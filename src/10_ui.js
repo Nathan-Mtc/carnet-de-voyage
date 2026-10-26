@@ -274,7 +274,7 @@ function craft(id) {
   const r = RECIPES.find(x => x.id === id); if (!r || !canCraft(r)) return;
   for (const [key, n] of r.ing) {
     const subs = ING[key][0];
-    const cands = S.inv.filter(i => subs.includes(i.sub) && (i.cat === 'm' || i.cat === 'n')).sort((a, b) => a.rarity - b.rarity);
+    const cands = S.inv.filter(i => subs.includes(i.sub) && (i.cat === 'm' || i.cat === 'n')).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); // spécialités régionales en dernier
     cands.slice(0, n).forEach(c => S.inv.splice(S.inv.indexOf(c), 1));
   }
   S.coins -= r.coins;

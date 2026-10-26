@@ -36,6 +36,7 @@ const fresh = () => ({
   achClaimed: {},   // succès dont la récompense a été récupérée
   firstTripDay: 0,  // jour du dernier « premier voyage du jour »
   jeuInit: 0,       // 1 quand les succès/paliers d'une ancienne sauvegarde ont été rattrapés
+  regions: { seen: {}, got: {}, claimed: {}, sel: '' }, // codex des régions (17_regions.js)
 });
 // complète les sous-objets des anciennes sauvegardes (Object.assign ne fusionne qu'au premier niveau)
 function patchSave(s) {

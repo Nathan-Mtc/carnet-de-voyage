@@ -66,7 +66,7 @@ function buildVillage(id) {
   const b = VB(id); if (!b || villageBuilt(id) || !villageUnlocked().has(id) || !villageCanPay(b)) return false;
   for (const [key, n] of b.cost) {
     const subs = ING[key][0];
-    const cands = S.inv.filter(i => subs.includes(i.sub) && (i.cat === 'm' || i.cat === 'n')).sort((a, c) => a.rarity - c.rarity);
+    const cands = S.inv.filter(i => subs.includes(i.sub) && (i.cat === 'm' || i.cat === 'n')).sort((a, c) => (a.rid ? 1 : 0) - (c.rid ? 1 : 0) || a.rarity - c.rarity); // spécialités régionales en dernier
     cands.slice(0, n).forEach(c => S.inv.splice(S.inv.indexOf(c), 1));
   }
   S.coins -= b.coins;
