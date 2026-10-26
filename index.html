@@ -1,4 +1,17 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Carnet de voyage</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Carnet">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f7e9cf">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Caveat:wght@500;700&family=Nunito:wght@400;600;700;800&display=swap">
@@ -133,7 +146,7 @@ body{background:#9fd1d8;color:var(--ink);font-family:var(--body);font-size:15px}
 .goal.ready{background:#fff3c4;animation:glow 1.2s ease-in-out infinite alternate}
 @media (max-width:900px){.goal{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));transform:none;width:auto;min-width:0;top:calc(98px + env(safe-area-inset-top,0px));padding:5px 6px 5px 8px}.goal .gi{width:28px;height:28px}.gx b{font-size:14px}}
 body.sheet-open .goal{display:none}
-@media (min-width:901px){body.sheet-open .goal{display:flex;left:calc((100% - 470px) / 2);width:min(480px,calc(100% - 900px));min-width:300px}}
+@media (min-width:1500px){body.sheet-open .goal{display:flex;left:calc((100% - 470px) / 2);width:min(480px,calc(100% - 900px));min-width:300px}}
 #modal{position:absolute;inset:0;z-index:40;background:rgba(74,53,40,.45);display:flex;align-items:center;justify-content:center;padding:16px}
 .mbox{background:var(--paper);border:3px solid var(--ink);border-radius:24px;box-shadow:0 6px 0 rgba(74,53,40,.5);max-width:440px;width:100%;padding:18px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:sheetIn .35s cubic-bezier(.2,1.4,.4,1);max-height:calc(100% - 20px);overflow:auto}
 .mbox h2{margin:0;font:800 24px/1.15 var(--display);text-wrap:balance}
@@ -208,6 +221,8 @@ select{font:700 15px var(--body);color:var(--ink);background:#fff;border:2px sol
 .logo b{display:block;font:800 26px/1 var(--display);color:#fff;-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;letter-spacing:.02em;white-space:nowrap}
 .logo b span{color:var(--gold)}
 @media (max-width:900px){.logo{display:none}}
+/* téléphone : le porte-monnaie grandit avec les pièces, on gagne quelques pixels pour que le bouton des réglages reste à l’écran */
+@media (max-width:420px){.hud{gap:6px;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}#hudComps{gap:2px}.purse{font-size:17px;padding:3px 10px 3px 5px;gap:4px}.purse .coin{width:22px;height:22px}}
 .zoom{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:4}
 body.sheet-open .zoom{display:none}
 
@@ -459,7 +474,7 @@ button[disabled]{opacity:.45;cursor:not-allowed}
 .tal.on{border:2px solid var(--ink)}
 .empty{border:2px dashed var(--line)}
 #toast{position:absolute;left:50%;top:calc(100px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:14px;font:700 15px var(--display);z-index:20;max-width:calc(100% - 32px);text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.25)}
-#react{position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(170px + env(safe-area-inset-bottom,0px));width:220px;background:var(--paper);border:3px solid var(--ink);border-radius:20px;padding:8px 10px 12px;z-index:20;text-align:center;box-shadow:0 5px 0 rgba(74,53,40,.4);animation:sheetIn .3s cubic-bezier(.2,1.4,.4,1)}
+#react{pointer-events:none;position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(170px + env(safe-area-inset-bottom,0px));width:220px;background:var(--paper);border:3px solid var(--ink);border-radius:20px;padding:8px 10px 12px;z-index:20;text-align:center;box-shadow:0 5px 0 rgba(74,53,40,.4);animation:sheetIn .3s cubic-bezier(.2,1.4,.4,1)}
 #react .rimg svg{width:150px;height:auto}
 #react p{margin:0;font-family:var(--hand);font-size:22px;line-height:1.1}
 #react.big{width:260px}#react.big .rimg svg{width:190px}
@@ -553,7 +568,7 @@ const CHARS = {
   pistache: {
     name: 'Pistache', species: 'Panda roux', perso: 'Curieuse',
     bio: 'Elle renifle tout ce qui bouge, collectionne les feuilles d’érable et range ses trésors dans son écharpe. Très courageuse, sauf devant les pigeons.',
-    love: 'les pommes, les feuilles d’érable, les forêts', hate: 'les pigeons, l’odeur de la mer',
+    love: 'les pommes, les fruits, le pain tout chaud, les forêts', hate: 'les pigeons, l’odeur de la mer',
     tw: 44, head: { rx: 94, ry: 78 }, eye: { dx: 37, y: 156, rx: 12.5, ry: 14.5 }, mouthY: 194, mouth: 'w', blush: { dx: 60, y: 178 },
     c: { fur: '#ec9c6f', fur2: '#cf7752', dark: '#86574a', light: '#fff5ea', inner: '#6b443a', iris: '#a0603a', line: '#6b4a3c', blush: '#f49a98' },
     sleepAfter: 26, foods: { pomme: 'love', crepe: 'like', mandarine: 'like', crevette: 'hate' },
@@ -565,12 +580,15 @@ const CHARS = {
       wake: ['Hein ? Je dormais pas…', 'J’ai rêvé d’une forêt en pommes.'],
       idle: ['Ça sent la forêt par ici…', 'Tu crois que les nuages ont un goût ?', 'Il y a un pigeon ? Non ? Ouf.'],
       love: 'Une pomme ! Ma préférée de toute la vie !', like: 'Miam, merci !', hate: 'Beurk… ça sent la mer.',
+      tap: ['Hihi ! Ça chatouille !', 'Tu as une pomme ? Juste une petite ?', 'Ça sent le pain chaud… tu sens aussi ?', 'Une fraise, une poire, une pomme… je veux tout !', 'On va renifler la boulangerie ?', 'J’ai caché une noisette dans mon écharpe.', 'Encore ! Derrière les oreilles…', 'Tu es mon humain préféré !'],
+      night: ['Mmh… cinq minutes encore…', 'Je rêvais d’une tartine à la pomme…', 'Chut… les étoiles dorment aussi.'],
+      away: ['Coucou de la route ! Ça sent les fruits ici !', 'Je te rapporte un truc qui croustille !', 'Il y a plein de choses à renifler !'],
     },
   },
   mochi: {
     name: 'Mochi', species: 'Capybara', perso: 'Zen',
     bio: 'Le plus calme de la bande. Il peut s’endormir n’importe où, et un petit oiseau nommé Pépin vient souvent se poser sur sa mandarine.',
-    love: 'les mandarines, les siestes, les sources chaudes', hate: 'courir, le bruit',
+    love: 'les mandarines, les citrons, le thé bien chaud, les siestes, les sources chaudes', hate: 'courir, le bruit',
     tw: 52, head: { rx: 90, ry: 80 }, eye: { dx: 42, y: 128, rx: 10, ry: 11 }, mouthY: 206, mouth: 'small', blush: { dx: 66, y: 156 }, lids: true,
     c: { fur: '#d9b18b', fur2: '#c39470', dark: '#8e6a4f', light: '#f2e0c8', inner: '#8a6248', iris: '#6a4632', line: '#6b4a3c', blush: '#f2a29a' },
     sleepAfter: 14, foods: { mandarine: 'love', pomme: 'like', crepe: 'like', crevette: 'hate' },
@@ -583,12 +601,15 @@ const CHARS = {
       idle: ['Pépin, tu es là ?', 'Une source chaude… ce serait bien.'],
       bird: 'Mon ami Pépin est revenu.',
       love: 'Une mandarine… Je la garde sur ma tête.', like: 'Merci, c’est gentil.', hate: 'Non merci. Trop d’émotions.',
+      tap: ['Oh. Bonjour, toi.', 'Un thé bien chaud… et la vie est douce.', 'Le yuzu, ça sent le soleil d’hiver.', 'Respire avec moi. Inspire… expire…', 'Rien ne presse. Tout arrive.', 'Un chocolat chaud ? Oui. Toujours oui.', 'Pépin dit bonjour aussi.', 'Mmmh… continue…'],
+      night: ['…zzz… une tisane… zzz…', 'Je méditais. Les yeux fermés.', 'La lune est une grosse mandarine.'],
+      away: ['Je marche doucement. C’est ça, le secret.', 'J’ai vu un citronnier. Très beau.', 'Pas d’inquiétude. J’arrive… un jour.'],
     },
   },
   bulle: {
     name: 'Bulle', species: 'Axolotl', perso: 'Joyeuse',
     bio: 'Toujours souriante, elle fait des bulles quand elle est contente et éclabousse tout le monde au bord de l’eau. Elle adore la pluie.',
-    love: 'les crevettes, les plages, les jours de pluie', hate: 'le soleil trop fort, la poussière',
+    love: 'la mer, les glaces, les crevettes, les jours de pluie', hate: 'le soleil trop fort, la poussière',
     tw: 46, head: { rx: 102, ry: 76 }, eye: { dx: 50, y: 146, rx: 10.5, ry: 11.5 }, mouthY: 170, mouth: 'wide', blush: { dx: 72, y: 166 },
     c: { fur: '#f8c4d2', fur2: '#ee9fb8', dark: '#de7c9c', light: '#fde8ef', inner: '#e7809f', iris: '#5b3a52', line: '#7a4e5c', blush: '#f58aa6', gill: '#f08db0', frill: '#fbb6cb' },
     sleepAfter: 30, foods: { crevette: 'love', crepe: 'like', pomme: 'like', mandarine: 'hate' },
@@ -600,6 +621,9 @@ const CHARS = {
       wake: ['Bloup ? C’est déjà le matin ?'],
       idle: ['Bloup.', 'Tu sens la pluie, toi aussi ?'],
       love: 'CREVETTE ! Tu es la meilleure personne du monde !', like: 'Bloup ! Merci !', hate: 'C’est tout sec et ça pique…',
+      tap: ['Bloup bloup ! Coucou !', 'On va à la mer ? Dis oui, dis oui !', 'Une glace à la fraise ! Non, deux !', 'Plouf ! Je t’ai eu !', 'Les vagues, c’est des câlins mouillés !', 'Glace à la vanille, ou au melon ? Les deux !', 'Hihihi ! Mes branchies !', 'Je fais des bulles de joie !'],
+      night: ['Bloup… je rêve de la mer…', 'Zzz… une glace… géante… zzz', 'Bloup ? Il fait encore nuit…'],
+      away: ['Bloup ! Je cherche la mer !', 'Je te garde un coquillage !', 'Il pleut ? Trop bien !'],
     },
   },
 };
@@ -614,7 +638,7 @@ const SLOTS = [
   ['pieds', 'Pieds', [['Rien', 'none'], ['Chaussettes', 'chaussettes'], ['Bottes de pluie', 'bottes']]],
   ['dos', 'Dos', [['Rien', 'none'], ['Sac à dos', 'sac'], ['Cape', 'cape']]],
 ];
-const MOODS = [['Content', 'content'], ['Fou rire', 'rire'], ['Amoureux', 'amour'], ['Surpris', 'surpris'], ['Triste', 'triste'], ['Boudeur', 'boude'], ['Endormi', 'dodo']];
+const MOODS = [['Content', 'content'], ['Fou rire', 'rire'], ['Amoureux', 'amour'], ['Surpris', 'surpris'], ['Triste', 'triste'], ['Boudeur', 'boude'], ['Endormi', 'dodo'], ['Curieux', 'curieux'], ['Fier', 'fier']];
 const FOODS = [['Pomme', 'pomme'], ['Mandarine', 'mandarine'], ['Crevette', 'crevette'], ['Crêpe', 'crepe']];
 
 // ---------- dessin ----------
@@ -664,8 +688,9 @@ function face(key, ch, expr, uid) {
   const mY = ch.mouthY;
   const blushBase = (k = 1) => xs.map((_, i) => {
     const bx = 160 + (i ? 1 : -1) * ch.blush.dx;
-    return `<ellipse cx="${bx}" cy="${ch.blush.y}" rx="${13 * k}" ry="${8 * k}" fill="${c.blush}" opacity="${0.55 + 0.2 * (k - 1)}"/>`;
+    return `<ellipse cx="${bx}" cy="${ch.blush.y}" rx="${13 * k}" ry="${8 * k}" fill="${c.blush}" opacity="${0.55 + 0.2 * (k - 1)}"/><ellipse cx="${bx - 5 * k}" cy="${ch.blush.y - 3 * k}" rx="${3.2 * k}" ry="${1.8 * k}" fill="#fff" opacity=".6"/>`;
   }).join('');
+  const sparkle = (x, y, r, d = 0) => `<path class="twk" style="animation-delay:${d}s" d="M${x} ${y - r}Q${x} ${y} ${x + r} ${y}Q${x} ${y} ${x} ${y + r}Q${x} ${y} ${x - r} ${y}Q${x} ${y} ${x} ${y - r}Z" fill="#ffe27a" stroke="${L}" stroke-width="1.3" stroke-linejoin="round"/>`;
   const blushLines = () => xs.map((_, i) => {
     const bx = 160 + (i ? 1 : -1) * ch.blush.dx;
     return [-6, 0, 6].map(o => `<path d="M${bx + o - 2} ${ch.blush.y + 3} l4 -6" stroke="${shade(c.blush, 0.8)}" stroke-width="1.4" stroke-linecap="round"/>`).join('');
@@ -707,6 +732,21 @@ function face(key, ch, expr, uid) {
       blush = blushBase(1.35);
       fx = `<g transform="translate(236 72)"><path d="M0 10 q-2 -12 10 -12 q4 -8 14 -2 q12 -2 10 10 q6 8 -4 12 q-10 6 -18 0 q-14 2 -12 -8Z" fill="#fff" stroke="${L}" stroke-width="1.4"/><text x="16" y="12" text-anchor="middle" font-family="Fredoka,sans-serif" font-size="11" fill="${L}">hmpf</text></g>`;
       break;
+    case 'curieux': {
+      eyes = eyeOpen(xs[0], e.y, e.rx, e.ry, c.iris, uid, 0, 1) + eyeOpen(xs[1], e.y - 1, e.rx, e.ry, c.iris, uid, 1, 1.16);
+      mouth = `<ellipse cx="${160 + 4}" cy="${mY + 2}" rx="4" ry="4.6" fill="#8c3a4c" stroke="${L}" stroke-width="1.8"/>`; blush = blushBase(0.95);
+      over = `<path d="M${xs[1] - 12} ${e.y - e.ry - 16} Q${xs[1]} ${e.y - e.ry - 25} ${xs[1] + 12} ${e.y - e.ry - 15}" fill="none" stroke="${L}" stroke-width="2.4" stroke-linecap="round"/><path d="M${xs[0] - 10} ${e.y - e.ry - 9} Q${xs[0]} ${e.y - e.ry - 12} ${xs[0] + 10} ${e.y - e.ry - 9}" fill="none" stroke="${L}" stroke-width="2.2" stroke-linecap="round"/>`;
+      fx = `<g class="rise" style="animation-iteration-count:infinite;animation-duration:2.6s"><text x="250" y="92" font-family="Fredoka,sans-serif" font-weight="700" font-size="34" fill="#fff" stroke="${L}" stroke-width="2.4" paint-order="stroke">?</text></g>`;
+      break;
+    }
+    case 'fier':
+      eyes = xs.map(x => `<path d="M${x - e.rx} ${e.y + 2} Q${x} ${e.y - e.ry * 0.9} ${x + e.rx} ${e.y + 2}" fill="none" stroke="#2a2130" stroke-width="3.4" stroke-linecap="round"/><path d="M${x + e.rx - 1} ${e.y + 1} l4 -3" stroke="#2a2130" stroke-width="2" stroke-linecap="round"/>`).join('');
+      mouth = `<path d="M${160 - 13} ${mY - 1} Q${160 - 2} ${mY + 9} ${160 + 14} ${mY - 4}" fill="none" stroke="${L}" stroke-width="2.4" stroke-linecap="round"/>`;
+      blush = blushBase(1.1);
+      over = xs.map((x, i) => { const s = i ? 1 : -1; return `<path d="M${x - s * 10} ${e.y - e.ry - 12} Q${x} ${e.y - e.ry - 18} ${x + s * 11} ${e.y - e.ry - 10}" fill="none" stroke="${L}" stroke-width="2.4" stroke-linecap="round"/>`; }).join('');
+      fx = sparkle(72, 70, 11) + sparkle(250, 84, 9, 0.5) + sparkle(236, 46, 6, 1);
+      break;
+    case 'endormi':
     case 'dodo':
       eyes = arcs(false); mouth = `<ellipse cx="160" cy="${mY + 2}" rx="3.6" ry="4.4" fill="#8c3a4c"/>`; blush = blushBase(1);
       fx = [0, 1, 2].map(i => `<text class="zz" style="animation-delay:${i * 0.8}s" x="${222 + i * 12}" y="${92 - i * 14}" font-family="Fredoka,sans-serif" font-weight="600" font-size="${16 + i * 5}" fill="${L}">z</text>`).join('');
@@ -714,8 +754,8 @@ function face(key, ch, expr, uid) {
     default:
       eyes = open(1); mouth = defMouth(); blush = blushBase(1);
   }
-  const ey = e.y;
-  return `<g class="eyes" style="transform-origin:160px ${ey}px">${eyes}</g>${over}${blush}${mouth}<g class="fxface">${fx}</g>`;
+  const ey = e.y, eo = !['rire', 'amour', 'dodo', 'endormi', 'fier'].includes(expr);
+  return `<g class="eyes${eo ? ' eo' : ''}" style="transform-origin:160px ${ey}px">${eyes}</g>${over}${blush}${mouth}<g class="fxface">${fx}</g>`;
 }
 
 // ---------- vêtements ----------
@@ -875,7 +915,9 @@ function headFront(key, ch, uid) {
       <ellipse cx="160" cy="104" rx="42" ry="16" fill="#fff" opacity=".22"/></g>
       <ellipse cx="${160 - 38}" cy="127" rx="15" ry="9" fill="${c.light}"/><ellipse cx="${160 + 38}" cy="127" rx="15" ry="9" fill="${c.light}"/>
       <ellipse cx="160" cy="190" rx="31" ry="22" fill="${c.light}"/>
-      <path d="M150 178 Q160 172 170 178 Q167 187 160 188 Q153 187 150 178Z" fill="#3b2a2a"/><ellipse cx="156" cy="178" rx="3" ry="1.6" fill="#fff" opacity=".6"/>`;
+      <path d="M150 178 Q160 172 170 178 Q167 187 160 188 Q153 187 150 178Z" fill="#3b2a2a"/><ellipse cx="156" cy="178" rx="3" ry="1.6" fill="#fff" opacity=".6"/>
+      <path d="M150 80 q4 -9 9 -2 M160 78 q5 -10 10 -1" fill="none" stroke="${c.fur2}" stroke-width="2.6" stroke-linecap="round"/>
+      ${[[-17, 194], [-21, 201], [-12, 202], [17, 194], [21, 201], [12, 202]].map(([dx, y]) => `<circle cx="${160 + dx}" cy="${y}" r="1.5" fill="${c.fur2}" opacity=".75"/>`).join('')}`;
   }
   if (key === 'mochi') {
     return `<g clip-path="url(#${uid}hc)"><ellipse cx="160" cy="96" rx="48" ry="16" fill="#fff" opacity=".2"/><ellipse cx="160" cy="226" rx="90" ry="14" fill="${c.fur2}" opacity=".35"/></g>
@@ -883,10 +925,14 @@ function headFront(key, ch, uid) {
       <ellipse cx="160" cy="160" rx="38" ry="8" fill="#fff" opacity=".18"/>
       <ellipse cx="${160 - 15}" cy="178" rx="5.5" ry="3.6" fill="#4a3428"/><ellipse cx="${160 + 15}" cy="178" rx="5.5" ry="3.6" fill="#4a3428"/>
       <path d="M160 186 v12" stroke="${L}" stroke-width="1.8" stroke-linecap="round"/>
+      <g class="nose" style="transform-origin:160px 178px"><ellipse cx="${160 - 17}" cy="176.5" rx="2" ry="1.1" fill="#fff" opacity=".45"/><ellipse cx="${160 + 13}" cy="176.5" rx="2" ry="1.1" fill="#fff" opacity=".45"/></g>
+      ${[[-34, 190], [-40, 197], [-30, 199], [34, 190], [40, 197], [30, 199]].map(([dx, y]) => `<circle cx="${160 + dx}" cy="${y}" r="1.6" fill="${c.dark}" opacity=".45"/>`).join('')}
+      <path d="M${160 - 76} 150 q5 3 3 9 M${160 + 76} 150 q-5 3 -3 9" fill="none" stroke="${c.fur2}" stroke-width="2.2" stroke-linecap="round"/>
       <path d="M152 74 q4 -14 10 -2 M162 72 q6 -12 10 0" fill="none" stroke="${L}" stroke-width="2" stroke-linecap="round"/>`;
   }
   return `<g clip-path="url(#${uid}hc)"><ellipse cx="160" cy="100" rx="50" ry="16" fill="#fff" opacity=".3"/><ellipse cx="160" cy="214" rx="96" ry="16" fill="${c.fur2}" opacity=".35"/></g>
-    ${[[132, 96], [146, 88], [176, 90], [190, 100], [161, 82]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.2" fill="${c.dark}" opacity=".45"/>`).join('')}`;
+    ${[[132, 96], [146, 88], [176, 90], [190, 100], [161, 82]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.2" fill="${c.dark}" opacity=".45"/>`).join('')}
+    <path d="M${160 - 84} 128 Q${160 - 80} 108 ${160 - 64} 98" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".55"/><circle cx="${160 - 86}" cy="138" r="2" fill="#fff" opacity=".55"/>`;
 }
 function tail(key, ch, g) {
   const c = ch.c, L = c.line, x0 = 160 + g.tw - 8;
@@ -901,7 +947,7 @@ function tail(key, ch, g) {
 function drawChar(key, outfit, expr, uid) {
   const ch = CHARS[key], g = geo(ch), c = ch.c, L = c.line, o = outfit;
   const hp = headPath(key, ch);
-  let s = `<svg viewBox="0 0 320 350" xmlns="${NS}" role="img" aria-label="${ch.name}, ${ch.species}"><defs><clipPath id="${uid}tc"><path d="${g.torso}"/></clipPath><clipPath id="${uid}hc"><path d="${hp}"/></clipPath></defs>`;
+  let s = `<svg viewBox="0 0 320 350" xmlns="${NS}" class="cc sp-${key} m-${expr || 'content'}" role="img" aria-label="${ch.name}, ${ch.species}"><defs><clipPath id="${uid}tc"><path d="${g.torso}"/></clipPath><clipPath id="${uid}hc"><path d="${hp}"/></clipPath></defs>`;
   s += `<path d="M14 338 C90 322 150 346 214 330 S290 322 308 334" fill="none" stroke="#cdb08a" stroke-width="2" stroke-dasharray="5 8" stroke-linecap="round"/>`;
   s += `<ellipse cx="160" cy="334" rx="${70 + g.tw * 0.3}" ry="8" fill="#e5d2ae"/>`;
   s += `<g class="root"><g class="breath">`;
@@ -912,7 +958,7 @@ function drawChar(key, outfit, expr, uid) {
   s += `<g clip-path="url(#${uid}tc)">`;
   if (key === 'pistache') s += `<rect x="100" y="276" width="120" height="40" fill="${c.dark}"/><ellipse cx="160" cy="276" rx="${g.tw}" ry="10" fill="${c.dark}"/>`;
   else s += `<ellipse cx="160" cy="282" rx="${g.tw * 0.6}" ry="30" fill="${c.light}"/>`;
-  s += `<ellipse cx="160" cy="232" rx="${g.tw + 6}" ry="14" fill="${c.fur2}" opacity=".45"/>`;
+  s += `<ellipse cx="160" cy="232" rx="${g.tw + 6}" ry="14" fill="${c.fur2}" opacity=".45"/><ellipse cx="${160 - g.tw * 0.45}" cy="258" rx="7" ry="13" fill="#fff" opacity=".18"/>`;
   s += torsoItems(o, g, ch, uid) + `</g>`;
   s += `<path d="${g.torso}" fill="none" stroke="${L}" stroke-width="2" stroke-linejoin="round"/>`;
   s += skirt(o, g, ch) + shortLegs(o, g, ch);
@@ -927,6 +973,7 @@ function drawChar(key, outfit, expr, uid) {
   s += headFront(key, ch, uid);
   s += `<g class="face">${face(key, ch, expr, uid)}</g>`;
   s += headItem(o, g, ch);
+  if (key === 'bulle' && expr !== 'dodo' && expr !== 'endormi') s += `<g class="bubs" opacity="0" fill="#e9f7ff" stroke="${L}" stroke-width="1.3"><circle cx="198" cy="${ch.mouthY - 6}" r="5"/><circle cx="210" cy="${ch.mouthY - 22}" r="3.4"/><circle cx="203" cy="${ch.mouthY - 34}" r="2.4"/></g>`;
   s += `<g class="perch"></g></g></g>`;
   s += `<g class="fx"></g></g></svg>`;
   return s;
@@ -1023,6 +1070,20 @@ const LOOT = {
   ile: [['Chemise à fleurs', 'v', 'haut', 1, 'tshirt', '#f6a6b8'], ['Collier de fleurs', 'v', 'cou', 1, 'foulard', '#f9d36b'], ['Noix de coco', 'n', 'fruit', 0], ['Sable blanc', 'm', 'sable', 0], ['Corail ancien', 'm', 'corail', 3]],
   agrumes: [['Mandarine', 'n', 'agrume', 0], ['Zeste confit', 'm', 'feuille', 1], ['Citron doux', 'n', 'agrume', 1]],
 };
+// Enrichissement des grands paysages : objets ajoutés à la suite de chaque liste
+Object.entries({
+  montagne: [['Bâton de berger', 'm', 'bois', 0, null, '#a87a50'], ['Clochette de vache', 'm', 'metal', 0, null, '#d9b44a'], ['Gourde de refuge', 'm', 'plastique', 0, null, '#d9604f'], ['Génépi en fleur', 'm', 'fleur', 1, null, '#e9e2a6'], ['Pull à edelweiss', 'v', 'haut', 1, 'pull', '#c94a4a'], ['Plume de chocard', 'm', 'plume', 1, null, '#3a3a4a'], ['Cape de cordée', 'v', 'dos', 3, 'cape', '#e9a03a'], ['Edelweiss d’argent', 'm', 'fleur', 4, null, '#e8eef5']],
+  neige: [['Boule de neige parfaite', 'm', 'flocon', 0, null, '#f4f8fc'], ['Luge en bois', 'm', 'bois', 0, null, '#c9604f'], ['Carotte de bonhomme de neige', 'n', 'legume', 0, null, '#f08a3a'], ['Glaçon rigolo', 'm', 'cristal', 0, null, '#cfe8f7'], ['Bonnet à pompon géant', 'v', 'tete', 0, 'bonnet', '#e5584f'], ['Chaussettes en laine polaire', 'v', 'pieds', 0, 'chaussettes', '#bfe3f6'], ['Thé brûlant du refuge', 'n', 'boisson', 0, null, '#c98a4f'], ['Bonhomme de neige miniature', 'd', 'statue', 1, null, '#f4f8fc'], ['Raquettes à neige', 'm', 'bois', 1, null, '#8a6448'], ['Moufles de yéti', 'v', 'mains', 3, 'moufles', '#f4f1ea'], ['Larme de glacier millénaire', 'm', 'cristal', 4, null, '#9fd8f0']],
+  lac: [['Nénuphar', 'm', 'fleur', 0, null, '#f6c2cf'], ['Roseau', 'm', 'feuille', 0, null, '#a8b45a'], ['Galet à ricochets', 'm', 'pierre', 0, null, '#a9b4bc'], ['Écaille de brochet', 'm', 'coquillage', 0, null, '#b9cc8a'], ['Gaufre du kiosque', 'n', 'sucre', 0, null, '#e9b86b'], ['Cuissardes de pêche', 'v', 'pieds', 1, 'bottes', '#5f7a4a'], ['Canne à pêche en bambou', 'm', 'bois', 1, null, '#d9c38f'], ['Plume de héron', 'm', 'plume', 1, null, '#c9cdd2'], ['Truite arc-en-ciel', 'n', 'mer', 2, null, '#e9a6b8'], ['Pédalo miniature', 'd', 'statue', 3, null, '#7fc4d9'], ['Perle d’eau douce', 'm', 'perle', 4, null, '#f3eef6']],
+  mer: [['Crabe en caramel', 'n', 'sucre', 1, null, '#e5784f'], ['Bouée rayée', 'm', 'plastique', 1, null, '#e5584f'], ['Carte des marées', 'm', 'papier', 1, null, '#bfe1f2'], ['Hippocampe de verre', 'm', 'verre', 2, null, '#9fd8c4'], ['Corne de brume miniature', 'm', 'metal', 2, null, '#c9a35a'], ['Écaille de sirène', 'm', 'perle', 4, null, '#7fd0d0']],
+  foret: [['Noisettes', 'n', 'fruit', 0, null, '#b07a4f'], ['Brindille', 'm', 'bois', 0, null, '#8a6448'], ['Écorce de bouleau', 'm', 'bois', 1, null, '#ece6da'], ['Plume de geai', 'm', 'plume', 1, null, '#5f87c9'], ['Bonnet renard', 'v', 'tete', 1, 'bonnet', '#e0884a'], ['Cape de chaperon', 'v', 'dos', 2, 'cape', '#c94a4a'], ['Gland doré', 'm', 'graine', 3, null, '#f2c14e'], ['Cœur de chêne millénaire', 'm', 'bois', 4, null, '#7a5a3a']],
+  ville: [['Badge rigolo', 'm', 'medaille', 0, null, '#f39ab0'], ['Plan du métro', 'm', 'papier', 0, null, '#bfe1f2'], ['Café à emporter', 'n', 'boisson', 0, null, '#c99a6a'], ['Chaussettes dépareillées', 'v', 'pieds', 0, 'chaussettes', '#f6d36b'], ['Pigeon en origami', 'm', 'papier', 1, null, '#c9cdd2'], ['Écharpe de citadin', 'v', 'cou', 1, 'echarpe', '#5c6b94'], ['Parapluie retourné', 'm', 'tissu', 1, null, '#3b4a7a'], ['Macaron framboise', 'n', 'sucre', 1, null, '#f39ab0'], ['Clé du réverbère', 'm', 'metal', 2, null, '#5c6b6e'], ['Clé de la ville', 'm', 'medaille', 4, null, '#f2c14e']],
+  monument: [['Prospectus touristique', 'm', 'papier', 0, null, '#f2d48f'], ['Ticket de visite', 'm', 'papier', 0, null, '#e9dcc0'], ['Pièce dans la fontaine', 'm', 'metal', 0, null, '#c9a35a'], ['Glace du parvis', 'n', 'glace', 0, null, '#f6e0c0'], ['Casquette de guide', 'v', 'tete', 0, 'casquette', '#e9a03a'], ['Gargouille en sucre', 'n', 'sucre', 0, null, '#d9c3a6'], ['Morceau de colonne', 'm', 'pierre', 0, null, '#e9e2d6'], ['Clé de crypte', 'm', 'metal', 3, null, '#7a6a5a'], ['Plume d’oie historique', 'm', 'plume', 4, null, '#fff8f0']],
+  desert: [['Figue de barbarie', 'n', 'fruit', 0, null, '#d9604f'], ['Thé à la menthe', 'n', 'boisson', 0, null, '#7fae4f'], ['Lunettes anti-sable', 'm', 'plastique', 0, null, '#3a3a4a'], ['Caillou tout chaud', 'm', 'pierre', 0, null, '#d9a35a'], ['Galette de semoule', 'n', 'pain', 0, null, '#e9c48a'], ['Plume d’autruche', 'm', 'plume', 1, null, '#4a4a4a'], ['Cactus en pot', 'd', 'plante', 1, null, '#7fae4f'], ['Tapis du désert', 'd', 'tapis', 1, null, '#c9604f'], ['Lanterne berbère', 'd', 'lanterne', 2, null, '#e3a94a'], ['Scarabée de turquoise', 'm', 'scarabee', 3, null, '#4fbfb0'], ['Sablier des dunes', 'm', 'verre', 4, null, '#f2cf9a']],
+  campagne: [['Œuf de cane', 'n', 'plat', 0, null, '#e9eedf'], ['Botte de radis', 'n', 'legume', 0, null, '#e5587f'], ['Bouquet de coquelicots', 'm', 'fleur', 1, null, '#e5584f'], ['Plume de faisan', 'm', 'plume', 1, null, '#b5703a'], ['Gilet de laine', 'v', 'haut', 1, 'pull', '#c9b48a'], ['Pot de crème fraîche', 'n', 'fromage', 1, null, '#fbf8f0'], ['Épouvantail miniature', 'd', 'statue', 2, null, '#d9b46a'], ['Trèfle doré', 'm', 'feuille', 3, null, '#e3c14a'], ['Graine de géant', 'm', 'graine', 4, null, '#7fae4f']],
+  ile: [['Mangue', 'n', 'fruit', 0, null, '#f2a93b'], ['Ananas', 'n', 'fruit', 0, null, '#e9c43a'], ['Feuille de palmier', 'm', 'feuille', 0, null, '#5fa24f'], ['Sandales en raphia', 'v', 'pieds', 0, 'chaussettes', '#e3c98f'], ['Hamac tressé', 'm', 'tissu', 0, null, '#f2a03a'], ['Coquillage spirale', 'm', 'coquillage', 0, null, '#f6dcc8'], ['Short à fleurs', 'v', 'bas', 1, 'short', '#f39ab0'], ['Ukulélé miniature', 'm', 'bois', 2, null, '#d9a36b'], ['Perle de lagon', 'm', 'perle', 4, null, '#9fe0d0']],
+  agrumes: [['Orange sanguine', 'n', 'agrume', 0, null, '#e5684f'], ['Pamplemousse rose', 'n', 'agrume', 0, null, '#f6a68a'], ['Clémentine', 'n', 'agrume', 0, null, '#f2963b'], ['Fleur d’oranger', 'm', 'fleur', 0, null, '#fff8f0'], ['Feuille de citronnier', 'm', 'feuille', 0, null, '#6faf4f'], ['Limonade maison', 'n', 'boisson', 0, null, '#f6e07a'], ['Bergamote', 'n', 'agrume', 0, null, '#c9d94a'], ['Chapeau de cueilleur', 'v', 'tete', 1, 'chapeau', '#e9c46a'], ['Panier d’agrumes', 'v', 'dos', 1, 'sac', '#c99a5a'], ['Kumquat confit', 'n', 'sucre', 2, null, '#f2a03a'], ['Citron doré', 'n', 'agrume', 3, null, '#f2c14e'], ['Oranger enchanté', 'd', 'plante', 4, null, '#f2963b']],
+}).forEach(([k, v]) => LOOT[k].push(...v));
 const SEASON_LOOT = [['Châtaignes grillées', 'n', 'sucre', 0], ['Écharpe d’automne', 'v', 'cou', 1, 'echarpe', '#d9893e'], ['Feuille d’érable rousse', 'm', 'feuille', 0]];
 const NIGHT_LOOT = [['Éclat de lune', 'm', 'lune', 2], ['Bonnet étoilé', 'v', 'tete', 2, 'bonnet', '#3b4a7a']];
 const WONDERS = { arc: ['Éclat d’arc-en-ciel', 'm', 'lumiere', 3], etoile: ['Poussière d’étoile', 'm', 'lune', 3], orage: ['Goutte d’orage', 'm', 'cristal', 2] };
@@ -1153,26 +1214,41 @@ const POI_CATS = {
   foret: ['Bois', '#4f8a5f', 'pine', 'foret', 0],
   campagne: ['Champs', '#a7b65a', 'wheat', 'campagne', 0],
   ferme: ['Ferme', '#b9824f', 'barn', 'campagne', 0],
+  fromagerie: ['Fromagerie', '#e3b84a', 'wheel', 'ville', 2],
+  boucherie: ['Boucherie-charcuterie', '#c95a5a', 'sausage', 'ville', 3],
+  coiffeur: ['Salon de coiffure', '#e07ab0', 'scissors', 'ville', 4],
+  laverie: ['Laverie', '#6fb3d9', 'washer', 'ville', 2],
+  bibliotheque: ['Bibliothèque', '#5f7ab8', 'books', 'ville', 2],
+  jardin: ['Jardin partagé', '#7fbf5a', 'sprout', 'campagne', 2],
+  etang: ['Lac ou étang', '#5aa0c8', 'duck', 'lac', 1],
+  riviere: ['Rivière', '#4f8fc0', 'river', 'lac', 1],
+  sentier: ['Sentier de montagne', '#7a9a6a', 'peak', 'montagne', 1],
+  jeux: ['Aire de jeux', '#f2b23a', 'swing', 'ville', 3],
+  puces: ['Marché aux puces', '#b08a5a', 'vase', 'ville', 1],
+  chocolaterie: ['Chocolaterie', '#8a5a3a', 'choco', 'ville', 2],
+  caviste: ['Caviste', '#9a4a6a', 'bottle', 'ville', 2],
+  mairie: ['Mairie', '#5c6b94', 'townhall', 'ville', 2],
+  phare: ['Phare', '#e0605a', 'lighthouse', 'mer', 0],
 };
 Object.assign(LOOT, {
   boulangerie: [['Baguette tradition', 'n', 'pain', 0, null, '#e3b06b'], ['Croissant au beurre', 'n', 'sucre', 0, null, '#e9b86b'], ['Pain au chocolat', 'n', 'sucre', 0, null, '#c98a4f'], ['Farine de blé', 'm', 'farine', 0, null, '#f4efe2'], ['Chouquettes', 'n', 'sucre', 1, null, '#e3b06b'], ['Tablier de boulanger', 'v', 'haut', 1, 'tshirt', '#f4efe2'], ['Toque de boulanger', 'v', 'tete', 2, 'bonnet', '#ffffff'], ['Fève de galette', 'm', 'medaille', 3, null, '#f2c14e'], ['Croissant d’or', 'n', 'sucre', 4, null, '#f2c14e']],
-  cafe: [['Café crème', 'n', 'boisson', 0, null, '#c99a6a'], ['Chocolat chaud', 'n', 'boisson', 0, null, '#8a5a3a'], ['Grain de café', 'm', 'graine', 0, null, '#6b4a32'], ['Ticket de caisse', 'm', 'papier', 0, null, '#f4efe2'], ['Tasse ébréchée', 'd', 'bocal', 1, null, '#e9dcc8'], ['Écharpe de terrasse', 'v', 'cou', 1, 'echarpe', '#c9604f'], ['Béret de poète', 'v', 'tete', 2, 'beret', '#3a3a4a'], ['Cuillère en argent', 'm', 'metal', 3, null, '#cfd6dc']],
+  cafe: [['Café crème', 'n', 'boisson', 0, null, '#c99a6a'], ['Chocolat chaud du café', 'n', 'boisson', 0, null, '#8a5a3a'], ['Grain de café', 'm', 'graine', 0, null, '#6b4a32'], ['Ticket de caisse', 'm', 'papier', 0, null, '#f4efe2'], ['Tasse ébréchée', 'd', 'bocal', 1, null, '#e9dcc8'], ['Écharpe de terrasse', 'v', 'cou', 1, 'echarpe', '#c9604f'], ['Béret de poète', 'v', 'tete', 2, 'beret', '#3a3a4a'], ['Cuillère en argent', 'm', 'metal', 3, null, '#cfd6dc']],
   restaurant: [['Plat du jour', 'n', 'plat', 0, null, '#d9733f'], ['Soupe à l’oignon', 'n', 'plat', 0, null, '#d9a35a'], ['Serviette brodée', 'm', 'tissu', 0, null, '#f4efe2'], ['Bouchon de liège', 'm', 'bois', 0, null, '#c99a6a'], ['Nœud papillon de serveur', 'v', 'cou', 1, 'noeud', '#2f2f3a'], ['Tablier à carreaux', 'v', 'haut', 1, 'tshirt', '#d96b5f'], ['Toque de chef étoilé', 'v', 'tete', 3, 'bonnet', '#ffffff'], ['Recette secrète', 'm', 'papier', 3, null, '#efe2c4']],
-  marche: [['Tomate du marché', 'n', 'legume', 0, null, '#e5584f'], ['Carotte fane', 'n', 'legume', 0, null, '#f08a3a'], ['Pomme reinette', 'n', 'pomme', 0, null, '#d9a03a'], ['Fraises', 'n', 'fruit', 0, null, '#e5584f'], ['Mandarine', 'n', 'agrume', 0, null, '#f2a93b'], ['Graines de potager', 'm', 'graine', 0, null, '#a9784f'], ['Panier en osier', 'v', 'dos', 1, 'sac', '#c99a5a'], ['Chapeau de maraîcher', 'v', 'tete', 1, 'chapeau', '#d9b46a'], ['Citrouille géante', 'n', 'legume', 3, null, '#f08a3a']],
+  marche: [['Tomate du marché', 'n', 'legume', 0, null, '#e5584f'], ['Carotte fane', 'n', 'legume', 0, null, '#f08a3a'], ['Pomme reinette', 'n', 'pomme', 0, null, '#d9a03a'], ['Fraises', 'n', 'fruit', 0, null, '#e5584f'], ['Mandarine du marché', 'n', 'agrume', 0, null, '#f2a93b'], ['Graines de potager', 'm', 'graine', 0, null, '#a9784f'], ['Panier en osier', 'v', 'dos', 1, 'sac', '#c99a5a'], ['Chapeau de maraîcher', 'v', 'tete', 1, 'chapeau', '#d9b46a'], ['Citrouille géante', 'n', 'legume', 3, null, '#f08a3a']],
   epicerie: [['Fromage de chèvre', 'n', 'fromage', 0, null, '#f6f0e0'], ['Pot de miel', 'n', 'sucre', 0, null, '#f2b13e'], ['Olives', 'n', 'legume', 0, null, '#6f8a3f'], ['Bocal en verre', 'm', 'verre', 0, null, '#d6eef2'], ['Torchon à carreaux', 'm', 'tissu', 0, null, '#d96b5f'], ['Comté affiné', 'n', 'fromage', 1, null, '#f2d06b'], ['Confiture maison', 'n', 'fruit', 1, null, '#c94a6a'], ['Truffe noire', 'n', 'legume', 4, null, '#3a2e2a']],
   poissonnerie: [['Sardines', 'n', 'mer', 0, null, '#9fb6c9'], ['Crevettes roses', 'n', 'mer', 0, null, '#f2908a'], ['Maquereau', 'n', 'mer', 0, null, '#5f87a8'], ['Écaille irisée', 'm', 'coquillage', 1, null, '#bfe3f6'], ['Huîtres', 'n', 'mer', 1, null, '#c9c3b8'], ['Bottes de pêcheur', 'v', 'pieds', 1, 'bottes', '#f6d36b'], ['Perle d’huître', 'm', 'perle', 3, null, '#f7eef2'], ['Homard bleu', 'n', 'mer', 4, null, '#3e6e9e']],
-  fleuriste: [['Rose rouge', 'm', 'fleur', 0, null, '#e5584f'], ['Tulipe', 'm', 'fleur', 0, null, '#f39ab0'], ['Pétales de pivoine', 'm', 'fleur', 0, null, '#f6c2cf'], ['Graines de tournesol', 'm', 'graine', 0, null, '#7a5a3a'], ['Couronne de fleurs', 'v', 'tete', 1, 'fleurs', '#f6c2cf'], ['Plante en pot', 'd', 'plante', 1, null, '#7fbf6a'], ['Bouquet de mariée', 'm', 'fleur', 2, null, '#fff8f0'], ['Orchidée bleue', 'm', 'fleur', 3, null, '#7f9fe0'], ['Rose éternelle', 'm', 'fleur', 4, null, '#c94a6a']],
+  fleuriste: [['Rose rouge', 'm', 'fleur', 0, null, '#e5584f'], ['Tulipe', 'm', 'fleur', 0, null, '#f39ab0'], ['Pétales de pivoine', 'm', 'fleur', 0, null, '#f6c2cf'], ['Sachet de graines de tournesol', 'm', 'graine', 0, null, '#7a5a3a'], ['Couronne de fleurs', 'v', 'tete', 1, 'fleurs', '#f6c2cf'], ['Petite plante de fleuriste', 'd', 'plante', 1, null, '#7fbf6a'], ['Bouquet de mariée', 'm', 'fleur', 2, null, '#fff8f0'], ['Orchidée bleue', 'm', 'fleur', 3, null, '#7f9fe0'], ['Rose éternelle', 'm', 'fleur', 4, null, '#c94a6a']],
   librairie: [['Marque-page', 'm', 'papier', 0, null, '#e7c46a'], ['Vieux roman', 'm', 'papier', 0, null, '#b5876a'], ['Carte routière', 'm', 'papier', 0, null, '#bfe1f2'], ['Carnet de croquis', 'm', 'papier', 1, null, '#f4efe2'], ['Écharpe de lecteur', 'v', 'cou', 1, 'echarpe', '#7a6fb8'], ['Herbier ancien', 'd', 'herbier', 2, null, '#8fbf7f'], ['Mappemonde de bureau', 'd', 'mappemonde', 2, null, '#c9a97a'], ['Première édition', 'm', 'papier', 3, null, '#c9604f'], ['Grimoire mystérieux', 'm', 'papier', 4, null, '#5a3a6a']],
   parc: [['Feuille de platane', 'm', 'feuille', 0, null, '#a8c45a'], ['Gland', 'm', 'graine', 0, null, '#a9784f'], ['Plume de pigeon', 'm', 'plume', 0, null, '#b5b8c4'], ['Pâquerette', 'm', 'fleur', 0, null, '#fff8f0'], ['Caillou tout rond', 'm', 'pierre', 0, null, '#bdb5aa'], ['Ballon perdu', 'm', 'plastique', 1, null, '#e5584f'], ['Casquette oubliée', 'v', 'tete', 1, 'casquette', '#4f86c9'], ['Pièce ancienne', 'm', 'medaille', 2, null, '#c9a35a'], ['Trèfle à quatre feuilles', 'm', 'feuille', 3, null, '#5fbf5f'], ['Plume de paon', 'm', 'plume', 3, null, '#3fa6a6']],
   rue: [['Ticket de bus', 'm', 'papier', 0, null, '#bfe1f2'], ['Capsule de bouteille', 'm', 'metal', 0, null, '#c9604f'], ['Caillou', 'm', 'pierre', 0, null, '#a9a39a'], ['Affiche déchirée', 'm', 'papier', 0, null, '#f2d48f'], ['Bouton de manteau', 'm', 'plastique', 0, null, '#5b4636'], ['Craie de trottoir', 'm', 'pierre', 0, null, '#f3aec1'], ['Gant perdu', 'v', 'mains', 1, 'gants', '#c9604f'], ['Clé rouillée', 'm', 'metal', 1, null, '#a87a50'], ['Billet de loterie gagnant', 'm', 'papier', 3, null, '#f2c14e'], ['Bague perdue', 'm', 'metal', 4, null, '#f2c14e']],
   route: [['Gravier', 'm', 'pierre', 0, null, '#bdb5aa'], ['Coquelicot', 'm', 'fleur', 0, null, '#e5584f'], ['Boulon', 'm', 'metal', 0, null, '#9aa4ac'], ['Mûres du talus', 'n', 'fruit', 0, null, '#5a3a6a'], ['Plume de buse', 'm', 'plume', 1, null, '#a87a50'], ['Catadioptre', 'm', 'plastique', 1, null, '#f2a03a'], ['Gilet de sécurité', 'v', 'haut', 1, 'tshirt', '#f6e04a'], ['Vieille plaque émaillée', 'm', 'metal', 3, null, '#3b4a7a']],
-  plage: [['Sable fin', 'm', 'sable', 0, null, '#f2dca6'], ['Coquillage', 'm', 'coquillage', 0, null, '#f6cdb8'], ['Galet poli', 'm', 'pierre', 0, null, '#bdb5aa'], ['Bois flotté', 'm', 'bois', 0, null, '#c9b49a'], ['Algue', 'm', 'feuille', 0, null, '#5f8a4a'], ['Bob de plage', 'v', 'tete', 0, 'chapeau', '#f39ab0'], ['Verre de mer', 'm', 'verre', 1, null, '#9fd8c4'], ['Short de bain', 'v', 'bas', 1, 'short', '#58c2b0'], ['Étoile de mer', 'm', 'corail', 2, null, '#f2905a'], ['Message dans une bouteille', 'm', 'verre', 3, null, '#bfe3d6'], ['Perle noire', 'm', 'perle', 4, null, '#3a3a4a']],
-  port: [['Bout de corde', 'm', 'tissu', 0, null, '#d9c39a'], ['Filet de pêche', 'm', 'tissu', 0, null, '#7a8a6a'], ['Sardine fraîche', 'n', 'mer', 0, null, '#9fb6c9'], ['Bouée miniature', 'm', 'plastique', 1, null, '#e5584f'], ['Marinière', 'v', 'haut', 1, 'pull', '#f4f1ea'], ['Casquette de capitaine', 'v', 'tete', 2, 'casquette', '#2f3b5c'], ['Ancre miniature', 'm', 'metal', 3, null, '#5c6b94'], ['Longue-vue', 'm', 'metal', 3, null, '#c9a35a']],
+  plage: [['Sable fin', 'm', 'sable', 0, null, '#f2dca6'], ['Coquillage', 'm', 'coquillage', 0, null, '#f6cdb8'], ['Galet poli par les vagues', 'm', 'pierre', 0, null, '#bdb5aa'], ['Bois flotté', 'm', 'bois', 0, null, '#c9b49a'], ['Algue', 'm', 'feuille', 0, null, '#5f8a4a'], ['Bob de vacancier', 'v', 'tete', 0, 'chapeau', '#f39ab0'], ['Verre poli de la plage', 'm', 'verre', 1, null, '#9fd8c4'], ['Short de bain à rayures', 'v', 'bas', 1, 'short', '#58c2b0'], ['Étoile de mer', 'm', 'corail', 2, null, '#f2905a'], ['Message dans une bouteille', 'm', 'verre', 3, null, '#bfe3d6'], ['Perle noire', 'm', 'perle', 4, null, '#3a3a4a']],
+  port: [['Bout de corde', 'm', 'tissu', 0, null, '#d9c39a'], ['Filet de pêche', 'm', 'tissu', 0, null, '#7a8a6a'], ['Sardine fraîche', 'n', 'mer', 0, null, '#9fb6c9'], ['Bouée miniature', 'm', 'plastique', 1, null, '#e5584f'], ['Marinière de matelot', 'v', 'haut', 1, 'pull', '#f4f1ea'], ['Casquette de capitaine', 'v', 'tete', 2, 'casquette', '#2f3b5c'], ['Ancre miniature', 'm', 'metal', 3, null, '#5c6b94'], ['Longue-vue', 'm', 'metal', 3, null, '#c9a35a']],
   glacier: [['Glace vanille', 'n', 'glace', 0, null, '#fbf0d0'], ['Glace fraise', 'n', 'glace', 0, null, '#f6a6b8'], ['Sorbet citron', 'n', 'agrume', 0, null, '#f6e07a'], ['Cornet croustillant', 'n', 'sucre', 0, null, '#d9a36b'], ['Cuillère en bois', 'm', 'bois', 0, null, '#d9b48a'], ['Bonnet sorbet', 'v', 'tete', 2, 'bonnet', '#f6a6b8'], ['Glace arc-en-ciel', 'n', 'glace', 3, null, '#b9a6e6']],
   piscine: [['Bonnet de bain', 'v', 'tete', 0, 'bonnet', '#4fb3d9'], ['Serviette rayée', 'm', 'tissu', 0, null, '#f39ab0'], ['Short de bain bleu', 'v', 'bas', 0, 'short', '#4f86c9'], ['Tongs', 'v', 'pieds', 1, 'chaussettes', '#58c2b0'], ['Bouée canard', 'm', 'plastique', 1, null, '#f6d36b'], ['Médaille de natation', 'm', 'medaille', 2, null, '#e3b94a']],
   gare: [['Billet de train', 'm', 'papier', 0, null, '#f2d48f'], ['Horaires jaunis', 'm', 'papier', 0, null, '#efe2c4'], ['Sandwich jambon-beurre', 'n', 'pain', 0, null, '#e3b06b'], ['Écharpe de voyageur', 'v', 'cou', 1, 'echarpe', '#5c6b94'], ['Valise vintage', 'v', 'dos', 2, 'sac', '#a8566a'], ['Montre à gousset', 'm', 'metal', 3, null, '#c9a35a'], ['Billet de l’Orient-Express', 'm', 'papier', 4, null, '#a8394a']],
   musee: [['Ticket d’entrée', 'm', 'papier', 0, null, '#f4efe2'], ['Pinceau d’artiste', 'm', 'bois', 1, null, '#c9734a'], ['Éclat de mosaïque', 'm', 'verre', 1, null, '#7fc4d9'], ['Reproduction miniature', 'd', 'statue', 1, null, '#e8d6ae'], ['Béret de peintre', 'v', 'tete', 1, 'beret', '#c94a4a'], ['Fragment antique', 'm', 'eclat', 3, null, '#d9c38f'], ['Tableau perdu', 'd', 'herbier', 4, null, '#c9a35a']],
-  patrimoine: [['Pierre taillée', 'm', 'pierre', 0, null, '#c9b8a6'], ['Cierge', 'm', 'lumiere', 0, null, '#fbf0d0'], ['Éclat de vitrail', 'm', 'verre', 1, null, '#7f9fe0'], ['Écusson brodé', 'm', 'tissu', 1, null, '#3b4a7a'], ['Cloche miniature', 'm', 'metal', 2, null, '#c9a35a'], ['Cape de chevalier', 'v', 'dos', 3, 'cape', '#3b4a7a'], ['Couronne ancienne', 'v', 'tete', 4, 'couronne', '#f2c14e']],
+  patrimoine: [['Pierre de rempart', 'm', 'pierre', 0, null, '#c9b8a6'], ['Cierge', 'm', 'lumiere', 0, null, '#fbf0d0'], ['Éclat de vitrail', 'm', 'verre', 1, null, '#7f9fe0'], ['Écusson brodé', 'm', 'tissu', 1, null, '#3b4a7a'], ['Cloche miniature', 'm', 'metal', 2, null, '#c9a35a'], ['Cape de chevalier', 'v', 'dos', 3, 'cape', '#3b4a7a'], ['Couronne ancienne', 'v', 'tete', 4, 'couronne', '#f2c14e']],
   belvedere: [['Caillou du belvédère', 'm', 'pierre', 0, null, '#bdb5aa'], ['Bonnet de randonneur', 'v', 'tete', 0, 'bonnet', '#5aa3a8'], ['Carte panoramique', 'm', 'papier', 1, null, '#bfe1f2'], ['Fleur des sommets', 'm', 'fleur', 1, null, '#cdb8ea'], ['Plume d’aigle', 'm', 'plume', 2, null, '#8a6448'], ['Éclat de lumière', 'm', 'lumiere', 3, null, '#f6e08a']],
   ecole: [['Crayon de couleur', 'm', 'bois', 0, null, '#e5584f'], ['Gomme parfumée', 'm', 'plastique', 0, null, '#f6c2cf'], ['Craie blanche', 'm', 'pierre', 0, null, '#ffffff'], ['Cahier à spirale', 'm', 'papier', 0, null, '#4f86c9'], ['Goûter', 'n', 'sucre', 0, null, '#c98a4f'], ['Cartable', 'v', 'dos', 1, 'sac', '#c9604f'], ['Bon point', 'm', 'papier', 1, null, '#f2c14e'], ['Diplôme', 'm', 'papier', 3, null, '#f4efe2']],
   sport: [['Ballon de foot', 'm', 'plastique', 0, null, '#ffffff'], ['Gourde', 'm', 'plastique', 0, null, '#58c2b0'], ['Casquette de supporter', 'v', 'tete', 0, 'casquette', '#d9604f'], ['Chaussettes de sport', 'v', 'pieds', 0, 'chaussettes', '#ffffff'], ['Sifflet', 'm', 'metal', 1, null, '#c9cdd2'], ['Maillot de l’équipe', 'v', 'haut', 1, 'tshirt', '#4f86c9'], ['Médaille d’or', 'm', 'medaille', 3, null, '#f2c14e'], ['Coupe miniature', 'd', 'statue', 4, null, '#f2c14e']],
@@ -1180,14 +1256,68 @@ Object.assign(LOOT, {
   friperie: [['Pull de grand-père', 'v', 'haut', 0, 'pull', '#b9b48a'], ['Foulard rétro', 'v', 'cou', 0, 'foulard', '#e3b04b'], ['Moufles tricotées main', 'v', 'mains', 0, 'moufles', '#d96b5f'], ['Bouton doré', 'm', 'metal', 0, null, '#e3b94a'], ['Chute de tissu', 'm', 'tissu', 0, null, '#c9b8ea'], ['Chapeau vintage', 'v', 'tete', 1, 'chapeau', '#8a6448'], ['Bottes d’occasion', 'v', 'pieds', 1, 'bottes', '#8a5a3a'], ['Veste des années 80', 'v', 'haut', 3, 'sweat', '#e0607e'], ['Broche ancienne', 'm', 'medaille', 4, null, '#9a6fd6']],
   cinema: [['Pop-corn', 'n', 'sucre', 0, null, '#fbe6a6'], ['Ticket de cinéma', 'm', 'papier', 0, null, '#e5584f'], ['Bonbons acidulés', 'n', 'sucre', 0, null, '#f39ab0'], ['Affiche de film', 'm', 'papier', 1, null, '#3b4a7a'], ['Lunettes 3D', 'm', 'plastique', 1, null, '#d9604f'], ['Pellicule', 'm', 'plastique', 2, null, '#3a3a3a'], ['Étoile de cinéma', 'm', 'medaille', 4, null, '#f2c14e']],
   bricolage: [['Clou', 'm', 'metal', 0, null, '#9aa4ac'], ['Vis', 'm', 'metal', 0, null, '#b5bcc2'], ['Ficelle', 'm', 'tissu', 0, null, '#d9c39a'], ['Planche de bois', 'm', 'bois', 0, null, '#c99a6a'], ['Gants de jardin', 'v', 'mains', 0, 'gants', '#7fae4f'], ['Pot de peinture', 'm', 'plastique', 1, null, '#4f97c4'], ['Salopette de bricoleur', 'v', 'bas', 1, 'short', '#5c6b94'], ['Boîte à outils dorée', 'm', 'metal', 3, null, '#f2c14e']],
-  camping: [['Guimauve grillée', 'n', 'sucre', 0, null, '#fbf0e0'], ['Bâton de marche', 'm', 'bois', 0, null, '#a87a50'], ['Pomme de pin', 'm', 'graine', 0, null, '#8a6448'], ['Lampe torche', 'm', 'lumiere', 1, null, '#f6e08a'], ['Bonnet de feu de camp', 'v', 'tete', 1, 'bonnet', '#d9733f'], ['Plaid à carreaux', 'm', 'tissu', 1, null, '#c94a4a'], ['Lanterne de camping', 'd', 'lanterne', 2, null, '#f6d36b'], ['Boussole ancienne', 'm', 'metal', 3, null, '#c9a35a']],
+  camping: [['Guimauve grillée', 'n', 'sucre', 0, null, '#fbf0e0'], ['Bâton de marche', 'm', 'bois', 0, null, '#a87a50'], ['Pomme de pin du feu de camp', 'm', 'graine', 0, null, '#8a6448'], ['Lampe torche', 'm', 'lumiere', 1, null, '#f6e08a'], ['Bonnet de feu de camp', 'v', 'tete', 1, 'bonnet', '#d9733f'], ['Plaid à carreaux', 'm', 'tissu', 1, null, '#c94a4a'], ['Lanterne de camping', 'd', 'lanterne', 2, null, '#f6d36b'], ['Boussole ancienne', 'm', 'metal', 3, null, '#c9a35a']],
   jouets: [['Bille en verre', 'm', 'verre', 0, null, '#7fc4d9'], ['Toupie', 'm', 'bois', 0, null, '#e5584f'], ['Ruban cadeau', 'm', 'tissu', 0, null, '#f39ab0'], ['Peluche', 'm', 'tissu', 1, null, '#c9a985'], ['Cerf-volant', 'm', 'tissu', 1, null, '#58c2b0'], ['Bonnet à oreilles', 'v', 'tete', 2, 'bonnet', '#f6c2cf'], ['Boîte à musique', 'd', 'bocal', 3, null, '#f2d48f']],
   zoo: [['Graines pour oiseaux', 'm', 'graine', 0, null, '#d9b46a'], ['Laine de lama', 'm', 'laine', 0, null, '#efe2c4'], ['Casquette safari', 'v', 'tete', 0, 'casquette', '#c9b48a'], ['Plume de perroquet', 'm', 'plume', 1, null, '#5fbf7f'], ['Écaille de poisson tropical', 'm', 'coquillage', 1, null, '#f6a63b'], ['Peluche panda roux', 'm', 'tissu', 2, null, '#ec9c6f'], ['Faux œuf de dinosaure', 'm', 'pierre', 3, null, '#b9cc8a']],
   hotel: [['Savonnette parfumée', 'm', 'plastique', 0, null, '#f6c2cf'], ['Chocolat sur l’oreiller', 'n', 'sucre', 0, null, '#6b4a32'], ['Chaussons d’hôtel', 'v', 'pieds', 0, 'chaussettes', '#fbf6ec'], ['Étiquette de bagage', 'm', 'papier', 0, null, '#efe2c4'], ['Peignoir moelleux', 'v', 'haut', 1, 'sweat', '#ffffff'], ['Clé de chambre', 'm', 'metal', 1, null, '#c9a35a'], ['Clé de la suite royale', 'm', 'metal', 4, null, '#f2c14e']],
   poste: [['Timbre', 'm', 'papier', 0, null, '#d96b5f'], ['Enveloppe', 'm', 'papier', 0, null, '#f4efe2'], ['Carte postale vierge', 'm', 'papier', 0, null, '#bfe1f2'], ['Colis mystère', 'm', 'papier', 2, null, '#c99a6a'], ['Sacoche de facteur', 'v', 'dos', 2, 'sac', '#3b5aa8'], ['Timbre rare', 'm', 'papier', 4, null, '#9a6fd6']],
   pharmacie: [['Pansement', 'm', 'tissu', 0, null, '#f2d0b0'], ['Bonbon à la menthe', 'n', 'sucre', 0, null, '#bfe3d6'], ['Tisane', 'n', 'boisson', 0, null, '#a6cf8e'], ['Baume à lèvres', 'm', 'plastique', 0, null, '#f6c2cf'], ['Écharpe chaude', 'v', 'cou', 1, 'echarpe', '#4fbf7f'], ['Herbes médicinales', 'm', 'feuille', 1, null, '#7fae4f'], ['Élixir doré', 'n', 'boisson', 3, null, '#f2c14e']],
-  ferme: [['Œufs frais', 'n', 'plat', 0, null, '#f6ead2'], ['Lait de la ferme', 'n', 'boisson', 0, null, '#fbf8f0'], ['Paille', 'm', 'ble', 0, null, '#e7c46a'], ['Plume de poule', 'm', 'plume', 0, null, '#f4efe2'], ['Pomme du verger', 'n', 'pomme', 0, null, '#d9a03a'], ['Laine de mouton', 'm', 'laine', 0, null, '#f4efe2'], ['Bottes en caoutchouc', 'v', 'pieds', 1, 'bottes', '#5f8a4a'], ['Chapeau de fermier', 'v', 'tete', 1, 'chapeau', '#c9a35a'], ['Fer à cheval porte-bonheur', 'm', 'metal', 3, null, '#9aa4ac']],
+  ferme: [['Œufs frais', 'n', 'plat', 0, null, '#f6ead2'], ['Lait de la ferme', 'n', 'boisson', 0, null, '#fbf8f0'], ['Paille', 'm', 'ble', 0, null, '#e7c46a'], ['Plume de poule', 'm', 'plume', 0, null, '#f4efe2'], ['Pomme de la ferme', 'n', 'pomme', 0, null, '#d9a03a'], ['Laine de mouton', 'm', 'laine', 0, null, '#f4efe2'], ['Bottes en caoutchouc', 'v', 'pieds', 1, 'bottes', '#5f8a4a'], ['Chapeau de fermier', 'v', 'tete', 1, 'chapeau', '#c9a35a'], ['Fer à cheval porte-bonheur', 'm', 'metal', 3, null, '#9aa4ac']],
   boutique: [['Sac en papier', 'm', 'papier', 0, null, '#d9b48a'], ['Ruban', 'm', 'tissu', 0, null, '#e07a9a'], ['Bougie parfumée', 'm', 'lumiere', 0, null, '#f6e0c0'], ['Porte-clés', 'm', 'metal', 0, null, '#c9a35a'], ['Tote bag', 'v', 'dos', 1, 'sac', '#f4efe2'], ['Mug souvenir', 'd', 'bocal', 1, null, '#ffffff'], ['Objet de collection', 'm', 'medaille', 3, null, '#9a6fd6']],
+});
+// Enrichissement des lieux du quotidien : objets ajoutés à la suite de chaque liste
+Object.entries({
+  boulangerie: [['Pain aux céréales', 'n', 'pain', 0, null, '#b5875a'], ['Éclair au café', 'n', 'sucre', 0, null, '#a8754a'], ['Miettes dorées', 'm', 'farine', 0, null, '#f2d48f'], ['Sachet de levain', 'm', 'farine', 0, null, '#efe6d2'], ['Tartelette au citron', 'n', 'agrume', 1, null, '#f6e07a'], ['Sac à pain en lin', 'm', 'tissu', 1, null, '#e9dcc0'], ['Pelle à enfourner', 'm', 'bois', 2, null, '#c99a6a']],
+  cafe: [['Sucre en morceau', 'n', 'sucre', 0, null, '#ffffff'], ['Madeleine', 'n', 'sucre', 0, null, '#e9b86b'], ['Sous-bock', 'm', 'papier', 0, null, '#d9b48a'], ['Thé glacé', 'n', 'boisson', 0, null, '#e3a94a'], ['Petite cuillère', 'm', 'metal', 0, null, '#c9cdd2'], ['Pull de barista', 'v', 'haut', 1, 'sweat', '#8a5a3a'], ['Moulin à café ancien', 'd', 'bocal', 2, null, '#a87a50'], ['Grain de café lunaire', 'm', 'graine', 4, null, '#efe8c4']],
+  restaurant: [['Pain du panier', 'n', 'pain', 0, null, '#e3b06b'], ['Mousse au chocolat', 'n', 'sucre', 0, null, '#6b4a32'], ['Menu plastifié', 'm', 'papier', 0, null, '#c9604f'], ['Cure-dent', 'm', 'bois', 0, null, '#e9cfa8'], ['Ratatouille', 'n', 'plat', 0, null, '#d9604f'], ['Crème brûlée', 'n', 'sucre', 1, null, '#e9b04b'], ['Fourchette en argent', 'm', 'metal', 2, null, '#cfd6dc'], ['Assiette d’or du chef', 'm', 'medaille', 4, null, '#f2c14e']],
+  marche: [['Poireau', 'n', 'legume', 0, null, '#a8c45a'], ['Melon', 'n', 'fruit', 0, null, '#f2a93b'], ['Bouquet de persil', 'm', 'feuille', 0, null, '#5fa24f'], ['Sac en filet', 'm', 'tissu', 0, null, '#7fae4f'], ['Cabas à roulettes', 'v', 'dos', 1, 'sac', '#c94a6a'], ['Panier de cerises', 'n', 'fruit', 2, null, '#c9304a'], ['Balance de marchand', 'm', 'metal', 2, null, '#c9a35a'], ['Tomate championne du concours', 'n', 'legume', 4, null, '#e5384f']],
+  epicerie: [['Biscuits sablés', 'n', 'sucre', 0, null, '#e9c48a'], ['Sachet de thé', 'n', 'boisson', 0, null, '#a6cf8e'], ['Pâtes artisanales', 'n', 'plat', 0, null, '#f2d48f'], ['Moutarde à l’ancienne', 'n', 'legume', 0, null, '#d9b43a'], ['Huile d’olive vierge', 'n', 'legume', 1, null, '#a8b43a'], ['Tablier d’épicier', 'v', 'haut', 1, 'tshirt', '#7fae4f'], ['Safran précieux', 'm', 'fleur', 2, null, '#e5684f'], ['Vinaigre de cent ans', 'n', 'boisson', 3, null, '#5a2e2a']],
+  poissonnerie: [['Moules', 'n', 'mer', 0, null, '#3a3a5a'], ['Crabe', 'n', 'mer', 0, null, '#e5784f'], ['Glace pilée', 'm', 'cristal', 0, null, '#e8f4f8'], ['Citron pour le poisson', 'n', 'agrume', 0, null, '#f6e07a'], ['Papier de poissonnier', 'm', 'papier', 0, null, '#f4efe2'], ['Bulot', 'n', 'mer', 0, null, '#c9b8a6'], ['Tablier ciré', 'v', 'haut', 1, 'sweat', '#3e6e9e'], ['Coquille Saint-Jacques', 'm', 'coquillage', 2, null, '#f6cda8']],
+  fleuriste: [['Brin de muguet', 'm', 'fleur', 0, null, '#fbf8f0'], ['Ruban de bouquet', 'm', 'tissu', 0, null, '#f39ab0'], ['Feuille d’eucalyptus', 'm', 'feuille', 0, null, '#8fb5a0'], ['Arrosoir miniature', 'm', 'metal', 0, null, '#7fae9f'], ['Marguerite', 'm', 'fleur', 0, null, '#ffffff'], ['Bulbe de tulipe', 'm', 'graine', 1, null, '#c9a985'], ['Cactus tout mignon', 'd', 'plante', 1, null, '#6faf6f']],
+  librairie: [['Bande dessinée', 'm', 'papier', 0, null, '#f2a03a'], ['Livre de recettes', 'm', 'papier', 0, null, '#e5584f'], ['Stylo plume', 'm', 'metal', 0, null, '#3b4a7a'], ['Lunettes de lecture', 'm', 'verre', 0, null, '#bfe3f6'], ['Tote bag de libraire', 'v', 'dos', 0, 'sac', '#e9dcc0'], ['Dictionnaire', 'm', 'papier', 0, null, '#c94a4a'], ['Signet brodé', 'm', 'tissu', 1, null, '#7a6fb8']],
+  parc: [['Marron d’Inde', 'm', 'graine', 0, null, '#8a4a2a'], ['Miettes pour canards', 'n', 'pain', 0, null, '#e9c48a'], ['Pissenlit', 'm', 'fleur', 0, null, '#f6d33a'], ['Brindille fourchue', 'm', 'bois', 0, null, '#a87a50'], ['Banc miniature', 'd', 'statue', 1, null, '#5f8a4a'], ['Médaille de jogging', 'm', 'medaille', 1, null, '#c9cdd2'], ['Couronne de pâquerettes', 'v', 'tete', 2, 'fleurs', '#fff8f0'], ['Plume du cygne royal', 'm', 'plume', 4, null, '#ffffff']],
+  rue: [['Feuille morte', 'm', 'feuille', 0, null, '#c9843a'], ['Élastique', 'm', 'plastique', 0, null, '#c9604f'], ['Flyer de concert', 'm', 'papier', 0, null, '#b07ccf'], ['Écharpe retrouvée', 'v', 'cou', 1, 'echarpe', '#e9a03a'], ['Pièce porte-bonheur', 'm', 'medaille', 2, null, '#c9a35a']],
+  route: [['Pomme tombée du camion', 'n', 'pomme', 0, null, '#e5584f'], ['Chicorée sauvage', 'm', 'fleur', 0, null, '#7f9fe0'], ['Poussière de route', 'm', 'sable', 0, null, '#d9c8aa'], ['Bâton de pèlerin', 'm', 'bois', 0, null, '#8a6448'], ['Casquette de routier', 'v', 'tete', 1, 'casquette', '#c94a4a'], ['Enjoliveur brillant', 'm', 'metal', 2, null, '#cfd6dc'], ['Borne kilométrique en or', 'm', 'pierre', 4, null, '#f2c14e']],
+  plage: [['Pelle et seau', 'm', 'plastique', 0, null, '#f2a03a'], ['Crème solaire', 'm', 'plastique', 0, null, '#f6e0c0'], ['Beignet de plage', 'n', 'sucre', 0, null, '#e9b86b'], ['Lunettes de soleil en cœur', 'm', 'plastique', 1, null, '#f06a90']],
+  port: [['Nœud marin', 'm', 'tissu', 0, null, '#d9c39a'], ['Bonnet de docker', 'v', 'tete', 0, 'bonnet', '#c94a4a'], ['Galette bretonne', 'n', 'sucre', 0, null, '#e9b86b'], ['Bocal de bigorneaux', 'n', 'mer', 0, null, '#5a5a6a'], ['Bout de voile', 'm', 'tissu', 0, null, '#f4f1ea'], ['Mouette en bois', 'd', 'statue', 1, null, '#f4f1ea'], ['Boussole de marin', 'm', 'metal', 2, null, '#c9a35a'], ['Gouvernail d’or', 'm', 'metal', 4, null, '#f2c14e']],
+  glacier: [['Glace chocolat', 'n', 'glace', 0, null, '#8a5a3a'], ['Glace pistache', 'n', 'glace', 0, null, '#b9d98a'], ['Serviette en papier', 'm', 'papier', 0, null, '#fbf6ec'], ['Pépites de chocolat', 'n', 'sucre', 0, null, '#6b4a32'], ['Sorbet framboise', 'n', 'glace', 1, null, '#e5587f'], ['Chantilly', 'n', 'sucre', 1, null, '#fffaf0'], ['Tablier rayé de glacier', 'v', 'haut', 1, 'tshirt', '#f6a6b8'], ['Coupe géante', 'n', 'glace', 2, null, '#f6c2cf'], ['Glace aux étoiles filantes', 'n', 'glace', 4, null, '#9a8fe0']],
+  piscine: [['Lunettes de natation', 'm', 'plastique', 0, null, '#4fb3d9'], ['Frite en mousse', 'm', 'plastique', 0, null, '#f2a03a'], ['Pince-nez', 'm', 'plastique', 0, null, '#f39ab0'], ['Barre chocolatée', 'n', 'sucre', 0, null, '#8a5a3a'], ['Planche de natation', 'm', 'plastique', 0, null, '#f6d36b'], ['Peignoir de bain', 'v', 'haut', 1, 'sweat', '#bfe3f6'], ['Bonnet à fleurs de nageuse', 'v', 'tete', 2, 'bonnet', '#f6c2cf'], ['Trophée de plongeon', 'd', 'statue', 3, null, '#e3b94a'], ['Médaille d’or de brasse', 'm', 'medaille', 4, null, '#f2c14e']],
+  gare: [['Café du distributeur', 'n', 'boisson', 0, null, '#a87a50'], ['Ticket composté', 'm', 'papier', 0, null, '#f2d48f'], ['Plan du réseau', 'm', 'papier', 0, null, '#bfe1f2'], ['Croissant de quai', 'n', 'sucre', 0, null, '#e9b86b'], ['Écouteurs emmêlés', 'm', 'plastique', 0, null, '#ffffff'], ['Casquette de contrôleur', 'v', 'tete', 1, 'casquette', '#3b4a7a'], ['Sifflet de chef de gare', 'm', 'metal', 1, null, '#c9cdd2'], ['Lanterne de quai', 'd', 'lanterne', 2, null, '#e9a03a']],
+  musee: [['Plan du musée', 'm', 'papier', 0, null, '#efe2c4'], ['Audioguide', 'm', 'plastique', 0, null, '#3a3a4a'], ['Carte postale de tableau', 'm', 'papier', 0, null, '#7f9fe0'], ['Crayon du musée', 'm', 'bois', 0, null, '#c39a4c'], ['Cookie de la cafétéria', 'n', 'sucre', 0, null, '#c98a4f'], ['Tote bag de musée', 'v', 'dos', 0, 'sac', '#f4efe2'], ['Écharpe de conservateur', 'v', 'cou', 0, 'echarpe', '#7a6a8a'], ['Fossile', 'm', 'pierre', 2, null, '#c9b8a6'], ['Cadre doré', 'm', 'bois', 2, null, '#e3b94a']],
+  patrimoine: [['Brin de lierre', 'm', 'feuille', 0, null, '#4f7a4a'], ['Goutte de cire', 'm', 'lumiere', 0, null, '#fbf0d0'], ['Plume de corbeau', 'm', 'plume', 0, null, '#2f2f3a'], ['Mousse de rempart', 'm', 'mousse', 0, null, '#8fbf6a'], ['Pain d’épices', 'n', 'sucre', 0, null, '#b5703a'], ['Tuile ancienne', 'm', 'pierre', 0, null, '#c9734a'], ['Blason peint', 'm', 'bois', 1, null, '#3b5aa8'], ['Clé du donjon', 'm', 'metal', 2, null, '#7a6a5a']],
+  belvedere: [['Pièce pour la longue-vue', 'm', 'metal', 0, null, '#c9a35a'], ['Pique-nique du sommet', 'n', 'plat', 0, null, '#d9a35a'], ['Écharpe de vent', 'v', 'cou', 0, 'echarpe', '#bfe3f6'], ['Brin de thym', 'm', 'feuille', 0, null, '#8a9a6a'], ['Sandwich panorama', 'n', 'pain', 0, null, '#e3b06b'], ['Caillou en forme de cœur', 'm', 'pierre', 0, null, '#e9b8b8'], ['Nuage en bocal', 'd', 'bocal', 1, null, '#f4f8fc'], ['Rayon de soleil levant', 'm', 'lumiere', 4, null, '#f6c86b']],
+  ecole: [['Règle en bois', 'm', 'bois', 0, null, '#d9b48a'], ['Taille-crayon', 'm', 'metal', 0, null, '#c9cdd2'], ['Trousse', 'm', 'tissu', 0, null, '#7fc4d9'], ['Billes de récré', 'm', 'verre', 0, null, '#9fd8c4'], ['Tablier de peinture', 'v', 'haut', 1, 'tshirt', '#f6d36b'], ['Globe de la classe', 'd', 'mappemonde', 2, null, '#7fb6d9'], ['Plume d’encre dorée', 'm', 'plume', 4, null, '#f2c14e']],
+  sport: [['Bandeau éponge', 'v', 'tete', 0, 'bonnet', '#e5584f'], ['Banane énergétique', 'n', 'fruit', 0, null, '#f6d33a'], ['Ticket de match', 'm', 'papier', 0, null, '#f2d48f'], ['Écharpe de supporter', 'v', 'cou', 0, 'echarpe', '#4f86c9'], ['Volant de badminton', 'm', 'plume', 0, null, '#ffffff'], ['Short de foot', 'v', 'bas', 1, 'short', '#ffffff'], ['Chronomètre', 'm', 'metal', 2, null, '#c9cdd2']],
+  mode: [['Cintre', 'm', 'bois', 0, null, '#d9b48a'], ['Étiquette de prix', 'm', 'papier', 0, null, '#f4efe2'], ['Jupe à pois', 'v', 'bas', 0, 'jupe', '#e5587f'], ['Gants de soie', 'v', 'mains', 2, 'gants', '#f6c2cf'], ['Écharpe de haute couture', 'v', 'cou', 4, 'echarpe', '#9a6fd6']],
+  friperie: [['Gilet en tricot', 'v', 'haut', 0, 'pull', '#a8b48a'], ['Nœud papillon rétro', 'v', 'cou', 0, 'noeud', '#c94a6a'], ['Jean élimé', 'v', 'bas', 0, 'short', '#6f8fb4'], ['Bonnet de skieur rétro', 'v', 'tete', 0, 'bonnet', '#e9a03a'], ['Sac en cuir usé', 'v', 'dos', 1, 'sac', '#8a5a3a'], ['Chaussettes à paillettes', 'v', 'pieds', 1, 'chaussettes', '#cdb8ea'], ['Manteau de star oublié', 'v', 'haut', 2, 'sweat', '#c9a35a']],
+  cinema: [['Gobelet de soda', 'm', 'plastique', 0, null, '#e5584f'], ['Réglisse', 'n', 'sucre', 0, null, '#2f2f3a'], ['Nachos', 'n', 'plat', 0, null, '#f2c14e'], ['Lunettes de star', 'm', 'plastique', 0, null, '#2f2f3a'], ['Programme de la séance', 'm', 'papier', 0, null, '#f2d48f'], ['Coussin de velours rouge', 'm', 'tissu', 1, null, '#a8394a'], ['Clap de tournage', 'm', 'bois', 2, null, '#3a3a3a'], ['Autographe de star', 'm', 'papier', 3, null, '#f2c14e']],
+  bricolage: [['Rondelle', 'm', 'metal', 0, null, '#b5bcc2'], ['Ruban adhésif', 'm', 'plastique', 0, null, '#c9a35a'], ['Papier de verre', 'm', 'sable', 0, null, '#c9a36b'], ['Mètre ruban', 'm', 'metal', 0, null, '#f6d33a'], ['Casquette de bricoleur', 'v', 'tete', 1, 'casquette', '#f2a03a'], ['Pinceau large', 'm', 'bois', 1, null, '#c99a6a'], ['Niveau à bulle', 'm', 'verre', 2, null, '#f6e04a'], ['Marteau en or', 'm', 'metal', 4, null, '#f2c14e']],
+  camping: [['Saucisse grillée', 'n', 'plat', 0, null, '#b5583a'], ['Allumettes', 'm', 'bois', 0, null, '#e5584f'], ['Duvet', 'm', 'tissu', 0, null, '#4f86c9'], ['Gourde cabossée', 'm', 'metal', 0, null, '#9aa4ac'], ['Chocolat de randonnée', 'n', 'sucre', 0, null, '#6b4a32'], ['Sac à dos de rando', 'v', 'dos', 1, 'sac', '#d9733f'], ['Harmonica', 'm', 'metal', 2, null, '#cfd6dc'], ['Étoile du feu de camp', 'm', 'lumiere', 4, null, '#f6a03a']],
+  jouets: [['Dé en bois', 'm', 'bois', 0, null, '#e9cfa8'], ['Pâte à modeler', 'm', 'plastique', 0, null, '#58c2b0'], ['Petite voiture', 'm', 'metal', 0, null, '#e5584f'], ['Bonbon caché', 'n', 'sucre', 0, null, '#f39ab0'], ['Pièce de puzzle', 'm', 'papier', 0, null, '#7fb6d9'], ['Yoyo', 'm', 'plastique', 1, null, '#f2a03a'], ['Robot à clé', 'm', 'metal', 2, null, '#9aa4ac'], ['Ours en peluche centenaire', 'm', 'tissu', 4, null, '#c9a985']],
+  zoo: [['Plan du zoo', 'm', 'papier', 0, null, '#a6cf8e'], ['Ticket du zoo', 'm', 'papier', 0, null, '#f2d48f'], ['Brin de bambou', 'm', 'bois', 0, null, '#a8c45a'], ['Feuille de bananier', 'm', 'feuille', 0, null, '#5fa24f'], ['Jumelles', 'm', 'metal', 0, null, '#3a3a4a'], ['Plume de flamant rose', 'm', 'plume', 1, null, '#f6a6b8'], ['Casquette à oreilles de lion', 'v', 'tete', 1, 'casquette', '#e9b04b'], ['Mue de serpent', 'm', 'tissu', 2, null, '#d9cfa8'], ['Plume de paon blanc', 'm', 'plume', 4, null, '#fbf8f0']],
+  hotel: [['Bonbon du comptoir', 'n', 'sucre', 0, null, '#f6c2cf'], ['Bonnet de nuit', 'v', 'tete', 0, 'bonnet', '#bfd0f0'], ['Mini-confiture', 'n', 'fruit', 0, null, '#c94a6a'], ['Papier à en-tête', 'm', 'papier', 0, null, '#fbf6ec'], ['Masque de sommeil', 'm', 'tissu', 0, null, '#3b4a7a'], ['Pancarte « Ne pas déranger »', 'm', 'papier', 1, null, '#e5584f'], ['Sonnette de réception', 'm', 'metal', 2, null, '#e3b94a'], ['Peignoir brodé d’or', 'v', 'haut', 3, 'sweat', '#fbf0d0']],
+  poste: [['Élastique de facteur', 'm', 'plastique', 0, null, '#c9604f'], ['Tampon encreur', 'm', 'bois', 0, null, '#3b4a7a'], ['Ficelle à colis', 'm', 'tissu', 0, null, '#d9c39a'], ['Chaussettes de facteur', 'v', 'pieds', 0, 'chaussettes', '#3b5aa8'], ['Papier bulle', 'm', 'plastique', 0, null, '#e8f4f8'], ['Lettre d’amour perdue', 'm', 'papier', 1, null, '#f6c2cf'], ['Casquette de facteur', 'v', 'tete', 1, 'casquette', '#3b5aa8'], ['Pull de facteur', 'v', 'haut', 1, 'pull', '#e3a92e'], ['Carte postale du bout du monde', 'm', 'papier', 3, null, '#7fc4d9']],
+  pharmacie: [['Pastille au miel', 'n', 'sucre', 0, null, '#f2b13e'], ['Coton tout doux', 'm', 'tissu', 0, null, '#ffffff'], ['Thermomètre', 'm', 'verre', 0, null, '#e8f4f8'], ['Sirop à la fraise', 'n', 'boisson', 0, null, '#e5587f'], ['Crème hydratante', 'm', 'plastique', 0, null, '#fbf6ec'], ['Bouillotte', 'm', 'plastique', 1, null, '#e5584f'], ['Mortier ancien', 'd', 'bocal', 2, null, '#c9b8a6'], ['Potion de bonne humeur', 'n', 'boisson', 4, null, '#f39ab0']],
+  ferme: [['Beurre de baratte', 'n', 'fromage', 0, null, '#f6e08a'], ['Fromage frais', 'n', 'fromage', 0, null, '#fbf8f0'], ['Seau de traite', 'm', 'metal', 0, null, '#b5bcc2'], ['Salopette de fermier', 'v', 'bas', 1, 'short', '#5c6b94'], ['Plume de dindon', 'm', 'plume', 1, null, '#6b5a4a'], ['Tracteur miniature', 'd', 'statue', 2, null, '#c94a4a'], ['Œuf en or', 'm', 'medaille', 4, null, '#f2c14e']],
+  boutique: [['Carte de vœux', 'm', 'papier', 0, null, '#f6c2cf'], ['Savon artisanal', 'm', 'plastique', 0, null, '#cdb8ea'], ['Magnet souvenir', 'm', 'metal', 0, null, '#7fb6d9'], ['Bracelet brésilien', 'm', 'tissu', 0, null, '#f2a03a'], ['Papier cadeau', 'm', 'papier', 0, null, '#e5584f'], ['Bougie en forme de chat', 'm', 'lumiere', 1, null, '#f6e0c0'], ['Boule à neige', 'd', 'bocal', 2, null, '#bfe3f6'], ['Boîte à bijoux enchantée', 'd', 'bocal', 4, null, '#9a6fd6']],
+}).forEach(([k, v]) => LOOT[k].push(...v));
+// Nouveaux lieux du quotidien
+Object.assign(LOOT, {
+  fromagerie: [['Camembert', 'n', 'fromage', 0, null, '#f6f0e0'], ['Tomme de Savoie', 'n', 'fromage', 0, null, '#e9d9a6'], ['Morceau de gruyère', 'n', 'fromage', 0, null, '#f2d06b'], ['Crottin de chèvre', 'n', 'fromage', 0, null, '#fbf8f0'], ['Bleu crémeux', 'n', 'fromage', 0, null, '#cfd9e0'], ['Croûte de comté', 'n', 'fromage', 0, null, '#d9a35a'], ['Raisin pour le plateau', 'n', 'fruit', 0, null, '#7a5fb8'], ['Papier de fromager', 'm', 'papier', 0, null, '#f4efe2'], ['Planche à fromage', 'm', 'bois', 0, null, '#c99a6a'], ['Tablier de fromager', 'v', 'haut', 1, 'tshirt', '#e3b84a'], ['Cloche à fromage', 'd', 'bocal', 1, null, '#e8f4f8'], ['Brie truffé', 'n', 'fromage', 1, null, '#f4ead2'], ['Meule miniature', 'n', 'fromage', 2, null, '#f2c14e'], ['Fromage affiné 40 mois', 'n', 'fromage', 3, null, '#e3a94a'], ['Fromage de la Lune', 'n', 'fromage', 4, null, '#efe8c4']],
+  boucherie: [['Saucisson', 'n', 'plat', 0, null, '#a8394a'], ['Jambon blanc', 'n', 'plat', 0, null, '#f6b8b8'], ['Pâté de campagne', 'n', 'plat', 0, null, '#b5703a'], ['Rôti ficelé', 'n', 'plat', 0, null, '#c9604f'], ['Saucisse de Toulouse', 'n', 'plat', 0, null, '#c95a4a'], ['Chipolatas', 'n', 'plat', 0, null, '#e5847a'], ['Ficelle de boucher', 'm', 'tissu', 0, null, '#f4efe2'], ['Papier de boucherie', 'm', 'papier', 0, null, '#f6dcd0'], ['Persil du comptoir', 'm', 'feuille', 0, null, '#5fa24f'], ['Tablier rayé de boucher', 'v', 'haut', 1, 'tshirt', '#3b4a7a'], ['Terrine maison', 'n', 'plat', 1, null, '#a8754a'], ['Bonnet de charcutier', 'v', 'tete', 1, 'bonnet', '#ffffff'], ['Pâté en croûte primé', 'n', 'plat', 2, null, '#d9a35a'], ['Jambon affiné 36 mois', 'n', 'plat', 3, null, '#c9304a'], ['Saucisson en or massif', 'm', 'medaille', 4, null, '#f2c14e']],
+  coiffeur: [['Mèche bouclée', 'm', 'laine', 0, null, '#c98a4f'], ['Peigne', 'm', 'plastique', 0, null, '#3a3a4a'], ['Barrette', 'm', 'plastique', 0, null, '#f39ab0'], ['Bigoudi', 'm', 'plastique', 0, null, '#f6a6b8'], ['Chouchou', 'm', 'tissu', 0, null, '#e07ab0'], ['Magazine de coiffure', 'm', 'papier', 0, null, '#f2d48f'], ['Laque parfumée', 'm', 'plastique', 0, null, '#cdb8ea'], ['Serviette de salon', 'm', 'tissu', 0, null, '#ffffff'], ['Nœud de coiffeur', 'v', 'cou', 0, 'noeud', '#e07ab0'], ['Brosse ronde', 'm', 'bois', 1, null, '#a87a50'], ['Cape de coiffeur', 'v', 'dos', 1, 'cape', '#2f2f3a'], ['Béret de coiffeuse', 'v', 'tete', 1, 'beret', '#e07ab0'], ['Ciseaux d’argent', 'm', 'metal', 2, null, '#cfd6dc'], ['Perruque de diva', 'm', 'laine', 3, null, '#f2c14e'], ['Mèche de licorne', 'm', 'laine', 4, null, '#cdb8ea']],
+  laverie: [['Chaussette orpheline', 'v', 'pieds', 0, 'chaussettes', '#e5584f'], ['Pull rétréci', 'v', 'haut', 0, 'pull', '#a6cf8e'], ['Pince à linge', 'm', 'bois', 0, null, '#e9cfa8'], ['Lessive parfumée', 'm', 'plastique', 0, null, '#7fc4d9'], ['Peluche de sèche-linge', 'm', 'laine', 0, null, '#c9cdd2'], ['Jeton de laverie', 'm', 'metal', 0, null, '#c9a35a'], ['Bouton égaré', 'm', 'plastique', 0, null, '#5b4636'], ['Mouchoir oublié', 'm', 'tissu', 0, null, '#bfe3f6'], ['Bulle de lessive', 'm', 'verre', 0, null, '#e8f4f8'], ['Panier à linge', 'v', 'dos', 1, 'sac', '#d9c39a'], ['Drap tout doux', 'm', 'tissu', 1, null, '#f4f1ea'], ['T-shirt délavé', 'v', 'haut', 1, 'tshirt', '#9fb6c9'], ['Chaussette jumelle retrouvée', 'v', 'pieds', 2, 'chaussettes', '#e5584f'], ['Pull qui sent la lavande', 'v', 'haut', 3, 'pull', '#b9a6e6'], ['Chaussettes arc-en-ciel', 'v', 'pieds', 4, 'chaussettes', '#f2a0c0']],
+  bibliotheque: [['Carte de lecteur', 'm', 'papier', 0, null, '#bfe1f2'], ['Livre de contes', 'm', 'papier', 0, null, '#e07a9a'], ['Encyclopédie', 'm', 'papier', 0, null, '#3b4a7a'], ['Atlas', 'm', 'papier', 0, null, '#7fb6d9'], ['Fiche de prêt', 'm', 'papier', 0, null, '#f4efe2'], ['Crayon à papier', 'm', 'bois', 0, null, '#f2c14e'], ['Coussin de lecture', 'm', 'tissu', 0, null, '#f6c2cf'], ['Lunettes rondes', 'm', 'verre', 0, null, '#c9a35a'], ['Album photo', 'm', 'papier', 0, null, '#a8566a'], ['Pull de rat de bibliothèque', 'v', 'haut', 1, 'pull', '#8a7ab8'], ['Lampe de lecture', 'd', 'lampe', 1, null, '#f6e08a'], ['Écharpe silencieuse', 'v', 'cou', 1, 'echarpe', '#5f7ab8'], ['Manuscrit enluminé', 'm', 'papier', 2, null, '#e3b94a'], ['Carte d’un pays imaginaire', 'm', 'papier', 3, null, '#9fd8c4'], ['Livre qui se lit tout seul', 'm', 'papier', 4, null, '#9a6fd6']],
+  jardin: [['Radis rose', 'n', 'legume', 0, null, '#e5587f'], ['Courgette', 'n', 'legume', 0, null, '#5f8a3f'], ['Tomate cerise', 'n', 'legume', 0, null, '#e5384f'], ['Fraise des bois', 'n', 'fruit', 0, null, '#e5584f'], ['Feuille de menthe', 'm', 'feuille', 0, null, '#5fbf7f'], ['Graines de capucine', 'm', 'graine', 0, null, '#a9784f'], ['Terreau', 'm', 'sable', 0, null, '#6b4a32'], ['Ficelle à tuteur', 'm', 'tissu', 0, null, '#d9c39a'], ['Brin de lavande', 'm', 'fleur', 0, null, '#b9a6e6'], ['Arrosoir en zinc', 'm', 'metal', 1, null, '#9aa4ac'], ['Chapeau de jardinier', 'v', 'tete', 1, 'chapeau', '#d9b46a'], ['Coccinelle sur une feuille', 'm', 'feuille', 1, null, '#e5384f'], ['Potiron primé', 'n', 'legume', 2, null, '#f08a3a'], ['Rose ancienne', 'm', 'fleur', 3, null, '#e07a9a'], ['Haricot magique', 'm', 'graine', 4, null, '#5fbf5f']],
+  etang: [['Feuille de nénuphar', 'm', 'feuille', 0, null, '#6faf4f'], ['Photo de têtard', 'm', 'papier', 0, null, '#a6cf8e'], ['Plume de canard', 'm', 'plume', 0, null, '#7a8a6a'], ['Caillou plat', 'm', 'pierre', 0, null, '#a9b4bc'], ['Massette', 'm', 'feuille', 0, null, '#8a6448'], ['Graines pour canards', 'm', 'graine', 0, null, '#d9b46a'], ['Coquille d’escargot d’eau', 'm', 'coquillage', 0, null, '#c9b48a'], ['Bois flotté d’étang', 'm', 'bois', 0, null, '#b5a58a'], ['Galet moussu', 'm', 'mousse', 0, null, '#7fae6a'], ['Bottes de grenouille', 'v', 'pieds', 1, 'bottes', '#6fbf5f'], ['Fleur de nénuphar', 'm', 'fleur', 1, null, '#f6c2cf'], ['Ciré de promeneur', 'v', 'haut', 1, 'sweat', '#f6d36b'], ['Écaille de carpe koï', 'm', 'coquillage', 2, null, '#f2905a'], ['Couronne du roi grenouille', 'v', 'tete', 3, 'couronne', '#a6d96a'], ['Perle du fond de l’étang', 'm', 'perle', 4, null, '#dff2ea']],
+  riviere: [['Galet de rivière', 'm', 'pierre', 0, null, '#a9a39a'], ['Branche flottée', 'm', 'bois', 0, null, '#b5a58a'], ['Cresson', 'n', 'legume', 0, null, '#5fa24f'], ['Bateau en papier', 'm', 'papier', 0, null, '#f4efe2'], ['Sable de rivière', 'm', 'sable', 0, null, '#d9c8aa'], ['Mousse de berge', 'm', 'mousse', 0, null, '#6f9a5f'], ['Roseau chantant', 'm', 'feuille', 0, null, '#b9b46a'], ['Mûres de la berge', 'n', 'fruit', 0, null, '#4a2e5a'], ['Caillou rayé', 'm', 'pierre', 0, null, '#8a8378'], ['Écharpe de batelier', 'v', 'cou', 1, 'echarpe', '#3e6e9e'], ['Épuisette', 'm', 'tissu', 1, null, '#7a8a6a'], ['Casquette de pêcheur à la mouche', 'v', 'tete', 1, 'casquette', '#7a8a5a'], ['Plume de martin-pêcheur', 'm', 'plume', 2, null, '#2fa6c9'], ['Pépite d’or de rivière', 'm', 'metal', 3, null, '#f2c14e'], ['Pierre de lune de la rivière', 'm', 'lune', 4, null, '#dfe8f2']],
+  sentier: [['Bâton de randonnée', 'm', 'bois', 0, null, '#8a6448'], ['Carte de randonnée', 'm', 'papier', 0, null, '#f2d48f'], ['Barre de céréales', 'n', 'sucre', 0, null, '#c99a6a'], ['Caillou de cairn', 'm', 'pierre', 0, null, '#bdb5aa'], ['Pomme de pin de mélèze', 'm', 'graine', 0, null, '#8a6448'], ['Gourde d’eau fraîche', 'm', 'plastique', 0, null, '#4fb3d9'], ['Myrtilles du sentier', 'n', 'fruit', 0, null, '#4a5a9a'], ['Chaussettes de marche', 'v', 'pieds', 0, 'chaussettes', '#a9784f'], ['Brin de genévrier', 'm', 'feuille', 0, null, '#4f7a6a'], ['Bonnet de trekkeur', 'v', 'tete', 1, 'bonnet', '#e9a03a'], ['Sac à dos de sommet', 'v', 'dos', 1, 'sac', '#5aa3a8'], ['Fleur de gentiane', 'm', 'fleur', 1, null, '#4f6fd9'], ['Cristal du sentier', 'm', 'cristal', 2, null, '#cfeaf7'], ['Plume de lagopède', 'm', 'plume', 3, null, '#fbf8f0'], ['Pierre du sommet du monde', 'm', 'pierre', 4, null, '#e9eef5']],
+  jeux: [['Pelle de bac à sable', 'm', 'plastique', 0, null, '#f2a03a'], ['Seau de sable', 'm', 'sable', 0, null, '#f2dca6'], ['Craie de marelle', 'm', 'pierre', 0, null, '#bfe3f6'], ['Corde à sauter', 'm', 'tissu', 0, null, '#e5584f'], ['Ballon rebondissant', 'm', 'plastique', 0, null, '#58c2b0'], ['Goûter partagé', 'n', 'sucre', 0, null, '#c98a4f'], ['Billes de couleur', 'm', 'verre', 0, null, '#f39ab0'], ['Flacon à bulles', 'm', 'plastique', 0, null, '#bfe3f6'], ['Casquette de récré', 'v', 'tete', 0, 'casquette', '#f2b23a'], ['Toboggan miniature', 'd', 'statue', 1, null, '#e5584f'], ['Cerf-volant arc-en-ciel', 'm', 'tissu', 1, null, '#b9a6e6'], ['Pull à étoiles', 'v', 'haut', 1, 'sweat', '#3b4a7a'], ['Médaille du roi du toboggan', 'm', 'medaille', 2, null, '#e3b94a'], ['Couronne de la balançoire', 'v', 'tete', 3, 'couronne', '#f6c2cf'], ['Bille galactique', 'm', 'verre', 4, null, '#5a4ab8']],
+  puces: [['Vieille clé', 'm', 'metal', 0, null, '#a87a50'], ['Assiette dépareillée', 'm', 'verre', 0, null, '#bfe1f2'], ['Carte postale jaunie', 'm', 'papier', 0, null, '#e9d9a6'], ['Vinyle rayé', 'm', 'plastique', 0, null, '#2f2f3a'], ['Dé à coudre', 'm', 'metal', 0, null, '#c9cdd2'], ['Napperon en dentelle', 'm', 'tissu', 0, null, '#fbf8f0'], ['Bouton de nacre', 'm', 'coquillage', 0, null, '#f3ece4'], ['Photo ancienne', 'm', 'papier', 0, null, '#c9b48a'], ['Cuillère souvenir', 'm', 'metal', 0, null, '#c9a35a'], ['Théière fleurie', 'd', 'bocal', 1, null, '#f6c2cf'], ['Chapeau cloche', 'v', 'tete', 1, 'chapeau', '#8a5a6a'], ['Valise en carton', 'v', 'dos', 1, 'sac', '#a87a50'], ['Gramophone miniature', 'd', 'statue', 2, null, '#c9a35a'], ['Tableau d’un peintre inconnu', 'd', 'herbier', 3, null, '#7f9fe0'], ['Lampe merveilleuse', 'd', 'lampe', 4, null, '#f2c14e']],
+  chocolaterie: [['Carré de chocolat noir', 'n', 'sucre', 0, null, '#4a2e22'], ['Praline', 'n', 'sucre', 0, null, '#c98a4f'], ['Truffe en chocolat', 'n', 'sucre', 0, null, '#5a3a2a'], ['Mendiant', 'n', 'sucre', 0, null, '#6b4a32'], ['Orangette', 'n', 'agrume', 0, null, '#e9963b'], ['Guimauve enrobée', 'n', 'sucre', 0, null, '#8a5a3a'], ['Tablette au lait', 'n', 'sucre', 0, null, '#a8754a'], ['Fève de cacao', 'm', 'graine', 0, null, '#7a4a2a'], ['Papier doré', 'm', 'papier', 0, null, '#f2c14e'], ['Œuf en chocolat', 'n', 'sucre', 1, null, '#8a5a3a'], ['Tablier chocolat', 'v', 'haut', 1, 'tshirt', '#6b4a32'], ['Moule en forme de poule', 'm', 'metal', 1, null, '#cfd6dc'], ['Fontaine de chocolat miniature', 'd', 'bocal', 2, null, '#8a5a3a'], ['Statue en chocolat', 'd', 'statue', 3, null, '#6b4a32'], ['Fève de cacao dorée', 'm', 'graine', 4, null, '#f2c14e']],
+  caviste: [['Jus de raisin', 'n', 'boisson', 0, null, '#7a3a5a'], ['Pétillant de pomme', 'n', 'boisson', 0, null, '#f2d06b'], ['Grappe de raisin', 'n', 'fruit', 0, null, '#6a4a8a'], ['Caisse en bois', 'm', 'bois', 0, null, '#c99a6a'], ['Étiquette ancienne', 'm', 'papier', 0, null, '#efe2c4'], ['Sarment de vigne', 'm', 'bois', 0, null, '#8a6448'], ['Feuille de vigne', 'm', 'feuille', 0, null, '#7fae4f'], ['Tire-bouchon', 'm', 'metal', 0, null, '#b5bcc2'], ['Bouchon champignon', 'm', 'bois', 0, null, '#d9b48a'], ['Tablier de sommelier', 'v', 'haut', 1, 'tshirt', '#2f2f3a'], ['Carafe en cristal', 'm', 'verre', 1, null, '#e8f4f8'], ['Nœud de sommelier', 'v', 'cou', 1, 'noeud', '#9a4a6a'], ['Cep de vigne centenaire', 'm', 'bois', 2, null, '#6b4a32'], ['Tastevin d’argent', 'm', 'metal', 3, null, '#cfd6dc'], ['Grain de raisin d’or', 'n', 'fruit', 4, null, '#f2c14e']],
+  mairie: [['Formulaire en trois exemplaires', 'm', 'papier', 0, null, '#f4efe2'], ['Tampon officiel', 'm', 'bois', 0, null, '#3b4a7a'], ['Ruban d’inauguration', 'm', 'tissu', 0, null, '#e5584f'], ['Agrafe', 'm', 'metal', 0, null, '#b5bcc2'], ['Ticket d’attente', 'm', 'papier', 0, null, '#f2d48f'], ['Brochure municipale', 'm', 'papier', 0, null, '#bfe1f2'], ['Stylo attaché à sa ficelle', 'm', 'plastique', 0, null, '#4f86c9'], ['Dragée de mariage', 'n', 'sucre', 0, null, '#f6dce4'], ['Confettis de mariage', 'm', 'papier', 0, null, '#f39ab0'], ['Écharpe de cérémonie', 'v', 'cou', 1, 'echarpe', '#5c6b94'], ['Médaille de la ville', 'm', 'medaille', 1, null, '#c9a35a'], ['Nœud papillon de mariage', 'v', 'cou', 1, 'noeud', '#fbf8f0'], ['Clé du beffroi', 'm', 'metal', 2, null, '#7a6a5a'], ['Registre de 1800', 'm', 'papier', 3, null, '#a8754a'], ['Sceau d’or de la commune', 'm', 'medaille', 4, null, '#f2c14e']],
+  phare: [['Bout de cordage', 'm', 'tissu', 0, null, '#d9c39a'], ['Écume de mer', 'm', 'sable', 0, null, '#f4f8fc'], ['Plume de goéland', 'm', 'plume', 0, null, '#e9eef0'], ['Coquille de patelle', 'm', 'coquillage', 0, null, '#c9b8a6'], ['Lichen orange', 'm', 'mousse', 0, null, '#f2a03a'], ['Galette du gardien', 'n', 'sucre', 0, null, '#e9b86b'], ['Thé du gardien', 'n', 'boisson', 0, null, '#c98a4f'], ['Ciré de gardien de phare', 'v', 'haut', 0, 'sweat', '#f6d36b'], ['Carnet de bord', 'm', 'papier', 0, null, '#a87a50'], ['Bonnet marin à pompon', 'v', 'tete', 1, 'bonnet', '#3b4a7a'], ['Ampoule du phare', 'm', 'lumiere', 1, null, '#f6e08a'], ['Longue-vue de gardien', 'm', 'metal', 1, null, '#c9a35a'], ['Lentille de Fresnel', 'm', 'verre', 2, null, '#bfe3f6'], ['Rayon de phare en bocal', 'd', 'lanterne', 3, null, '#f6e08a'], ['Lumière qui guide les bateaux', 'm', 'lumiere', 4, null, '#fff3b0']],
 });
 // Spécialité unique à chaque lieu ({P} = nom du lieu)
 const SPECIALTY = {
@@ -1198,6 +1328,16 @@ const SPECIALTY = {
   port: ['Pavillon de {P}', 'm', 'tissu', 2, null, '#3e6e9e'], glacier: ['Parfum secret de {P}', 'n', 'glace', 2, null, '#b9a6e6'], musee: ['Catalogue de {P}', 'm', 'papier', 2, null, '#c39a4c'],
   patrimoine: ['Médaille de {P}', 'm', 'medaille', 2, null, '#c9a35a'], gare: ['Billet pour {P}', 'm', 'papier', 2, null, '#f2d48f'], mode: ['Pièce unique de {P}', 'v', 'cou', 2, 'foulard', '#b07ccf'],
   friperie: ['Trouvaille de {P}', 'v', 'tete', 2, 'chapeau', '#a8566a'],
+  piscine: ['Bonnet de bain de {P}', 'v', 'tete', 2, 'bonnet', '#4fb3d9'], belvedere: ['Panorama de {P}', 'm', 'papier', 2, null, '#5aa3a8'], ecole: ['Bulletin de {P}', 'm', 'papier', 2, null, '#e9a03a'],
+  sport: ['Fanion de {P}', 'm', 'tissu', 2, null, '#4f9f78'], cinema: ['Affiche culte de {P}', 'm', 'papier', 2, null, '#3b3f5a'], bricolage: ['Outil fétiche de {P}', 'm', 'metal', 2, null, '#7a8a9a'],
+  camping: ['Écusson de {P}', 'm', 'tissu', 2, null, '#6f9a5f'], jouets: ['Jouet unique de {P}', 'm', 'bois', 2, null, '#f2a03a'], zoo: ['Peluche mascotte de {P}', 'm', 'tissu', 2, null, '#8aa84f'],
+  hotel: ['Clé dorée de {P}', 'm', 'metal', 2, null, '#c9a35a'], poste: ['Timbre de {P}', 'm', 'papier', 2, null, '#e3a92e'], pharmacie: ['Tisane de {P}', 'n', 'boisson', 2, null, '#3faf72'],
+  foret: ['Champignon de {P}', 'm', 'champignon', 2, null, '#e9b04b'], campagne: ['Gerbe de {P}', 'm', 'ble', 2, null, '#e7c46a'], ferme: ['Panier fermier de {P}', 'n', 'legume', 2, null, '#b9824f'],
+  fromagerie: ['Fromage affiné de {P}', 'n', 'fromage', 2, null, '#e3b84a'], boucherie: ['Terrine du chef de {P}', 'n', 'plat', 2, null, '#c95a5a'], coiffeur: ['Barrette porte-bonheur de {P}', 'm', 'plastique', 2, null, '#e07ab0'],
+  laverie: ['Chaussette perdue de {P}', 'v', 'pieds', 2, 'chaussettes', '#6fb3d9'], bibliotheque: ['Livre introuvable de {P}', 'm', 'papier', 2, null, '#5f7ab8'], jardin: ['Graines partagées de {P}', 'm', 'graine', 2, null, '#7fbf5a'],
+  etang: ['Nénuphar de {P}', 'm', 'fleur', 2, null, '#f6c2cf'], riviere: ['Galet chantant de {P}', 'm', 'pierre', 2, null, '#4f8fc0'], sentier: ['Carte secrète de {P}', 'm', 'papier', 2, null, '#7a9a6a'],
+  jeux: ['Médaille de la récré de {P}', 'm', 'medaille', 2, null, '#f2b23a'], puces: ['Trésor chiné de {P}', 'd', 'bocal', 2, null, '#b08a5a'], chocolaterie: ['Bonbon signature de {P}', 'n', 'sucre', 2, null, '#8a5a3a'],
+  caviste: ['Jus de raisin de {P}', 'n', 'boisson', 2, null, '#9a4a6a'], mairie: ['Médaille d’honneur de {P}', 'm', 'medaille', 2, null, '#5c6b94'], phare: ['Lumière de {P}', 'm', 'lumiere', 2, null, '#e0605a'],
 };
 const SPEC_DEFAULT = ['Souvenir de {P}', 'm', 'medaille', 2, null, '#c9a35a'];
 Object.assign(TAGC, Object.fromEntries(Object.entries(POI_CATS).map(([k, v]) => [k, v[1]])));
@@ -1214,6 +1354,32 @@ RECIPES.push(
   { id: 'lanverre', kind: 'Décoration', out: ['Lanterne de verre', 'd', 'lanterne', 2, null, '#bfe3f6'], ing: [['verre', 2], ['metal', 1]], coins: 10 },
   { id: 'mobile', kind: 'Décoration', out: ['Mobile de coquillages', 'd', 'bocal', 2, null, '#f6cdb8'], ing: [['coquillage', 2], ['bois', 1]], coins: 5 },
   { id: 'statuebois', kind: 'Décoration', out: ['Statuette sculptée', 'd', 'statue', 3, null, '#c99a6a'], ing: [['bois', 4]], coins: 20 },
+);
+// Ingrédients et recettes des nouveaux lieux
+Object.assign(ING, { fromage: [['fromage'], 'Fromage'], legume: [['legume'], 'Légume'], boisson: [['boisson'], 'Boisson'], pain: [['pain'], 'Pain'], plat: [['plat'], 'Plat cuisiné'], glace: [['glace'], 'Glace'], plastique: [['plastique'], 'Plastique'], fleur: [['fleur'], 'Fleur'] });
+RECIPES.push(
+  { id: 'plateau', kind: 'Cuisine', out: ['Plateau de fromages', 'n', 'fromage', 2, null, '#f2d06b'], ing: [['fromage', 3]], coins: 0 },
+  { id: 'fondue', kind: 'Cuisine', out: ['Fondue des copains', 'n', 'fromage', 3, null, '#f2c14e'], ing: [['fromage', 3], ['pain', 1]], coins: 10 },
+  { id: 'croque', kind: 'Cuisine', out: ['Croque-monsieur doré', 'n', 'pain', 2, null, '#e3b06b'], ing: [['pain', 1], ['fromage', 1], ['plat', 1]], coins: 0 },
+  { id: 'soupepotager', kind: 'Cuisine', out: ['Soupe du potager', 'n', 'legume', 2, null, '#8fbf5a'], ing: [['legume', 3]], coins: 0 },
+  { id: 'sandrando', kind: 'Cuisine', out: ['Sandwich du randonneur', 'n', 'pain', 2, null, '#d9a35a'], ing: [['pain', 1], ['fromage', 1], ['legume', 1]], coins: 0 },
+  { id: 'chantilly', kind: 'Cuisine', out: ['Chocolat chaud à la chantilly', 'n', 'boisson', 2, null, '#8a5a3a'], ing: [['boisson', 1], ['sucre', 2]], coins: 0 },
+  { id: 'coupeg', kind: 'Cuisine', out: ['Coupe glacée des grands jours', 'n', 'glace', 3, null, '#f6a6b8'], ing: [['glace', 2], ['sucre', 1], ['fruit', 1]], coins: 5 },
+  { id: 'bonhommechoc', kind: 'Cuisine', out: ['Bonhomme en chocolat', 'n', 'sucre', 2, null, '#6b4a32'], ing: [['sucre', 3]], coins: 0 },
+  { id: 'piquenique', kind: 'Vêtement', out: ['Panier pique-nique', 'v', 'dos', 2, 'sac', '#d9b46a'], ing: [['tissu', 1], ['bois', 1], ['pain', 1]], coins: 5 },
+  { id: 'couronnejardin', kind: 'Vêtement', out: ['Couronne du jardin', 'v', 'tete', 3, 'fleurs', '#f6c2cf'], ing: [['fleur', 4]], coins: 10 },
+  { id: 'chpatch', kind: 'Vêtement', out: ['Chaussettes en patchwork', 'v', 'pieds', 2, 'chaussettes', '#e9a0a0'], ing: [['tissu', 2]], coins: 0 },
+  { id: 'noeudpapier', kind: 'Vêtement', out: ['Nœud papillon en origami', 'v', 'cou', 1, 'noeud', '#f2d48f'], ing: [['papier', 2]], coins: 0 },
+  { id: 'bottespluie', kind: 'Vêtement', out: ['Bottes de pluie peintes', 'v', 'pieds', 2, 'bottes', '#58c2b0'], ing: [['plastique', 2]], coins: 5 },
+  { id: 'jupefleurs', kind: 'Vêtement', out: ['Jupe à fleurs cousue main', 'v', 'bas', 2, 'jupe', '#f6a6b8'], ing: [['tissu', 2], ['fleur', 1]], coins: 5 },
+  { id: 'gantsbrodes', kind: 'Vêtement', out: ['Gants de jardinier brodés', 'v', 'mains', 2, 'gants', '#7fae4f'], ing: [['tissu', 2], ['fleur', 1]], coins: 5 },
+  { id: 'shorttoile', kind: 'Vêtement', out: ['Short en toile cousu main', 'v', 'bas', 2, 'short', '#c9b48a'], ing: [['tissu', 3]], coins: 5 },
+  { id: 'vasefleurs', kind: 'Décoration', out: ['Vase de fleurs fraîches', 'd', 'plante', 2, null, '#f39ab0'], ing: [['fleur', 2], ['verre', 1]], coins: 0 },
+  { id: 'veilleuse', kind: 'Décoration', out: ['Veilleuse en forme de lune', 'd', 'lampe', 3, null, '#f4efd2'], ing: [['plastique', 2], ['lumiere', 1]], coins: 15 },
+  { id: 'robotrecup', kind: 'Décoration', out: ['Robot de récup’', 'd', 'statue', 2, null, '#9aa4ac'], ing: [['metal', 2], ['plastique', 2]], coins: 5 },
+  { id: 'patchwork', kind: 'Décoration', out: ['Tapis en patchwork', 'd', 'tapis', 2, null, '#e9a0a0'], ing: [['tissu', 4]], coins: 5 },
+  { id: 'herbjardin', kind: 'Décoration', out: ['Herbier du jardin partagé', 'd', 'herbier', 2, null, '#a6cf8e'], ing: [['fleur', 2], ['papier', 1]], coins: 5 },
+  { id: 'lanphare', kind: 'Décoration', out: ['Lanterne de gardien de phare', 'd', 'lanterne', 3, null, '#f6e08a'], ing: [['verre', 2], ['lumiere', 1], ['metal', 1]], coins: 20 },
 );
 const POI_GLYPH = {
   bread: '<path d="M3 15 C3 7 21 7 21 15 C21 18 3 18 3 15Z" fill="#fff"/><path d="M8 10.5 l2 4 M12 10 l2 4 M16 10.5 l2 4" stroke="#000" stroke-opacity=".28" stroke-width="1.6"/>',
@@ -1250,13 +1416,34 @@ const POI_GLYPH = {
   wheat: '<path d="M12 22 V4" stroke="#fff" stroke-width="2"/><ellipse cx="9" cy="7" rx="3" ry="1.8" transform="rotate(-35 9 7)" fill="#fff"/><ellipse cx="15" cy="7" rx="3" ry="1.8" transform="rotate(35 15 7)" fill="#fff"/><ellipse cx="9" cy="12" rx="3" ry="1.8" transform="rotate(-35 9 12)" fill="#fff"/><ellipse cx="15" cy="12" rx="3" ry="1.8" transform="rotate(35 15 12)" fill="#fff"/><ellipse cx="9" cy="17" rx="3" ry="1.8" transform="rotate(-35 9 17)" fill="#fff"/><ellipse cx="15" cy="17" rx="3" ry="1.8" transform="rotate(35 15 17)" fill="#fff"/>',
   barn: '<path d="M3 22 V11 L12 4 L21 11 V22Z" fill="#fff"/><path d="M9 22 V15 H15 V22 M9 15 L15 22 M15 15 L9 22" stroke="#000" stroke-opacity=".3" stroke-width="1.4" fill="none"/>',
   bag: '<path d="M5 8 H19 L20 21 H4Z" fill="#fff"/><path d="M9 8 C9 3 15 3 15 8" stroke="#fff" stroke-width="2" fill="none"/>',
+  wheel: '<circle cx="12" cy="12.5" r="8.5" fill="#fff"/><path d="M12 12.5 H20.5 A8.5 8.5 0 0 0 17.2 5.8Z" fill="#000" fill-opacity=".25"/><circle cx="8.5" cy="14.5" r="1.5" fill="#000" fill-opacity=".22"/><circle cx="12.5" cy="17.5" r="1.1" fill="#000" fill-opacity=".22"/><circle cx="9" cy="9.5" r="1" fill="#000" fill-opacity=".22"/>',
+  sausage: '<path d="M4.5 16 C2.5 12 6 6.5 12 5.5 C17 4.8 20.5 6.8 19.5 9.5 C18.6 11.8 14 11.5 10.5 14.5 C8 16.6 6 18.6 4.5 16Z" fill="#fff"/><path d="M19.6 8 L22 6.6 M4.4 16.8 L2.6 18.8" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><path d="M9 9.5 l1 1 M13 8 l1 1" stroke="#000" stroke-opacity=".28" stroke-width="1.4" stroke-linecap="round"/>',
+  scissors: '<circle cx="7" cy="17.5" r="3.2" stroke="#fff" stroke-width="2.2" fill="none"/><circle cx="17" cy="17.5" r="3.2" stroke="#fff" stroke-width="2.2" fill="none"/><path d="M9 15 L17 3 M15 15 L7 3" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>',
+  washer: '<rect x="4" y="2.5" width="16" height="19" rx="3" fill="#fff"/><circle cx="12" cy="13.5" r="5" fill="#000" fill-opacity=".28"/><circle cx="7.5" cy="5.5" r="1" fill="#000" fill-opacity=".3"/><path d="M8.2 14 q1.9 -2 3.8 0 q1.9 2 3.8 0" stroke="#fff" stroke-width="1.4" fill="none"/>',
+  books: '<rect x="3" y="5" width="4.5" height="16" rx="1" fill="#fff"/><rect x="8.5" y="3" width="4.5" height="18" rx="1" fill="#fff"/><path d="M14.5 6.5 L18.5 5.5 L22 20 L18 21Z" fill="#fff"/><path d="M3 9 h4.5 M8.5 7 h4.5" stroke="#000" stroke-opacity=".28" stroke-width="1.4"/>',
+  sprout: '<path d="M12 21 V11" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M12 12 C12 6 7 4 3 5 C3 10 7 13 12 12Z M12 10 C12 5 16 2 21 3 C21 8 17 11 12 10Z" fill="#fff"/><path d="M5 21.5 H19" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>',
+  duck: '<path d="M3 14.5 C3 20 19 21 20.5 14.5 C21 12 18 11 15 12 C16 10 15.6 6 11.5 6 C7.5 6 7.2 10 9 12 C6 12 3 12 3 14.5Z" fill="#fff"/><path d="M15.2 7.6 L19.5 8.6 L15.2 9.8Z" fill="#fff"/><circle cx="12" cy="8.4" r="1" fill="#000" fill-opacity=".35"/>',
+  river: '<path d="M8 2 C2 8 16 10 10 16 C7 19 9 21 11 22 M15 2 C9 8 22 10 16 16 C13 19 15 21 17 22" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
+  peak: '<path d="M1.5 21 L9 6 L13 13 L16 9 L22.5 21Z" fill="#fff"/><path d="M9 6 L11.2 10.4 L9.6 9.6 L7.6 11Z" fill="#000" fill-opacity=".22"/>',
+  swing: '<path d="M3 21 L7 3 H17 L21 21" stroke="#fff" stroke-width="2.2" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="M10 3 V14 M14 3 V14" stroke="#fff" stroke-width="1.6"/><rect x="8.5" y="14" width="7" height="2.6" rx="1" fill="#fff"/>',
+  vase: '<path d="M9 3 H15 V6 C19 8 20 14 17 19 L16 21 H8 L7 19 C4 14 5 8 9 6Z" fill="#fff"/><path d="M8 12 q4 3 8 0" stroke="#000" stroke-opacity=".28" stroke-width="1.4" fill="none"/>',
+  choco: '<rect x="5" y="3" width="14" height="18" rx="2" fill="#fff"/><path d="M5 9 H19 M5 15 H19 M12 3 V21" stroke="#000" stroke-opacity=".28" stroke-width="1.4"/><path d="M14 3 H19 V8Z" fill="#000" fill-opacity=".18"/>',
+  bottle: '<path d="M10 2 H14 V7 C17 8.5 17 10 17 12 V21 H7 V12 C7 10 7 8.5 10 7Z" fill="#fff"/><rect x="8.5" y="13" width="7" height="4.5" rx="1" fill="#000" fill-opacity=".25"/>',
+  townhall: '<path d="M12 2 V7" stroke="#fff" stroke-width="1.6"/><path d="M12 2 H17 L15.5 3.5 L17 5 H12Z" fill="#fff"/><path d="M3 11 L12 7 L21 11Z M4 21 H20 V19 H4Z M5.5 12 h2.4 v6 h-2.4Z M10.8 12 h2.4 v6 h-2.4Z M16.1 12 h2.4 v6 h-2.4Z" fill="#fff"/>',
+  lighthouse: '<path d="M9 8 H15 L17 21 H7Z" fill="#fff"/><rect x="8.5" y="3" width="7" height="4" rx="1" fill="#fff"/><path d="M8.3 12 H15.7 M7.7 16 H16.3" stroke="#000" stroke-opacity=".3" stroke-width="1.8"/><path d="M16.5 4 L22 2.5 M16.5 6 L22 7.5 M7.5 4 L2 2.5 M7.5 6 L2 7.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/>',
 };
 const OSM_CAT = {
   bakery: 'boulangerie', pastry: 'boulangerie', cafe: 'cafe', coffee: 'cafe', tea: 'cafe', pub: 'cafe', bar: 'cafe', biergarten: 'cafe',
   restaurant: 'restaurant', fast_food: 'restaurant', food_court: 'restaurant', marketplace: 'marche', greengrocer: 'marche', supermarket: 'marche', convenience: 'marche', farm: 'marche',
-  deli: 'epicerie', cheese: 'epicerie', butcher: 'epicerie', wine: 'epicerie', alcohol: 'epicerie', chocolate: 'epicerie', confectionery: 'glacier', grocery: 'epicerie',
-  seafood: 'poissonnerie', fishmonger: 'poissonnerie', florist: 'fleuriste', garden_centre: 'fleuriste', books: 'librairie', library: 'librairie', newsagent: 'librairie', stationery: 'librairie',
-  park: 'parc', playground: 'parc', garden: 'parc', dog_park: 'parc', beach: 'plage', beach_resort: 'plage', harbour: 'port', marina: 'port', ferry_terminal: 'port', harbor: 'port',
+  deli: 'epicerie', grocery: 'epicerie', spices: 'epicerie', tea_shop: 'epicerie',
+  cheese: 'fromagerie', dairy: 'fromagerie', butcher: 'boucherie', hairdresser: 'coiffeur', laundry: 'laverie', dry_cleaning: 'laverie',
+  library: 'bibliotheque', public_bookcase: 'bibliotheque', allotments: 'jardin', community_garden: 'jardin',
+  lake: 'etang', pond: 'etang', reservoir: 'etang', fishing: 'etang', river: 'riviere', stream: 'riviere', waterfall: 'riviere', weir: 'riviere', lock_gate: 'riviere', dam: 'riviere',
+  trailhead: 'sentier', alpine_hut: 'sentier', wilderness_hut: 'sentier', peak: 'sentier', saddle: 'sentier',
+  playground: 'jeux', miniature_golf: 'jeux', antiques: 'puces', flea_market: 'puces', chocolate: 'chocolaterie', confectionery: 'chocolaterie',
+  wine: 'caviste', alcohol: 'caviste', beverages: 'caviste', townhall: 'mairie', lighthouse: 'phare',
+  seafood: 'poissonnerie', fishmonger: 'poissonnerie', florist: 'fleuriste', garden_centre: 'fleuriste', books: 'librairie', newsagent: 'librairie', stationery: 'librairie',
+  park: 'parc', garden: 'parc', dog_park: 'parc', beach: 'plage', beach_resort: 'plage', harbour: 'port', marina: 'port', ferry_terminal: 'port', harbor: 'port',
   ice_cream: 'glacier', swimming_pool: 'piscine', water_park: 'piscine', swimming: 'piscine', station: 'gare', railway: 'gare', halt: 'gare', bus_station: 'gare',
   museum: 'musee', gallery: 'musee', art_gallery: 'musee', arts_centre: 'musee', place_of_worship: 'patrimoine', castle: 'patrimoine', monument: 'patrimoine', memorial: 'patrimoine', ruins: 'patrimoine', attraction: 'patrimoine',
   viewpoint: 'belvedere', school: 'ecole', kindergarten: 'ecole', college: 'ecole', university: 'ecole', stadium: 'sport', sports_centre: 'sport', pitch: 'sport', fitness_centre: 'sport', golf: 'sport',
@@ -1277,6 +1464,13 @@ const POI_NAMES = {
   cinema: ['Cinéma Le Rex', 'Cinéma {A}', 'Théâtre municipal'], bricolage: ['Quincaillerie {N}', 'Brico {N}'], jouets: ['La Boîte à Jouets', 'Jouets {N}'], hotel: ['Hôtel {A}', 'Hôtel du Commerce', 'Hôtel de la Gare'],
   poste: ['Bureau de poste'], pharmacie: ['Pharmacie {N}', 'Pharmacie du Centre', 'Pharmacie {A}'], boutique: ['Bazar {N}', 'Cadeaux & Merveilles', 'La Petite Boutique'], gare: ['Gare de {V}'], zoo: ['Parc animalier {A}'],
   camping: ['Camping {A}'], belvedere: ['Belvédère {A}'], plage: ['Plage {A}', 'Plage des Sablettes', 'Plage du Phare'], port: ['Port de {V}', 'Port de plaisance'],
+  fromagerie: ['Fromagerie {N}', 'La Cloche à Fromages', 'Le Plateau de {N}', 'Crèmerie {N}'], boucherie: ['Boucherie {N}', 'Charcuterie {N}', 'Le Petit Saucisson', 'Maison {N} père et fille'],
+  coiffeur: ['Salon {N}', 'Coiff’ & Co', 'L’Hair du temps', 'Les Ciseaux d’Or', 'Atelier coiffure {N}'], laverie: ['Laverie du Centre', 'Lavomatique {A}', 'La Bulle Propre', 'Laverie {N}'],
+  bibliotheque: ['Bibliothèque municipale', 'Médiathèque {A}', 'Bibliothèque {N}', 'Boîte à livres {A}'], jardin: ['Jardin partagé {A}', 'Potager des voisins', 'Jardins familiaux {A}', 'Les Petits Carrés'],
+  etang: ['Étang {A}', 'Lac {A}', 'Mare aux canards', 'Étang du Moulin'], riviere: ['Bords de rivière', 'Quai {A}', 'Le Ruisseau {A}', 'Berges de {V}'],
+  sentier: ['Sentier {A}', 'Chemin des crêtes', 'GR du Coteau', 'Sentier des chamois'], jeux: ['Aire de jeux {A}', 'Square des enfants', 'Le Toboggan', 'Aire de jeux {N}'],
+  puces: ['Marché aux puces', 'Brocante du dimanche', 'Vide-grenier {A}', 'Antiquités {N}'], chocolaterie: ['Chocolaterie {N}', 'Le Cacaotier', 'Maison {N} chocolatier', 'Au Petit Carré'],
+  caviste: ['Cave {N}', 'La Cave {A}', 'Le Tire-Bouchon', 'Comptoir des Vignes'], mairie: ['Mairie de {V}', 'Hôtel de ville', 'Mairie annexe {A}'], phare: ['Phare {A}', 'Phare de {V}', 'Le Vieux Phare'],
 };
 const BOIS_N = ['Bois {A}', 'Forêt communale', 'Bois du Loup', 'Bosquet {A}', 'Bois Joli'];
 const CHAMP_N = ['Champs {A}', 'Prés {A}', 'Champ de blé', 'Prairie fleurie', 'Les Grands Prés'];
@@ -1317,13 +1511,29 @@ const fresh = () => ({
   trips: { pistache: null, mochi: null, bulle: null }, unseen: { pistache: 0, mochi: 0, bulle: 0 },
   prog: { pistache: { xp: 0, lvl: 1 }, mochi: { xp: 0, lvl: 1 }, bulle: { xp: 0, lvl: 1 } },
   house: {}, market: { day: 0, refresh: 0, list: [], mine: [] }, daily: { day: 0, quests: [], chest: false }, colClaimed: {}, stats: { trips: 0, crafted: 0, sold: 0 },
+  // ajouts (boucle de jeu) : chaque clé a une valeur par défaut pour les anciennes sauvegardes
+  login: { last: 0, streak: 0, best: 0, total: 0 }, // cadeau quotidien et série de jours
+  tiers: {},        // paliers de collection atteints : { cle: 1 (25 %) | 2 (50 %) }
+  achSeen: {},      // succès débloqués (annoncés)
+  achClaimed: {},   // succès dont la récompense a été récupérée
+  firstTripDay: 0,  // jour du dernier « premier voyage du jour »
+  jeuInit: 0,       // 1 quand les succès/paliers d'une ancienne sauvegarde ont été rattrapés
 });
+// complète les sous-objets des anciennes sauvegardes (Object.assign ne fusionne qu'au premier niveau)
+function patchSave(s) {
+  const f = fresh();
+  for (const k of ['stats', 'login', 'daily', 'market', 'prog', 'trips', 'unseen']) s[k] = Object.assign({}, f[k], s[k] || {});
+  for (const k of Object.keys(f.prog)) s.prog[k] = Object.assign({ xp: 0, lvl: 1 }, s.prog[k] || {});
+  for (const k of ['tiers', 'achSeen', 'achClaimed', 'colClaimed', 'found', 'dex', 'house']) if (!s[k] || typeof s[k] !== 'object') s[k] = {};
+  return s;
+}
 let S = fresh();
 try {
   const raw = localStorage.getItem(SAVE);
   if (raw) { const d = JSON.parse(raw); if (d && d.v === 2) S = Object.assign(fresh(), d); }
   else { const old = localStorage.getItem('carnet-voyage-v1'); if (old) { const d = JSON.parse(old); S.inv = d.inv || []; S.album = d.album || []; S.home = d.home || S.home; S.found = d.found || {}; S.inv.forEach(i => S.dex[i.name] = true); } }
 } catch (e) {}
+try { patchSave(S); } catch (e) {}
 function save() { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) {} }
 const homeObj = () => { const h = HOMES.find(x => x[0] === S.home) || HOMES[1]; return { name: h[0], lat: h[1], lon: h[2] }; };
 let plan = { dest: null, dur: 'eclair' };
@@ -1351,7 +1561,10 @@ function addXP(k, amount, why) {
   }
   return gain;
 }
-function gainCoins(n) { S.coins += Math.round(n); }
+function gainCoins(n) {
+  n = Math.round(n); S.coins += n;
+  if (n > 0) { S.stats.earned = (S.stats.earned || 0) + n; if (typeof coinFX === 'function') coinFX(n); }
+}
 function value(it) {
   const base = [6, 16, 42, 120, 380][it.rarity] || 6;
   const m = { v: 1.2, m: 1, n: 0.6, d: 1.5, t: 2 }[it.cat] || 1;
@@ -1393,6 +1606,11 @@ function collections() {
   return cols;
 }
 function colReward(c) { return c.big ? 400 : 120; }
+// paliers de collection : 25 %, 50 %, 100 % des objets d'un type de lieu
+const TIERS = [{ pct: 0.25, label: '25 %' }, { pct: 0.5, label: '50 %' }, { pct: 1, label: '100 %' }];
+const colGot = c => c.names.filter(n => S.dex[n]).length;
+function colTierReached(c) { const f = colGot(c) / c.names.length; return TIERS.filter(t => f >= t.pct - 1e-9).length; }
+const tierReward = (c, i) => i === 0 ? (c.big ? 100 : 30) : i === 1 ? (c.big ? 200 : 60) : colReward(c);
 
 
 // ================= VRAIE CARTE (MapLibre, WebGL) =================
@@ -1800,7 +2018,7 @@ function treeFeat(lon, lat, rM, h, col) { const ring = [], k = 1 / (111000 * Mat
 function boxFeat(lon, lat, w, d, h, col) { const k = 1 / (111000 * Math.cos(lat * Math.PI / 180)), dl = d / 111000; return { type: 'Feature', properties: { kind: 'bldg', h, c: col }, geometry: { type: 'Polygon', coordinates: [[[lon - w / 2 * k, lat - dl / 2], [lon + w / 2 * k, lat - dl / 2], [lon + w / 2 * k, lat + dl / 2], [lon - w / 2 * k, lat + dl / 2], [lon - w / 2 * k, lat - dl / 2]]] } }; }
 const cityRad = c => c.gen ? 1.3 : c.r <= 2 ? 7 : c.r <= 4 ? 4.5 : c.r <= 6 ? 3.2 : c.r <= 8 ? 2.4 : 1.9;
 const cityW = c => c.gen ? 0.62 : c.r <= 6 ? 1 : 0.85;
-const RURAL = [['foret', 4], ['campagne', 4], ['ferme', 2], ['route', 1], ['camping', 0.3], ['belvedere', 0.4]];
+const RURAL = [['foret', 4], ['campagne', 4], ['ferme', 2], ['route', 1], ['camping', 0.3], ['belvedere', 0.4], ['etang', 0.8], ['riviere', 0.8], ['sentier', 0.6]];
 let cellCache = {};
 function urbanAt(lon, lat, towns) {
   let u = 0, best = null, bd = 1e9;
@@ -1879,7 +2097,7 @@ function genCell(gx, gy, towns) {
     if (u > 0.12) { let x = r() * tot; for (const [kk, v] of cats) { x -= v[4]; if (x <= 0) { cat = kk; break; } } }
     else { let x = r() * rtot; for (const [kk, w] of RURAL) { x -= w; if (x <= 0) { cat = kk; break; } } }
     cat = cat || 'boulangerie';
-    if (!isLand(lon, lat)) { if (u > 0.05 && (isLand(lon + CELL, lat) || isLand(lon - CELL, lat) || isLand(lon, lat + CELL) || isLand(lon, lat - CELL))) cat = r() < 0.7 ? 'plage' : 'port'; else continue; }
+    if (!isLand(lon, lat)) { if (u > 0.05 && (isLand(lon + CELL, lat) || isLand(lon - CELL, lat) || isLand(lon, lat + CELL) || isLand(lon, lat - CELL))) { const q = r(); cat = q < 0.66 ? 'plage' : q < 0.95 ? 'port' : 'phare'; } else continue; }
     const names = { foret: BOIS_N, campagne: CHAMP_N, ferme: FERME_N }[cat] || POI_NAMES[cat] || [POI_CATS[cat][0]];
     out.pois.push({ id: 'c' + key + 'p' + i, cat, name: fillName(pick3(names, r), r, city), lon, lat, city, imp: r() * (cat === 'plage' || cat === 'gare' || cat === 'musee' ? 0.3 : 1) });
     if (cat === 'parc' || cat === 'foret' || cat === 'camping') {
@@ -2002,45 +2220,83 @@ function nextPlaceIn(z) {
 }
 function goToPlace(p) { if (!p) return; if (S.trips[S.sel]) { openSheet('voyage'); return; } choosePlace(p); zoomTo(p.lon, p.lat, Math.max(zoomT.k, 20)); }
 const tripActive = () => Object.values(S.trips).some(t => t);
+const goHome = () => { const h = homeObj(); zoomTo(h.lon, h.lat, Math.pow(2, (mapMode === 'tiles' ? 15.5 : 13.2) - 1.5)); toast('Touchez une boulangerie, un parc ou une rue pour voir ce qu’on peut y trouver.'); };
+const goTrip = () => { const t = S.trips[S.sel]; if (t && t.done) collect(); else openSheet('voyage'); };
+const anyTier = n => collections().some(c => colTierReached(c) >= n);
+const achCount = () => Object.keys(S.achClaimed || {}).length;
+// Chapitres courts au début (3 étapes de quelques minutes chacune), puis les grands objectifs.
 const CHAPTERS = [
   { key: 'debut', name: 'Premiers pas', icon: 'compass', steps: [
     { txt: 'Envoie un compagnon en voyage', done: () => (S.stats.started || 0) >= 1, go: () => openSheet('voyage') },
-    { txt: 'Zoome sur ton quartier et récolte dans un lieu (boulangerie, parc, rue…)', done: () => (S.stats.poiTrips || 0) >= 1 || (S.stats.poiStarted || 0) >= 1, go: () => { const h = homeObj(); zoomTo(h.lon, h.lat, Math.pow(2, (mapMode === 'tiles' ? 15.5 : 13.2) - 1.5)); toast('Touchez une boulangerie, un parc ou une rue pour voir ce qu\u2019on peut y trouver.'); } },
-    { txt: 'Réponds à un choix pendant son voyage', done: () => (S.stats.choices || 0) >= 1, go: () => { if (S.trips[S.sel]) openSheet('voyage'); else openSheet('voyage'); } },
-    { txt: 'Ouvre son sac à son retour', done: () => (S.stats.trips || 0) >= 1, go: () => { const t = S.trips[S.sel]; if (t && t.done) collect(); else openSheet('voyage'); } },
+    { txt: 'Réponds à un choix pendant son voyage', done: () => (S.stats.choices || 0) >= 1, go: () => openSheet('voyage') },
+    { txt: 'Ouvre son sac à son retour', done: () => (S.stats.trips || 0) >= 1, go: goTrip },
+  ], reward: { coins: 60, item: ['Bonnet du baroudeur', 'v', 'tete', 1, 'bonnet', '#e9784a'] } },
+  { key: 'quartier', name: 'Mon quartier', icon: 'house', steps: [
+    { txt: 'Zoome sur ton quartier et récolte dans un lieu (boulangerie, parc, rue…)', done: () => (S.stats.poiTrips || 0) >= 1 || (S.stats.poiStarted || 0) >= 1, go: goHome },
     { txt: 'Habille un compagnon avec une trouvaille', done: () => (S.stats.worn || 0) >= 1, go: () => { bagFilter = 'v'; openSheet('sac'); } },
+    { txt: 'Vends un objet dont tu n’as pas besoin', done: () => (S.stats.sold || 0) >= 1, go: () => { bagFilter = 'all'; openSheet('sac'); toast('Le bouton avec une pièce, à droite de chaque objet, le vend tout de suite.'); } },
+  ], reward: { coins: 100, item: ['Foulard du quartier', 'v', 'cou', 2, 'foulard', '#58c2b0'] } },
+  { key: 'mains', name: 'Petites mains', icon: 'hammer', steps: [
+    { txt: 'Récupère la récompense d’une quête du jour', done: () => (S.stats.qclaimed || 0) >= 1 || S.daily.quests.some(q => q.claimed), go: () => { questView = 'jour'; openSheet('quetes'); } },
     { txt: 'Fabrique un objet à l’atelier', done: () => (S.stats.crafted || 0) >= 1, go: () => openSheet('atelier') },
     { txt: 'Décore la maison', done: () => Object.values(S.house).some(Boolean), go: () => openSheet('maison') },
-  ], reward: { coins: 200, item: ['Écharpe du voyageur', 'v', 'cou', 3, 'echarpe', '#e9784a'] } },
+  ], reward: { coins: 150, item: ['Écharpe du voyageur', 'v', 'cou', 3, 'echarpe', '#e9784a'] } },
+  { key: 'collec', name: 'Le collectionneur', icon: 'book', steps: [
+    { txt: 'Découvre 20 objets différents', done: () => Object.keys(S.dex).length >= 20, go: () => openSheet('voyage') },
+    { txt: 'Atteins 25 % d’une collection de lieu', done: () => anyTier(1), go: () => { questView = 'col'; openSheet('quetes'); } },
+    { txt: 'Fais monter un compagnon au niveau 3', done: () => Object.values(S.prog).some(p => p.lvl >= 3), go: () => openSheet('voyage') },
+  ], reward: { coins: 200, item: ['Sac à dos d’aventurier', 'v', 'dos', 3, 'sac', '#a87a50'] } },
   { key: 'france', name: 'Le tour de France', icon: 'flag', count: () => foundIn('fr'), goal: 5, txt: n => `Trouve ${n} souvenirs uniques en France`, go: () => goToPlace(nextPlaceIn('fr')), reward: { coins: 300, item: ['Béret tricolore', 'v', 'tete', 4, 'beret', '#3b5aa8'] } },
+  { key: 'amis', name: 'Les trois amis', icon: 'heart', steps: [
+    { txt: 'Fais voyager Pistache, Mochi et Bulle jusqu’au niveau 2', done: () => Object.values(S.prog).every(p => p.lvl >= 2), go: () => { const k = Object.keys(S.prog).find(x => S.prog[x].lvl < 2); if (k) selectComp(k); openSheet('voyage'); } },
+    { txt: 'Récupère 5 succès', done: () => achCount() >= 5, go: () => { questView = 'succes'; openSheet('quetes'); } },
+    { txt: 'Atteins 50 % d’une collection de lieu', done: () => anyTier(2), go: () => { questView = 'col'; openSheet('quetes'); } },
+  ], reward: { coins: 300, item: ['Pull des trois amis', 'v', 'haut', 3, 'pull', '#f08aa6'] } },
   { key: 'europe', name: 'Grand tour d’Europe', icon: 'globe', count: () => foundIn('eu'), goal: 8, txt: n => `Trouve ${n} souvenirs uniques en Europe`, go: () => goToPlace(nextPlaceIn('eu')), reward: { coins: 500, item: ['Cape de l’explorateur', 'v', 'dos', 4, 'cape', '#3f6e5a'] } },
   { key: 'monde', name: 'Le tour du monde', icon: 'plane', count: () => foundIn('monde'), goal: 10, txt: n => `Trouve ${n} souvenirs uniques sur les autres continents`, go: () => goToPlace(nextPlaceIn('monde')), reward: { coins: 800, item: ['Couronne du tour du monde', 'v', 'tete', 4, 'couronne', '#f2c14e'] } },
   { key: 'secrets', name: 'Les lieux secrets', icon: 'star', count: () => SECRETS.filter(s => S.found[s.name]).length, goal: 6, txt: n => `Visite les ${n} lieux secrets (cartes au trésor)`, go: () => { const s = SECRETS.find(x => S.secrets.includes(x.key) && !S.found[x.name]); if (s && !S.trips[S.sel]) { chooseSecret(s.key); zoomTo(s.lon, s.lat, 20); } else { toast('Les cartes au trésor se trouvent en voyage. Les choix audacieux aident beaucoup !'); openSheet('voyage'); } }, reward: { coins: 1500, item: ['Trophée : Légende du Carnet', 'd', 'statue', 4, null, '#f2c14e'] } },
 ];
+// Ancienne sauvegarde : { ch: index dans l'ancienne liste de 5 chapitres } -> { done: [clés] }
+const OLD_CHAPTERS = ['debut', 'france', 'europe', 'monde', 'secrets'];
+function goalData() {
+  if (!S.goal || typeof S.goal !== 'object') S.goal = { done: [] };
+  if (!Array.isArray(S.goal.done)) {
+    const oldKey = OLD_CHAPTERS[S.goal.ch || 0], pos = oldKey ? CHAPTERS.findIndex(c => c.key === oldKey) : CHAPTERS.length;
+    S.goal.done = CHAPTERS.slice(0, pos).map(c => c.key);
+  }
+  const idx = CHAPTERS.findIndex(c => !S.goal.done.includes(c.key));
+  S.goal.ch = idx < 0 ? CHAPTERS.length : idx;
+  return S.goal;
+}
 function goalState() {
-  S.goal = S.goal || { ch: 0 };
-  const ch = CHAPTERS[Math.min(S.goal.ch, CHAPTERS.length - 1)];
-  if (S.goal.ch >= CHAPTERS.length) return { finished: true };
+  const G = goalData();
+  if (G.ch >= CHAPTERS.length) return { finished: true };
+  const ch = CHAPTERS[G.ch];
   if (ch.steps) {
     const doneN = ch.steps.filter(s => s.done()).length, step = ch.steps.find(s => !s.done());
-    return { ch, idx: S.goal.ch, doneN, total: ch.steps.length, step, complete: !step };
+    return { ch, idx: G.ch, doneN, total: ch.steps.length, step, complete: !step };
   }
   const n = Math.min(ch.goal, ch.count());
-  return { ch, idx: S.goal.ch, doneN: n, total: ch.goal, step: { txt: ch.txt(ch.goal), go: ch.go }, complete: n >= ch.goal };
+  return { ch, idx: G.ch, doneN: n, total: ch.goal, step: { txt: ch.txt(ch.goal), go: ch.go }, complete: n >= ch.goal };
 }
 const GOAL_ICON = {
   compass: '<circle cx="15" cy="15" r="11" fill="#fff3e2" stroke="currentColor" stroke-width="2.2"/><path d="M15 6 L18 15 L15 24 L12 15Z" fill="#d9604f" stroke="currentColor" stroke-width="1.4"/>',
   flag: '<path d="M8 26 V4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M8 5 H14 V15 H8Z" fill="#3b5aa8"/><path d="M14 5 H18 V15 H14Z" fill="#fff"/><path d="M18 5 H24 V15 H18Z" fill="#d9604f"/><path d="M8 5 H24 V15 H8" fill="none" stroke="currentColor" stroke-width="1.8"/>',
   globe: '<circle cx="15" cy="15" r="11" fill="#9fd1d8" stroke="currentColor" stroke-width="2.2"/><path d="M8 11c3 0 4 3 3 5s3 4 4 7M17 5c-1 3 1 4 4 4s3 4 1 6" fill="none" stroke="#5fa274" stroke-width="2.4"/>',
   plane: '<path d="M4 17 L26 6 L20 25 L15 18Z" fill="#fff3e2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M15 18 L26 6" stroke="currentColor" stroke-width="1.6"/>',
+  house: '<path d="M4 15 L15 5 L26 15 V26 H4Z" fill="#fff3e2" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><rect x="12" y="17" width="6" height="9" fill="#d9604f" stroke="currentColor" stroke-width="1.6"/>',
+  hammer: '<path d="M14 13 L24 25" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M14 13 L24 25" stroke="#c99a6a" stroke-width="2" stroke-linecap="round"/><path d="M5 10 L12 3 L19 9 L15 13 L11 10 L9 12Z" fill="#b5bcc2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  book: '<path d="M5 6 H14 Q15 6 15 8 V26 Q15 24 13 24 H5Z M25 6 H16 Q15 6 15 8 V26 Q15 24 17 24 H25Z" fill="#fff3e2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 11 H12 M8 15 H12 M18 11 H22 M18 15 H22" stroke="#d9604f" stroke-width="1.8" stroke-linecap="round"/>',
+  heart: '<path d="M15 26 C4 18 3 12 6 8 C9 4 14 6 15 10 C16 6 21 4 24 8 C27 12 26 18 15 26Z" fill="#f08aa6" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>',
   star: '<path d="M15 3 L18.5 11 L27 11.8 L20.5 17.4 L22.6 26 L15 21.4 L7.4 26 L9.5 17.4 L3 11.8 L11.5 11Z" fill="#f6c445" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
 };
 function renderGoal() {
   const box = $('goal'); if (!box) return;
   const g = goalState();
-  if (g.finished) { box.innerHTML = `<svg viewBox="0 0 30 30" class="gi">${GOAL_ICON.star}</svg><div class="gx"><span class="gk">Le Grand Carnet est complet</span><b>Vous êtes une légende du voyage !</b></div>`; return; }
+  if (g.finished) { box.className = 'goal'; box.innerHTML = `<svg viewBox="0 0 30 30" class="gi">${GOAL_ICON.star}</svg><div class="gx"><span class="gk">Le Grand Carnet est complet</span><b>Vous êtes une légende du voyage !</b></div>`; return; }
   const pct = Math.round(g.doneN / g.total * 100);
   box.className = 'goal' + (g.complete ? ' ready' : '');
+  box.title = `Récompense du chapitre : ${g.ch.reward.coins} pièces et « ${g.ch.reward.item[0]} »`;
   box.innerHTML = `<svg viewBox="0 0 30 30" class="gi" aria-hidden="true">${GOAL_ICON[g.ch.icon]}</svg><div class="gx"><span class="gk">Chapitre ${g.idx + 1}/${CHAPTERS.length} · ${esc(g.ch.name)}</span><b>${g.complete ? 'Chapitre terminé !' : esc(g.step.txt)}</b><span class="gbar"><i style="width:${pct}%"></i></span></div><span class="gn">${g.doneN}/${g.total}</span>${g.complete ? '<button class="btn gold sm" id="goalClaim">Récompense</button>' : '<button class="btn green sm" id="goalGo">Aller</button>'}`;
 }
 function claimChapter() {
@@ -2049,10 +2305,10 @@ function claimChapter() {
   gainCoins(r.coins);
   const it = makeItem(r.item, 0, `Récompense : ${g.ch.name}`, [], { fixed: r.item[3], special: true });
   S.inv.push(it); S.dex[it.name] = true;
-  S.goal.ch++; save();
+  goalData().done.push(g.ch.key); goalData(); save();
   renderAll();
   const next = CHAPTERS[S.goal.ch];
-  showModal(`<div class="mart">${drawChar(S.sel, S.outfits[S.sel], 'amour', 'mod')}</div><h2>Chapitre terminé : ${esc(g.ch.name)} !</h2><p>Récompense : <b>${r.coins} pièces</b> et <b>« ${esc(r.item[0])} »</b> (${RARITY[r.item[3]]}).</p>${next ? `<p>Prochain chapitre : <b>${esc(next.name)}</b>.</p>` : '<p>Vous avez complété tout le Grand Carnet !</p>'}<button class="btn green big" data-closemodal="1">Super !</button>`);
+  showModal(`<div class="mart">${drawChar(S.sel, S.outfits[S.sel], 'amour', 'mod')}</div><h2>Chapitre terminé : ${esc(g.ch.name)} !</h2><p>Récompense : <b>${r.coins} pièces</b> et <b class="rar r${r.item[3]}">« ${esc(r.item[0])} »</b> (${RARITY[r.item[3]]}).</p><div class="haul one">${typeof haulCard === 'function' ? haulCard(it, 0, false) : ''}</div>${next ? `<p>Prochain chapitre : <b>${esc(next.name)}</b>${next.steps ? ' · ' + esc(next.steps[0].txt) : ''}.</p>` : '<p>Vous avez complété tout le Grand Carnet !</p>'}<button class="btn green big" data-closemodal="1">Super !</button>`);
 }
 function showModal(html) { const m = $('modal'); m.querySelector('.mbox').innerHTML = html; m.hidden = false; }
 function maybeIntro() {
@@ -2093,10 +2349,13 @@ function startTrip() {
   events.forEach((e, i) => { if (!e.type) e.type = (n <= 4 ? ['choix', 'animal', 'trouvaille', 'aide'][mi++ % 4] : (mi < must.length ? must[mi++] : weightedType(k))); });
   const order = events.filter(e => e.type !== 'arrivee').map(e => e.type).sort(() => Math.random() - 0.5);
   let oi = 0; events.forEach(e => { if (e.type !== 'arrivee') e.type = order[oi++]; });
+  // voyages courts : un petit coup de chance de temps en temps (arc-en-ciel, étoile filante…)
+  if (n <= 6 && Math.random() < 0.18) { const a = events.find(e => e.type === 'animal' || e.type === 'trouvaille'); if (a) a.type = 'meteo'; }
   if (hasTalent(k, 0) && k === 'pistache') events.push({ at: 0.97, type: 'trouvaille' });
   if (k === 'mochi' && hasTalent(k, 2)) events.push({ at: 0.93, type: 'pepin' });
   events.sort((a, b) => a.at - b.at);
   S.trips[k] = { id: uidGen(), comp: k, from, dest, dur: d.key, luck: d.luck + lvlLuck(k), total: d.ms, elapsed: 0, last: Date.now(), dist, events, journal: [], bag: [], photos: [], coins: 0, xp: 0, done: false, startedAt: Date.now() };
+  const dk = dayKey(); if (S.firstTripDay !== dk) { S.firstTripDay = dk; S.trips[k].dayBonus = true; }
   S.trips[k].journal.push({ t: Date.now(), kind: 'depart', text: `${CHARS[k].name} boucle son sac et part pour ${dest.name}. ${dist.toLocaleString('fr-FR')} km l’attendent.` });
   plan.dest = null; save(); renderAll();
 }
@@ -2117,6 +2376,9 @@ function lootFor(tags, luck, place, n = 1, comp = null) {
   if (isNight()) pool = pool.concat(NIGHT_LOOT);
   if (!pool.length) pool = LOOT.campagne;
   const water = tags.some(t => WATER.includes(t));
+  const ev = typeof todayEvent === 'function' ? todayEvent() : null; // événement du jour
+  if (ev && ev.tags && tags.some(t => ev.tags.includes(t))) n *= 2;
+  if (ev && ev.luck) luck += ev.luck;
   if (comp === 'bulle' && water && hasTalent('bulle', 0)) n *= 2;
   if (comp === 'bulle' && water && hasTalent('bulle', 2)) luck += 1.2;
   const out = [];
@@ -2337,6 +2599,13 @@ function tick(dtReal) {
 }
 function collect() {
   const k = S.sel, t = S.trips[k]; if (!t) return;
+  const ev = typeof todayEvent === 'function' ? todayEvent() : null, extra = [];
+  const newNames = new Set(t.bag.filter(i => !S.dex[i.name]).map(i => i.name));
+  if (t.dayBonus) { // bonus du premier voyage du jour : un objet peu commun ou mieux
+    const b = lootFor(t.dest.tags || ['campagne'], t.luck + 1, t.dest.name, 1, k)[0];
+    if (b) { b.rarity = Math.max(1, b.rarity); if (!S.dex[b.name]) newNames.add(b.name); t.bag.push(b); extra.push('Bonus du premier voyage du jour : un objet en plus !'); }
+  }
+  if (ev && ev.coins && t.coins > 0) { t.coins *= 2; extra.push(`${ev.name} : pièces doublées !`); }
   t.bag.forEach(i => { S.dex[i.name] = true; if (i.special) S.found[i.from] = true; });
   if (t.dest.secret) S.found[t.dest.name] = true;
   S.inv.push(...t.bag);
@@ -2344,15 +2613,19 @@ function collect() {
   if (t.coins) gainCoins(t.coins);
   const dd = DURS.find(x => x.key === t.dur) || DURS[0];
   const xp = Math.min(520, Math.round((t.xp + 15 + Math.floor(t.dist / 400)) * (1 + dd.luck * 0.4)));
-  const gained = addXP(k, xp);
+  const gained = addXP(k, Math.round(xp * (ev && ev.xp ? ev.xp : 1)));
   S.stats.trips++;
+  S.stats.maxRar = Math.max(S.stats.maxRar || 0, ...t.bag.map(i => i.rarity || 0));
+  if (t.dur === 'expe') S.stats.expe = (S.stats.expe || 0) + 1;
+  if (t.dur === 'eclair' || t.dur === 'court') S.stats.short = (S.stats.short || 0) + 1;
   if (t.dest.poi) S.stats.poiTrips = (S.stats.poiTrips || 0) + 1;
   bump('visit', 1, t.dest.tags);
   t.bag.forEach(i => { if (i.tags && i.tags.length) bump('items_tag', 1, i.tags); if (i.rarity >= 2) bump('rare'); });
   bump('postcards', t.photos.length);
   S.trips[k] = null; S.unseen[k] = 0; fast = false;
   save(); tab = 'sac'; renderAll();
-  toast(`${t.bag.length} objets rangés${t.coins > 0 ? `, ${t.coins} pièces gagnées` : ''}, +${gained} expérience.`);
+  if (typeof showHaul === 'function') showHaul({ comp: k, trip: t, items: t.bag, coins: t.coins, xp: gained, photos: t.photos.length, newNames, extra });
+  else toast(`${t.bag.length} objets rangés${t.coins > 0 ? `, ${t.coins} pièces gagnées` : ''}, +${gained} expérience.`);
 }
 
 // ================= CARTES POSTALES =================
@@ -2988,6 +3261,738 @@ window.__dbg = () => { const b = window.__map.getBounds(), z = window.__map.getZ
 window.__tabDebug = () => ({ tab, hidden: $('sheet').hidden });
 window.__test = { S, tick, startTrip, plan, PLACES, collect, craft, setFast: v => fast = v, value };
 window.__gen = { gridVillages, geoLayersCities, genCell, CELL };
+
+// ================= VIE DES COMPAGNONS =================
+// Portraits animés (respiration, clignements, oreilles, branchies), réactions au toucher,
+// bulles de paroles. Chargé en dernier : enveloppe quelques fonctions existantes.
+(function () {
+  const RM = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  const still = () => !!(RM && RM.matches);
+
+  // ---------- styles ----------
+  const css = `
+.cc .tilt{transition:transform .6s cubic-bezier(.3,1.4,.5,1)}
+.cc.tl .tilt{transform:rotate(-5deg)}.cc.tr .tilt{transform:rotate(5deg)}
+.cc.m-fier .tilt{transform:rotate(-4deg)}
+.cc .eyes.eo.blink{animation:ccBlink .17s ease-in-out}
+@keyframes ccBlink{50%{transform:scaleY(.08)}}
+.sp-pistache .ear{animation:ccTwitch 5.3s ease-in-out infinite}
+.sp-pistache .ear+.ear{animation-duration:6.9s;animation-delay:-2.3s}
+@keyframes ccTwitch{0%,84%,100%{transform:rotate(0)}87%{transform:rotate(-10deg)}90%{transform:rotate(6deg)}93%{transform:rotate(-3deg)}96%{transform:rotate(0)}}
+.sp-mochi .breath,.sp-mochi .bob{animation-duration:4.8s}
+.sp-mochi .ear{animation:ccFlick 7.6s ease-in-out infinite}
+.sp-mochi .ear+.ear{animation-duration:9.3s;animation-delay:-3.1s}
+@keyframes ccFlick{0%,91%,100%{transform:rotate(0)}94%{transform:rotate(16deg)}97%{transform:rotate(-6deg)}}
+.sp-bulle .breath,.sp-bulle .bob{animation-duration:2.7s}
+.sp-bulle .wave{animation-duration:1.9s}
+.sp-bulle .bubs{transform-box:view-box;animation:ccBubs 6.8s ease-out infinite}
+@keyframes ccBubs{0%,60%{opacity:0;transform:translate(0,10px)}66%{opacity:1}92%{opacity:.85;transform:translate(7px,-24px)}100%{opacity:0;transform:translate(9px,-32px)}}
+.twk{transform-box:fill-box;transform-origin:center;animation:ccTwk 1.5s ease-in-out infinite}
+@keyframes ccTwk{0%,100%{transform:scale(.7);opacity:.7}50%{transform:scale(1.15);opacity:1}}
+.cc.hop .root{transform-box:view-box;transform-origin:160px 334px;animation:ccHop .62s cubic-bezier(.3,1.3,.5,1)}
+.cc.hop.soft .root{animation-name:ccHopSoft;animation-duration:.8s}
+@keyframes ccHop{0%{transform:none}22%{transform:translateY(-34px) scale(.96,1.05)}50%{transform:translateY(0) scale(1.08,.92)}72%{transform:scale(.97,1.03)}100%{transform:none}}
+@keyframes ccHopSoft{0%{transform:none}35%{transform:translateY(-12px)}70%{transform:scale(1.04,.96)}100%{transform:none}}
+.cc.hop>ellipse{transform-box:fill-box;transform-origin:center;animation:ccShadow .62s ease-in-out}
+@keyframes ccShadow{22%{transform:scale(.8);opacity:.7}}
+.livep{display:block;line-height:0;box-sizing:content-box;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.livep svg{display:block;width:100%;height:100%}
+.hc-btn .livep{position:absolute;top:5px;left:11px;width:44px;height:48px}
+.tripcard .livep{width:56px;height:62px;flex:none;background:#f6e3c4;border-radius:14px;border:2px solid var(--ink);overflow:hidden}
+.phead .livep{width:62px;height:68px;flex:none;background:#f6e3c4;border:2px solid var(--ink);border-radius:16px;overflow:hidden}
+.gobar .livep{width:50px;height:54px;flex:none;background:#fff;border:2px solid var(--ink);border-radius:12px;overflow:hidden}
+.livep:focus-visible{outline:3px solid #2f7f6c;outline-offset:2px}
+#ccTalk{position:fixed;left:0;top:0;z-index:30;max-width:min(240px,calc(100vw - 32px));background:#fffaf0;border:3px solid var(--ink);border-radius:18px;padding:6px 13px 5px;font:700 15px/1.25 var(--display);color:var(--ink);box-shadow:0 4px 0 rgba(74,53,40,.35);pointer-events:none;opacity:0;transform:translateY(6px) scale(.92);transition:opacity .18s,transform .28s cubic-bezier(.3,1.6,.5,1);text-wrap:balance}
+#ccTalk.on{opacity:1;transform:none}
+#ccTalk::after{content:'';position:absolute;left:var(--ax,20px);width:12px;height:12px;background:#fffaf0;border:3px solid var(--ink);transform:rotate(45deg)}
+#ccTalk.below::after{top:-9px;border-right:0;border-bottom:0}
+#ccTalk:not(.below)::after{bottom:-9px;border-left:0;border-top:0}
+.ccP{position:fixed;z-index:29;pointer-events:none;width:20px;height:20px;margin:-10px 0 0 -10px;animation:ccFloat 1.25s ease-out forwards}
+.ccP svg{width:100%;height:100%;display:block}
+@keyframes ccFloat{0%{opacity:0;transform:translate(0,4px) scale(.4)}18%{opacity:1;transform:translate(calc(var(--dx)*.3),calc(var(--dy,-62px)*.2)) scale(1.05)}100%{opacity:0;transform:translate(var(--dx),var(--dy,-62px)) scale(.85) rotate(var(--rot))}}
+@media (prefers-reduced-motion:reduce){.cc *,.cc,.ccP,#ccTalk{animation:none!important;transition:none!important}.cc.tl .tilt,.cc.tr .tilt{transform:none}.ccP{display:none}}
+`;
+  const st = document.createElement('style');
+  st.id = 'ccAnim'; st.textContent = css; document.head.appendChild(st);
+
+  // ---------- portraits vivants (SVG en ligne à la place des <img>) ----------
+  const uriInfo = new Map();
+  const _portraitURI = portraitURI;
+  portraitURI = function (k, mood = 'content') {
+    const u = _portraitURI(k, mood);
+    if (!uriInfo.has(u)) uriInfo.set(u, [k, mood]);
+    return u;
+  };
+  let uidN = 0;
+  const svgFor = (k, mood) => drawChar(k, S.outfits[k], mood, 'lv' + (++uidN) + '_');
+  const asleep = k => isNight() && !S.trips[k];
+  function liven(root, ctx) {
+    if (!root) return;
+    root.querySelectorAll('img').forEach(img => {
+      const inf = uriInfo.get(img.getAttribute('src')); if (!inf) return;
+      const k = inf[0];
+      const mood = inf[1] === 'content' && ctx !== 'panel' && asleep(k) ? 'dodo' : inf[1];
+      const sp = document.createElement('span');
+      sp.className = 'livep'; sp.dataset.k = k; sp.dataset.mood = mood;
+      if (ctx === 'hud') sp.setAttribute('aria-hidden', 'true');
+      else { sp.tabIndex = 0; sp.setAttribute('role', 'button'); sp.setAttribute('aria-label', `Câliner ${CHARS[k].name}`); }
+      sp.innerHTML = svgFor(k, mood);
+      img.replaceWith(sp);
+    });
+  }
+  const _renderComps = renderComps;
+  renderComps = function () { const r = _renderComps.apply(this, arguments); liven($('hudComps'), 'hud'); return r; };
+  const _renderTripCard = renderTripCard;
+  renderTripCard = function () { const r = _renderTripCard.apply(this, arguments); liven($('tripCard'), 'trip'); return r; };
+  const _renderPanel = renderPanel;
+  renderPanel = function () { const r = _renderPanel.apply(this, arguments); liven($('panelBody'), 'panel'); return r; };
+
+  // ---------- vie au repos ----------
+  const nextBlink = new WeakMap();
+  const onScreen = el => {
+    const svg = el.ownerSVGElement || el; const r = svg.getBoundingClientRect();
+    return r.width > 0 && r.bottom > 0 && r.top < innerHeight;
+  };
+  function blink(el) { el.classList.add('blink'); setTimeout(() => el.classList.remove('blink'), 190); }
+  setInterval(() => {
+    if (still() || document.hidden) return;
+    const now = performance.now();
+    document.querySelectorAll('.cc .eyes.eo').forEach(el => {
+      const n = nextBlink.get(el);
+      if (n === undefined) { nextBlink.set(el, now + rnd(400, 4000)); return; }
+      if (now < n || !onScreen(el)) return;
+      blink(el);
+      if (Math.random() < 0.2) setTimeout(() => blink(el), 300);
+      nextBlink.set(el, now + rnd(1800, 6500));
+    });
+  }, 220);
+
+  function idle() {
+    setTimeout(idle, rnd(3500, 8000));
+    if (still() || document.hidden) return;
+    const list = [...document.querySelectorAll('svg.cc')].filter(s => !s.classList.contains('hop') && !s.classList.contains('m-dodo') && onScreen(s));
+    if (!list.length) return;
+    const svg = pick(list), sp = svg.parentElement;
+    if (sp && sp.classList.contains('livep') && sp.dataset.mood === 'content' && !sp._busy && Math.random() < 0.3) {
+      setMood(sp, 'curieux'); sp._busy = true;
+      sp._t = setTimeout(() => { sp._busy = false; if (sp.isConnected) setMood(sp, sp.dataset.mood); }, 2400);
+      return;
+    }
+    const c = Math.random() < 0.5 ? 'tl' : 'tr';
+    svg.classList.add(c); setTimeout(() => svg.classList.remove(c), rnd(1200, 2200));
+  }
+  setTimeout(idle, 3000);
+
+  // ---------- réactions au toucher ----------
+  function setMood(sp, mood) { sp.innerHTML = svgFor(sp.dataset.k, mood); return sp.querySelector('svg.cc'); }
+  function hop(svg, soft) {
+    if (!svg || still()) return;
+    svg.classList.remove('hop', 'soft'); void svg.getBoundingClientRect();
+    svg.classList.add('hop'); if (soft) svg.classList.add('soft');
+    clearTimeout(svg._hop); svg._hop = setTimeout(() => svg.classList.remove('hop', 'soft'), 850);
+  }
+  const L = '#6b4a3c';
+  // bulles et particules dans le cadre du jeu, sous les fenêtres (#modal, z-index 40)
+  const layer = () => document.querySelector('.game') || document.body;
+  const PART = {
+    heart: () => `<svg viewBox="0 0 20 20"><path d="${heartD(10, 9, 6)}" fill="#f27a9a" stroke="${L}" stroke-width="1.4"/></svg>`,
+    apple: () => `<svg viewBox="0 0 20 20"><circle cx="10" cy="12" r="6.5" fill="#ef6b5e" stroke="${L}" stroke-width="1.4"/><path d="M10 6 q1 -3 3 -4" stroke="${L}" stroke-width="1.4" fill="none"/><path d="M11 5 q4 -3 6 0 q-3 2 -6 0Z" fill="#8cc47a" stroke="${L}" stroke-width="1"/><circle cx="7.5" cy="10" r="1.5" fill="#fff" opacity=".7"/></svg>`,
+    bread: () => `<svg viewBox="0 0 20 20"><path d="M3 13 C3 6 17 6 17 13 Q17 16 10 16 Q3 16 3 13Z" fill="#e8b46a" stroke="${L}" stroke-width="1.4"/><path d="M7 9 l1.5 2 M10 8.5 l1.5 2 M13 9 l1.5 2" stroke="${L}" stroke-width="1.2" stroke-linecap="round"/></svg>`,
+    citrus: () => `<svg viewBox="0 0 20 20"><circle cx="10" cy="11" r="7" fill="#f7b367" stroke="${L}" stroke-width="1.4"/><path d="M10 4 C12 1 15 1 16 3 C14 4.5 12 4.5 10 4Z" fill="#a6cf8e" stroke="${L}" stroke-width="1"/><circle cx="7.5" cy="9" r="1.6" fill="#fff" opacity=".55"/></svg>`,
+    tea: () => `<svg viewBox="0 0 20 20"><path d="M4 9 H14 V13 Q14 17 9 17 Q4 17 4 13Z" fill="#fff8f0" stroke="${L}" stroke-width="1.4"/><path d="M14 10.5 q3.5 0 3 2.5 q-.5 2 -3 1.5" fill="none" stroke="${L}" stroke-width="1.4"/><path d="M7 7 q-1 -2 0 -4 M11 7 q-1 -2 0 -4" stroke="#b9a99a" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>`,
+    bubble: () => `<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="#e9f7ff" stroke="#7a4e5c" stroke-width="1.4"/><path d="M6.5 8 q1 -2.5 3.5 -3" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>`,
+    icecream: () => `<svg viewBox="0 0 20 20"><path d="M6 10 L10 19 L14 10Z" fill="#e8b46a" stroke="${L}" stroke-width="1.3" stroke-linejoin="round"/><circle cx="10" cy="8" r="5" fill="#f9c6d6" stroke="${L}" stroke-width="1.3"/><circle cx="8.3" cy="6.5" r="1.3" fill="#fff" opacity=".7"/></svg>`,
+    zz: () => `<svg viewBox="0 0 20 20"><text x="4" y="16" font-family="Fredoka,sans-serif" font-weight="700" font-size="16" fill="#fff" stroke="${L}" stroke-width="1.6" paint-order="stroke">z</text></svg>`,
+  };
+  const TREATS = { pistache: ['apple', 'apple', 'bread'], mochi: ['citrus', 'tea'], bulle: ['bubble', 'bubble', 'icecream'] };
+  function burst(el, k, kind) {
+    if (still()) return;
+    const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height * 0.3;
+    const n = k === 'mochi' ? 4 : 6, top = r.top < 90;
+    for (let i = 0; i < n; i++) {
+      const p = document.createElement('div');
+      const type = kind === 'sleep' ? (i % 2 ? 'zz' : 'heart') : (i % 2 ? pick(TREATS[k]) : 'heart');
+      p.className = 'ccP'; p.innerHTML = PART[type]();
+      p.style.left = (cx + rnd(-r.width * 0.35, r.width * 0.35)) + 'px';
+      p.style.top = (cy + rnd(-6, 10)) + 'px';
+      p.style.setProperty('--dx', (top ? rnd(-44, 44) : rnd(-26, 26)).toFixed(0) + 'px');
+      if (top) p.style.setProperty('--dy', rnd(-26, -14).toFixed(0) + 'px');
+      p.style.setProperty('--rot', rnd(-25, 25).toFixed(0) + 'deg');
+      p.style.animationDelay = (i * 0.07 + rnd(0, 0.06)).toFixed(2) + 's';
+      layer().appendChild(p);
+      setTimeout(() => p.remove(), 1600);
+    }
+  }
+  let talk = null;
+  function say(el, text) {
+    if (!talk) { talk = document.createElement('div'); talk.id = 'ccTalk'; talk.setAttribute('role', 'status'); layer().appendChild(talk); }
+    talk.textContent = text;
+    talk.classList.remove('on');
+    talk.style.transition = 'none';
+    const r = el.getBoundingClientRect(), W = innerWidth, H = innerHeight;
+    const tw = talk.offsetWidth, th = talk.offsetHeight;
+    const below = r.top < H * 0.42;
+    const ax = r.left + r.width / 2;
+    const x = Math.max(16, Math.min(W - 16 - tw, ax - 30));
+    const y = below ? r.bottom + 12 : Math.max(8, r.top - th - 12);
+    talk.style.left = x + 'px'; talk.style.top = y + 'px';
+    talk.style.setProperty('--ax', Math.max(12, Math.min(tw - 30, ax - x - 9)) + 'px');
+    talk.classList.toggle('below', below);
+    void talk.offsetWidth; talk.style.transition = '';
+    requestAnimationFrame(() => talk.classList.add('on'));
+    clearTimeout(say.t); say.t = setTimeout(() => talk.classList.remove('on'), Math.max(2400, 900 + text.length * 55));
+  }
+  const lastLine = {};
+  function lineFor(k, sleeping) {
+    const ch = CHARS[k], ln = ch.lines, t = S.trips[k];
+    let pool = ln.tap;
+    if (sleeping) pool = (ln.night || []).concat(ln.wake || []);
+    else if (t && !t.done) pool = (ln.away || []).concat(ln.tap.slice(0, 2));
+    let l = pick(pool), tries = 0;
+    while (pool.length > 1 && l === lastLine[k] && tries++ < 6) l = pick(pool);
+    return (lastLine[k] = l);
+  }
+  const TAP_MOODS = { pistache: ['rire', 'amour', 'curieux', 'rire'], mochi: ['amour', 'fier', 'content'], bulle: ['rire', 'amour', 'surpris', 'rire'] };
+  function react(sp, anchor) {
+    const k = sp.dataset.k, sleeping = sp.dataset.mood === 'dodo';
+    const mood = sleeping ? (Math.random() < 0.5 ? 'surpris' : 'dodo') : pick(TAP_MOODS[k]);
+    clearTimeout(sp._t); sp._busy = true;
+    const svg = setMood(sp, mood);
+    hop(svg, k === 'mochi' || sleeping);
+    burst(sp, k, sleeping ? 'sleep' : '');
+    say(anchor || sp, lineFor(k, sleeping));
+    sp._t = setTimeout(() => { sp._busy = false; if (sp.isConnected) setMood(sp, sp.dataset.mood); }, 2200);
+  }
+
+  document.addEventListener('click', ev => {
+    const hb = ev.target.closest('.hc-btn[data-sel]');
+    if (hb) {
+      // le gestionnaire principal a déjà redessiné le HUD : on retrouve le nouveau portrait
+      const sp = document.querySelector(`#hudComps .hc-btn[data-sel="${hb.dataset.sel}"] .livep`);
+      if (sp) react(sp, sp.closest('.hc-btn'));
+      return;
+    }
+    const sp = ev.target.closest('.livep');
+    if (sp) { react(sp); return; }
+    const hc = ev.target.closest('[data-hc]');
+    if (hc) { const svg = hc.querySelector('svg.cc'); hop(svg, hc.dataset.hc === 'mochi'); burst(hc, hc.dataset.hc, ''); }
+  });
+  document.addEventListener('keydown', ev => {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    const sp = ev.target.closest && ev.target.closest('.livep[role="button"]');
+    if (sp) { ev.preventDefault(); react(sp); }
+  });
+})();
+
+// ================= BOUCLE DE JEU : cadeau quotidien, événement du jour, paliers, succès, effets =================
+// Chargé en dernier. Ne modifie pas les autres fichiers : il enveloppe quelques fonctions globales
+// (renderQuests, renderNav, renderVoyage, renderGoal, maybeIntro) et ajoute ses propres éléments d'interface.
+(function injectJeuCSS() {
+  const css = `
+#jeuBar{position:absolute;z-index:5;display:flex;gap:8px;align-items:center;left:16px;top:calc(106px + env(safe-area-inset-top,0px));pointer-events:none;max-width:calc(100% - 32px)}
+#jeuBar>*{pointer-events:auto}
+body.sheet-open #jeuBar{display:none}
+@media (min-width:901px){body.sheet-open #jeuBar{display:flex}}
+.evchip{display:flex;align-items:center;gap:8px;min-width:0;background:var(--paper);border:2.5px solid var(--ink);border-radius:999px;box-shadow:0 3px 0 rgba(74,53,40,.4);padding:3px 12px 3px 3px;cursor:pointer;color:var(--ink);text-align:left;max-width:300px}
+.evchip:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(74,53,40,.4)}
+.evi{flex:none;width:32px;height:32px;border-radius:50%;background:var(--ec);border:2px solid var(--ink);display:flex;align-items:center;justify-content:center}
+.evi svg{width:19px;height:19px}
+.evt{display:flex;flex-direction:column;min-width:0}
+.evt b{font:700 14px/1.1 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.evt small{font:700 11.5px/1.2 var(--body);color:var(--rust);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jbtn{position:relative;flex:none;width:44px;height:44px;border-radius:50%;background:var(--paper);border:2.5px solid var(--ink);box-shadow:0 3px 0 rgba(74,53,40,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;color:var(--ink)}
+.jbtn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(74,53,40,.4)}
+.jbtn svg{width:26px;height:26px}
+.jbtn .jn{position:absolute;right:-5px;bottom:-5px;min-width:20px;height:20px;border-radius:999px;background:var(--gold);border:2px solid var(--ink);font:800 11.5px/16px var(--display);text-align:center;padding:0 3px}
+.jbtn .jb{position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--rust);color:#fff;border:2px solid #fff;font:800 11.5px/16px var(--display);text-align:center;padding:0 4px;animation:pulse .8s ease-in-out infinite alternate}
+@media (max-width:900px){#jeuBar{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));max-width:none}.evchip{flex:1;max-width:none}}
+/* événement dans le panneau de voyage */
+.evbans{display:flex;flex-direction:column;gap:6px}
+.evban{display:flex;align-items:center;gap:10px;background:#fff3c4;border:2px solid var(--goldD);border-radius:14px;padding:8px 10px;margin:0}
+.sugs .sug{position:relative}.sugs .sug .x2{position:absolute;right:10px;top:10px;background:var(--gold);border:2px solid var(--ink);border-radius:999px;font:800 12px/1 var(--display);padding:3px 7px}
+.evban .evi{width:30px;height:30px}
+.evban p{margin:0;font-size:13.5px;line-height:1.35}
+.evban b{font-family:var(--display)}
+/* effets de pièces et confettis */
+#fxLayer{position:fixed;inset:0;pointer-events:none;z-index:70;overflow:hidden}
+.fxcoin{position:absolute;left:0;top:0;width:26px;height:26px;margin:-13px 0 0 -13px;filter:drop-shadow(0 2px 0 rgba(74,53,40,.35))}
+.fxcoin svg{width:100%;height:100%}
+.fxplus{position:absolute;font:800 20px var(--display);color:#fff;-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;white-space:nowrap}
+.fxconf{position:absolute;left:0;top:0;width:9px;height:14px;border-radius:2px}
+.purse.bump{animation:purseBump .45s cubic-bezier(.2,1.8,.4,1)}
+@keyframes purseBump{40%{transform:scale(1.18)}}
+/* butin rapporté */
+.hhead{display:flex;align-items:center;gap:12px;width:100%;text-align:left}
+.hhead img{width:64px;height:70px;flex:none;background:#f6e3c4;border-radius:16px;border:2.5px solid var(--ink)}
+.hhead h2{font-size:22px}
+.hstats{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.hstats span{display:inline-flex;align-items:center;gap:4px;background:#fff;border:2px solid var(--line);border-radius:999px;padding:2px 9px;font:700 13px var(--display)}
+.haul{display:grid;grid-template-columns:repeat(auto-fill,minmax(94px,1fr));grid-auto-rows:max-content;flex:none;gap:8px;width:100%;max-height:min(40vh,380px);overflow:auto;padding:6px 2px 4px}
+.haul.one{grid-template-columns:120px;justify-content:center;max-height:none;overflow:visible}
+.hcard{position:relative;isolation:isolate;overflow:hidden;background:#fff;border:2.5px solid var(--rc);border-radius:14px;box-shadow:0 3px 0 var(--rc);padding:9px 5px 7px;display:flex;flex-direction:column;align-items:center;gap:3px;opacity:0;transform:scale(.6) translateY(10px);animation:hcIn .5s cubic-bezier(.2,1.5,.4,1) forwards;animation-delay:var(--d,0s)}
+@keyframes hcIn{to{opacity:1;transform:none}}
+.hcard .hico{width:46px;height:46px;display:flex;align-items:center;justify-content:center}
+.hcard .hico svg{width:100%;height:100%}
+.hcard b{font:700 12.5px/1.15 var(--display);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.3em}
+.hcard .hr{font:800 10.5px var(--display);text-transform:uppercase;letter-spacing:.04em;color:var(--rc)}
+.hcard .hnew{position:absolute;left:4px;top:4px;background:var(--pink);color:#fff;font:800 9.5px/1 var(--display);padding:3px 5px;border-radius:999px;text-transform:uppercase;z-index:2}
+.hcard .hed{font:700 9.5px var(--display);color:var(--goldD)}
+.hcard.r1{background:#f1faf5}.hcard.r2{background:#eef5fd}
+.hcard.r3{background:radial-gradient(circle at 50% 35%,#f6efff 0,#e6d8fb 100%);animation:hcIn .6s cubic-bezier(.2,1.5,.4,1) forwards,epicGlow 1.4s ease-in-out infinite alternate;animation-delay:var(--d,0s),calc(var(--d,0s) + .6s)}
+.hcard.r4{background:radial-gradient(circle at 50% 35%,#fffbe6 0,#fbe3a3 100%);animation:hcIn .7s cubic-bezier(.2,1.5,.4,1) forwards,legGlow 1.1s ease-in-out infinite alternate;animation-delay:var(--d,0s),calc(var(--d,0s) + .7s)}
+.hcard.r3::before,.hcard.r4::before{content:"";position:absolute;inset:-60%;z-index:-1;background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.75) 0 10deg,transparent 10deg 30deg);animation:rays 6s linear infinite;opacity:.55}
+.hcard.r4::before{background:repeating-conic-gradient(from 0deg,rgba(255,244,190,.95) 0 10deg,transparent 10deg 30deg);opacity:.8}
+.hcard.r3::after,.hcard.r4::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;z-index:1;background:linear-gradient(100deg,transparent,rgba(255,255,255,.85),transparent);transform:skewX(-18deg);animation:shine 2.4s ease-in-out infinite;animation-delay:calc(var(--d,0s) + .8s)}
+.hcard.r3 .hico,.hcard.r4 .hico{animation:floaty 1.6s ease-in-out infinite alternate}
+@keyframes rays{to{transform:rotate(360deg)}}
+@keyframes shine{0%{left:-60%}55%,100%{left:130%}}
+@keyframes floaty{to{transform:translateY(-3px) scale(1.06)}}
+@keyframes epicGlow{from{box-shadow:0 3px 0 var(--rc),0 0 0 0 rgba(154,111,214,.0)}to{box-shadow:0 3px 0 var(--rc),0 0 14px 3px rgba(154,111,214,.55)}}
+@keyframes legGlow{from{box-shadow:0 3px 0 var(--rc),0 0 0 0 rgba(242,193,78,0)}to{box-shadow:0 3px 0 var(--rc),0 0 18px 5px rgba(242,193,78,.75)}}
+.hbig{font:800 15px var(--display);text-transform:uppercase;letter-spacing:.06em;padding:3px 12px;border-radius:999px;border:2px solid var(--ink)}
+.hbig.r3{background:#e6d8fb;color:#6a3fb0}.hbig.r4{background:#fbe3a3;color:#9a6200;animation:pulse .7s ease-in-out infinite alternate}
+.hextra{list-style:none;margin:0;padding:0;width:100%;display:flex;flex-direction:column;gap:5px;text-align:left}
+.hextra li{display:block;text-align:left;background:#fff3c4;border:2px solid var(--goldD);border-radius:12px;padding:6px 10px;font-size:13.5px;line-height:1.35}
+.hextra li.ach{background:#e6f6e9;border-color:var(--greenD)}
+.rar.r3{color:#7a4fc0}.rar.r4{color:#b27a00}
+/* raretés dans le sac et le journal */
+.bi[style*="--rc:#9a6fd6"],.it[style*="--rc:#9a6fd6"]{background:linear-gradient(90deg,#f3ebff,#fff 60%);box-shadow:0 0 0 1.5px rgba(154,111,214,.35),0 0 12px rgba(154,111,214,.25)}
+.bi[style*="--rc:#d99a25"],.it[style*="--rc:#d99a25"]{position:relative;overflow:hidden;background:linear-gradient(90deg,#fff3c9,#fffaf0 60%);box-shadow:0 0 0 1.5px rgba(217,154,37,.45),0 0 14px rgba(242,193,78,.45)}
+.bi[style*="--rc:#d99a25"]::after,.it[style*="--rc:#d99a25"]::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:25%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.8),transparent);transform:skewX(-18deg);animation:shine 3.2s ease-in-out infinite;pointer-events:none}
+.bi[style*="--rc:#d99a25"] .itx b,.it[style*="--rc:#d99a25"] .itx b{color:#9a6200}
+.bi[style*="--rc:#9a6fd6"] .itx b,.it[style*="--rc:#9a6fd6"] .itx b{color:#6a3fb0}
+/* cadeau quotidien */
+.dgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;width:100%}
+.dcell{position:relative;border:2.5px solid var(--line);background:#fff;border-radius:12px;padding:5px 2px 4px;display:flex;flex-direction:column;align-items:center;gap:1px;font:700 11px var(--display);color:var(--ink2)}
+.dcell .dic{width:30px;height:30px;display:flex;align-items:center;justify-content:center}
+.dcell .dic svg{width:26px;height:26px}
+.dcell .dv{font:800 12px var(--display);color:var(--ink)}
+.dcell.past{background:#e6f6e9;border-color:var(--greenD);opacity:.75}
+.dcell.past::after{content:"✓";position:absolute;right:3px;top:1px;color:var(--greenD);font:800 13px var(--display)}
+.dcell.today{background:#fff3c4;border-color:var(--ink);box-shadow:0 0 0 3px rgba(246,196,69,.6);animation:pulse .8s ease-in-out infinite alternate}
+.dcell.big{background:#fbe3a3}
+@media (max-width:480px){.dgrid{grid-template-columns:repeat(4,1fr)}.dcell.d7{grid-column:span 2}}
+.streak{display:inline-flex;align-items:center;gap:6px;font:800 18px var(--display);color:var(--rust)}
+.streak svg{width:24px;height:24px}
+.evcard{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px 10px}
+.evcard .evi{width:40px;height:40px}.evcard .evi svg{width:24px;height:24px}
+.evcard p{margin:0;font-size:13.5px}
+/* collections avec paliers */
+.tcols{display:flex;flex-direction:column;gap:8px}
+.tcol{background:#fff;border:2px solid var(--line);border-radius:14px;padding:0}
+.tcol summary{list-style:none;display:grid;grid-template-columns:1fr auto;grid-template-areas:"n c" "b b";align-items:center;gap:4px 10px;padding:9px 12px;cursor:pointer}
+.tcol summary::-webkit-details-marker{display:none}
+.tcol .cn{grid-area:n;font:700 15px var(--display);display:flex;align-items:center;gap:8px;min-width:0}
+.tcol .cn i{flex:none;width:12px;height:12px;border-radius:50%;background:var(--tc);border:2px solid var(--ink)}
+.tcol .cc{grid-area:c;display:flex;align-items:center;gap:6px;font:700 13px var(--display);color:var(--ink2)}
+.tbar{grid-area:b;position:relative;height:12px;background:#f1e4c8;border:2px solid var(--ink);border-radius:999px;margin:6px 0 2px}
+.tbar>i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:var(--green)}
+.tbar>em{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:#fff;border:2px solid var(--ink);font:800 9px/12px var(--display);text-align:center;font-style:normal}
+.tbar>em.on{background:var(--gold)}
+.tbar>em:last-of-type{margin-left:-14px}
+.tcol.full{border-color:var(--goldD);background:#fffaf0}
+.tiers{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 8px}
+.tiers>span{font:700 12px var(--display);border:2px solid var(--line);border-radius:999px;padding:2px 9px;display:inline-flex;align-items:center;gap:4px;background:#fffaf0}
+.tiers>span.on{background:#e6f6e9;border-color:var(--greenD);color:var(--greenD)}
+.tcol ul{margin:0;padding:0 12px 10px 28px;columns:2;font-size:13px;color:var(--muted)}
+.tcol li.got{color:var(--ink)}
+/* succès */
+.achsum{display:flex;align-items:center;gap:10px;margin:2px 0 10px}
+.achsum b{font:800 16px var(--display);white-space:nowrap}
+.achsum .gbar{flex:1}
+.achs{display:flex;flex-direction:column;gap:7px}
+.ach{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px 10px}
+.ach .achi{flex:none;width:40px;height:40px;border-radius:12px;background:#efe7d8;display:flex;align-items:center;justify-content:center;filter:grayscale(1);opacity:.55}
+.ach .achi svg{width:30px;height:30px}
+.ach .achx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ach .achx b{font:700 15px/1.15 var(--display)}
+.ach .achx span{font-size:12.5px;color:var(--muted);line-height:1.3}
+.ach .apb{height:6px;background:#f1e4c8;border-radius:999px;overflow:hidden;margin-top:2px}
+.ach .apb i{display:block;height:100%;background:var(--green)}
+.ach .ar{flex:none;font:700 13px var(--display);color:var(--muted)}
+.ach.ready{background:#fff3c4;border-color:var(--goldD);animation:glow 1.2s ease-in-out infinite alternate}
+.ach.ready .achi,.ach.got .achi{filter:none;opacity:1;background:#fbe3a3}
+.ach.got .achi{background:#e6f6e9}
+.filters button .fb{display:inline-block;min-width:18px;height:18px;margin-left:3px;border-radius:999px;background:var(--rust);color:#fff;font:800 11px/18px var(--display);text-align:center;padding:0 4px}
+/* annonce de succès */
+#achPop{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translate(-50%,-150%);z-index:65;display:flex;align-items:center;gap:10px;background:var(--paper);border:3px solid var(--ink);border-radius:18px;box-shadow:0 5px 0 rgba(74,53,40,.45);padding:7px 14px 7px 8px;transition:transform .45s cubic-bezier(.2,1.4,.4,1);cursor:pointer;max-width:calc(100% - 24px)}
+#achPop.on{transform:translate(-50%,0)}
+#achPop svg{width:38px;height:38px;flex:none}
+#achPop small{display:block;font:800 11px var(--display);color:var(--rust);text-transform:uppercase;letter-spacing:.06em}
+#achPop b{font:700 16px/1.15 var(--display)}
+/* étape réussie du bandeau d'objectif */
+.gstep{position:absolute;right:12px;top:-14px;background:var(--green);color:#fff;border:2px solid var(--ink);border-radius:999px;padding:2px 10px;font:800 12px var(--display);pointer-events:none;z-index:6}
+#fastBtn{display:none}
+body.jeu-test #fastBtn{display:inline-flex}
+@media (prefers-reduced-motion:reduce){.hcard,.hcard.r3,.hcard.r4{animation:none;opacity:1;transform:none}.hcard.r3::before,.hcard.r4::before,.hcard::after{animation:none}}
+`;
+  const st = document.createElement('style'); st.id = 'jeuCSS'; st.textContent = css; document.head.appendChild(st);
+  try { if (/test/.test(location.hash + location.search)) document.body.classList.add('jeu-test'); } catch (e) {}
+})();
+
+// ---------- Durées : la balade éclair n'est plus présentée comme un « test »
+(function () { const e = DURS.find(d => d.key === 'eclair'); if (e && /tester/.test(e.hint)) e.hint = '1 min, parfait pour une pause'; })();
+
+// ---------- Petits outils
+const reduceMotion = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+const fxLayer = () => { let l = $('fxLayer'); if (!l) { l = document.createElement('div'); l.id = 'fxLayer'; document.body.appendChild(l); } return l; };
+let lastPointer = { x: 0, y: 0, t: 0 };
+document.addEventListener('pointerdown', e => { lastPointer = { x: e.clientX, y: e.clientY, t: Date.now() }; }, true);
+const dayNum = (d = new Date()) => Math.round(new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 864e5);
+const TROPHY = (c = '#f2c14e') => `<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M12 6 H28 V15 C28 21 24 25 20 25 C16 25 12 21 12 15Z" fill="${c}" stroke="#5b4636" stroke-width="2" stroke-linejoin="round"/><path d="M12 9 H6 C6 15 9 17 12 17 M28 9 H34 C34 15 31 17 28 17" fill="none" stroke="#5b4636" stroke-width="2"/><path d="M17 25 H23 L24 31 H16Z" fill="${c}" stroke="#5b4636" stroke-width="2" stroke-linejoin="round"/><rect x="12" y="31" width="16" height="5" rx="1.5" fill="#c98a4f" stroke="#5b4636" stroke-width="2"/><path d="M16 10 Q17 17 20 19" fill="none" stroke="#fff" stroke-width="2" opacity=".6" stroke-linecap="round"/></svg>`;
+const FLAME = `<svg viewBox="0 0 30 30" aria-hidden="true"><path d="M15 3 C17 9 24 11 24 19 C24 24 20 28 15 28 C10 28 6 24 6 19 C6 14 10 12 11 8 C13 11 13 13 15 14 C16 11 16 7 15 3Z" fill="#f2884a" stroke="#5b4636" stroke-width="2" stroke-linejoin="round"/><path d="M15 27 C12 27 10 25 10 22 C10 19 13 18 14 15 C16 18 20 19 20 22 C20 25 18 27 15 27Z" fill="#f6c445"/></svg>`;
+const GIFT = (c = '#f08aa6') => `<svg viewBox="0 0 30 30" aria-hidden="true"><rect x="4" y="11" width="22" height="16" rx="2" fill="${c}" stroke="#5b4636" stroke-width="2"/><rect x="3" y="8" width="24" height="5" rx="1.5" fill="${c}" stroke="#5b4636" stroke-width="2"/><path d="M15 8 V27" stroke="#f6c445" stroke-width="4"/><path d="M15 8 C11 2 6 4 9 8 M15 8 C19 2 24 4 21 8" fill="none" stroke="#5b4636" stroke-width="2"/></svg>`;
+
+// ================= EFFETS : pièces, confettis =================
+let coinQueue = 0, coinTimer = null;
+function coinFX(n) {
+  if (!window.__jeuReady) return;
+  coinQueue += n; clearTimeout(coinTimer);
+  coinTimer = setTimeout(() => { const v = coinQueue; coinQueue = 0; flyCoins(v); }, 60);
+}
+function flyCoins(n) {
+  const purse = $('coins'); if (!purse) return;
+  const pr = purse.getBoundingClientRect(), tx = pr.left + 20, ty = pr.top + pr.height / 2;
+  const recent = Date.now() - lastPointer.t < 2000;
+  const ox = recent ? lastPointer.x : innerWidth / 2, oy = recent ? lastPointer.y : innerHeight / 2;
+  const L = fxLayer(), count = reduceMotion() ? 0 : Math.min(12, 3 + Math.round(n / 25));
+  let landed = 0;
+  const bump = () => { purse.classList.remove('bump'); void purse.offsetWidth; purse.classList.add('bump'); };
+  for (let i = 0; i < count; i++) {
+    const c = document.createElement('div'); c.className = 'fxcoin'; c.innerHTML = COIN; L.appendChild(c);
+    const sx = ox + (Math.random() - 0.5) * 90, sy = oy + (Math.random() - 0.5) * 60 - 30;
+    const a = c.animate([
+      { transform: `translate(${ox}px,${oy}px) scale(.4)`, opacity: 0 },
+      { transform: `translate(${sx}px,${sy}px) scale(1.15)`, opacity: 1, offset: 0.3 },
+      { transform: `translate(${tx}px,${ty}px) scale(.7)`, opacity: 1 },
+    ], { duration: 650 + i * 55, easing: 'cubic-bezier(.5,0,.75,.4)', fill: 'forwards' });
+    a.onfinish = () => { c.remove(); landed++; bump(); };
+  }
+  if (!count) bump();
+  const p = document.createElement('div'); p.className = 'fxplus'; p.textContent = `+${n.toLocaleString('fr-FR')}`; L.appendChild(p);
+  p.animate([{ transform: `translate(${pr.left + 4}px,${pr.bottom + 4}px)`, opacity: 0 }, { transform: `translate(${pr.left + 4}px,${pr.bottom + 10}px)`, opacity: 1, offset: 0.2 }, { transform: `translate(${pr.left + 4}px,${pr.bottom + 34}px)`, opacity: 0 }], { duration: 1500, delay: count ? 550 : 0, fill: 'both' }).onfinish = () => p.remove();
+}
+function confetti(gold) {
+  if (reduceMotion()) return;
+  const L = fxLayer(), cols = gold ? ['#f6c445', '#f2c14e', '#fff3c4', '#d99a25', '#f08aa6'] : ['#9a6fd6', '#cdb8ea', '#f08aa6', '#8cc7e8', '#f6c445'];
+  for (let i = 0; i < (gold ? 70 : 40); i++) {
+    const c = document.createElement('div'); c.className = 'fxconf'; c.style.background = cols[i % cols.length]; L.appendChild(c);
+    const x0 = innerWidth / 2 + (Math.random() - 0.5) * 120, y0 = innerHeight * 0.38;
+    const x1 = x0 + (Math.random() - 0.5) * innerWidth * 0.9, y1 = innerHeight + 40, r = Math.random() * 900 - 450;
+    const peak = y0 - 120 - Math.random() * 200;
+    c.animate([
+      { transform: `translate(${x0}px,${y0}px) rotate(0deg)`, opacity: 1 },
+      { transform: `translate(${(x0 + x1) / 2}px,${peak}px) rotate(${r / 2}deg)`, opacity: 1, offset: 0.3 },
+      { transform: `translate(${x1}px,${y1}px) rotate(${r}deg)`, opacity: 0.9 },
+    ], { duration: 1800 + Math.random() * 1200, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'forwards' }).onfinish = () => c.remove();
+  }
+}
+
+// ================= ÉVÉNEMENT DU JOUR =================
+const EVENTS = [
+  { key: 'boulangerie', name: 'Jour des boulangeries', short: 'Butin ×2 dans les boulangeries', desc: 'Les boulangeries sortent leurs meilleures fournées : tout ce qu’on y récolte est doublé.', tags: ['boulangerie'], cat: 'boulangerie' },
+  { key: 'marche', name: 'Jour du marché', short: 'Butin ×2 aux marchés et épiceries', desc: 'Les étals débordent : le butin des marchés et des épiceries fines est doublé.', tags: ['marche', 'epicerie'], cat: 'marche' },
+  { key: 'parc', name: 'Journée des parcs', short: 'Butin ×2 dans les parcs et les bois', desc: 'Grand soleil sur les jardins : le butin des parcs, des bois et des forêts est doublé.', tags: ['parc', 'foret'], cat: 'parc' },
+  { key: 'mer', name: 'Journée de la mer', short: 'Butin ×2 à la plage et au port', desc: 'Marée exceptionnelle : plages, ports, poissonneries et voyages en bord de mer rapportent le double.', tags: ['plage', 'port', 'poissonnerie', 'mer'], cat: 'plage' },
+  { key: 'fleurs', name: 'Fête des fleurs', short: 'Butin ×2 chez les fleuristes et aux champs', desc: 'Tout fleurit : le butin des fleuristes, des champs et de la campagne est doublé.', tags: ['fleuriste', 'campagne'], cat: 'fleuriste' },
+  { key: 'patrimoine', name: 'Journée du patrimoine', short: 'Butin ×2 aux musées et monuments', desc: 'Portes ouvertes partout : musées, églises, châteaux, librairies et monuments rapportent le double.', tags: ['musee', 'patrimoine', 'librairie', 'monument'], cat: 'musee' },
+  { key: 'gourmand', name: 'Jour gourmand', short: 'Butin ×2 aux cafés, glaciers et restaurants', desc: 'Les cuisines tournent à plein : cafés, glaciers et restaurants rapportent le double.', tags: ['cafe', 'glacier', 'restaurant'], cat: 'cafe' },
+  { key: 'mode', name: 'Jour des boutiques', short: 'Butin ×2 dans les boutiques de mode', desc: 'Soldes chez les créateurs : boutiques de vêtements, friperies et boutiques rapportent le double.', tags: ['mode', 'friperie', 'boutique'], cat: 'mode' },
+  { key: 'sommets', name: 'Jour des sommets', short: 'Butin ×2 en montagne', desc: 'Ciel limpide sur les cimes : montagnes, neige et points de vue rapportent le double.', tags: ['montagne', 'neige', 'belvedere'], cat: 'belvedere', place: true },
+  { key: 'chance', name: 'Jour de chance', short: 'Objets rares plus fréquents partout', desc: 'Un trèfle à quatre feuilles dans chaque sac : les objets rares, épiques et légendaires sortent bien plus souvent.', luck: 1, color: '#5fbf7f' },
+  { key: 'pieces', name: 'Jour des pièces', short: 'Pièces de voyage ×2', desc: 'Les fontaines débordent : les pièces rapportées de voyage sont doublées au retour.', coins: true, color: '#f2c14e' },
+  { key: 'savoir', name: 'Jour d’apprentissage', short: '+50 % d’expérience', desc: 'Les compagnons sont très attentifs aujourd’hui : +50 % d’expérience au retour de chaque voyage.', xp: 1.5, color: '#7a6fb8' },
+];
+let _evCache = { dk: 0, ev: null };
+function todayEvent() {
+  const dk = dayKey(); if (_evCache.dk === dk) return _evCache.ev;
+  const ev = EVENTS[(Math.imul(dk, 2654435761) >>> 0) % EVENTS.length];
+  _evCache = { dk, ev }; return ev;
+}
+const evColor = ev => ev.color || (ev.cat && POI_CATS[ev.cat] ? POI_CATS[ev.cat][1] : '#f2c14e');
+function evIcon(ev) {
+  if (ev.cat && POI_CATS[ev.cat]) return `<svg viewBox="0 0 24 24" aria-hidden="true">${POI_GLYPH[POI_CATS[ev.cat][2]] || ''}</svg>`;
+  if (ev.coins) return COIN;
+  if (ev.luck) return `<svg viewBox="0 0 24 24" aria-hidden="true">${[0, 1, 2, 3].map(i => `<circle cx="${12 + Math.cos(i * 1.571) * 4.6}" cy="${11 + Math.sin(i * 1.571) * 4.6}" r="4.4" fill="#fff"/>`).join('')}<path d="M12 12 Q14 18 17 21" stroke="#fff" stroke-width="2" fill="none"/></svg>`;
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6 H11 Q12 6 12 8 V20 Q12 18 10 18 H4Z M20 6 H13 Q12 6 12 8 V20 Q12 18 14 18 H20Z" fill="#fff"/></svg>`;
+}
+const evApplies = (ev, tags) => !!(ev && ev.tags && tags && tags.some(t => ev.tags.includes(t)));
+function goEvent() {
+  const ev = todayEvent();
+  $('modal').hidden = true;
+  if (ev.place && !S.trips[S.sel]) { const h = homeObj(), p = PLACES.filter(x => x.name !== S.home && ev.tags.some(t => x.tags.includes(t))).sort((a, b) => kmBetween(h, a) - kmBetween(h, b))[0]; if (p) { goToPlace(p); return; } }
+  if (ev.cat && POI_CATS[ev.cat]) { if (tab !== 'carte') closeSheet(); goHome(); setTimeout(() => toast(`Cherchez « ${POI_CATS[ev.cat][0]} » près de chez vous et touchez-le pour récolter.`), 50); return; }
+  openSheet('voyage');
+}
+function eventModal() {
+  const ev = todayEvent();
+  showModal(`<div class="evi" style="--ec:${evColor(ev)};width:64px;height:64px">${evIcon(ev).replace('<svg ', '<svg style="width:38px;height:38px" ')}</div><h2>${esc(ev.name)}</h2><p>${esc(ev.desc)}</p><p class="small">Un nouvel événement chaque jour. Revenez demain pour découvrir le suivant !</p><div class="row" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn cream" data-closemodal="1">Fermer</button><button class="btn green" data-jeu="goevent">J’y vais !</button></div>`);
+}
+
+// ================= CADEAU QUOTIDIEN ET SÉRIE =================
+const LOGIN_REWARDS = [{ coins: 30 }, { coins: 50 }, { item: 1 }, { coins: 80 }, { item: 2 }, { coins: 120 }, { coins: 200, item: 3 }];
+function giftItem(r) {
+  const all = Object.values(LOOT).flat().filter(d => d[1] !== 'n' && d[3] <= r);
+  const it = makeItem(pick(all), 0, 'Cadeau du jour', [], { fixed: r });
+  S.inv.push(it); S.dex[it.name] = true; S.stats.maxRar = Math.max(S.stats.maxRar || 0, r);
+  return it;
+}
+function checkLogin() {
+  const L = S.login, today = dayNum();
+  if (L.last === today) return null;
+  L.streak = L.last === today - 1 ? (L.streak || 0) + 1 : 1;
+  L.last = today; L.best = Math.max(L.best || 0, L.streak); L.total = (L.total || 0) + 1;
+  const idx = (L.streak - 1) % 7, r = LOGIN_REWARDS[idx];
+  const got = { idx, coins: r.coins || 0, item: null };
+  if (r.item != null) got.item = giftItem(r.item);
+  save();
+  return got;
+}
+function rewardCell(r, i, cls) {
+  const ic = r.item != null ? GIFT(RARC[r.item]) : COIN;
+  return `<div class="dcell ${cls} d${i + 1}${i === 6 ? ' big' : ''}"><span>Jour ${i + 1}</span><span class="dic">${ic}</span><span class="dv"${r.item != null && !r.coins ? ` style="color:${RARC[r.item]}"` : ''}>${r.coins ? r.coins : RARITY[r.item]}${r.coins && r.item != null ? ` + <span style="color:${RARC[r.item]}">${RARITY[r.item]}</span>` : ''}</span></div>`;
+}
+function loginModal(got) {
+  const L = S.login, cur = ((L.streak || 1) - 1) % 7, ev = todayEvent();
+  const cells = LOGIN_REWARDS.map((r, i) => rewardCell(r, i, i < cur ? 'past' : i === cur ? 'today' : '')).join('');
+  let gotTxt = '';
+  if (got) gotTxt = `<p>Cadeau du jour ${got.idx + 1} : ${got.coins ? `<b>${got.coins} pièces</b>` : ''}${got.coins && got.item ? ' et ' : ''}${got.item ? `<b class="rar r${got.item.rarity}">« ${esc(got.item.name)} »</b> (${RARITY[got.item.rarity]})` : ''}.</p>`;
+  showModal(`<span class="streak">${FLAME} ${L.streak} jour${L.streak > 1 ? 's' : ''} de suite</span><h2>${got ? (L.total > 1 || (S.stats.trips || 0) > 0 ? 'Bon retour !' : 'Cadeau de bienvenue !') : 'Cadeaux quotidiens'}</h2>${gotTxt}<div class="dgrid">${cells}</div><p class="small">Revenez chaque jour : les cadeaux grandissent jusqu’au 7ᵉ jour. Si vous manquez un jour, la série recommence.</p><div class="evcard"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>Aujourd’hui : ${esc(ev.name)}</b><br>${esc(ev.short)}</p></div><button class="btn green big" data-closemodal="1" data-jeu="logindone">${got ? 'Merci !' : 'Fermer'}</button>`);
+  if (got) setTimeout(() => { if (got.coins) { lastPointer = { x: innerWidth / 2, y: innerHeight / 2, t: Date.now() }; coinFX(got.coins); } }, 350);
+}
+function runLogin() {
+  if (!S.seenIntro) return;
+  if (!$('modal').hidden) { setTimeout(runLogin, 1500); return; }
+  const got = checkLogin();
+  if (got) { gainCoinsSilent(got.coins); renderAll(); renderJeuBar(); loginModal(got); }
+}
+// les pièces du cadeau sont ajoutées sans animation immédiate (l'animation part du cadeau)
+function gainCoinsSilent(n) { const r = window.__jeuReady; window.__jeuReady = false; gainCoins(n); window.__jeuReady = r; }
+
+// ================= PALIERS DE COLLECTION =================
+function checkTiers() {
+  const out = [];
+  for (const c of collections()) {
+    const reached = colTierReached(c), have = S.tiers[c.key] || 0;
+    if (reached <= have) continue;
+    for (let i = have; i < reached; i++) {
+      if (i < 2) {
+        const coinsR = tierReward(c, i); gainCoins(coinsR);
+        let it = null;
+        if (i === 1) { // 50 % : un objet rare de cette collection
+          const defs = (LOOT[c.key] || []).filter(d => d[1] !== 'n');
+          if (defs.length) { const d = pick(defs); it = makeItem(d, 0, `Palier : ${c.label}`, [c.key], { fixed: Math.max(2, d[3]) }); S.inv.push(it); S.dex[it.name] = true; }
+        }
+        out.push({ c, i, coins: coinsR, item: it });
+      } else out.push({ c, i, coins: 0, full: true });
+    }
+    S.tiers[c.key] = reached;
+  }
+  if (out.length) save();
+  return out;
+}
+const tierText = t => t.full ? `Collection « ${t.c.label} » complète ! Votre trophée vous attend dans Quêtes › Collections.` : `Palier ${TIERS[t.i].label} · ${t.c.label} : +${t.coins} pièces${t.item ? ` et « ${t.item.name} »` : ''}`;
+
+// ================= SUCCÈS =================
+const st_ = k => S.stats[k] || 0;
+const dexN = () => Object.keys(S.dex).length;
+const placesN = () => PLACES.filter(p => S.found[p.name]).length;
+const maxRar = () => Math.max(S.stats.maxRar || 0, ...S.inv.map(i => i.rarity || 0), 0);
+const tierCount = n => collections().filter(c => colTierReached(c) >= n).length;
+const lvls = () => Object.values(S.prog).map(p => p.lvl);
+const ACH = [
+  { id: 'depart', name: 'Premier départ', desc: 'Envoyer un compagnon en voyage', p: () => [st_('started'), 1], r: 30 },
+  { id: 'voyageur', name: 'Voyageur', desc: 'Terminer 10 voyages', p: () => [st_('trips'), 10], r: 80 },
+  { id: 'globe', name: 'Globe-trotteur', desc: 'Terminer 50 voyages', p: () => [st_('trips'), 50], r: 250 },
+  { id: 'pause', name: 'Pause éclair', desc: 'Terminer 5 voyages courts (balade ou escapade)', p: () => [st_('short'), 5], r: 60 },
+  { id: 'expe', name: 'Grande expédition', desc: 'Terminer une expédition de 12 h', p: () => [st_('expe'), 1], r: 200 },
+  { id: 'quartier', name: 'Enfant du quartier', desc: 'Récolter 10 fois dans les lieux du quartier', p: () => [st_('poiTrips'), 10], r: 120 },
+  { id: 'curieux', name: 'Curieux', desc: 'Découvrir 25 objets différents', p: () => [dexN(), 25], r: 60 },
+  { id: 'encyclo', name: 'Encyclopédiste', desc: 'Découvrir 100 objets différents', p: () => [dexN(), 100], r: 200 },
+  { id: 'savant', name: 'Grand savant', desc: 'Découvrir 250 objets différents', p: () => [dexN(), 250], r: 500 },
+  { id: 'epique', name: 'Éclat épique', desc: 'Trouver un objet épique', p: () => [maxRar() >= 3 ? 1 : 0, 1], r: 100 },
+  { id: 'legende', name: 'Légendaire !', desc: 'Trouver un objet légendaire', p: () => [maxRar() >= 4 ? 1 : 0, 1], r: 300 },
+  { id: 'souvenir', name: 'Premier souvenir', desc: 'Trouver le souvenir unique d’un lieu célèbre', p: () => [placesN(), 1], r: 60 },
+  { id: 'memoire', name: 'Mémoire du monde', desc: 'Trouver 15 souvenirs uniques', p: () => [placesN(), 15], r: 300 },
+  { id: 'carte', name: 'Chasseur de trésors', desc: 'Déplier une carte au trésor', p: () => [S.secrets.length, 1], r: 100 },
+  { id: 'secret', name: 'Lieu secret', desc: 'Visiter un lieu secret', p: () => [SECRETS.filter(s => S.found[s.name]).length, 1], r: 200 },
+  { id: 'palier', name: 'Bon début', desc: 'Atteindre 25 % d’une collection de lieu', p: () => [tierCount(1), 1], r: 50 },
+  { id: 'paliers', name: 'Collectionneur', desc: 'Atteindre 50 % de 5 collections', p: () => [tierCount(2), 5], r: 200 },
+  { id: 'complet', name: 'Collection complète', desc: 'Compléter une collection à 100 %', p: () => [tierCount(3), 1], r: 250 },
+  { id: 'artisan', name: 'Artisan', desc: 'Fabriquer 5 objets à l’atelier', p: () => [st_('crafted'), 5], r: 80 },
+  { id: 'maitre', name: 'Maître artisan', desc: 'Fabriquer 25 objets à l’atelier', p: () => [st_('crafted'), 25], r: 250 },
+  { id: 'commerce', name: 'Petit commerce', desc: 'Vendre 10 objets', p: () => [st_('sold'), 10], r: 80 },
+  { id: 'fortune', name: 'Tirelire pleine', desc: 'Gagner 3 000 pièces au total', p: () => [st_('earned'), 3000], r: 150 },
+  { id: 'coquet', name: 'Coquet', desc: 'Essayer 5 vêtements', p: () => [st_('worn'), 5], r: 50 },
+  { id: 'deco', name: 'Décorateur', desc: 'Remplir 5 emplacements de la maison', p: () => [Object.values(S.house).filter(Boolean).length, 5], r: 100 },
+  { id: 'photo', name: 'Photographe', desc: 'Rassembler 30 cartes postales', p: () => [S.album.length, 30], r: 100 },
+  { id: 'gourmet', name: 'Gourmet', desc: 'Offrir 10 repas aux compagnons', p: () => [st_('fed'), 10], r: 60 },
+  { id: 'coeur', name: 'Grand cœur', desc: 'Répondre à 20 choix en voyage', p: () => [st_('choices'), 20], r: 80 },
+  { id: 'aguerri', name: 'Compagnon aguerri', desc: 'Faire monter un compagnon au niveau 5', p: () => [Math.max(...lvls()), 5], r: 150 },
+  { id: 'trio', name: 'Les trois amis', desc: 'Les trois compagnons au niveau 3', p: () => [Math.min(...lvls()), 3], r: 150 },
+  { id: 'fidele', name: 'Fidèle', desc: 'Revenir 3 jours de suite', p: () => [S.login.best || 0, 3], r: 80 },
+  { id: 'assidu', name: 'Assidu', desc: 'Revenir 7 jours de suite', p: () => [S.login.best || 0, 7], r: 250 },
+];
+const achDone = a => { const [c, g] = a.p(); return c >= g; };
+const achReady = () => ACH.filter(a => achDone(a) && !S.achClaimed[a.id]);
+function checkAch() {
+  const out = [];
+  for (const a of ACH) if (!S.achSeen[a.id] && achDone(a)) { S.achSeen[a.id] = Date.now(); out.push(a); }
+  if (out.length) save();
+  return out;
+}
+let popQueue = [], popBusy = false;
+function achPop(a) { popQueue.push(a); if (!popBusy) nextPop(); }
+function nextPop() {
+  const a = popQueue.shift(); if (!a) { popBusy = false; return; }
+  popBusy = true;
+  let el = $('achPop'); if (!el) { el = document.createElement('div'); el.id = 'achPop'; el.setAttribute('role', 'status'); el.addEventListener('click', () => { el.classList.remove('on'); openAchievements(); }); document.body.appendChild(el); }
+  el.innerHTML = `${TROPHY()}<div><small>Succès débloqué</small><b>${esc(a.name)}</b></div>`;
+  requestAnimationFrame(() => el.classList.add('on'));
+  setTimeout(() => { el.classList.remove('on'); setTimeout(nextPop, 450); }, 3000);
+}
+function claimAch(id) {
+  const a = ACH.find(x => x.id === id); if (!a || S.achClaimed[id] || !achDone(a)) return;
+  S.achClaimed[id] = Date.now(); gainCoins(a.r); save(); renderTop(); renderPanel(); renderJeuBar();
+}
+function openAchievements() { questView = 'succes'; openSheet('quetes'); }
+function achHTML() {
+  const ready = achReady().length, claimed = Object.keys(S.achClaimed).length;
+  const rows = ACH.map(a => { const [c, g] = a.p(); return { a, c: Math.min(c, g), g, done: c >= g, got: !!S.achClaimed[a.id] }; });
+  rows.sort((x, y) => (y.done && !y.got) - (x.done && !x.got) || x.got - y.got || (y.c / y.g) - (x.c / x.g));
+  let h = `<div class="achsum"><b>${claimed} / ${ACH.length} succès</b><span class="gbar"><i style="width:${(claimed / ACH.length * 100).toFixed(0)}%"></i></span></div>`;
+  if (ready) h += `<p class="small" style="margin:0 0 8px">${ready} récompense${ready > 1 ? 's' : ''} à récupérer !</p>`;
+  h += `<div class="achs">` + rows.map(({ a, c, g, done, got }) => `<div class="ach ${got ? 'got' : done ? 'ready' : ''}"><span class="achi">${TROPHY(got ? '#f2c14e' : done ? '#f6c445' : '#c9bfae')}</span><div class="achx"><b>${esc(a.name)}</b><span>${esc(a.desc)}</span>${!done && g > 1 ? `<div class="apb"><i style="width:${(c / g * 100).toFixed(0)}%"></i></div><span>${c.toLocaleString('fr-FR')} / ${g.toLocaleString('fr-FR')}</span>` : ''}</div>${got ? '<span class="tagok">Obtenu</span>' : done ? `<button class="btn gold sm" data-ach="${a.id}">${coins(a.r)}</button>` : `<span class="ar">${coins(a.r)}</span>`}</div>`).join('') + `</div>`;
+  return h;
+}
+
+// ---- collections avec paliers (remplace la liste d'origine dans Quêtes › Collections)
+function colsHTML() {
+  const cols = collections().map(c => ({ c, got: colGot(c), n: c.names.length, tier: colTierReached(c) }));
+  cols.sort((a, b) => ((b.tier === 3 && !S.colClaimed[b.c.key]) - (a.tier === 3 && !S.colClaimed[a.c.key])) || (!!S.colClaimed[a.c.key] - !!S.colClaimed[b.c.key]) || (b.got / b.n - a.got / a.n));
+  let h = `<p class="small" style="margin:0 0 8px">Chaque type de lieu a sa collection. À 25 % et 50 % des objets découverts, vous recevez une récompense automatiquement. À 100 %, un trophée pour la maison.</p><div class="tcols">`;
+  h += cols.map(({ c, got, n, tier }) => {
+    const claimed = S.colClaimed[c.key], f = got / n;
+    const pills = TIERS.map((t, i) => `<span class="${tier > i ? 'on' : ''}">${tier > i ? '✓ ' : ''}${t.label} · ${coins(tierReward(c, i))}${i === 1 ? ' + objet' : i === 2 ? ' + trophée' : ''}</span>`).join('');
+    return `<details class="tcol ${tier === 3 ? 'full' : ''}"><summary><span class="cn"><i style="--tc:${TAGC[c.key] || '#c9a97a'}"></i>${esc(c.label)}</span><span class="cc">${got}/${n}${tier === 3 && !claimed ? `<button class="btn gold sm" data-claimc="${c.key}">Trophée</button>` : claimed ? '<span class="tagok">Complète</span>' : ''}</span><span class="tbar"><i style="width:${(f * 100).toFixed(0)}%"></i><em class="${tier > 0 ? 'on' : ''}" style="left:25%"></em><em class="${tier > 1 ? 'on' : ''}" style="left:50%"></em><em class="${tier > 2 ? 'on' : ''}" style="left:100%"></em></span></summary><div class="tiers">${pills}</div><ul>${c.names.map(x => `<li class="${S.dex[x] ? 'got' : ''}">${S.dex[x] ? esc(x) : '? ? ?'}</li>`).join('')}</ul></details>`;
+  }).join('');
+  return h + `</div>`;
+}
+
+// ================= BUTIN AU RETOUR =================
+function haulCard(it, i, isNew) {
+  return `<div class="hcard r${it.rarity}" style="--rc:${RARC[it.rarity]};--d:${(0.08 * i).toFixed(2)}s">${isNew ? '<span class="hnew">Nouveau</span>' : ''}<span class="hico">${itemIcon(it)}</span><b>${esc(it.name)}</b><span class="hr">${RARITY[it.rarity]}</span>${it.edition ? `<span class="hed">${esc(it.edition)}</span>` : it.special && !/^Récompense/.test(it.from || '') ? '<span class="hed">Souvenir unique</span>' : ''}</div>`;
+}
+function showHaul(h) {
+  const items = h.items.slice().sort((a, b) => b.rarity - a.rarity);
+  const top = items.length ? items[0].rarity : 0, name = CHARS[h.comp].name;
+  const tiers = checkTiers(), achs = checkAch();
+  const extra = (h.extra || []).map(x => `<li>${esc(x)}</li>`).concat(tiers.map(t => `<li>${esc(tierText(t))}</li>`), achs.length ? [`<li class="ach">${achs.length > 1 ? 'Succès débloqués' : 'Succès débloqué'} : <b>${achs.map(a => esc(a.name)).join(', ')}</b>. Récompense${achs.length > 1 ? 's' : ''} dans Quêtes › Succès.</li>`] : []);
+  const newN = items.filter(i => h.newNames.has(i.name)).length;
+  showModal(`<div class="hhead"><img src="${portraitURI(h.comp, 'rire')}" alt=""><div><h2>${name} est de retour !</h2><div class="hstats"><span>${items.length} objet${items.length > 1 ? 's' : ''}</span>${newN ? `<span>${newN} nouveau${newN > 1 ? 'x' : ''}</span>` : ''}${h.coins > 0 ? `<span>${COIN}+${h.coins}</span>` : ''}<span>+${h.xp} exp.</span>${h.photos ? `<span>${h.photos} carte${h.photos > 1 ? 's' : ''} postale${h.photos > 1 ? 's' : ''}</span>` : ''}</div></div></div>${top >= 3 ? `<span class="hbig r${top}">${top >= 4 ? 'Trouvaille légendaire !' : 'Trouvaille épique !'}</span>` : ''}<div class="haul">${items.map((it, i) => haulCard(it, i, h.newNames.has(it.name))).join('')}</div>${extra.length ? `<ul class="hextra">${extra.join('')}</ul>` : ''}<button class="btn green big wide" data-closemodal="1">Tout ranger dans le sac</button>`);
+  if (top >= 3) setTimeout(() => confetti(top >= 4), 300 + Math.min(items.length, 8) * 60);
+  renderJeuBar();
+}
+
+// ================= BARRE DU JEU (écran principal) =================
+function renderJeuBar() {
+  let bar = $('jeuBar');
+  if (!bar) { bar = document.createElement('div'); bar.id = 'jeuBar'; const g = $('goal'); g.parentNode.insertBefore(bar, g.nextSibling); }
+  const ev = todayEvent(), ready = achReady().length, L = S.login;
+  bar.innerHTML = `<button class="evchip" data-jeu="event" aria-label="Événement du jour : ${esc(ev.name)}"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><span class="evt"><b>${esc(ev.name)}</b><small>${esc(ev.short)}</small></span></button><button class="jbtn" data-jeu="login" aria-label="Cadeaux quotidiens, série de ${L.streak || 0} jours">${FLAME}<span class="jn">${L.streak || 0}</span></button><button class="jbtn" data-jeu="ach" aria-label="Succès${ready ? `, ${ready} à récupérer` : ''}">${TROPHY()}${ready ? `<span class="jb">${ready}</span>` : ''}</button>`;
+  layoutJeuBar(); eventMapCSS();
+}
+// les lieux concernés par l'événement du jour brillent sur la carte
+function eventMapCSS() {
+  const ev = todayEvent(); let st = $('jeuEvCSS'); if (!st) { st = document.createElement('style'); st.id = 'jeuEvCSS'; document.head.appendChild(st); }
+  const cols = (ev.tags || []).filter(t => POI_CATS[t]).map(t => POI_CATS[t][1]);
+  st.textContent = cols.map(c => `.poi .poib[style*="--pc:${c}"]`).join(',') + (cols.length ? `{box-shadow:0 0 0 3px #f6c445,0 0 12px 4px rgba(246,196,69,.8);animation:pulse .9s ease-in-out infinite alternate}` : '');
+}
+function layoutJeuBar() {
+  const bar = $('jeuBar'), g = $('goal'); if (!bar || !g) return;
+  if (innerWidth <= 900) { const r = g.getBoundingClientRect(); bar.style.top = (r.height ? r.bottom + 10 : 110) + 'px'; }
+  else bar.style.top = '';
+}
+addEventListener('resize', layoutJeuBar);
+
+// ================= ENVELOPPES DES FONCTIONS EXISTANTES =================
+renderQuests = (orig => function (box) {
+  orig(box);
+  const f = box.querySelector('.filters');
+  if (f && !f.querySelector('[data-qv="succes"]')) { const n = achReady().length; f.insertAdjacentHTML('beforeend', `<button data-qv="succes" aria-pressed="${questView === 'succes'}">Succès${n ? ` <span class="fb">${n}</span>` : ''}</button>`); }
+  if (questView === 'col' || questView === 'succes') {
+    let el = f ? f.nextElementSibling : null; while (el) { const nx = el.nextElementSibling; el.remove(); el = nx; }
+    box.insertAdjacentHTML('beforeend', questView === 'col' ? colsHTML() : achHTML());
+  }
+})(renderQuests);
+renderNav = (orig => function () {
+  orig();
+  const b = document.querySelector('#nav [data-nav="quetes"]'); if (!b) return;
+  const q = S.daily.quests.filter(x => x.prog >= x.goal && !x.claimed).length + collections().filter(c => !S.colClaimed[c.key] && c.names.every(n => S.dex[n])).length + achReady().length;
+  const old = b.querySelector('.tb'); if (old) old.remove();
+  if (q) b.insertAdjacentHTML('beforeend', `<i class="tb">${q}</i>`);
+})(renderNav);
+renderVoyage = (orig => function (box) {
+  orig(box);
+  const ev = todayEvent(); if (S.trips[S.sel]) return;
+  let html = '';
+  if (plan.dest && evApplies(ev, plan.dest.tags)) html = `<div class="evban"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>${esc(ev.name)} !</b> Le butin est doublé ici aujourd’hui.</p></div>`;
+  else if (!plan.dest) html = `<div class="evban"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>Aujourd’hui : ${esc(ev.name)}.</b> ${esc(ev.short)}.</p></div>`;
+  else if (ev.luck || ev.coins || ev.xp) html = `<div class="evban"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>${esc(ev.name)} :</b> ${esc(ev.short)}.</p></div>`;
+  if (S.firstTripDay !== dayKey()) html += `<div class="evban" style="background:#e6f6e9;border-color:var(--greenD)"><span class="evi" style="--ec:#5fbf7f">${GIFT('#fff').replace('<svg ', '<svg style="width:20px;height:20px" ')}</span><p><b>Premier voyage du jour :</b> un objet peu commun ou mieux en bonus au retour.</p></div>`;
+  if (html) box.insertAdjacentHTML('afterbegin', `<div class="evbans">${html}</div>`);
+  if (ev.tags) box.querySelectorAll('[data-goplace]').forEach(b => { const p = PLACES[+b.dataset.goplace]; if (p && evApplies(ev, p.tags)) b.insertAdjacentHTML('beforeend', '<span class="x2" title="Butin doublé aujourd’hui">×2</span>'); });
+})(renderVoyage);
+let _goalMark = null;
+renderGoal = (orig => function () {
+  orig();
+  try {
+    const g = goalState(), mark = g.finished ? 'fin' : `${g.idx}:${g.doneN}`;
+    if (_goalMark && mark !== _goalMark && !g.finished && g.doneN > 0 && _goalMark.split(':')[0] == g.idx) {
+      const box = $('goal');
+      if (box && !reduceMotion()) box.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(1.15) saturate(1.2)', offset: 0.3 }, { filter: 'brightness(1)' }], { duration: 800 });
+      if (box) { const s = document.createElement('span'); s.className = 'gstep'; s.textContent = g.complete ? 'Chapitre terminé !' : 'Étape réussie !'; box.appendChild(s); s.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none', offset: 0.15 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], { duration: 2200, fill: 'forwards' }); }
+    }
+    _goalMark = mark;
+  } catch (e) {}
+  layoutJeuBar();
+})(renderGoal);
+maybeIntro = (orig => function () {
+  orig();
+  window.__jeuReady = true;
+  renderJeuBar();
+  // succès et paliers déjà mérités avec une ancienne sauvegarde : accordés en silence au premier lancement
+  if (!S.jeuInit) { const tt = checkTiers(); if (tt.length) setTimeout(() => toast(`Paliers de collection déjà atteints : +${tt.reduce((a, t) => a + t.coins, 0)} pièces !`), 1200); for (const a of ACH) if (achDone(a)) S.achSeen[a.id] = S.achSeen[a.id] || Date.now(); S.jeuInit = 1; save(); renderAll(); }
+  setTimeout(runLogin, 700);
+})(maybeIntro);
+
+// ================= CLICS =================
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('button'); if (!el || el.disabled) return;
+  const d = el.dataset;
+  if (d.closemodal === 'intro') setTimeout(runLogin, 500);
+  if (d.jeu === 'event') return eventModal();
+  if (d.jeu === 'goevent') return goEvent();
+  if (d.jeu === 'login') return loginModal(null);
+  if (d.jeu === 'ach') return openAchievements();
+  if (d.ach) return claimAch(d.ach);
+  if (d.claimq) { S.stats.qclaimed = (S.stats.qclaimed || 0) + 1; save(); }
+  if (d.feed) { S.stats.fed = (S.stats.fed || 0) + 1; save(); }
+  if (d.claimc) { S.tiers[d.claimc] = 3; renderJeuBar(); }
+});
+document.addEventListener('visibilitychange', () => { if (!document.hidden && window.__jeuReady) { _evCache.dk = 0; renderJeuBar(); runLogin(); } });
+
+// ================= VÉRIFICATION RÉGULIÈRE =================
+setInterval(() => {
+  if (!window.__jeuReady) return;
+  if (!$('modal').hidden) return; // on attend la fin d'une fenêtre (le butin affiche déjà ses propres annonces)
+  const tiers = checkTiers(), achs = checkAch();
+  tiers.forEach(t => toast(tierText(t)));
+  achs.forEach(achPop);
+  if (tiers.length || achs.length) { renderTop(); renderNav(); renderJeuBar(); if (tab === 'quetes') renderPanel(); }
+  else layoutJeuBar();
+}, 1500);
+window.__jeu = { setEvent: i => { _evCache = { dk: dayKey(), ev: EVENTS[i] }; renderJeuBar(); }, renderGoal: () => renderGoal(), todayEvent, EVENTS, ACH, checkTiers, checkAch, checkLogin, showHaul, coinFX, confetti, goalState };
 
 })();
 </script>

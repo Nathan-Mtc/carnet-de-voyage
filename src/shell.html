@@ -1,4 +1,17 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Carnet de voyage</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Carnet">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f7e9cf">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Caveat:wght@500;700&family=Nunito:wght@400;600;700;800&display=swap">
@@ -133,7 +146,7 @@ body{background:#9fd1d8;color:var(--ink);font-family:var(--body);font-size:15px}
 .goal.ready{background:#fff3c4;animation:glow 1.2s ease-in-out infinite alternate}
 @media (max-width:900px){.goal{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));transform:none;width:auto;min-width:0;top:calc(98px + env(safe-area-inset-top,0px));padding:5px 6px 5px 8px}.goal .gi{width:28px;height:28px}.gx b{font-size:14px}}
 body.sheet-open .goal{display:none}
-@media (min-width:901px){body.sheet-open .goal{display:flex;left:calc((100% - 470px) / 2);width:min(480px,calc(100% - 900px));min-width:300px}}
+@media (min-width:1500px){body.sheet-open .goal{display:flex;left:calc((100% - 470px) / 2);width:min(480px,calc(100% - 900px));min-width:300px}}
 #modal{position:absolute;inset:0;z-index:40;background:rgba(74,53,40,.45);display:flex;align-items:center;justify-content:center;padding:16px}
 .mbox{background:var(--paper);border:3px solid var(--ink);border-radius:24px;box-shadow:0 6px 0 rgba(74,53,40,.5);max-width:440px;width:100%;padding:18px 20px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;animation:sheetIn .35s cubic-bezier(.2,1.4,.4,1);max-height:calc(100% - 20px);overflow:auto}
 .mbox h2{margin:0;font:800 24px/1.15 var(--display);text-wrap:balance}
@@ -208,6 +221,8 @@ select{font:700 15px var(--body);color:var(--ink);background:#fff;border:2px sol
 .logo b{display:block;font:800 26px/1 var(--display);color:#fff;-webkit-text-stroke:5px var(--ink);paint-order:stroke fill;letter-spacing:.02em;white-space:nowrap}
 .logo b span{color:var(--gold)}
 @media (max-width:900px){.logo{display:none}}
+/* téléphone : le porte-monnaie grandit avec les pièces, on gagne quelques pixels pour que le bouton des réglages reste à l’écran */
+@media (max-width:420px){.hud{gap:6px;padding-left:max(10px,env(safe-area-inset-left,0px));padding-right:max(10px,env(safe-area-inset-right,0px))}#hudComps{gap:2px}.purse{font-size:17px;padding:3px 10px 3px 5px;gap:4px}.purse .coin{width:22px;height:22px}}
 .zoom{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:4}
 body.sheet-open .zoom{display:none}
 
@@ -307,7 +322,7 @@ INNER_CSS
 .tal.on{border:2px solid var(--ink)}
 .empty{border:2px dashed var(--line)}
 #toast{position:absolute;left:50%;top:calc(100px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:14px;font:700 15px var(--display);z-index:20;max-width:calc(100% - 32px);text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.25)}
-#react{position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(170px + env(safe-area-inset-bottom,0px));width:220px;background:var(--paper);border:3px solid var(--ink);border-radius:20px;padding:8px 10px 12px;z-index:20;text-align:center;box-shadow:0 5px 0 rgba(74,53,40,.4);animation:sheetIn .3s cubic-bezier(.2,1.4,.4,1)}
+#react{pointer-events:none;position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(170px + env(safe-area-inset-bottom,0px));width:220px;background:var(--paper);border:3px solid var(--ink);border-radius:20px;padding:8px 10px 12px;z-index:20;text-align:center;box-shadow:0 5px 0 rgba(74,53,40,.4);animation:sheetIn .3s cubic-bezier(.2,1.4,.4,1)}
 #react .rimg svg{width:150px;height:auto}
 #react p{margin:0;font-family:var(--hand);font-size:22px;line-height:1.1}
 #react.big{width:260px}#react.big .rimg svg{width:190px}

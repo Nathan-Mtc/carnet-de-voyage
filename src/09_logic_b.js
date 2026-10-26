@@ -25,10 +25,13 @@ function startTrip() {
   events.forEach((e, i) => { if (!e.type) e.type = (n <= 4 ? ['choix', 'animal', 'trouvaille', 'aide'][mi++ % 4] : (mi < must.length ? must[mi++] : weightedType(k))); });
   const order = events.filter(e => e.type !== 'arrivee').map(e => e.type).sort(() => Math.random() - 0.5);
   let oi = 0; events.forEach(e => { if (e.type !== 'arrivee') e.type = order[oi++]; });
+  // voyages courts : un petit coup de chance de temps en temps (arc-en-ciel, étoile filante…)
+  if (n <= 6 && Math.random() < 0.18) { const a = events.find(e => e.type === 'animal' || e.type === 'trouvaille'); if (a) a.type = 'meteo'; }
   if (hasTalent(k, 0) && k === 'pistache') events.push({ at: 0.97, type: 'trouvaille' });
   if (k === 'mochi' && hasTalent(k, 2)) events.push({ at: 0.93, type: 'pepin' });
   events.sort((a, b) => a.at - b.at);
   S.trips[k] = { id: uidGen(), comp: k, from, dest, dur: d.key, luck: d.luck + lvlLuck(k), total: d.ms, elapsed: 0, last: Date.now(), dist, events, journal: [], bag: [], photos: [], coins: 0, xp: 0, done: false, startedAt: Date.now() };
+  const dk = dayKey(); if (S.firstTripDay !== dk) { S.firstTripDay = dk; S.trips[k].dayBonus = true; }
   S.trips[k].journal.push({ t: Date.now(), kind: 'depart', text: `${CHARS[k].name} boucle son sac et part pour ${dest.name}. ${dist.toLocaleString('fr-FR')} km l’attendent.` });
   plan.dest = null; save(); renderAll();
 }
@@ -49,6 +52,9 @@ function lootFor(tags, luck, place, n = 1, comp = null) {
   if (isNight()) pool = pool.concat(NIGHT_LOOT);
   if (!pool.length) pool = LOOT.campagne;
   const water = tags.some(t => WATER.includes(t));
+  const ev = typeof todayEvent === 'function' ? todayEvent() : null; // événement du jour
+  if (ev && ev.tags && tags.some(t => ev.tags.includes(t))) n *= 2;
+  if (ev && ev.luck) luck += ev.luck;
   if (comp === 'bulle' && water && hasTalent('bulle', 0)) n *= 2;
   if (comp === 'bulle' && water && hasTalent('bulle', 2)) luck += 1.2;
   const out = [];
@@ -269,6 +275,13 @@ function tick(dtReal) {
 }
 function collect() {
   const k = S.sel, t = S.trips[k]; if (!t) return;
+  const ev = typeof todayEvent === 'function' ? todayEvent() : null, extra = [];
+  const newNames = new Set(t.bag.filter(i => !S.dex[i.name]).map(i => i.name));
+  if (t.dayBonus) { // bonus du premier voyage du jour : un objet peu commun ou mieux
+    const b = lootFor(t.dest.tags || ['campagne'], t.luck + 1, t.dest.name, 1, k)[0];
+    if (b) { b.rarity = Math.max(1, b.rarity); if (!S.dex[b.name]) newNames.add(b.name); t.bag.push(b); extra.push('Bonus du premier voyage du jour : un objet en plus !'); }
+  }
+  if (ev && ev.coins && t.coins > 0) { t.coins *= 2; extra.push(`${ev.name} : pièces doublées !`); }
   t.bag.forEach(i => { S.dex[i.name] = true; if (i.special) S.found[i.from] = true; });
   if (t.dest.secret) S.found[t.dest.name] = true;
   S.inv.push(...t.bag);
@@ -276,15 +289,19 @@ function collect() {
   if (t.coins) gainCoins(t.coins);
   const dd = DURS.find(x => x.key === t.dur) || DURS[0];
   const xp = Math.min(520, Math.round((t.xp + 15 + Math.floor(t.dist / 400)) * (1 + dd.luck * 0.4)));
-  const gained = addXP(k, xp);
+  const gained = addXP(k, Math.round(xp * (ev && ev.xp ? ev.xp : 1)));
   S.stats.trips++;
+  S.stats.maxRar = Math.max(S.stats.maxRar || 0, ...t.bag.map(i => i.rarity || 0));
+  if (t.dur === 'expe') S.stats.expe = (S.stats.expe || 0) + 1;
+  if (t.dur === 'eclair' || t.dur === 'court') S.stats.short = (S.stats.short || 0) + 1;
   if (t.dest.poi) S.stats.poiTrips = (S.stats.poiTrips || 0) + 1;
   bump('visit', 1, t.dest.tags);
   t.bag.forEach(i => { if (i.tags && i.tags.length) bump('items_tag', 1, i.tags); if (i.rarity >= 2) bump('rare'); });
   bump('postcards', t.photos.length);
   S.trips[k] = null; S.unseen[k] = 0; fast = false;
   save(); tab = 'sac'; renderAll();
-  toast(`${t.bag.length} objets rangés${t.coins > 0 ? `, ${t.coins} pièces gagnées` : ''}, +${gained} expérience.`);
+  if (typeof showHaul === 'function') showHaul({ comp: k, trip: t, items: t.bag, coins: t.coins, xp: gained, photos: t.photos.length, newNames, extra });
+  else toast(`${t.bag.length} objets rangés${t.coins > 0 ? `, ${t.coins} pièces gagnées` : ''}, +${gained} expérience.`);
 }
 
 // ================= CARTES POSTALES =================

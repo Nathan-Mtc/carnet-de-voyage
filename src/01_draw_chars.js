@@ -27,7 +27,7 @@ const CHARS = {
   pistache: {
     name: 'Pistache', species: 'Panda roux', perso: 'Curieuse',
     bio: 'Elle renifle tout ce qui bouge, collectionne les feuilles d’érable et range ses trésors dans son écharpe. Très courageuse, sauf devant les pigeons.',
-    love: 'les pommes, les feuilles d’érable, les forêts', hate: 'les pigeons, l’odeur de la mer',
+    love: 'les pommes, les fruits, le pain tout chaud, les forêts', hate: 'les pigeons, l’odeur de la mer',
     tw: 44, head: { rx: 94, ry: 78 }, eye: { dx: 37, y: 156, rx: 12.5, ry: 14.5 }, mouthY: 194, mouth: 'w', blush: { dx: 60, y: 178 },
     c: { fur: '#ec9c6f', fur2: '#cf7752', dark: '#86574a', light: '#fff5ea', inner: '#6b443a', iris: '#a0603a', line: '#6b4a3c', blush: '#f49a98' },
     sleepAfter: 26, foods: { pomme: 'love', crepe: 'like', mandarine: 'like', crevette: 'hate' },
@@ -39,12 +39,15 @@ const CHARS = {
       wake: ['Hein ? Je dormais pas…', 'J’ai rêvé d’une forêt en pommes.'],
       idle: ['Ça sent la forêt par ici…', 'Tu crois que les nuages ont un goût ?', 'Il y a un pigeon ? Non ? Ouf.'],
       love: 'Une pomme ! Ma préférée de toute la vie !', like: 'Miam, merci !', hate: 'Beurk… ça sent la mer.',
+      tap: ['Hihi ! Ça chatouille !', 'Tu as une pomme ? Juste une petite ?', 'Ça sent le pain chaud… tu sens aussi ?', 'Une fraise, une poire, une pomme… je veux tout !', 'On va renifler la boulangerie ?', 'J’ai caché une noisette dans mon écharpe.', 'Encore ! Derrière les oreilles…', 'Tu es mon humain préféré !'],
+      night: ['Mmh… cinq minutes encore…', 'Je rêvais d’une tartine à la pomme…', 'Chut… les étoiles dorment aussi.'],
+      away: ['Coucou de la route ! Ça sent les fruits ici !', 'Je te rapporte un truc qui croustille !', 'Il y a plein de choses à renifler !'],
     },
   },
   mochi: {
     name: 'Mochi', species: 'Capybara', perso: 'Zen',
     bio: 'Le plus calme de la bande. Il peut s’endormir n’importe où, et un petit oiseau nommé Pépin vient souvent se poser sur sa mandarine.',
-    love: 'les mandarines, les siestes, les sources chaudes', hate: 'courir, le bruit',
+    love: 'les mandarines, les citrons, le thé bien chaud, les siestes, les sources chaudes', hate: 'courir, le bruit',
     tw: 52, head: { rx: 90, ry: 80 }, eye: { dx: 42, y: 128, rx: 10, ry: 11 }, mouthY: 206, mouth: 'small', blush: { dx: 66, y: 156 }, lids: true,
     c: { fur: '#d9b18b', fur2: '#c39470', dark: '#8e6a4f', light: '#f2e0c8', inner: '#8a6248', iris: '#6a4632', line: '#6b4a3c', blush: '#f2a29a' },
     sleepAfter: 14, foods: { mandarine: 'love', pomme: 'like', crepe: 'like', crevette: 'hate' },
@@ -57,12 +60,15 @@ const CHARS = {
       idle: ['Pépin, tu es là ?', 'Une source chaude… ce serait bien.'],
       bird: 'Mon ami Pépin est revenu.',
       love: 'Une mandarine… Je la garde sur ma tête.', like: 'Merci, c’est gentil.', hate: 'Non merci. Trop d’émotions.',
+      tap: ['Oh. Bonjour, toi.', 'Un thé bien chaud… et la vie est douce.', 'Le yuzu, ça sent le soleil d’hiver.', 'Respire avec moi. Inspire… expire…', 'Rien ne presse. Tout arrive.', 'Un chocolat chaud ? Oui. Toujours oui.', 'Pépin dit bonjour aussi.', 'Mmmh… continue…'],
+      night: ['…zzz… une tisane… zzz…', 'Je méditais. Les yeux fermés.', 'La lune est une grosse mandarine.'],
+      away: ['Je marche doucement. C’est ça, le secret.', 'J’ai vu un citronnier. Très beau.', 'Pas d’inquiétude. J’arrive… un jour.'],
     },
   },
   bulle: {
     name: 'Bulle', species: 'Axolotl', perso: 'Joyeuse',
     bio: 'Toujours souriante, elle fait des bulles quand elle est contente et éclabousse tout le monde au bord de l’eau. Elle adore la pluie.',
-    love: 'les crevettes, les plages, les jours de pluie', hate: 'le soleil trop fort, la poussière',
+    love: 'la mer, les glaces, les crevettes, les jours de pluie', hate: 'le soleil trop fort, la poussière',
     tw: 46, head: { rx: 102, ry: 76 }, eye: { dx: 50, y: 146, rx: 10.5, ry: 11.5 }, mouthY: 170, mouth: 'wide', blush: { dx: 72, y: 166 },
     c: { fur: '#f8c4d2', fur2: '#ee9fb8', dark: '#de7c9c', light: '#fde8ef', inner: '#e7809f', iris: '#5b3a52', line: '#7a4e5c', blush: '#f58aa6', gill: '#f08db0', frill: '#fbb6cb' },
     sleepAfter: 30, foods: { crevette: 'love', crepe: 'like', pomme: 'like', mandarine: 'hate' },
@@ -74,6 +80,9 @@ const CHARS = {
       wake: ['Bloup ? C’est déjà le matin ?'],
       idle: ['Bloup.', 'Tu sens la pluie, toi aussi ?'],
       love: 'CREVETTE ! Tu es la meilleure personne du monde !', like: 'Bloup ! Merci !', hate: 'C’est tout sec et ça pique…',
+      tap: ['Bloup bloup ! Coucou !', 'On va à la mer ? Dis oui, dis oui !', 'Une glace à la fraise ! Non, deux !', 'Plouf ! Je t’ai eu !', 'Les vagues, c’est des câlins mouillés !', 'Glace à la vanille, ou au melon ? Les deux !', 'Hihihi ! Mes branchies !', 'Je fais des bulles de joie !'],
+      night: ['Bloup… je rêve de la mer…', 'Zzz… une glace… géante… zzz', 'Bloup ? Il fait encore nuit…'],
+      away: ['Bloup ! Je cherche la mer !', 'Je te garde un coquillage !', 'Il pleut ? Trop bien !'],
     },
   },
 };
@@ -88,7 +97,7 @@ const SLOTS = [
   ['pieds', 'Pieds', [['Rien', 'none'], ['Chaussettes', 'chaussettes'], ['Bottes de pluie', 'bottes']]],
   ['dos', 'Dos', [['Rien', 'none'], ['Sac à dos', 'sac'], ['Cape', 'cape']]],
 ];
-const MOODS = [['Content', 'content'], ['Fou rire', 'rire'], ['Amoureux', 'amour'], ['Surpris', 'surpris'], ['Triste', 'triste'], ['Boudeur', 'boude'], ['Endormi', 'dodo']];
+const MOODS = [['Content', 'content'], ['Fou rire', 'rire'], ['Amoureux', 'amour'], ['Surpris', 'surpris'], ['Triste', 'triste'], ['Boudeur', 'boude'], ['Endormi', 'dodo'], ['Curieux', 'curieux'], ['Fier', 'fier']];
 const FOODS = [['Pomme', 'pomme'], ['Mandarine', 'mandarine'], ['Crevette', 'crevette'], ['Crêpe', 'crepe']];
 
 // ---------- dessin ----------
@@ -138,8 +147,9 @@ function face(key, ch, expr, uid) {
   const mY = ch.mouthY;
   const blushBase = (k = 1) => xs.map((_, i) => {
     const bx = 160 + (i ? 1 : -1) * ch.blush.dx;
-    return `<ellipse cx="${bx}" cy="${ch.blush.y}" rx="${13 * k}" ry="${8 * k}" fill="${c.blush}" opacity="${0.55 + 0.2 * (k - 1)}"/>`;
+    return `<ellipse cx="${bx}" cy="${ch.blush.y}" rx="${13 * k}" ry="${8 * k}" fill="${c.blush}" opacity="${0.55 + 0.2 * (k - 1)}"/><ellipse cx="${bx - 5 * k}" cy="${ch.blush.y - 3 * k}" rx="${3.2 * k}" ry="${1.8 * k}" fill="#fff" opacity=".6"/>`;
   }).join('');
+  const sparkle = (x, y, r, d = 0) => `<path class="twk" style="animation-delay:${d}s" d="M${x} ${y - r}Q${x} ${y} ${x + r} ${y}Q${x} ${y} ${x} ${y + r}Q${x} ${y} ${x - r} ${y}Q${x} ${y} ${x} ${y - r}Z" fill="#ffe27a" stroke="${L}" stroke-width="1.3" stroke-linejoin="round"/>`;
   const blushLines = () => xs.map((_, i) => {
     const bx = 160 + (i ? 1 : -1) * ch.blush.dx;
     return [-6, 0, 6].map(o => `<path d="M${bx + o - 2} ${ch.blush.y + 3} l4 -6" stroke="${shade(c.blush, 0.8)}" stroke-width="1.4" stroke-linecap="round"/>`).join('');
@@ -181,6 +191,21 @@ function face(key, ch, expr, uid) {
       blush = blushBase(1.35);
       fx = `<g transform="translate(236 72)"><path d="M0 10 q-2 -12 10 -12 q4 -8 14 -2 q12 -2 10 10 q6 8 -4 12 q-10 6 -18 0 q-14 2 -12 -8Z" fill="#fff" stroke="${L}" stroke-width="1.4"/><text x="16" y="12" text-anchor="middle" font-family="Fredoka,sans-serif" font-size="11" fill="${L}">hmpf</text></g>`;
       break;
+    case 'curieux': {
+      eyes = eyeOpen(xs[0], e.y, e.rx, e.ry, c.iris, uid, 0, 1) + eyeOpen(xs[1], e.y - 1, e.rx, e.ry, c.iris, uid, 1, 1.16);
+      mouth = `<ellipse cx="${160 + 4}" cy="${mY + 2}" rx="4" ry="4.6" fill="#8c3a4c" stroke="${L}" stroke-width="1.8"/>`; blush = blushBase(0.95);
+      over = `<path d="M${xs[1] - 12} ${e.y - e.ry - 16} Q${xs[1]} ${e.y - e.ry - 25} ${xs[1] + 12} ${e.y - e.ry - 15}" fill="none" stroke="${L}" stroke-width="2.4" stroke-linecap="round"/><path d="M${xs[0] - 10} ${e.y - e.ry - 9} Q${xs[0]} ${e.y - e.ry - 12} ${xs[0] + 10} ${e.y - e.ry - 9}" fill="none" stroke="${L}" stroke-width="2.2" stroke-linecap="round"/>`;
+      fx = `<g class="rise" style="animation-iteration-count:infinite;animation-duration:2.6s"><text x="250" y="92" font-family="Fredoka,sans-serif" font-weight="700" font-size="34" fill="#fff" stroke="${L}" stroke-width="2.4" paint-order="stroke">?</text></g>`;
+      break;
+    }
+    case 'fier':
+      eyes = xs.map(x => `<path d="M${x - e.rx} ${e.y + 2} Q${x} ${e.y - e.ry * 0.9} ${x + e.rx} ${e.y + 2}" fill="none" stroke="#2a2130" stroke-width="3.4" stroke-linecap="round"/><path d="M${x + e.rx - 1} ${e.y + 1} l4 -3" stroke="#2a2130" stroke-width="2" stroke-linecap="round"/>`).join('');
+      mouth = `<path d="M${160 - 13} ${mY - 1} Q${160 - 2} ${mY + 9} ${160 + 14} ${mY - 4}" fill="none" stroke="${L}" stroke-width="2.4" stroke-linecap="round"/>`;
+      blush = blushBase(1.1);
+      over = xs.map((x, i) => { const s = i ? 1 : -1; return `<path d="M${x - s * 10} ${e.y - e.ry - 12} Q${x} ${e.y - e.ry - 18} ${x + s * 11} ${e.y - e.ry - 10}" fill="none" stroke="${L}" stroke-width="2.4" stroke-linecap="round"/>`; }).join('');
+      fx = sparkle(72, 70, 11) + sparkle(250, 84, 9, 0.5) + sparkle(236, 46, 6, 1);
+      break;
+    case 'endormi':
     case 'dodo':
       eyes = arcs(false); mouth = `<ellipse cx="160" cy="${mY + 2}" rx="3.6" ry="4.4" fill="#8c3a4c"/>`; blush = blushBase(1);
       fx = [0, 1, 2].map(i => `<text class="zz" style="animation-delay:${i * 0.8}s" x="${222 + i * 12}" y="${92 - i * 14}" font-family="Fredoka,sans-serif" font-weight="600" font-size="${16 + i * 5}" fill="${L}">z</text>`).join('');
@@ -188,8 +213,8 @@ function face(key, ch, expr, uid) {
     default:
       eyes = open(1); mouth = defMouth(); blush = blushBase(1);
   }
-  const ey = e.y;
-  return `<g class="eyes" style="transform-origin:160px ${ey}px">${eyes}</g>${over}${blush}${mouth}<g class="fxface">${fx}</g>`;
+  const ey = e.y, eo = !['rire', 'amour', 'dodo', 'endormi', 'fier'].includes(expr);
+  return `<g class="eyes${eo ? ' eo' : ''}" style="transform-origin:160px ${ey}px">${eyes}</g>${over}${blush}${mouth}<g class="fxface">${fx}</g>`;
 }
 
 // ---------- vêtements ----------
@@ -349,7 +374,9 @@ function headFront(key, ch, uid) {
       <ellipse cx="160" cy="104" rx="42" ry="16" fill="#fff" opacity=".22"/></g>
       <ellipse cx="${160 - 38}" cy="127" rx="15" ry="9" fill="${c.light}"/><ellipse cx="${160 + 38}" cy="127" rx="15" ry="9" fill="${c.light}"/>
       <ellipse cx="160" cy="190" rx="31" ry="22" fill="${c.light}"/>
-      <path d="M150 178 Q160 172 170 178 Q167 187 160 188 Q153 187 150 178Z" fill="#3b2a2a"/><ellipse cx="156" cy="178" rx="3" ry="1.6" fill="#fff" opacity=".6"/>`;
+      <path d="M150 178 Q160 172 170 178 Q167 187 160 188 Q153 187 150 178Z" fill="#3b2a2a"/><ellipse cx="156" cy="178" rx="3" ry="1.6" fill="#fff" opacity=".6"/>
+      <path d="M150 80 q4 -9 9 -2 M160 78 q5 -10 10 -1" fill="none" stroke="${c.fur2}" stroke-width="2.6" stroke-linecap="round"/>
+      ${[[-17, 194], [-21, 201], [-12, 202], [17, 194], [21, 201], [12, 202]].map(([dx, y]) => `<circle cx="${160 + dx}" cy="${y}" r="1.5" fill="${c.fur2}" opacity=".75"/>`).join('')}`;
   }
   if (key === 'mochi') {
     return `<g clip-path="url(#${uid}hc)"><ellipse cx="160" cy="96" rx="48" ry="16" fill="#fff" opacity=".2"/><ellipse cx="160" cy="226" rx="90" ry="14" fill="${c.fur2}" opacity=".35"/></g>
@@ -357,10 +384,14 @@ function headFront(key, ch, uid) {
       <ellipse cx="160" cy="160" rx="38" ry="8" fill="#fff" opacity=".18"/>
       <ellipse cx="${160 - 15}" cy="178" rx="5.5" ry="3.6" fill="#4a3428"/><ellipse cx="${160 + 15}" cy="178" rx="5.5" ry="3.6" fill="#4a3428"/>
       <path d="M160 186 v12" stroke="${L}" stroke-width="1.8" stroke-linecap="round"/>
+      <g class="nose" style="transform-origin:160px 178px"><ellipse cx="${160 - 17}" cy="176.5" rx="2" ry="1.1" fill="#fff" opacity=".45"/><ellipse cx="${160 + 13}" cy="176.5" rx="2" ry="1.1" fill="#fff" opacity=".45"/></g>
+      ${[[-34, 190], [-40, 197], [-30, 199], [34, 190], [40, 197], [30, 199]].map(([dx, y]) => `<circle cx="${160 + dx}" cy="${y}" r="1.6" fill="${c.dark}" opacity=".45"/>`).join('')}
+      <path d="M${160 - 76} 150 q5 3 3 9 M${160 + 76} 150 q-5 3 -3 9" fill="none" stroke="${c.fur2}" stroke-width="2.2" stroke-linecap="round"/>
       <path d="M152 74 q4 -14 10 -2 M162 72 q6 -12 10 0" fill="none" stroke="${L}" stroke-width="2" stroke-linecap="round"/>`;
   }
   return `<g clip-path="url(#${uid}hc)"><ellipse cx="160" cy="100" rx="50" ry="16" fill="#fff" opacity=".3"/><ellipse cx="160" cy="214" rx="96" ry="16" fill="${c.fur2}" opacity=".35"/></g>
-    ${[[132, 96], [146, 88], [176, 90], [190, 100], [161, 82]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.2" fill="${c.dark}" opacity=".45"/>`).join('')}`;
+    ${[[132, 96], [146, 88], [176, 90], [190, 100], [161, 82]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.2" fill="${c.dark}" opacity=".45"/>`).join('')}
+    <path d="M${160 - 84} 128 Q${160 - 80} 108 ${160 - 64} 98" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".55"/><circle cx="${160 - 86}" cy="138" r="2" fill="#fff" opacity=".55"/>`;
 }
 function tail(key, ch, g) {
   const c = ch.c, L = c.line, x0 = 160 + g.tw - 8;
@@ -375,7 +406,7 @@ function tail(key, ch, g) {
 function drawChar(key, outfit, expr, uid) {
   const ch = CHARS[key], g = geo(ch), c = ch.c, L = c.line, o = outfit;
   const hp = headPath(key, ch);
-  let s = `<svg viewBox="0 0 320 350" xmlns="${NS}" role="img" aria-label="${ch.name}, ${ch.species}"><defs><clipPath id="${uid}tc"><path d="${g.torso}"/></clipPath><clipPath id="${uid}hc"><path d="${hp}"/></clipPath></defs>`;
+  let s = `<svg viewBox="0 0 320 350" xmlns="${NS}" class="cc sp-${key} m-${expr || 'content'}" role="img" aria-label="${ch.name}, ${ch.species}"><defs><clipPath id="${uid}tc"><path d="${g.torso}"/></clipPath><clipPath id="${uid}hc"><path d="${hp}"/></clipPath></defs>`;
   s += `<path d="M14 338 C90 322 150 346 214 330 S290 322 308 334" fill="none" stroke="#cdb08a" stroke-width="2" stroke-dasharray="5 8" stroke-linecap="round"/>`;
   s += `<ellipse cx="160" cy="334" rx="${70 + g.tw * 0.3}" ry="8" fill="#e5d2ae"/>`;
   s += `<g class="root"><g class="breath">`;
@@ -386,7 +417,7 @@ function drawChar(key, outfit, expr, uid) {
   s += `<g clip-path="url(#${uid}tc)">`;
   if (key === 'pistache') s += `<rect x="100" y="276" width="120" height="40" fill="${c.dark}"/><ellipse cx="160" cy="276" rx="${g.tw}" ry="10" fill="${c.dark}"/>`;
   else s += `<ellipse cx="160" cy="282" rx="${g.tw * 0.6}" ry="30" fill="${c.light}"/>`;
-  s += `<ellipse cx="160" cy="232" rx="${g.tw + 6}" ry="14" fill="${c.fur2}" opacity=".45"/>`;
+  s += `<ellipse cx="160" cy="232" rx="${g.tw + 6}" ry="14" fill="${c.fur2}" opacity=".45"/><ellipse cx="${160 - g.tw * 0.45}" cy="258" rx="7" ry="13" fill="#fff" opacity=".18"/>`;
   s += torsoItems(o, g, ch, uid) + `</g>`;
   s += `<path d="${g.torso}" fill="none" stroke="${L}" stroke-width="2" stroke-linejoin="round"/>`;
   s += skirt(o, g, ch) + shortLegs(o, g, ch);
@@ -401,6 +432,7 @@ function drawChar(key, outfit, expr, uid) {
   s += headFront(key, ch, uid);
   s += `<g class="face">${face(key, ch, expr, uid)}</g>`;
   s += headItem(o, g, ch);
+  if (key === 'bulle' && expr !== 'dodo' && expr !== 'endormi') s += `<g class="bubs" opacity="0" fill="#e9f7ff" stroke="${L}" stroke-width="1.3"><circle cx="198" cy="${ch.mouthY - 6}" r="5"/><circle cx="210" cy="${ch.mouthY - 22}" r="3.4"/><circle cx="203" cy="${ch.mouthY - 34}" r="2.4"/></g>`;
   s += `<g class="perch"></g></g></g>`;
   s += `<g class="fx"></g></g></svg>`;
   return s;

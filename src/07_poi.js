@@ -97,7 +97,7 @@ function treeFeat(lon, lat, rM, h, col) { const ring = [], k = 1 / (111000 * Mat
 function boxFeat(lon, lat, w, d, h, col) { const k = 1 / (111000 * Math.cos(lat * Math.PI / 180)), dl = d / 111000; return { type: 'Feature', properties: { kind: 'bldg', h, c: col }, geometry: { type: 'Polygon', coordinates: [[[lon - w / 2 * k, lat - dl / 2], [lon + w / 2 * k, lat - dl / 2], [lon + w / 2 * k, lat + dl / 2], [lon - w / 2 * k, lat + dl / 2], [lon - w / 2 * k, lat - dl / 2]]] } }; }
 const cityRad = c => c.gen ? 1.3 : c.r <= 2 ? 7 : c.r <= 4 ? 4.5 : c.r <= 6 ? 3.2 : c.r <= 8 ? 2.4 : 1.9;
 const cityW = c => c.gen ? 0.62 : c.r <= 6 ? 1 : 0.85;
-const RURAL = [['foret', 4], ['campagne', 4], ['ferme', 2], ['route', 1], ['camping', 0.3], ['belvedere', 0.4]];
+const RURAL = [['foret', 4], ['campagne', 4], ['ferme', 2], ['route', 1], ['camping', 0.3], ['belvedere', 0.4], ['etang', 0.8], ['riviere', 0.8], ['sentier', 0.6]];
 let cellCache = {};
 function urbanAt(lon, lat, towns) {
   let u = 0, best = null, bd = 1e9;
@@ -176,7 +176,7 @@ function genCell(gx, gy, towns) {
     if (u > 0.12) { let x = r() * tot; for (const [kk, v] of cats) { x -= v[4]; if (x <= 0) { cat = kk; break; } } }
     else { let x = r() * rtot; for (const [kk, w] of RURAL) { x -= w; if (x <= 0) { cat = kk; break; } } }
     cat = cat || 'boulangerie';
-    if (!isLand(lon, lat)) { if (u > 0.05 && (isLand(lon + CELL, lat) || isLand(lon - CELL, lat) || isLand(lon, lat + CELL) || isLand(lon, lat - CELL))) cat = r() < 0.7 ? 'plage' : 'port'; else continue; }
+    if (!isLand(lon, lat)) { if (u > 0.05 && (isLand(lon + CELL, lat) || isLand(lon - CELL, lat) || isLand(lon, lat + CELL) || isLand(lon, lat - CELL))) { const q = r(); cat = q < 0.66 ? 'plage' : q < 0.95 ? 'port' : 'phare'; } else continue; }
     const names = { foret: BOIS_N, campagne: CHAMP_N, ferme: FERME_N }[cat] || POI_NAMES[cat] || [POI_CATS[cat][0]];
     out.pois.push({ id: 'c' + key + 'p' + i, cat, name: fillName(pick3(names, r), r, city), lon, lat, city, imp: r() * (cat === 'plage' || cat === 'gare' || cat === 'musee' ? 0.3 : 1) });
     if (cat === 'parc' || cat === 'foret' || cat === 'camping') {

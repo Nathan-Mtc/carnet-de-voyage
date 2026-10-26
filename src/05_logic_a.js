@@ -29,13 +29,29 @@ const fresh = () => ({
   trips: { pistache: null, mochi: null, bulle: null }, unseen: { pistache: 0, mochi: 0, bulle: 0 },
   prog: { pistache: { xp: 0, lvl: 1 }, mochi: { xp: 0, lvl: 1 }, bulle: { xp: 0, lvl: 1 } },
   house: {}, market: { day: 0, refresh: 0, list: [], mine: [] }, daily: { day: 0, quests: [], chest: false }, colClaimed: {}, stats: { trips: 0, crafted: 0, sold: 0 },
+  // ajouts (boucle de jeu) : chaque clé a une valeur par défaut pour les anciennes sauvegardes
+  login: { last: 0, streak: 0, best: 0, total: 0 }, // cadeau quotidien et série de jours
+  tiers: {},        // paliers de collection atteints : { cle: 1 (25 %) | 2 (50 %) }
+  achSeen: {},      // succès débloqués (annoncés)
+  achClaimed: {},   // succès dont la récompense a été récupérée
+  firstTripDay: 0,  // jour du dernier « premier voyage du jour »
+  jeuInit: 0,       // 1 quand les succès/paliers d'une ancienne sauvegarde ont été rattrapés
 });
+// complète les sous-objets des anciennes sauvegardes (Object.assign ne fusionne qu'au premier niveau)
+function patchSave(s) {
+  const f = fresh();
+  for (const k of ['stats', 'login', 'daily', 'market', 'prog', 'trips', 'unseen']) s[k] = Object.assign({}, f[k], s[k] || {});
+  for (const k of Object.keys(f.prog)) s.prog[k] = Object.assign({ xp: 0, lvl: 1 }, s.prog[k] || {});
+  for (const k of ['tiers', 'achSeen', 'achClaimed', 'colClaimed', 'found', 'dex', 'house']) if (!s[k] || typeof s[k] !== 'object') s[k] = {};
+  return s;
+}
 let S = fresh();
 try {
   const raw = localStorage.getItem(SAVE);
   if (raw) { const d = JSON.parse(raw); if (d && d.v === 2) S = Object.assign(fresh(), d); }
   else { const old = localStorage.getItem('carnet-voyage-v1'); if (old) { const d = JSON.parse(old); S.inv = d.inv || []; S.album = d.album || []; S.home = d.home || S.home; S.found = d.found || {}; S.inv.forEach(i => S.dex[i.name] = true); } }
 } catch (e) {}
+try { patchSave(S); } catch (e) {}
 function save() { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) {} }
 const homeObj = () => { const h = HOMES.find(x => x[0] === S.home) || HOMES[1]; return { name: h[0], lat: h[1], lon: h[2] }; };
 let plan = { dest: null, dur: 'eclair' };
@@ -63,7 +79,10 @@ function addXP(k, amount, why) {
   }
   return gain;
 }
-function gainCoins(n) { S.coins += Math.round(n); }
+function gainCoins(n) {
+  n = Math.round(n); S.coins += n;
+  if (n > 0) { S.stats.earned = (S.stats.earned || 0) + n; if (typeof coinFX === 'function') coinFX(n); }
+}
 function value(it) {
   const base = [6, 16, 42, 120, 380][it.rarity] || 6;
   const m = { v: 1.2, m: 1, n: 0.6, d: 1.5, t: 2 }[it.cat] || 1;
@@ -105,4 +124,9 @@ function collections() {
   return cols;
 }
 function colReward(c) { return c.big ? 400 : 120; }
+// paliers de collection : 25 %, 50 %, 100 % des objets d'un type de lieu
+const TIERS = [{ pct: 0.25, label: '25 %' }, { pct: 0.5, label: '50 %' }, { pct: 1, label: '100 %' }];
+const colGot = c => c.names.filter(n => S.dex[n]).length;
+function colTierReached(c) { const f = colGot(c) / c.names.length; return TIERS.filter(t => f >= t.pct - 1e-9).length; }
+const tierReward = (c, i) => i === 0 ? (c.big ? 100 : 30) : i === 1 ? (c.big ? 200 : 60) : colReward(c);
 
