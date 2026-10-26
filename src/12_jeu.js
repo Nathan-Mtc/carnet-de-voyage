@@ -19,7 +19,8 @@ body.sheet-open #jeuBar{display:none}
 .jbtn svg{width:26px;height:26px}
 .jbtn .jn{position:absolute;right:-5px;bottom:-5px;min-width:20px;height:20px;border-radius:999px;background:var(--gold);border:2px solid var(--ink);font:800 11.5px/16px var(--display);text-align:center;padding:0 3px}
 .jbtn .jb{position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;border-radius:999px;background:var(--rust);color:#fff;border:2px solid #fff;font:800 11.5px/16px var(--display);text-align:center;padding:0 4px;animation:pulse .8s ease-in-out infinite alternate}
-@media (max-width:900px){#jeuBar{left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));max-width:none}.evchip{flex:1;max-width:none}}
+/* téléphone : sous la carte de rêve, l'événement du jour se réduit à une icône (le détail s'ouvre en la touchant) pour garder la carte visible */
+@media (max-width:900px){#jeuBar{left:max(10px,env(safe-area-inset-left,0px));max-width:none}.evchip{flex:none;width:44px;height:44px;padding:0;justify-content:center;max-width:none}.evchip .evi{width:34px;height:34px}.evchip .evt{display:none}}
 /* événement dans le panneau de voyage */
 .evbans{display:flex;flex-direction:column;gap:6px}
 .evban{display:flex;align-items:center;gap:10px;background:#fff3c4;border:2px solid var(--goldD);border-radius:14px;padding:8px 10px;margin:0}
@@ -305,7 +306,7 @@ function checkTiers() {
   if (out.length) save();
   return out;
 }
-const tierText = t => t.full ? `Collection « ${t.c.label} » complète ! Votre trophée vous attend dans Quêtes › Collections.` : `Palier ${TIERS[t.i].label} · ${t.c.label} : +${t.coins} pièces${t.item ? ` et « ${t.item.name} »` : ''}`;
+const tierText = t => t.full ? `Collection « ${t.c.label} » complète ! Votre trophée vous attend dans Sac & Album › Collections.` : `Palier ${TIERS[t.i].label} · ${t.c.label} : +${t.coins} pièces${t.item ? ` et « ${t.item.name} »` : ''}`;
 
 // ================= SUCCÈS =================
 const st_ = k => S.stats[k] || 0;
@@ -369,7 +370,7 @@ function claimAch(id) {
   const a = ACH.find(x => x.id === id); if (!a || S.achClaimed[id] || !achDone(a)) return;
   S.achClaimed[id] = Date.now(); gainCoins(a.r); save(); renderTop(); renderPanel(); renderJeuBar();
 }
-function openAchievements() { questView = 'succes'; openSheet('quetes'); }
+function openAchievements() { questView = 'succes'; openSheet('reves'); setTimeout(() => { const q = document.getElementById('rvQuests'); if (q && q.scrollIntoView) q.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 80); }
 function achHTML() {
   const ready = achReady().length, claimed = Object.keys(S.achClaimed).length;
   const rows = ACH.map(a => { const [c, g] = a.p(); return { a, c: Math.min(c, g), g, done: c >= g, got: !!S.achClaimed[a.id] }; });
@@ -401,7 +402,7 @@ function showHaul(h) {
   const items = h.items.slice().sort((a, b) => b.rarity - a.rarity);
   const top = items.length ? items[0].rarity : 0, name = CHARS[h.comp].name;
   const tiers = checkTiers(), achs = checkAch();
-  const extra = (h.extra || []).map(x => `<li>${esc(x)}</li>`).concat(tiers.map(t => `<li>${esc(tierText(t))}</li>`), achs.length ? [`<li class="ach">${achs.length > 1 ? 'Succès débloqués' : 'Succès débloqué'} : <b>${achs.map(a => esc(a.name)).join(', ')}</b>. Récompense${achs.length > 1 ? 's' : ''} dans Quêtes › Succès.</li>`] : []);
+  const extra = (h.extra || []).map(x => `<li>${esc(x)}</li>`).concat(tiers.map(t => `<li>${esc(tierText(t))}</li>`), achs.length ? [`<li class="ach">${achs.length > 1 ? 'Succès débloqués' : 'Succès débloqué'} : <b>${achs.map(a => esc(a.name)).join(', ')}</b>. Récompense${achs.length > 1 ? 's' : ''} dans Rêves › Succès.</li>`] : []);
   const newN = items.filter(i => h.newNames.has(i.name)).length;
   showModal(`<div class="hhead"><img src="${portraitURI(h.comp, 'rire')}" alt=""><div><h2>${name} est de retour !</h2><div class="hstats"><span>${items.length} objet${items.length > 1 ? 's' : ''}</span>${newN ? `<span>${newN} nouveau${newN > 1 ? 'x' : ''}</span>` : ''}${h.coins > 0 ? `<span>${COIN}+${h.coins}</span>` : ''}<span>+${h.xp} exp.</span>${h.photos ? `<span>${h.photos} carte${h.photos > 1 ? 's' : ''} postale${h.photos > 1 ? 's' : ''}</span>` : ''}</div></div></div>${top >= 3 ? `<span class="hbig r${top}">${top >= 4 ? 'Trouvaille légendaire !' : 'Trouvaille épique !'}</span>` : ''}<div class="haul">${items.map((it, i) => haulCard(it, i, h.newNames.has(it.name))).join('')}</div>${extra.length ? `<ul class="hextra">${extra.join('')}</ul>` : ''}<button class="btn green big wide" data-closemodal="1">Tout ranger dans le sac</button>`);
   if (top >= 3) setTimeout(() => confetti(top >= 4), 300 + Math.min(items.length, 8) * 60);
@@ -439,13 +440,7 @@ renderQuests = (orig => function (box) {
     box.insertAdjacentHTML('beforeend', questView === 'col' ? colsHTML() : achHTML());
   }
 })(renderQuests);
-renderNav = (orig => function () {
-  orig();
-  const b = document.querySelector('#nav [data-nav="quetes"]'); if (!b) return;
-  const q = S.daily.quests.filter(x => x.prog >= x.goal && !x.claimed).length + collections().filter(c => !S.colClaimed[c.key] && c.names.every(n => S.dex[n])).length + achReady().length;
-  const old = b.querySelector('.tb'); if (old) old.remove();
-  if (q) b.insertAdjacentHTML('beforeend', `<i class="tb">${q}</i>`);
-})(renderNav);
+// (badge : la navigation à 4 onglets de 10_ui.js compte déjà quêtes et succès sur l'onglet « Rêves », et les collections sur « Sac & Album »)
 renderVoyage = (orig => function (box) {
   orig(box);
   const ev = todayEvent(); if (S.trips[S.sel]) return;
@@ -464,6 +459,7 @@ renderGoal = (orig => function () {
     const g = goalState(), mark = g.finished ? 'fin' : `${g.idx}:${g.doneN}`;
     if (_goalMark && mark !== _goalMark && !g.finished && g.doneN > 0 && _goalMark.split(':')[0] == g.idx) {
       const box = $('goal');
+      if (box && box.classList.contains('dream')) { _goalMark = mark; layoutJeuBar(); return; } // l'écran principal montre le rêve : pas d'animation de chapitre dessus
       if (box && !reduceMotion()) box.animate([{ filter: 'brightness(1)' }, { filter: 'brightness(1.15) saturate(1.2)', offset: 0.3 }, { filter: 'brightness(1)' }], { duration: 800 });
       if (box) { const s = document.createElement('span'); s.className = 'gstep'; s.textContent = g.complete ? 'Chapitre terminé !' : 'Étape réussie !'; box.appendChild(s); s.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none', offset: 0.15 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], { duration: 2200, fill: 'forwards' }); }
     }
@@ -503,7 +499,7 @@ setInterval(() => {
   const tiers = checkTiers(), achs = checkAch();
   tiers.forEach(t => toast(tierText(t)));
   achs.forEach(achPop);
-  if (tiers.length || achs.length) { renderTop(); renderNav(); renderJeuBar(); if (tab === 'quetes') renderPanel(); }
+  if (tiers.length || achs.length) { renderTop(); renderNav(); renderJeuBar(); if (tab === 'reves' || tab === 'quetes' || (tab === 'sac' && sacView === 'col')) renderPanel(); }
   else layoutJeuBar();
 }, 1500);
 window.__jeu = { setEvent: i => { _evCache = { dk: dayKey(), ev: EVENTS[i] }; renderJeuBar(); }, renderGoal: () => renderGoal(), todayEvent, EVENTS, ACH, checkTiers, checkAch, checkLogin, showHaul, coinFX, confetti, goalState };

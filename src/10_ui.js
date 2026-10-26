@@ -1,9 +1,22 @@
 // ================= INTERFACE =================
-const NAV = [['carte', 'Carte'], ['sac', 'Sac'], ['atelier', 'Atelier'], ['marche', 'Marché'], ['maison', 'Maison'], ['quetes', 'Quêtes'], ['album', 'Album']];
-const SHEET_TITLES = { sac: 'Le sac', atelier: 'L\u2019atelier', marche: 'Le marché', maison: 'La maison', quetes: 'Quêtes', album: 'L\u2019album' };
+// Navigation à 4 onglets (refonte Rêves) : Carte · Rêves · Village · Sac & Album.
+// Les anciens onglets (atelier, marché, maison, quêtes, album) deviennent des sous-onglets : openSheet('atelier') etc. continue de marcher.
+const NAV = [['carte', 'Carte'], ['reves', 'Rêves'], ['village', 'Village'], ['sac', 'Sac & Album']];
+const SHEET_TITLES = { sac: 'Sac & Album', reves: 'Les rêves', village: 'Le village', atelier: 'L\u2019atelier', marche: 'Le marché', maison: 'La maison', quetes: 'Quêtes', album: 'L\u2019album' };
+const SUBTABS = {
+  village: [['bat', 'Bâtiments', 'village'], ['maison', 'Maison', 'maison'], ['atelier', 'Atelier', 'atelier'], ['marche', 'Marché', 'marche']],
+  sac: [['sac', 'Sac', 'sac1'], ['col', 'Collections', 'col'], ['album', 'Cartes postales', 'album']],
+};
+// ancien nom d'onglet -> [onglet, sous-onglet]
+const TAB_ALIAS = { atelier: ['village', 'atelier'], marche: ['village', 'marche'], maison: ['village', 'maison'], batiments: ['village', 'bat'], village: ['village', 'bat'], quetes: ['reves'], succes: ['reves'], reves: ['reves'], album: ['sac', 'album'], cartes: ['sac', 'album'], collections: ['sac', 'col'], sac: ['sac', 'sac'] };
+let sacView = 'sac', villView = 'bat';
 const NAV_ICONS = {
+  reves: '<path d="M8.5 23.5 H22 a4.6 4.6 0 0 0 .9-9.1 a6.6 6.6 0 0 0-12.6-2.2 A5.6 5.6 0 0 0 8.5 23.5Z" fill="#d9ccf5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 12.6 l1.4 2.9 3.1.4-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.4Z" fill="#f6c445" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M25 4.5 v4 M23 6.5 h4" stroke="#f08aa6" stroke-width="1.8" stroke-linecap="round"/>',
+  village: '<path d="M2.5 25.5 H27.5" stroke="#5fa274" stroke-width="2.6" stroke-linecap="round"/><path d="M4.5 25 V15.5 L11.5 9.5 L18.5 15.5 V25Z" fill="#fff3e2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2.8 16.6 L11.5 8.6 L20.2 16.6" fill="none" stroke="#d9604f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><rect x="9.5" y="19" width="4" height="6" rx="1" fill="#c98a5a" stroke="currentColor" stroke-width="1.4"/><path d="M23.5 19.5 V25" stroke="#a87a50" stroke-width="2.6" stroke-linecap="round"/><circle cx="23.5" cy="14.5" r="5" fill="#8fcf7f" stroke="currentColor" stroke-width="2"/>',
+  sac1: '<path d="M7 11 H23 L25 25 H5Z" fill="#e9b07a" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 11 C10 4 20 4 20 11" fill="none" stroke="currentColor" stroke-width="2"/><rect x="11" y="15" width="8" height="5" rx="1.5" fill="#f2c14e" stroke="currentColor" stroke-width="1.6"/>',
+  col: '<circle cx="15" cy="13" r="8.5" fill="#f6c445" stroke="currentColor" stroke-width="2"/><path d="M15 8.4 l1.5 3 3.3.5-2.4 2.3.6 3.3-3-1.6-3 1.6.6-3.3-2.4-2.3 3.3-.5Z" fill="#fff8ea" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M10 20 L8 27 L11.5 25.5 L13.5 28 L15 21.5 M20 20 L22 27 L18.5 25.5 L16.5 28 L15 21.5" fill="#f08aa6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
   carte: '<path d="M4 7 L11 4 L18 7 L25 4 V22 L18 25 L11 22 L4 25Z" fill="#9fd1d8" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M11 4 V22 M18 7 V25" stroke="currentColor" stroke-width="2"/><path d="M6 15 q3 -3 4 0" stroke="#5fa274" stroke-width="2.4" fill="none"/>',
-  sac: '<path d="M7 11 H23 L25 25 H5Z" fill="#e9b07a" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 11 C10 4 20 4 20 11" fill="none" stroke="currentColor" stroke-width="2"/><rect x="11" y="15" width="8" height="5" rx="1.5" fill="#f2c14e" stroke="currentColor" stroke-width="1.6"/>',
+  sac: '<rect x="15.5" y="2.5" width="11" height="9" rx="1.2" transform="rotate(14 21 7)" fill="#bfe1f2" stroke="currentColor" stroke-width="1.6"/><path d="M7 11 H23 L25 25 H5Z" fill="#e9b07a" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 11 C10 4 20 4 20 11" fill="none" stroke="currentColor" stroke-width="2"/><rect x="11" y="15" width="8" height="5" rx="1.5" fill="#f2c14e" stroke="currentColor" stroke-width="1.6"/>',
   atelier: '<path d="M6 24 L17 13" stroke="#a87a50" stroke-width="4" stroke-linecap="round"/><path d="M14 7 L22 4 L26 8 L23 16 L19 12 L16 13Z" fill="#b9c4cc" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   marche: '<path d="M4 12 L7 5 H23 L26 12Z" fill="#f3aec1" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 5 L7 12 M13 5 L12.5 12 M17 5 L17.5 12 M22 5 L23 12" stroke="currentColor" stroke-width="1.4"/><rect x="6" y="12" width="18" height="12" fill="#fff3e2" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="18" r="2.5" fill="#f2c14e" stroke="currentColor" stroke-width="1.4"/>',
   maison: '<path d="M5 25 V13 L15 5 L25 13 V25Z" fill="#fff3e2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 14 L15 4 L27 14" fill="none" stroke="#d9604f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><rect x="12" y="16" width="6" height="9" fill="#c98a5a" stroke="currentColor" stroke-width="1.6"/>',
@@ -11,8 +24,19 @@ const NAV_ICONS = {
   album: '<rect x="4" y="7" width="22" height="17" rx="2" fill="#bfe1f2" stroke="currentColor" stroke-width="2"/><path d="M4 21 L11 14 L16 19 L19 16 L26 22" fill="#8fbf7f" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="20" cy="12" r="2.4" fill="#fbd76a"/>',
 };
 function selectComp(k) { S.sel = k; S.unseen[k] = 0; if (S.trips[k]) plan.dest = null; fast = false; save(); renderAll(); const t = S.trips[k]; if (t) { const p = tripPos(t); zoomTo(p[0], p[1]); } }
-function openSheet(name) { tab = name; houseSel = null; if (name === 'voyage') S.unseen[S.sel] = 0; renderPanel(); }
-function closeSheet() { tab = 'carte'; if (!S.trips[S.sel]) plan.dest = null; renderPanel(); drawMarks(); }
+function resolveTab(name) {
+  if (name === 'quetes' && questView === 'col') return ['sac', 'col']; // les collections vivent maintenant dans Sac & Album
+  return TAB_ALIAS[name] || [name];
+}
+// openSheet(nom) : ouvre un onglet ; les anciens noms sont redirigés vers le bon onglet et le bon sous-onglet
+function openSheet(name, keepSub) {
+  const [t, sub] = resolveTab(name);
+  if (!keepSub && sub) { if (t === 'village') villView = sub; if (t === 'sac') sacView = sub; }
+  const changed = t !== tab || (sub && !keepSub);
+  tab = t; houseSel = null; if (t === 'voyage') S.unseen[S.sel] = 0; renderPanel();
+  if (changed) $('panelBody').scrollTop = 0;
+}
+function closeSheet() { const rc = $('react'); if (rc) rc.hidden = true; tab = 'carte'; if (!S.trips[S.sel]) plan.dest = null; renderPanel(); drawMarks(); }
 function renderTop() { $('coins').innerHTML = coins(S.coins); }
 function renderComps() {
   $('hudComps').innerHTML = Object.entries(CHARS).map(([k, ch]) => {
@@ -29,7 +53,9 @@ function renderTripCard() {
   box.hidden = false;
   if (!t) {
     box.className = 'tripcard idle';
-    box.innerHTML = `<img src="${portraitURI(k)}" alt=""><div class="tcx"><b>${ch.name} est à la maison</b><span>Touchez un lieu de la carte pour l’envoyer en voyage.</span></div><button class="btn gold sm" data-suggest="1">Idées du jour</button>`;
+    // le but principal est le rêve (carte du haut, bouton « Partir ») : ici, une aide discrète, sans bouton concurrent
+    const dr = typeof curDream === 'function' ? curDream(k) : null;
+    box.innerHTML = `<img src="${portraitURI(k)}" alt=""><div class="tcx"><b>${ch.name} est à la maison</b><span>${dr ? (typeof dreamReady === 'function' && dreamReady(k) ? 'Son rêve est prêt : touchez « Réaliser » en haut !' : 'Touchez « Partir » en haut pour son rêve, ou n’importe quel lieu de la carte.') : 'Touchez un lieu de la carte pour l’envoyer en voyage.'}</span></div><button class="btn ${dr ? 'cream' : 'gold'} sm" data-suggest="1">${dr ? 'Autres idées' : 'Idées du jour'}</button>`;
     return;
   }
   const f = Math.min(1, t.elapsed / t.total), pend = t.journal.filter(j => j.pending && !j.resolved).length;
@@ -39,13 +65,16 @@ function renderTripCard() {
 }
 function renderNav() {
   ensureDaily();
-  const q = S.daily.quests.filter(x => x.prog >= x.goal && !x.claimed).length + collections().filter(c => !S.colClaimed[c.key] && c.names.every(n => S.dex[n])).length;
+  const q = S.daily.quests.filter(x => x.prog >= x.goal && !x.claimed).length + (typeof achReady === 'function' ? achReady().length : 0) + (typeof goalState === 'function' && goalState().complete ? 1 : 0) + (typeof dreamReady === 'function' ? Object.keys(CHARS).filter(k => dreamReady(k)).length : 0); // quêtes, succès, chapitre du Grand Carnet et rêves à réaliser
+  const cols = collections().filter(c => !S.colClaimed[c.key] && c.names.every(n => S.dex[n])).length;
   const sold = S.market.mine.filter(m => !m.sold).length;
-  const cur = tab === 'voyage' ? 'carte' : tab;
+  const build = typeof villageBuildable === 'function' ? villageBuildable().length : 0;
+  const cur = tab === 'voyage' ? 'carte' : (resolveTab(tab)[0]);
   $('nav').innerHTML = NAV.map(([k, l]) => {
     let b = '';
-    if (k === 'quetes' && q) b = `<i class="tb">${q}</i>`;
-    if (k === 'marche' && sold) b = `<i class="tb soft">${sold}</i>`;
+    if (k === 'reves' && q) b = `<i class="tb">${q}</i>`;
+    if (k === 'sac' && cols) b = `<i class="tb">${cols}</i>`;
+    if (k === 'village') b = build ? `<i class="tb" title="Bâtiment à construire">${build}</i>` : sold ? `<i class="tb soft">${sold}</i>` : '';
     if (k === 'carte' && Object.values(S.trips).some(t => t && (t.done || t.journal.some(j => j.pending && !j.resolved)))) b = `<i class="tb">!</i>`;
     return `<button data-nav="${k}" class="${cur === k ? 'on' : ''}" aria-current="${cur === k ? 'page' : 'false'}"><svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS[k]}</svg><span>${l}</span>${b}</button>`;
   }).join('');
@@ -55,13 +84,84 @@ function renderPanel() {
   renderNav(); renderTripCard(); renderGoal();
   const sheet = $('sheet');
   if (tab === 'carte') { sheet.hidden = true; document.body.classList.remove('sheet-open'); return; }
+  { const [t, sub] = resolveTab(tab); if (t !== tab) { if (sub && t === 'village') villView = sub; if (sub && t === 'sac') sacView = sub; tab = t; } } // ancien nom posé directement dans « tab »
   sheet.hidden = false; document.body.classList.add('sheet-open');
   const t = S.trips[S.sel];
-  $('sheetTitle').textContent = tab === 'voyage' ? (t ? 'Journal de voyage' : plan.dest ? (plan.dest.poi ? 'Récolter ici' : 'Préparer le voyage') : 'Partir en voyage') : SHEET_TITLES[tab];
-  $('sheetIcon').innerHTML = NAV_ICONS[tab === 'voyage' ? 'carte' : tab];
+  $('sheetTitle').textContent = tab === 'voyage' ? (t ? 'Journal de voyage' : plan.dest ? (plan.dest.poi ? 'Récolter ici' : 'Préparer le voyage') : 'Partir en voyage') : (SHEET_TITLES[tab] || '');
+  $('sheetIcon').innerHTML = NAV_ICONS[tab === 'voyage' ? 'carte' : tab] || '';
   sheet.dataset.kind = tab;
+  sheet.dataset.sub = tab === 'village' ? villView : tab === 'sac' ? sacView : '';
   const box = $('panelBody');
-  ({ voyage: renderVoyage, sac: renderBag, atelier: renderAtelier, marche: renderMarket, maison: renderHouse, quetes: renderQuests, album: renderAlbum })[tab](box);
+  const R = { voyage: renderVoyage, reves: renderRevesTab, village: renderVillageTab, sac: renderSacTab }[tab];
+  if (R) R(box); else box.innerHTML = '';
+  const subs = SUBTABS[tab];
+  if (subs) {
+    const curSub = tab === 'village' ? villView : sacView;
+    box.insertAdjacentHTML('afterbegin', `<div class="subtabs" role="tablist">${subs.map(([k, l, ic]) => `<button role="tab" data-sub="${k}" aria-selected="${curSub === k}">${k === 'bat' && typeof villageBuildable === 'function' && villageBuildable().length ? '<i class="sdot"></i>' : ''}<svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS[ic]}</svg><span>${l}</span></button>`).join('')}</div>`);
+  }
+}
+function renderRevesTab(box) {
+  if (typeof renderReves === 'function') return renderReves(box);
+  box.innerHTML = phead(S.sel, 'Les rêves', 'Les rêves de vos compagnons arrivent bientôt ici.') + `<p class="empty">Les rêves de Pistache, Mochi et Bulle seront affichés ici, avec les quêtes du jour et les succès.</p>`;
+}
+function renderVillageTab(box) {
+  if (villView === 'maison') return renderHouse(box);
+  if (villView === 'atelier') return renderAtelier(box);
+  if (villView === 'marche') return renderMarket(box);
+  if (typeof renderVillage === 'function') return renderVillage(box);
+  box.innerHTML = `<p class="empty">Le village arrive bientôt.</p>`;
+}
+function renderSacTab(box) {
+  if (sacView === 'album') return renderAlbum(box);
+  if (sacView === 'col') return renderCollections(box);
+  return renderBag(box);
+}
+function renderCollections(box) {
+  let html = '';
+  if (typeof colsHTML === 'function') html += colsHTML();
+  else html += phead(null, 'Collections', 'Chaque type de lieu a sa collection d’objets à découvrir.') + `<div class="cols">` + collections().map(c => {
+    const got = c.names.filter(n => S.dex[n]).length, done = got === c.names.length, claimed = S.colClaimed[c.key];
+    return `<details class="col ${done ? 'done' : ''}"><summary><span class="cname">${esc(c.label)}</span><span class="cbar"><i style="width:${(got / c.names.length * 100).toFixed(0)}%"></i></span><span class="small">${got}/${c.names.length}</span>${done && !claimed ? `<button data-claimc="${c.key}">${coins(colReward(c))}</button>` : claimed ? '<span class="tagok">Complète</span>' : ''}</summary><ul>${c.names.map(n => `<li class="${S.dex[n] ? 'got' : ''}">${S.dex[n] ? esc(n) : '? ? ?'}</li>`).join('')}</ul></details>`;
+  }).join('') + `</div>`;
+  box.innerHTML = html;
+}
+// « Sert à… » : petites étiquettes colorées, d'après GAME.usesOf(objet)
+const USE_KIND = { reve: ['Rêve', '#ece4fd', '#6d4fc0'], batiment: ['Village', '#ffe6cf', '#b8652a'], recette: ['Atelier', '#dcf3e5', '#2f7f6c'], collection: ['Collection', '#dcedfa', '#3d77a8'], usage: ['', '#fff1c9', '#9a6f12'], vente: ['', '#f1ece4', '#7a5f50'] };
+const USE_ORDER = ['reve', 'batiment', 'recette', 'collection'];
+function itemUses(it) {
+  let u = [];
+  try { if (typeof GAME !== 'undefined' && GAME.usesOf) u = GAME.usesOf(it) || []; } catch (e) {}
+  const seen = new Set(); u = u.filter(x => x && x.txt && !seen.has(x.txt) && seen.add(x.txt));
+  u.sort((a, b) => (USE_ORDER.indexOf(a.kind) + 9) % 9 - (USE_ORDER.indexOf(b.kind) + 9) % 9);
+  if (!u.length) {
+    if (it.cat === 'v') u.push({ txt: 'À porter par un compagnon', kind: 'usage' });
+    else if (it.cat === 'n') u.push({ txt: 'Repas pour un compagnon', kind: 'usage' });
+    else if (it.cat === 'd') u.push({ txt: 'Décore la maison', kind: 'usage' });
+    else if (it.cat === 't') u.push({ txt: 'Révèle un lieu secret', kind: 'usage' });
+    else if (it.rarity >= 2 || it.special || it.edition) u.push({ txt: 'Objet de collection', kind: 'collection' });
+    else u.push({ txt: 'À vendre au marché', kind: 'vente' });
+  }
+  return u;
+}
+function usesTags(it, max) {
+  const u = itemUses(it), shown = max ? u.slice(0, max) : u;
+  return `<span class="uses">${shown.map(x => { const k = USE_KIND[x.kind] || USE_KIND.usage; return `<i class="use" style="--ub:${k[1]};--uc:${k[2]}">${esc(x.txt)}</i>`; }).join('')}${u.length > shown.length ? `<i class="use more">+${u.length - shown.length}</i>` : ''}</span>`;
+}
+// fiche d'un objet (touchez un objet du sac)
+function itemActs(it) {
+  const k = S.sel, worn = it.cat === 'v' && S.outfits[k].worn && S.outfits[k].worn[it.sub] === it.id;
+  let act = '';
+  if (it.cat === 'v') act = `<button data-wear="${it.id}">${worn ? 'Retirer' : 'Essayer'}</button>`;
+  else if (it.cat === 'n') act = `<button data-feed="${it.id}">Donner</button>`;
+  else if (it.cat === 't') act = `<button data-unroll="${it.id}">Déplier</button>`;
+  else if (it.cat === 'd') act = `<button data-gohouse="1">Placer</button>`;
+  return act;
+}
+function openFiche(id) {
+  const it = S.inv.find(i => i.id === id); if (!it) return;
+  const m = $('modal');
+  m.querySelector('.mbox').innerHTML = `<div class="fiche" style="--rc:${RARC[it.rarity]}"><div class="fico">${itemIcon(it)}</div><h2>${esc(it.name)}</h2><span class="frar">${RARITY[it.rarity]} · ${it.cat === 'v' ? SLOT_LABEL[it.sub] : CAT_LABEL[it.cat]}</span>${it.from ? `<span class="small">${it.edition ? esc(it.edition) + ' · ' : ''}Trouvé : ${esc(it.from)}</span>` : ''}<div class="fuses"><b>Sert à…</b>${usesTags(it, 7)}</div><div class="facts">${itemActs(it)}<button class="sell" data-sellq="${it.id}">Vendre ${coins(sellPrice(it))}</button></div><button class="btn cream" data-fclose="1">Fermer</button></div>`;
+  m.hidden = false;
 }
 const phead = (k, title, sub, mood) => `<div class="phead">${k ? `<img src="${portraitURI(k, mood)}" alt="">` : ''}<div><h2>${title}</h2>${sub ? `<p>${sub}</p>` : ''}</div></div>`;
 
@@ -161,8 +261,8 @@ function renderBag(box) {
     else if (it.cat === 't') act = `<button data-unroll="${it.id}">Déplier</button>`;
     else if (it.cat === 'd') act = `<button data-gohouse="1">Placer</button>`;
     act += `<button class="sell" data-sellq="${it.id}" title="Vendre au comptoir pour ${sellPrice(it)} pièces">${coins(sellPrice(it))}</button>`;
-    return `<div class="bi" style="--rc:${RARC[it.rarity]}"><div class="ico">${itemIcon(it)}</div><div class="itx"><b>${esc(it.name)}</b><span>${RARITY[it.rarity]} · ${it.cat === 'v' ? SLOT_LABEL[it.sub] : CAT_LABEL[it.cat]}</span><span class="from">${it.edition ? '<em>' + it.edition + '</em> · ' : ''}${esc(it.from)}</span></div><div class="acts">${act}</div></div>`;
-  }).join('') + `</div><p class="small">Le prix affiché est celui du comptoir, immédiat. Au marché, vous vendrez plus cher, mais il faut attendre un acheteur.</p>`;
+    return `<div class="bi" style="--rc:${RARC[it.rarity]}"><button class="ico fbtn" data-fiche="${it.id}" aria-label="Fiche : ${esc(it.name)}">${itemIcon(it)}</button><button class="itx fbtn" data-fiche="${it.id}"><b>${esc(it.name)}</b><span>${RARITY[it.rarity]} · ${it.cat === 'v' ? SLOT_LABEL[it.sub] : CAT_LABEL[it.cat]}</span><span class="from">${it.edition ? '<em>' + it.edition + '</em> · ' : ''}${esc(it.from)}</span>${usesTags(it, 3)}</button><div class="acts">${act}</div></div>`;
+  }).join('') + `</div><p class="small">Touchez un objet pour voir sa fiche et à quoi il sert. Le prix affiché est celui du comptoir, immédiat. Au marché, vous vendrez plus cher, mais il faut attendre un acheteur.</p>`;
   box.innerHTML = html;
 }
 const sellPrice = it => Math.round(value(it) * (S.sel === 'mochi' && hasTalent('mochi', 0) ? 0.75 : 0.6));
@@ -362,8 +462,11 @@ document.addEventListener('click', ev => {
   if (hc) { const k = hc.dataset.hc; reactionPopup(k, 'amour', pick(CHARS[k].lines.pet)); return; }
   const el = ev.target.closest('button'); if (!el || el.disabled) return;
   const d = el.dataset;
+  if (el.closest('.fiche')) { $('modal').hidden = true; if (d.fclose) return; } // une action dans la fiche ferme la fiche
+  if (d.fiche) return openFiche(d.fiche);
   if (d.sel) return selectComp(d.sel);
-  if (d.nav) { if (d.nav === 'carte') closeSheet(); else openSheet(d.nav); return; }
+  if (d.nav) { if (d.nav === 'carte') closeSheet(); else openSheet(d.nav, true); return; }
+  if (d.sub && el.closest('.subtabs')) { if (tab === 'village') villView = d.sub; else if (tab === 'sac') sacView = d.sub; houseSel = null; renderPanel(); $('panelBody').scrollTop = 0; return; }
   if (d.open) { openSheet(d.open); return; }
   if (el.id === 'sheetClose') { closeSheet(); return; }
   if (d.suggest) { openSheet('voyage'); return; }
@@ -471,7 +574,7 @@ maybeIntro();
 lastNow = performance.now();
 function loop(now) {
   const dt = Math.min(1000, now - lastNow); lastNow = now; acc += dt;
-  if (tick(dt)) { save(); renderTop(); renderComps(); renderGoal(); if (tab === 'voyage' || tab === 'marche') renderPanel(); else { renderNav(); renderTripCard(); } drawMarks(); }
+  if (tick(dt)) { save(); renderTop(); renderComps(); renderGoal(); if (tab === 'voyage' || tab === 'reves' || (tab === 'village' && villView === 'marche')) renderPanel(); else { renderNav(); renderTripCard(); } drawMarks(); }
   else if (acc > 250) {
     acc = 0;
     const t = S.trips[S.sel];
@@ -499,6 +602,6 @@ window.__redraw = () => drawMarks();
 window.__poiRefresh = () => refreshPOIs();
 window.__pos = () => positionOverlay();
 window.__dbg = () => { const b = window.__map.getBounds(), z = window.__map.getZoom(); const x0 = Math.floor(b.getWest() / CELL), x1 = Math.ceil(b.getEast() / CELL), y0 = Math.floor(b.getSouth() / CELL), y1 = Math.ceil(b.getNorth() / CELL); return { z, w: b.getWest(), e: b.getEast(), s: b.getSouth(), n: b.getNorth(), cells: (x1 - x0) * (y1 - y0) }; };
-window.__tabDebug = () => ({ tab, hidden: $('sheet').hidden });
+window.__tabDebug = () => ({ tab, villView, sacView, hidden: $('sheet').hidden });
 window.__test = { S, tick, startTrip, plan, PLACES, collect, craft, setFast: v => fast = v, value };
 window.__gen = { gridVillages, geoLayersCities, genCell, CELL };

@@ -81,6 +81,8 @@ const GOAL_ICON = {
 };
 function renderGoal() {
   const box = $('goal'); if (!box) return;
+  // Le but principal est désormais le rêve du compagnon sélectionné (14_reves.js). Les chapitres vivent dans l'onglet Rêves.
+  if (typeof renderDreamCard === 'function') { try { renderDreamCard(box); return; } catch (e) { console.error(e); } }
   const g = goalState();
   if (g.finished) { box.className = 'goal'; box.innerHTML = `<svg viewBox="0 0 30 30" class="gi">${GOAL_ICON.star}</svg><div class="gx"><span class="gk">Le Grand Carnet est complet</span><b>Vous êtes une légende du voyage !</b></div>`; return; }
   const pct = Math.round(g.doneN / g.total * 100);
@@ -88,6 +90,28 @@ function renderGoal() {
   box.title = `Récompense du chapitre : ${g.ch.reward.coins} pièces et « ${g.ch.reward.item[0]} »`;
   box.innerHTML = `<svg viewBox="0 0 30 30" class="gi" aria-hidden="true">${GOAL_ICON[g.ch.icon]}</svg><div class="gx"><span class="gk">Chapitre ${g.idx + 1}/${CHAPTERS.length} · ${esc(g.ch.name)}</span><b>${g.complete ? 'Chapitre terminé !' : esc(g.step.txt)}</b><span class="gbar"><i style="width:${pct}%"></i></span></div><span class="gn">${g.doneN}/${g.total}</span>${g.complete ? '<button class="btn gold sm" id="goalClaim">Récompense</button>' : '<button class="btn green sm" id="goalGo">Aller</button>'}`;
 }
+// Grand Carnet, affiché dans l'onglet Rêves : tous les chapitres, le chapitre en cours détaillé
+function carnetHTML() {
+  const g = goalState(), G = goalData();
+  let h = `<p class="small" style="margin:0 0 8px">Les grands défis du voyageur, à remplir à votre rythme. Chaque chapitre rapporte des pièces et un vêtement rare.</p><ol class="carnet">`;
+  CHAPTERS.forEach((ch, i) => {
+    const done = G.done.includes(ch.key), cur = !g.finished && g.idx === i;
+    h += `<li class="${done ? 'done' : cur ? 'cur' : 'todo'}"><svg viewBox="0 0 30 30" class="gi" aria-hidden="true">${GOAL_ICON[ch.icon]}</svg><div class="cx"><b>${i + 1}. ${esc(ch.name)}</b>`;
+    if (cur) {
+      if (ch.steps) h += `<ul>${ch.steps.map(s => `<li class="${s.done() ? 'ok' : ''}">${s.done() ? '✓' : '○'} ${esc(s.txt)}</li>`).join('')}</ul>`;
+      else h += `<span>${esc(ch.txt(ch.goal))} · ${g.doneN}/${g.total}</span>`;
+      h += `<span class="gbar"><i style="width:${Math.round(g.doneN / g.total * 100)}%"></i></span><span class="crw">Récompense : ${ch.reward.coins} pièces et « ${esc(ch.reward.item[0])} »</span>`;
+    } else h += `<span>${done ? 'Terminé' : `${ch.reward.coins} pièces · « ${esc(ch.reward.item[0])} »`}</span>`;
+    h += `</div>${cur ? (g.complete ? '<button class="btn gold sm" data-carnet="claim">Récompense</button>' : '<button class="btn green sm" data-carnet="go">Aller</button>') : done ? '<span class="tagok">Fait</span>' : ''}</li>`;
+  });
+  h += `</ol>${g.finished ? '<p class="small"><b>Le Grand Carnet est complet : vous êtes une légende du voyage !</b></p>' : ''}`;
+  return h;
+}
+(function () {
+  const st = document.createElement('style');
+  st.textContent = `.carnet{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}.carnet>li{display:flex;align-items:center;gap:9px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:7px 9px}.carnet>li.cur{border-color:var(--ink);background:#fffaf0;box-shadow:0 3px 0 rgba(74,53,40,.25)}.carnet>li.done{background:#eef8f0;opacity:.85}.carnet>li.todo{opacity:.7}.carnet .gi{width:30px;height:30px;flex:none;color:var(--ink)}.carnet .cx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.carnet .cx b{font:700 14.5px var(--display)}.carnet .cx>span{font-size:12.5px;color:var(--ink2)}.carnet ul{list-style:none;margin:0;padding:0;font-size:13px}.carnet ul li.ok{color:var(--greenD)}.carnet .crw{font-size:12px!important}`;
+  document.head.appendChild(st);
+})();
 function claimChapter() {
   const g = goalState(); if (!g.complete || g.finished) return;
   const r = g.ch.reward;
@@ -102,11 +126,12 @@ function claimChapter() {
 function showModal(html) { const m = $('modal'); m.querySelector('.mbox').innerHTML = html; m.hidden = false; }
 function maybeIntro() {
   if (S.seenIntro) return;
-  showModal(`<div class="mart">${drawChar('pistache', S.outfits.pistache, 'rire', 'intro')}</div><h2>Bienvenue dans le Carnet de voyage !</h2><p>Pistache, Mochi et Bulle rêvent de remplir <b>le Grand Carnet</b> : un souvenir unique de chaque lieu du monde.</p><ul class="mlist"><li><b>Envoyez-les en voyage</b> vers de vrais endroits sur la carte.</li><li><b>Aidez-les en route</b> : choix, rencontres, marchands.</li><li><b>Rapportez des trésors</b> pour les habiller, décorer la maison et fabriquer des objets rares.</li></ul><p>Le bandeau en haut vous dit toujours quoi faire ensuite.</p><button class="btn green big" data-closemodal="intro">C’est parti !</button>`);
+  showModal(`<div class="mart">${drawChar('pistache', S.outfits.pistache, 'rire', 'intro')}</div><h2>Bienvenue dans le Carnet de voyage !</h2><p>Pistache, Mochi et Bulle ont plein de rêves. <b>Votre mission : les réaliser !</b></p><ul class="mlist"><li><b>Regardez leur rêve</b>, en haut de l’écran, avec ses étapes.</li><li><b>Touchez « Partir »</b> : le jeu choisit le bon endroit, près de chez vous ou au bout du monde.</li><li><b>Rapportez des trésors</b> et fabriquez ce qu’il faut. Chaque rêve réalisé fait grandir le village.</li></ul><p>Le premier rêve de Pistache ne prend que deux petites balades !</p><button class="btn green big" data-closemodal="intro">C’est parti !</button>`);
 }
 document.addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
   if (b.id === 'goalGo') { const g = goalState(); if (g.step && g.step.go) g.step.go(); }
-  if (b.id === 'goalClaim') claimChapter();
+  if (b.id === 'goalClaim' || b.dataset.carnet === 'claim') claimChapter();
+  if (b.dataset.carnet === 'go') { const g = goalState(); if (g.step && g.step.go) { if (typeof closeSheet === 'function') closeSheet(); g.step.go(); } }
   if (b.dataset.closemodal) { $('modal').hidden = true; if (b.dataset.closemodal === 'intro') { S.seenIntro = true; save(); } }
 });

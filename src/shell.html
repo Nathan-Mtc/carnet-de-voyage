@@ -235,6 +235,8 @@ body.sheet-open .zoom{display:none}
 .tripcard.done{background:#fff3c4;animation:glow 1.2s ease-in-out infinite alternate}
 @keyframes glow{to{box-shadow:0 5px 0 rgba(74,53,40,.45),0 0 0 6px rgba(246,196,69,.45)}}
 .tripcard .bar{height:12px}
+/* téléphone : au repos, la carte de voyage reste petite (le but est dans la carte de rêve en haut) */
+@media (max-width:620px){.tripcard.idle{padding:4px 8px 4px 4px;gap:8px}.tripcard.idle img,.tripcard.idle .livep{width:40px;height:44px;border-radius:11px}.tripcard.idle .tcx b{font-size:14.5px}.tripcard.idle .tcx span{font-size:12px;line-height:1.25}}
 
 /* boutons de jeu */
 .btn{font:700 16px/1 var(--display);border:2.5px solid var(--ink);border-radius:14px;padding:10px 16px 8px;box-shadow:0 4px 0 var(--ink);cursor:pointer;color:var(--ink);background:var(--paper);white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:transform .06s}
@@ -263,7 +265,7 @@ button:focus-visible,select:focus-visible{outline:3px solid var(--teal);outline-
 
 /* panneaux */
 #sheet{position:absolute;z-index:5;background:var(--paper);border:3px solid var(--ink);box-shadow:0 6px 0 rgba(74,53,40,.45);display:flex;flex-direction:column;overflow:hidden;animation:sheetIn .28s cubic-bezier(.2,1.2,.4,1)}
-@media (min-width:901px){#sheet{right:16px;top:calc(84px + env(safe-area-inset-top,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px));width:440px;border-radius:24px}#sheet[data-kind="maison"]{width:min(640px,calc(100% - 32px))}}
+@media (min-width:901px){#sheet{right:16px;top:calc(84px + env(safe-area-inset-top,0px));bottom:calc(104px + env(safe-area-inset-bottom,0px));width:440px;border-radius:24px}#sheet[data-kind="maison"],#sheet[data-kind="village"][data-sub="maison"]{width:min(640px,calc(100% - 32px))}}
 @media (max-width:900px){#sheet{left:0;right:0;bottom:calc(76px + env(safe-area-inset-bottom,0px));height:min(78%,calc(100% - 110px));border-radius:24px 24px 0 0;border-bottom:0}}
 @keyframes sheetIn{from{opacity:.5;transform:translateY(24px)}}
 .sheethead{display:flex;align-items:center;gap:10px;padding:10px 12px 10px 14px;background:#f2d9a8;border-bottom:3px solid var(--ink);background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.18) 0 12px,transparent 12px 24px)}
@@ -271,6 +273,7 @@ button:focus-visible,select:focus-visible{outline:3px solid var(--teal);outline-
 #sheetTitle{flex:1;margin:0;font:800 22px/1.1 var(--display);color:var(--ink)}
 #sheetClose{width:38px;height:38px;border-radius:50%}
 #panelBody{flex:1;overflow-y:auto;padding:14px 16px 24px;display:flex;flex-direction:column;gap:12px;overscroll-behavior:contain}
+#panelBody>*{flex-shrink:0} /* sinon un bloc à overflow:hidden (maison, village) se fait écraser quand le contenu dépasse */
 h3{margin:4px 0 0;font:700 15px var(--display);color:var(--ink2);letter-spacing:.02em}
 
 /* contenu */
@@ -348,6 +351,99 @@ INNER_CSS
 @keyframes zz{0%{opacity:0;transform:translate(0,0)}30%{opacity:1}100%{opacity:0;transform:translate(14px,-34px)}}
 .walker .bob{transform-box:fill-box;animation:walk .6s ease-in-out infinite alternate}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* ===== navigation à 4 onglets et sous-onglets ===== */
+#nav button{min-width:76px}
+@media (min-width:901px){#sheet[data-kind="village"]{width:min(620px,calc(100% - 32px))}}
+.subtabs{flex:none;display:flex;gap:4px;background:#f2d9a8;border:2.5px solid var(--ink);border-radius:16px;padding:4px;box-shadow:inset 0 2px 0 rgba(74,53,40,.12);position:sticky;top:-14px;z-index:3;margin-top:-4px}
+.subtabs button{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:0;background:transparent;border:2px solid transparent;border-radius:12px;padding:3px 2px 2px;cursor:pointer;color:var(--ink);font:700 12.5px/1.15 var(--display)}
+.subtabs button svg{width:24px;height:24px;transition:transform .15s}
+.subtabs button span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.subtabs button[aria-selected="true"]{background:var(--paper);border-color:var(--ink);box-shadow:0 2px 0 var(--ink)}
+.subtabs button[aria-selected="true"] svg{transform:translateY(-1px) scale(1.08)}
+.subtabs button:hover svg{transform:rotate(-5deg)}
+.subtabs .sdot{position:absolute;top:2px;right:calc(50% - 20px);width:11px;height:11px;border-radius:50%;background:var(--rust);border:2px solid #fff}
+@media (max-width:420px){.subtabs button{font-size:11.5px}}
+/* ===== « Sert à… » ===== */
+.bi .fbtn{background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.bi button.ico{width:40px;height:40px;border-radius:10px}
+.bi button.ico:hover{background:#fff8e2}
+.bi button.itx{display:flex;flex-direction:column;min-width:0;flex:1}
+.uses{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.uses .use{font:700 10.5px/1.2 var(--display);font-style:normal;color:var(--uc,#7a5f50);background:var(--ub,#f1ece4);border:1.5px solid color-mix(in srgb,var(--uc,#7a5f50) 35%,transparent);border-radius:999px;padding:1px 7px 0;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.uses .use.more{background:#fff;color:var(--ink2);border-color:var(--line)}
+.fiche{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
+.fiche .fico{width:84px;height:84px;padding:10px;border-radius:22px;background:#fff;border:3px solid var(--rc);box-shadow:0 4px 0 var(--rc)}
+.fiche .fico svg{width:100%;height:100%}
+.fiche .frar{font:800 12.5px var(--display);color:var(--rc);text-transform:uppercase;letter-spacing:.04em}
+.fuses{width:100%;background:#fffdf6;border:2px dashed var(--line);border-radius:14px;padding:8px 10px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left}
+.fuses>b{font:800 14px var(--display)}
+.fuses .uses .use{font-size:12.5px;padding:2px 9px 1px}
+.facts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.facts button{border:2px solid var(--ink);box-shadow:0 3px 0 var(--ink);border-radius:11px;font:700 15px var(--display);padding:7px 12px 5px;background:#e6f6e9;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.facts .sell{background:#fff3c4}
+/* ===== village ===== */
+.vprog{display:flex;align-items:center;gap:10px;font:700 13.5px var(--display);color:var(--ink2)}
+.vprog b{font:800 18px var(--display);color:var(--ink)}
+.vbar{flex:1;height:10px;border:2px solid var(--ink);border-radius:999px;background:#f1e4c8;overflow:hidden}
+.vbar i{display:block;height:100%;background:linear-gradient(90deg,#8fcf7f,#5fbf7f)}
+.vbox{flex:none;border:3px solid var(--ink);border-radius:24px;box-shadow:0 5px 0 rgba(74,53,40,.4);overflow:hidden;background:#bfe3a0;line-height:0}
+.vsvg{width:100%;height:auto;display:block}
+.vsvg text{font-family:var(--display);text-anchor:middle;pointer-events:none}
+.vtxt{font-size:13px;font-weight:800;fill:var(--ink)}
+.vbtn.ok .vtxt{fill:#fff;paint-order:stroke;stroke:#2f7f4c;stroke-width:2.5px}
+.vlab{font-size:10.5px;font-weight:800;fill:var(--ink)}
+.vlab.dim{fill:#7a6a5a;font-size:11px}
+.vplot{cursor:pointer}
+.vplot>g{transition:transform .18s cubic-bezier(.2,1.4,.4,1)}
+.vplot:hover>g{transform-box:fill-box}
+.vplot:focus{outline:none}.vplot:focus-visible rect{stroke:#2f7f6c}
+.vplot.open .vbtn.ok{animation:vpulse 1s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
+@keyframes vpulse{to{transform:scale(1.06)}}
+.vplot.fresh .vart{animation:vpop .8s cubic-bezier(.2,1.6,.4,1);transform-box:fill-box;transform-origin:50% 100%}
+@keyframes vpop{from{transform:scale(.2) translateY(10px);opacity:0}}
+.vhome{cursor:pointer}
+.vchar{cursor:pointer}
+.vcard{flex:none;background:#fff;border:2.5px solid var(--ink);border-radius:18px;box-shadow:0 4px 0 rgba(74,53,40,.35);padding:10px 12px 12px;display:flex;flex-direction:column;gap:8px}
+.vcard.locked{background:#fbf5e8}
+.vch{display:flex;gap:10px;align-items:center}
+.vch h3{margin:0;font:800 19px/1.1 var(--display);color:var(--ink)}
+.vch p{margin:2px 0 0;font-size:13.5px;line-height:1.35;color:var(--ink2)}
+.vst{font:800 11px var(--display);text-transform:uppercase;letter-spacing:.06em;color:var(--teal)}
+.vcard.locked .vst{color:var(--goldD)}.vcard.built .vst{color:var(--greenD)}
+.vmini{width:64px;height:64px;flex:none;background:#dff0cf;border-radius:14px;border:2px solid var(--ink)}
+.vbon{margin:0;background:#e6f6e9;border:2px solid #9fd3b0;border-radius:12px;padding:6px 10px;font-size:13.5px;line-height:1.35}
+.vbon b{font-family:var(--display)}
+.vlock{margin:0;display:flex;align-items:center;gap:6px;font:700 13.5px/1.3 var(--display);color:#8a6418;background:#fff3c4;border:2px dashed var(--goldD);border-radius:12px;padding:6px 10px}
+.vlock svg{flex:none}
+.vcost b{font:800 13px var(--display);color:var(--ink2)}
+.vcost ul{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:5px}
+.vcost li{display:inline-flex;align-items:center;gap:4px;background:#fdeaea;color:#a5463a;border:1.5px solid #f0c0b8;border-radius:999px;padding:2px 9px 1px;font:700 13px var(--display)}
+.vcost li.have{background:#e7f3ec;color:#2f6e5a;border-color:#a9d6bd}
+.vcard .btn.wide{width:100%}
+.vcard .btn[disabled]{opacity:.6;cursor:default;box-shadow:0 2px 0 var(--ink)}
+.vhint{margin:0}
+.vlist{display:flex;flex-direction:column;gap:6px}
+.vrow{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:5px 10px 5px 5px;cursor:pointer;text-align:left;color:var(--ink);font:inherit}
+.vrow .vmini{width:46px;height:46px;border-width:1.5px;border-radius:10px}
+.vrow.on{border-color:var(--teal);background:#f1faf5}
+.vrow.locked{background:#fbf7ee}
+.vrow.locked .vrx b{color:var(--ink2)}
+.vrx{flex:1;min-width:0;display:flex;flex-direction:column}
+.vrx b{font:800 15px/1.15 var(--display)}
+.vrx span{font-size:12.5px;line-height:1.3;color:var(--ink2)}
+.vrow.open .vrx span{color:var(--teal);font-weight:700}
+.vtag{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 15px var(--display);border:2px solid var(--ink);background:#f6ead2}
+.vrow.built .vtag{background:var(--green);color:#fff}
+.vrow.open .vtag{background:var(--gold)}
+.vrow.locked .vtag{background:#fff3c4;border-color:var(--goldD)}
+.vcele{display:flex;flex-direction:column;align-items:center;gap:8px}
+.vck{font:800 13px var(--display);text-transform:uppercase;letter-spacing:.08em;color:#fff;background:var(--green);border:2px solid var(--ink);border-radius:999px;padding:3px 12px 1px}
+.vbig{width:170px;height:170px;background:radial-gradient(circle at 50% 60%,#dff0cf 0 55%,transparent 56%);animation:vpop .9s cubic-bezier(.2,1.6,.4,1)}
+.vcele .vbon{text-align:left}
+.hcard .hvil{font:800 9.5px var(--display);color:#fff;background:var(--green);border-radius:999px;padding:1px 6px;text-transform:uppercase}
+.hextra li.vil{color:var(--greenD)}
+@media (prefers-reduced-motion:reduce){.vplot.open .vbtn.ok,.vplot.fresh .vart,.vbig{animation:none}}
 </style>
 
 <div class="game">

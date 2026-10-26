@@ -155,7 +155,7 @@ async function buildMap() {
   map.touchZoomRotate.disableRotation && 0;
   map.keyboard.disableRotation && map.keyboard.disableRotation();
   map.on('error', e => { if (mapMode === 'tiles' && !mapReady) { /* tuiles inaccessibles : on garde la carte intégrée */ } });
-  map.on('load', () => { routeLayers(); mapReady = true; setTimeout(refreshPOIs, 50); const n = $('mapNote'); n.hidden = mapMode === 'tiles'; if (!n.hidden) setTimeout(() => n.classList.add('gone'), 9000); drawMarks(); });
+  map.on('load', () => { routeLayers(); mapReady = true; if (typeof liveOnMapLoad === 'function') { try { liveOnMapLoad(); } catch (e) { console.error(e); } } setTimeout(refreshPOIs, 50); const n = $('mapNote'); n.hidden = mapMode === 'tiles'; if (!n.hidden) setTimeout(() => n.classList.add('gone'), 9000); drawMarks(); });
   map.on('move', positionOverlay);
   map.on('zoom', () => { lodOverlay(); });
   map.on('moveend', refreshPOIs);
@@ -192,7 +192,9 @@ function buildOverlay() {
   for (const s of SECRETS) add('s' + s.key, 'pin secret', `<div class="pinb gold"><svg viewBox="0 0 24 24"><path d="${starPath(12, 12.5, 9)}" fill="#fff"/></svg></div><span class="pinl">${esc(s.name)}</span>`, s.lon, s.lat, { secret: s.key });
   add('home', 'home', `<div class="homeb"><svg viewBox="0 0 60 60"><path d="M40 6 v12 h6 V10Z" fill="#c9604f" stroke="#5b4636" stroke-width="2.4"/><path d="M8 54 V28 L30 10 L52 28 V54Z" fill="#fff6e6" stroke="#5b4636" stroke-width="3" stroke-linejoin="round"/><path d="M4 30 L30 8 L56 30" fill="none" stroke="#d9604f" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><rect x="24" y="36" width="12" height="18" rx="2" fill="#c98a5a" stroke="#5b4636" stroke-width="2.4"/><rect x="12" y="32" width="9" height="9" fill="#bfe1f2" stroke="#5b4636" stroke-width="2"/><rect x="39" y="32" width="9" height="9" fill="#bfe1f2" stroke="#5b4636" stroke-width="2"/></svg></div><span class="pinl home">Chez vous</span>`, 0, 0, { home: 1 });
   add('drop', 'drop', `<svg viewBox="0 0 30 40"><path d="M15 39 C4 24 2 16 2 13 A13 13 0 0 1 28 13 C28 16 26 24 15 39Z" fill="#e0607e" stroke="#4a3528" stroke-width="2.4"/><circle cx="15" cy="13" r="5" fill="#fff"/></svg><span class="pinl"></span>`, 0, 0, {});
-  for (const k of Object.keys(CHARS)) add('w' + k, 'walker', `<div class="wkb"><img alt="" src="${portraitURI(k)}"></div><i class="wkbang">!</i>`, 0, 0, { comp: k });
+  // destination d'un voyage en cours (drapeau), pour les lieux qui n'ont pas déjà d'épingle
+  for (const k of Object.keys(CHARS)) add('t' + k, 'tdest', `<svg viewBox="0 0 30 40" aria-hidden="true"><path d="M7 38 V4" stroke="#4a3528" stroke-width="3" stroke-linecap="round"/><path d="M8 5 C14 2 18 9 27 5 V19 C18 23 14 16 8 19Z" fill="${({ pistache: '#e0884a', mochi: '#c99a6a', bulle: '#f08aa6' })[k] || '#d9604f'}" stroke="#4a3528" stroke-width="2.2" stroke-linejoin="round"/></svg><span class="pinl"></span>`, 0, 0, { comp: k });
+  for (const k of Object.keys(CHARS)) add('w' + k, 'walker', `<div class="wkb"><img alt="" src="${portraitURI(k)}"></div><i class="wkbang">!</i><span class="wkl"></span>`, 0, 0, { comp: k });
   drawMarks();
 }
 function positionOverlay() {
@@ -250,7 +252,9 @@ function drawMarks() {
   for (const k of Object.keys(CHARS)) {
     const o = ovEls['w' + k], t = S.trips[k];
     o.el.hidden = !t;
-    if (t) { o.el.classList.toggle('cur', k === S.sel); o.el.classList.toggle('done', !!t.done); const img = o.el.querySelector('img'), u = portraitURI(k); if (img.getAttribute('src') !== u) img.setAttribute('src', u); const pos = tripPos(t); o.lon = pos[0]; o.lat = pos[1]; }
+    if (t) { o.el.classList.toggle('cur', k === S.sel); o.el.classList.toggle('done', !!t.done); const img = o.el.querySelector('img'), u = portraitURI(k); if (img.getAttribute('src') !== u) img.setAttribute('src', u); const pos = tripPos(t); o.lon = pos[0]; o.lat = pos[1]; walkerLabel(o.el, k, t); }
+    const td = ovEls['t' + k];
+    if (td) { const show = !!(t && !t.done && t.dest.id == null && !t.dest.secret); td.el.hidden = !show; if (show) { td.lon = t.dest.lon; td.lat = t.dest.lat; const l = td.el.querySelector('.pinl'); if (l.textContent !== t.dest.name) l.textContent = t.dest.name; } }
   }
   if (mapReady && map.getSource('routes')) {
     const feats = [];
@@ -261,8 +265,16 @@ function drawMarks() {
   lodOverlay(); positionOverlay();
 }
 function updateWalkers() {
-  for (const k of Object.keys(CHARS)) { const o = ovEls['w' + k], t = S.trips[k]; if (o && t) { const pos = tripPos(t); o.lon = pos[0]; o.lat = pos[1]; } }
+  for (const k of Object.keys(CHARS)) { const o = ovEls['w' + k], t = S.trips[k]; if (o && t) { const pos = tripPos(t); o.lon = pos[0]; o.lat = pos[1]; walkerLabel(o.el, k, t); } }
   positionOverlay();
+}
+// étiquette sous le portrait d'un compagnon en route : « Pistache · 63 % »
+function walkerLabel(el, k, t) {
+  const l = el.querySelector('.wkl'); if (!l) return;
+  const pend = t.journal.some(j => j.pending && !j.resolved);
+  const txt = t.done ? `${CHARS[k].name} est rentré !` : `${CHARS[k].name} · ${Math.min(99, Math.floor(t.elapsed / t.total * 100))} %`;
+  if (l.textContent !== txt) l.textContent = txt;
+  el.classList.toggle('ask', pend && !t.done);
 }
 function starPath(x, y, r) { let p = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; p += (i ? 'L' : 'M') + (x + Math.cos(a) * rr).toFixed(1) + ' ' + (y + Math.sin(a) * rr).toFixed(1); } return p + 'Z'; }
 const portraitCache = {};
