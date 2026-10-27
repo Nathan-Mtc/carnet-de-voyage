@@ -232,6 +232,8 @@ body.sheet-open .zoom{display:none}
 .tcx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .tcx b{font:700 16px/1.15 var(--display)}
 .tcx span{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tcx b .tuto{display:inline-block;font:800 12px/1 var(--display);font-style:normal;background:var(--green);color:#fff;border:2px solid var(--ink);border-radius:8px;padding:3px 5px 2px;margin-right:2px;vertical-align:1px}
+.tripcard.idle .btn.sm{flex:none}
 .tripcard.done{background:#fff3c4;animation:glow 1.2s ease-in-out infinite alternate}
 @keyframes glow{to{box-shadow:0 5px 0 rgba(74,53,40,.45),0 0 0 6px rgba(246,196,69,.45)}}
 .tripcard .bar{height:12px}
@@ -1666,6 +1668,7 @@ function gainCoins(n) {
 function value(it) {
   const base = [6, 16, 42, 120, 380][it.rarity] || 6;
   const m = { v: 1.2, m: 1, n: 0.6, d: 1.5, t: 2 }[it.cat] || 1;
+  if (it.near) return Math.round(30 * m); // spécialité d'un lieu du quotidien : souvenir, pas un trésor à revendre
   return Math.round(base * m * (it.special ? 1.8 : 1) * (it.edition ? 2.5 : 1));
 }
 
@@ -2447,7 +2450,7 @@ function claimChapter() {
 function showModal(html) { const m = $('modal'); m.querySelector('.mbox').innerHTML = html; m.hidden = false; }
 function maybeIntro() {
   if (S.seenIntro) return;
-  showModal(`<div class="mart">${drawChar('pistache', S.outfits.pistache, 'rire', 'intro')}</div><h2>Bienvenue dans le Carnet de voyage !</h2><p>Pistache, Mochi et Bulle ont plein de rêves. <b>Votre mission : les réaliser !</b></p><ul class="mlist"><li><b>Regardez leur rêve</b>, en haut de l’écran, avec ses étapes.</li><li><b>Touchez « Partir »</b> : le jeu choisit le bon endroit, près de chez vous ou au bout du monde.</li><li><b>Rapportez des trésors</b> et fabriquez ce qu’il faut. Chaque rêve réalisé fait grandir le village.</li></ul><p>Le premier rêve de Pistache ne prend que deux petites balades !</p><button class="btn green big" data-closemodal="intro">C’est parti !</button>`);
+  showModal(`<div class="mart">${drawChar('pistache', S.outfits.pistache, 'rire', 'intro')}</div><h2>Bienvenue dans le Carnet de voyage !</h2><p>Pistache, Mochi et Bulle tiennent une petite boutique et rêvent de voyages. <b>Trois gestes suffisent :</b></p><ol class="mlist"><li><b>Partir</b> : touchez « Partir » en haut (un rêve) ou « Partir chercher » (une commande).</li><li><b>Livrer à la boutique</b> : les clients paient en pièces et en réputation.</li><li><b>Habiller son compagnon</b> : vêtements, couleurs et concours de style.</li></ol><p>Le premier rêve de Pistache ne prend que deux petites balades !</p><button class="btn green big" data-closemodal="intro">C’est parti !</button>`);
 }
 document.addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
@@ -2495,6 +2498,8 @@ function startTrip() {
   plan.dest = null; save(); renderAll();
 }
 function rollRarity(base, luck) { let r = base; while (r < 4 && Math.random() < 0.08 * (1 + luck * 0.6) * Math.pow(0.5, r - base)) r++; return r; }
+// spécialité d'un lieu du quotidien (tout près de chez soi) : un joli souvenir, mais peu cher à la revente (la boutique doit rester plus rentable)
+function poiNear(it, place) { if (!place || place.poi) it.near = 1; return it; }
 function makeItem(def, luck, place, tags, extra = {}) {
   const [name, cat, sub, base, look, color] = def;
   const rarity = extra.fixed != null ? extra.fixed : extra.special ? Math.max(base, 3) : rollRarity(base, luck);
@@ -2603,7 +2608,7 @@ function fireEvent(t, e) {
       if (place.secret) {
         const s = SECRETS.find(x => x.key === place.secret);
         s.loot.forEach(d => items.push(makeItem(d, 0, pName, tags, { fixed: 4, special: true, edition: S.found[s.name] ? null : 'Édition originale' })));
-      } else if (place.special && (!S.found[pName] || Math.random() < (place.poi ? 0.08 : 0.3) + t.luck * 0.1)) items.push(makeItem(place.special, t.luck, pName, tags, { special: true, edition: S.found[pName] ? null : 'Édition originale' }));
+      } else if (place.special && (!S.found[pName] || Math.random() < (place.poi ? 0.08 : 0.3) + t.luck * 0.1)) items.push(poiNear(makeItem(place.special, t.luck, pName, tags, { special: true, edition: S.found[pName] ? null : 'Édition originale' }), place));
       t.bag.push(...items); t.xp += 20;
       const p = photo([k], pName);
       J({ kind: 'photo', text: place.secret ? `${n} a trouvé ${pName} ! Personne ne croira ce qu’il a vu.` : pick([`${n} est arrivé à ${pName} ! Regarde-moi cette vue.`, `Bien arrivé à ${pName}. ${n} t’envoie une carte postale.`]), photo: p, items });
@@ -2611,7 +2616,7 @@ function fireEvent(t, e) {
     }
     case 'decouverte': {
       const items = lootFor(tags, t.luck, pName, 1, k);
-      if (place.special && Math.random() < 0.08 + t.luck * 0.05) items.push(makeItem(place.special, t.luck, pName, tags, { special: true }));
+      if (place.special && Math.random() < 0.08 + t.luck * 0.05) items.push(poiNear(makeItem(place.special, t.luck, pName, tags, { special: true }), place));
       t.bag.push(...items); t.xp += 8;
       J({ kind: 'photo', text: pick([`Petit détour par ${pName}.`, `${n} fait une pause à ${pName}.`, `Halte à ${pName}, ${n} sourit pour la photo.`]), photo: photo([k], pName), items });
       break;
@@ -2893,18 +2898,41 @@ const CAT_LABEL = { v: 'Vêtement', m: 'Matériau', n: 'Nourriture', d: 'Décora
 const itemChip = it => `<div class="it" style="--rc:${RARC[it.rarity]}"><div class="ico">${itemIcon(it)}</div><div class="itx"><b>${esc(it.name)}</b><span>${RARITY[it.rarity]}${it.special ? ' · Souvenir unique' : ''}</span></div></div>`;
 
 // ================= INTERFACE =================
-// Navigation à 4 onglets (refonte Rêves) : Carte · Rêves · Village · Sac & Album.
-// Les anciens onglets (atelier, marché, maison, quêtes, album) deviennent des sous-onglets : openSheet('atelier') etc. continue de marcher.
-const NAV = [['carte', 'Carte'], ['reves', 'Rêves'], ['village', 'Village'], ['sac', 'Sac & Album']];
-const SHEET_TITLES = { sac: 'Sac & Album', reves: 'Les rêves', village: 'Le village', atelier: 'L\u2019atelier', marche: 'Le marché', maison: 'La maison', quetes: 'Quêtes', album: 'L\u2019album' };
+// Navigation à 5 onglets (étape Boutique + Compagnons) : Carte · Boutique · Compagnons · Village · Sac.
+// Les anciens noms d'onglets restent valables : openSheet('marche'), openSheet('reves'), openSheet('quetes')… sont redirigés
+// vers le bon onglet et le bon sous-onglet (voir TAB_ALIAS).
+const NAV = [['carte', 'Carte'], ['boutique', 'Boutique'], ['compagnons', 'Compagnons'], ['village', 'Village'], ['sac', 'Sac']];
+const SHEET_TITLES = { sac: 'Sac & Album', boutique: 'La boutique', compagnons: 'Les compagnons', reves: 'Les rêves', village: 'Le village', atelier: 'L\u2019atelier', marche: 'Le marché', maison: 'La maison', quetes: 'Quêtes', album: 'L\u2019album' };
 const SUBTABS = {
-  village: [['bat', 'Bâtiments', 'village'], ['maison', 'Maison', 'maison'], ['atelier', 'Atelier', 'atelier'], ['marche', 'Marché', 'marche']],
+  compagnons: [['garde', 'Garde-robe', 'garde'], ['reves', 'Rêves', 'reves'], ['talents', 'Talents', 'talents'], ['concours', 'Concours', 'concours']],
+  village: [['bat', 'Bâtiments', 'village'], ['maison', 'Maison', 'maison'], ['atelier', 'Atelier', 'atelier']],
   sac: [['sac', 'Sac', 'sac1'], ['col', 'Collections', 'col'], ['album', 'Cartes postales', 'album']],
 };
 // ancien nom d'onglet -> [onglet, sous-onglet]
-const TAB_ALIAS = { atelier: ['village', 'atelier'], marche: ['village', 'marche'], maison: ['village', 'maison'], batiments: ['village', 'bat'], village: ['village', 'bat'], quetes: ['reves'], succes: ['reves'], reves: ['reves'], album: ['sac', 'album'], cartes: ['sac', 'album'], collections: ['sac', 'col'], sac: ['sac', 'sac'] };
-let sacView = 'sac', villView = 'bat';
+const TAB_ALIAS = {
+  atelier: ['village', 'atelier'], maison: ['village', 'maison'], batiments: ['village', 'bat'], village: ['village', 'bat'],
+  marche: ['boutique', 'marche'], magasin: ['boutique', 'magasin'], comptoir: ['boutique', 'comptoir'], shop: ['boutique'],
+  reves: ['compagnons', 'reves'], quetes: ['compagnons', 'reves'], succes: ['compagnons', 'reves'], carnet: ['compagnons', 'reves'],
+  garderobe: ['compagnons', 'garde'], tenues: ['compagnons', 'garde'], talents: ['compagnons', 'talents'], concours: ['compagnons', 'concours'],
+  album: ['sac', 'album'], cartes: ['sac', 'album'], collections: ['sac', 'col'], sac: ['sac', 'sac'],
+};
+let sacView = 'sac', villView = 'bat', compView = 'garde';
+// sous-onglet courant d'un onglet, et son changement (la boutique gère elle-même ses sous-onglets via openBoutique)
+function getSub(t) { return t === 'village' ? villView : t === 'sac' ? sacView : t === 'compagnons' ? compView : t === 'boutique' ? bqSubSafe() : ''; }
+function bqSubSafe() { try { return bView; } catch (e) { return ''; } } // bView vit dans 18_boutique.js
+function setSub(t, sub) {
+  if (!sub) return;
+  if (t === 'village') { if (sub === 'marche') return; villView = sub; }
+  else if (t === 'sac') sacView = sub;
+  else if (t === 'compagnons') compView = sub;
+  else if (t === 'boutique') setSub._bq = sub;
+}
 const NAV_ICONS = {
+  boutique: '<path d="M4.5 13.5 V25.5 H25.5 V13.5" fill="#fff3e2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3 13 L5.5 5 H24.5 L27 13Z" fill="#f3aec1" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 5 L9 13 M15 5 V13 M20 5 L21 13" stroke="#fff" stroke-width="2.4"/><path d="M3 13 q2.25 3 4.5 0 q2.25 3 4.5 0 q2.25 3 4.5 0 q2.25 3 4.5 0 q2.25 3 4.5 0 q.75 1 1.5 0" fill="#f3aec1" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><rect x="7.5" y="18" width="6" height="7.5" rx="1" fill="#c98a5a" stroke="currentColor" stroke-width="1.5"/><circle cx="20.5" cy="20.5" r="3.3" fill="#f6c445" stroke="currentColor" stroke-width="1.5"/>',
+  compagnons: '<path d="M6.5 11 C3.5 6 7 3 10.5 7.5 M23.5 11 C26.5 6 23 3 19.5 7.5" fill="#cf7752" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><ellipse cx="15" cy="16.5" rx="11" ry="9.5" fill="#ec9c6f" stroke="currentColor" stroke-width="2"/><ellipse cx="10.4" cy="19.4" rx="4.6" ry="3.6" fill="#fff5ea"/><ellipse cx="19.6" cy="19.4" rx="4.6" ry="3.6" fill="#fff5ea"/><circle cx="11" cy="15.4" r="1.7" fill="currentColor"/><circle cx="19" cy="15.4" r="1.7" fill="currentColor"/><path d="M13.6 19.2 h2.8 l-1.4 1.5Z" fill="currentColor"/><ellipse cx="7.6" cy="19" rx="1.8" ry="1.1" fill="#f49a98"/><ellipse cx="22.4" cy="19" rx="1.8" ry="1.1" fill="#f49a98"/><path d="M15 6.6 L10.8 3.8 V9.4Z M15 6.6 L19.2 3.8 V9.4Z" fill="#f08aa6" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><circle cx="15" cy="6.6" r="1.6" fill="#f08aa6" stroke="currentColor" stroke-width="1.3"/>',
+  garde: '<path d="M15 4.5 a2.6 2.6 0 1 1 2.6 2.6 c-1.3 0 -2.6.8 -2.6 2.2 V10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15 10 L3.5 17 H26.5Z" fill="none" stroke="#a87a50" stroke-width="2" stroke-linejoin="round"/><path d="M9 15 L5.5 18.5 L8.5 21.5 L10 20.5 V27 H20 V20.5 L21.5 21.5 L24.5 18.5 L21 15 Q15 17.5 9 15Z" fill="#bfe3d6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15 23.8 l-2-1.9 a1.2 1.2 0 0 1 2-1.3 a1.2 1.2 0 0 1 2 1.3Z" fill="#f08aa6"/>',
+  talents: '<path d="M10 17 L7 27 L11 25 L13.5 28 L15 19 M20 17 L23 27 L19 25 L16.5 28 L15 19" fill="#9fd1d8" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="15" cy="12.5" r="9" fill="#d9ccf5" stroke="currentColor" stroke-width="2"/><path d="M15 7.2 l1.6 3.3 3.6.5 -2.6 2.5.6 3.6 -3.2-1.7 -3.2 1.7.6-3.6 -2.6-2.5 3.6-.5Z" fill="#f6c445" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/>',
+  concours: '<path d="M9 4.5 H21 V11 a6 6 0 0 1 -12 0Z" fill="#f6c445" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 6.5 H5.5 a3.5 3.5 0 0 0 4 5.5 M21 6.5 H24.5 a3.5 3.5 0 0 1 -4 5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15 17 V21.5" stroke="currentColor" stroke-width="2.4"/><rect x="9.5" y="21.5" width="11" height="5" rx="1.5" fill="#c98a5a" stroke="currentColor" stroke-width="1.8"/><path d="M15 6.6 l1 2 2.2.3 -1.6 1.5.4 2.2 -2-1 -2 1 .4-2.2 -1.6-1.5 2.2-.3Z" fill="#fff8ea"/>',
   reves: '<path d="M8.5 23.5 H22 a4.6 4.6 0 0 0 .9-9.1 a6.6 6.6 0 0 0-12.6-2.2 A5.6 5.6 0 0 0 8.5 23.5Z" fill="#d9ccf5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M16 12.6 l1.4 2.9 3.1.4-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.4Z" fill="#f6c445" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M25 4.5 v4 M23 6.5 h4" stroke="#f08aa6" stroke-width="1.8" stroke-linecap="round"/>',
   village: '<path d="M2.5 25.5 H27.5" stroke="#5fa274" stroke-width="2.6" stroke-linecap="round"/><path d="M4.5 25 V15.5 L11.5 9.5 L18.5 15.5 V25Z" fill="#fff3e2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2.8 16.6 L11.5 8.6 L20.2 16.6" fill="none" stroke="#d9604f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><rect x="9.5" y="19" width="4" height="6" rx="1" fill="#c98a5a" stroke="currentColor" stroke-width="1.4"/><path d="M23.5 19.5 V25" stroke="#a87a50" stroke-width="2.6" stroke-linecap="round"/><circle cx="23.5" cy="14.5" r="5" fill="#8fcf7f" stroke="currentColor" stroke-width="2"/>',
   sac1: '<path d="M7 11 H23 L25 25 H5Z" fill="#e9b07a" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 11 C10 4 20 4 20 11" fill="none" stroke="currentColor" stroke-width="2"/><rect x="11" y="15" width="8" height="5" rx="1.5" fill="#f2c14e" stroke="currentColor" stroke-width="1.6"/>',
@@ -2924,8 +2952,17 @@ function resolveTab(name) {
 }
 // openSheet(nom) : ouvre un onglet ; les anciens noms sont redirigés vers le bon onglet et le bon sous-onglet
 function openSheet(name, keepSub) {
+  if (name === 'village' && keepSub && villView === 'marche') villView = 'bat';
   const [t, sub] = resolveTab(name);
-  if (!keepSub && sub) { if (t === 'village') villView = sub; if (t === 'sac') sacView = sub; }
+  // la boutique (18_boutique.js) choisit elle-même son sous-onglet : Comptoir, Magasin ou Marché
+  if (t === 'boutique' && sub && !keepSub && typeof openBoutique === 'function' && !openSheet._bq) {
+    const was = tab; openSheet._bq = true;
+    try { openBoutique(sub); } catch (e) { console.error(e); } finally { openSheet._bq = false; }
+    if (tab !== 'boutique') { tab = 'boutique'; houseSel = null; renderPanel(); }
+    if (was !== 'boutique') $('panelBody').scrollTop = 0;
+    return;
+  }
+  if (!keepSub && sub) setSub(t, sub);
   const changed = t !== tab || (sub && !keepSub);
   tab = t; houseSel = null; if (t === 'voyage') S.unseen[S.sel] = 0; renderPanel();
   if (changed) $('panelBody').scrollTop = 0;
@@ -2949,7 +2986,18 @@ function renderTripCard() {
     box.className = 'tripcard idle';
     // le but principal est le rêve (carte du haut, bouton « Partir ») : ici, une aide discrète, sans bouton concurrent
     const dr = typeof curDream === 'function' ? curDream(k) : null;
-    box.innerHTML = `<img src="${portraitURI(k)}" alt=""><div class="tcx"><b>${ch.name} est à la maison</b><span>${dr ? (typeof dreamReady === 'function' && dreamReady(k) ? 'Son rêve est prêt : touchez « Réaliser » en haut !' : 'Touchez « Partir » en haut pour son rêve, ou n’importe quel lieu de la carte.') : 'Touchez un lieu de la carte pour l’envoyer en voyage.'}</span></div><button class="btn ${dr ? 'cream' : 'gold'} sm" data-suggest="1">${dr ? 'Autres idées' : 'Idées du jour'}</button>`;
+    // petit tutoriel en 3 étapes (Partir · Livrer · Habiller), affiché ici tant qu'il n'est pas fini
+    const ts = tutoStep();
+    if (ts) {
+      const rdy = typeof shopReady === 'function' ? shopReady() : 0;
+      const T = [null,
+        ['Partir', 'Touchez « Partir » en haut pour son rêve, ou « Partir chercher » une commande de la boutique.', `<button class="btn cream sm" data-bopen="comptoir">Commandes</button>`],
+        ['Livrer à la boutique', rdy ? 'Une commande est prête : livrez-la au comptoir !' : 'Les clients attendent leurs objets au comptoir. Rapportez-les de voyage.', `<button class="btn ${rdy ? 'green' : 'gold'} sm" data-bopen="comptoir">Boutique</button>`],
+        ['Habiller son compagnon', `Mettez un vêtement à ${ch.name} dans sa garde-robe.`, `<button class="btn gold sm" data-stgo="garde">Habiller</button>`]][ts];
+      box.innerHTML = `<img src="${portraitURI(k)}" alt=""><div class="tcx"><b><i class="tuto">${ts}/3</i> ${T[0]}</b><span>${T[1]}</span></div>${T[2]}`;
+      return;
+    }
+    box.innerHTML =`<img src="${portraitURI(k)}" alt=""><div class="tcx"><b>${ch.name} est à la maison</b><span>${dr ? (typeof dreamReady === 'function' && dreamReady(k) ? 'Son rêve est prêt : touchez « Réaliser » en haut !' : 'Touchez « Partir » en haut pour son rêve, ou n’importe quel lieu de la carte.') : 'Touchez un lieu de la carte pour l’envoyer en voyage.'}</span></div><button class="btn ${dr ? 'cream' : 'gold'} sm" data-suggest="1">${dr ? 'Autres idées' : 'Idées du jour'}</button>`;
     return;
   }
   const f = Math.min(1, t.elapsed / t.total), pend = t.journal.filter(j => j.pending && !j.resolved).length;
@@ -2957,18 +3005,27 @@ function renderTripCard() {
   box.className = 'tripcard away';
   box.innerHTML = `<img src="${portraitURI(k)}" alt=""><div class="tcx"><b>En route vers ${esc(t.dest.name)}</b><div class="bar"><i id="pbar2" style="width:${(f * 100).toFixed(1)}%"></i><span class="mid"></span></div><span id="ptime2">${f < 0.5 ? 'Aller' : 'Retour'} · ${fmtDur((t.total - t.elapsed) / (fast ? 30 : 1))}</span></div><button class="btn ${pend ? 'pink' : 'cream'} sm" data-open="voyage">${pend ? `${pend} choix !` : 'Journal'}</button>`;
 }
+// étape du tutoriel (1 Partir, 2 Livrer, 3 Habiller) ; 0 quand les trois sont faites
+function tutoStep() {
+  const st = S.stats || {};
+  const went = (st.started || 0) > 0 || (st.trips || 0) > 0 || Object.values(S.trips).some(Boolean);
+  const served = !!(S.shop && S.shop.served > 0);
+  const dressed = (st.worn || 0) > 0 || Object.values(S.outfits || {}).some(o => o && o.worn && Object.values(o.worn).some(Boolean));
+  return !went ? 1 : !served ? 2 : !dressed ? 3 : 0;
+}
 function renderNav() {
-  ensureDaily();
-  const q = S.daily.quests.filter(x => x.prog >= x.goal && !x.claimed).length + (typeof achReady === 'function' ? achReady().length : 0) + (typeof goalState === 'function' && goalState().complete ? 1 : 0) + (typeof dreamReady === 'function' ? Object.keys(CHARS).filter(k => dreamReady(k)).length : 0); // quêtes, succès, chapitre du Grand Carnet et rêves à réaliser
+  const q = revesBadge();
+  let shop = 0; try { if (typeof shopBadge === 'function') shop = shopBadge() || 0; } catch (e) {}
   const cols = collections().filter(c => !S.colClaimed[c.key] && c.names.every(n => S.dex[n])).length;
   const sold = S.market.mine.filter(m => !m.sold).length;
   const build = typeof villageBuildable === 'function' ? villageBuildable().length : 0;
   const cur = tab === 'voyage' ? 'carte' : (resolveTab(tab)[0]);
   $('nav').innerHTML = NAV.map(([k, l]) => {
     let b = '';
-    if (k === 'reves' && q) b = `<i class="tb">${q}</i>`;
+    if (k === 'compagnons' && q) b = `<i class="tb">${q}</i>`;
+    if (k === 'boutique') b = shop ? `<i class="tb">${typeof shop === 'number' ? shop : esc(shop)}</i>` : sold ? `<i class="tb soft" title="Annonces en cours au marché">${sold}</i>` : '';
     if (k === 'sac' && cols) b = `<i class="tb">${cols}</i>`;
-    if (k === 'village') b = build ? `<i class="tb" title="Bâtiment à construire">${build}</i>` : sold ? `<i class="tb soft">${sold}</i>` : '';
+    if (k === 'village' && build) b = `<i class="tb" title="Bâtiment à construire">${build}</i>`;
     if (k === 'carte' && Object.values(S.trips).some(t => t && (t.done || t.journal.some(j => j.pending && !j.resolved)))) b = `<i class="tb">!</i>`;
     return `<button data-nav="${k}" class="${cur === k ? 'on' : ''}" aria-current="${cur === k ? 'page' : 'false'}"><svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS[k]}</svg><span>${l}</span>${b}</button>`;
   }).join('');
@@ -2978,21 +3035,47 @@ function renderPanel() {
   renderNav(); renderTripCard(); renderGoal();
   const sheet = $('sheet');
   if (tab === 'carte') { sheet.hidden = true; document.body.classList.remove('sheet-open'); return; }
-  { const [t, sub] = resolveTab(tab); if (t !== tab) { if (sub && t === 'village') villView = sub; if (sub && t === 'sac') sacView = sub; tab = t; } } // ancien nom posé directement dans « tab »
+  { const [t, sub] = resolveTab(tab); if (t !== tab) { setSub(t, sub); tab = t; } } // ancien nom posé directement dans « tab »
+  if (tab === 'village' && villView === 'marche') villView = 'bat'; // le marché a déménagé dans la boutique
   sheet.hidden = false; document.body.classList.add('sheet-open');
   const t = S.trips[S.sel];
   $('sheetTitle').textContent = tab === 'voyage' ? (t ? 'Journal de voyage' : plan.dest ? (plan.dest.poi ? 'Récolter ici' : 'Préparer le voyage') : 'Partir en voyage') : (SHEET_TITLES[tab] || '');
   $('sheetIcon').innerHTML = NAV_ICONS[tab === 'voyage' ? 'carte' : tab] || '';
   sheet.dataset.kind = tab;
-  sheet.dataset.sub = tab === 'village' ? villView : tab === 'sac' ? sacView : '';
+  sheet.dataset.sub = getSub(tab);
   const box = $('panelBody');
-  const R = { voyage: renderVoyage, reves: renderRevesTab, village: renderVillageTab, sac: renderSacTab }[tab];
-  if (R) R(box); else box.innerHTML = '';
+  const R = { voyage: renderVoyage, boutique: renderBoutiqueTab, compagnons: renderCompagnonsTab, village: renderVillageTab, sac: renderSacTab }[tab];
+  try { if (R) R(box); else box.innerHTML = ''; } catch (e) { console.error(e); box.innerHTML = `<p class="empty">Oups, cet écran n’a pas pu s’afficher.</p>`; }
   const subs = SUBTABS[tab];
   if (subs) {
-    const curSub = tab === 'village' ? villView : sacView;
-    box.insertAdjacentHTML('afterbegin', `<div class="subtabs" role="tablist">${subs.map(([k, l, ic]) => `<button role="tab" data-sub="${k}" aria-selected="${curSub === k}">${k === 'bat' && typeof villageBuildable === 'function' && villageBuildable().length ? '<i class="sdot"></i>' : ''}<svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS[ic]}</svg><span>${l}</span></button>`).join('')}</div>`);
+    const curSub = getSub(tab);
+    box.insertAdjacentHTML('afterbegin', `<div class="subtabs" role="tablist">${subs.map(([k, l, ic]) => `<button role="tab" data-sub="${k}" aria-selected="${curSub === k}">${subDot(tab, k) ? '<i class="sdot"></i>' : ''}<svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS[ic]}</svg><span>${l}</span></button>`).join('')}</div>`);
   }
+}
+// pastille rouge sur un sous-onglet : quelque chose attend le joueur
+function subDot(t, k) {
+  try {
+    if (t === 'village' && k === 'bat') return typeof villageBuildable === 'function' && villageBuildable().length > 0;
+    if (t === 'compagnons' && k === 'reves') return revesBadge() > 0;
+    if (t === 'compagnons' && typeof styleSubDot === 'function') return styleSubDot(k);
+  } catch (e) {}
+  return false;
+}
+// quêtes, succès, chapitre du Grand Carnet et rêves à réaliser
+function revesBadge() {
+  ensureDaily();
+  return S.daily.quests.filter(x => x.prog >= x.goal && !x.claimed).length + (typeof achReady === 'function' ? achReady().length : 0) + (typeof goalState === 'function' && goalState().complete ? 1 : 0) + (typeof dreamReady === 'function' ? Object.keys(CHARS).filter(k => dreamReady(k)).length : 0);
+}
+function renderBoutiqueTab(box) {
+  if (typeof renderBoutique === 'function') return renderBoutique(box);
+  // en attendant le module Boutique : le marché reste accessible ici
+  renderMarket(box);
+  box.insertAdjacentHTML('afterbegin', `<p class="empty">La boutique ouvre très bientôt : commandes des clients et magasin. En attendant, voici le marché.</p>`);
+}
+function renderCompagnonsTab(box) {
+  if (typeof renderCompagnons === 'function') return renderCompagnons(box);
+  if (compView === 'reves') return renderRevesTab(box);
+  box.innerHTML = `<p class="empty">Les compagnons arrivent bientôt ici.</p>`;
 }
 function renderRevesTab(box) {
   if (typeof renderReves === 'function') return renderReves(box);
@@ -3001,7 +3084,6 @@ function renderRevesTab(box) {
 function renderVillageTab(box) {
   if (villView === 'maison') return renderHouse(box);
   if (villView === 'atelier') return renderAtelier(box);
-  if (villView === 'marche') return renderMarket(box);
   if (typeof renderVillage === 'function') return renderVillage(box);
   box.innerHTML = `<p class="empty">Le village arrive bientôt.</p>`;
 }
@@ -3360,7 +3442,7 @@ document.addEventListener('click', ev => {
   if (d.fiche) return openFiche(d.fiche);
   if (d.sel) return selectComp(d.sel);
   if (d.nav) { if (d.nav === 'carte') closeSheet(); else openSheet(d.nav, true); return; }
-  if (d.sub && el.closest('.subtabs')) { if (tab === 'village') villView = d.sub; else if (tab === 'sac') sacView = d.sub; houseSel = null; renderPanel(); $('panelBody').scrollTop = 0; return; }
+  if (d.sub && el.closest('.subtabs') && SUBTABS[tab]) { /* la boutique gère ses propres sous-onglets */ setSub(tab, d.sub); houseSel = null; renderPanel(); $('panelBody').scrollTop = 0; return; }
   if (d.open) { openSheet(d.open); return; }
   if (el.id === 'sheetClose') { closeSheet(); return; }
   if (d.suggest) { openSheet('voyage'); return; }
@@ -3395,6 +3477,7 @@ document.addEventListener('click', ev => {
   }
   if (d.wear) {
     const it = S.inv.find(i => i.id === d.wear); if (!it) return;
+    if (typeof styleToggleWear === 'function') return styleToggleWear(S.sel, it); // garde-robe (19_style.js) : couleurs, prêt entre compagnons
     const o = S.outfits[S.sel]; o.col = o.col || {}; o.worn = o.worn || {};
     if (o.worn[it.sub] === it.id) { o[it.sub] = 'none'; o.worn[it.sub] = null; }
     else { o[it.sub] = it.look; o.col[it.look] = it.color; o.worn[it.sub] = it.id; S.stats.worn = (S.stats.worn || 0) + 1; }
@@ -3413,10 +3496,14 @@ document.addEventListener('click', ev => {
   }
   if (d.gohouse) { openSheet('maison'); return; }
   if (d.sellq) {
-    const it = S.inv.find(i => i.id === d.sellq); if (!it) return;
-    const p = sellPrice(it); S.inv.splice(S.inv.indexOf(it), 1); gainCoins(p); S.stats.sold++; bump('sell');
-    const o = S.outfits[S.sel]; if (o.worn && o.worn[it.sub] === it.id) { o[it.sub] = 'none'; o.worn[it.sub] = null; }
-    save(); renderTop(); renderPanel(); toast(`Vendu au comptoir : +${p} pièces.`); return;
+    const id = d.sellq, go = () => {
+      const it = S.inv.find(i => i.id === id); if (!it) return;
+      const p = sellPrice(it); S.inv.splice(S.inv.indexOf(it), 1); gainCoins(p); S.stats.sold++; bump('sell');
+      for (const o of Object.values(S.outfits)) if (o && o.worn && o.worn[it.sub] === it.id) { o[it.sub] = 'none'; o.worn[it.sub] = null; } // aucun compagnon ne garde un vêtement vendu
+      save(); renderTop(); renderComps(); renderPanel(); toast(`Vendu au comptoir : +${p} pièces.`);
+    };
+    if (typeof styleGuard === 'function') styleGuard(id, 'vendre', go); else go();
+    return;
   }
   if (d.cf) { craftFilter = d.cf; renderPanel(); return; }
   if (d.craft) return craft(d.craft);
@@ -3427,7 +3514,7 @@ document.addEventListener('click', ev => {
     save(); renderTop(); renderPanel(); toast(`Acheté : « ${it.name} ».`); return;
   }
   if (el.id === 'mRefresh') { if (S.coins < 10) return; S.coins -= 10; S.market.refresh++; S.market.list = []; save(); renderTop(); renderPanel(); return; }
-  if (d.list) return listItem(d.list, parseFloat(d.p));
+  if (d.list) { const id = d.list, m = parseFloat(d.p); if (typeof styleGuard === 'function') styleGuard(id, 'mettre en vente', () => listItem(id, m)); else listItem(id, m); return; }
   if (d.unlist) { const m = S.market.mine[+d.unlist]; if (m && !m.sold) { S.inv.push(m.item); S.market.mine.splice(+d.unlist, 1); save(); renderPanel(); } return; }
   if (el.id === 'hClose') { houseSel = null; renderPanel(); return; }
   if (el.id === 'hRemove') { const cur = S.house[houseSel]; if (cur && cur.item) S.inv.push(cur.item); delete S.house[houseSel]; save(); renderPanel(); return; }
@@ -3468,7 +3555,7 @@ maybeIntro();
 lastNow = performance.now();
 function loop(now) {
   const dt = Math.min(1000, now - lastNow); lastNow = now; acc += dt;
-  if (tick(dt)) { save(); renderTop(); renderComps(); renderGoal(); if (tab === 'voyage' || tab === 'reves' || (tab === 'village' && villView === 'marche')) renderPanel(); else { renderNav(); renderTripCard(); } drawMarks(); }
+  if (tick(dt)) { save(); renderTop(); renderComps(); renderGoal(); if (tab === 'voyage' || tab === 'boutique' || (tab === 'compagnons' && compView === 'reves')) renderPanel(); else { renderNav(); renderTripCard(); } drawMarks(); }
   else if (acc > 250) {
     acc = 0;
     const t = S.trips[S.sel];
@@ -3489,14 +3576,14 @@ const ld = $('loader'); if (ld) { ld.classList.add('out'); setTimeout(() => ld.r
 }
 let lastNow = performance.now(), acc = 0;
 requestAnimationFrame(() => setTimeout(boot, 30));
-setInterval(save, 5000);
+setInterval(() => save(), 5000); // save() est enveloppé plus loin (19_style.js) : on appelle toujours la dernière version
 window.addEventListener('resize', () => { if (map) map.resize(); });
 window.__z = k => { const h = homeObj(); zoomTo(h.lon, h.lat, k); };
 window.__redraw = () => drawMarks();
 window.__poiRefresh = () => refreshPOIs();
 window.__pos = () => positionOverlay();
 window.__dbg = () => { const b = window.__map.getBounds(), z = window.__map.getZoom(); const x0 = Math.floor(b.getWest() / CELL), x1 = Math.ceil(b.getEast() / CELL), y0 = Math.floor(b.getSouth() / CELL), y1 = Math.ceil(b.getNorth() / CELL); return { z, w: b.getWest(), e: b.getEast(), s: b.getSouth(), n: b.getNorth(), cells: (x1 - x0) * (y1 - y0) }; };
-window.__tabDebug = () => ({ tab, villView, sacView, hidden: $('sheet').hidden });
+window.__tabDebug = () => ({ tab, villView, sacView, compView, sub: $('sheet').dataset.sub, hidden: $('sheet').hidden });
 window.__test = { S, tick, startTrip, plan, PLACES, collect, craft, setFast: v => fast = v, value };
 window.__gen = { gridVillages, geoLayersCities, genCell, CELL };
 
@@ -4003,7 +4090,11 @@ function runLogin() {
   if (!S.seenIntro) return;
   if (!$('modal').hidden) { setTimeout(runLogin, 1500); return; }
   const got = checkLogin();
-  if (got) { gainCoinsSilent(got.coins); renderAll(); renderJeuBar(); loginModal(got); }
+  if (!got) return;
+  gainCoinsSilent(got.coins); renderAll(); renderJeuBar();
+  // tout premier lancement : juste après le tutoriel, un simple message plutôt qu'une deuxième grande fenêtre
+  if ((S.login.total || 0) <= 1 && !got.item) { toast(`Cadeau du jour : +${got.coins} pièces !`); if (typeof coinFX === 'function') coinFX(got.coins); return; }
+  loginModal(got);
 }
 // les pièces du cadeau sont ajoutées sans animation immédiate (l'animation part du cadeau)
 function gainCoinsSilent(n) { const r = window.__jeuReady; window.__jeuReady = false; gainCoins(n); window.__jeuReady = r; }
@@ -4223,7 +4314,7 @@ setInterval(() => {
   const tiers = checkTiers(), achs = checkAch();
   tiers.forEach(t => toast(tierText(t)));
   achs.forEach(achPop);
-  if (tiers.length || achs.length) { renderTop(); renderNav(); renderJeuBar(); if (tab === 'reves' || tab === 'quetes' || (tab === 'sac' && sacView === 'col')) renderPanel(); }
+  if (tiers.length || achs.length) { renderTop(); renderNav(); renderJeuBar(); if (tab === 'reves' || tab === 'quetes' || (tab === 'compagnons' && compView === 'reves') || (tab === 'sac' && sacView === 'col')) renderPanel(); }
   else layoutJeuBar();
 }, 1500);
 window.__jeu = { setEvent: i => { _evCache = { dk: dayKey(), ev: EVENTS[i] }; renderJeuBar(); }, renderGoal: () => renderGoal(), todayEvent, EVENTS, ACH, checkTiers, checkAch, checkLogin, showHaul, coinFX, confetti, goalState };
@@ -4467,6 +4558,8 @@ function dreamAdvance(k, fn) {
   });
   return gains;
 }
+// le sous-onglet Rêves (onglet Compagnons) est-il affiché ? (ancien onglet 'reves' accepté aussi)
+const revesShown = () => tab === 'reves' || (tab === 'compagnons' && typeof compView !== 'undefined' && compView === 'reves');
 let _dreamFlash = null; // étape tout juste réussie (petite animation sur la carte de rêve)
 GAME.on('trip:return', ({ who, trip, dest, items }) => {
   if (!who || !S.dreams) return;
@@ -4478,7 +4571,7 @@ GAME.on('trip:return', ({ who, trip, dest, items }) => {
   });
   if (!gains.length) return;
   save(); _dreamFlash = { k: who, idx: gains.map(g => g.i), t: Date.now() };
-  renderGoal();
+  renderGoal(); if (revesShown()) renderPanel();
   announceGains(gains);
 });
 GAME.on('craft', ({ id }) => {
@@ -4487,7 +4580,7 @@ GAME.on('craft', ({ id }) => {
   for (const k of Object.keys(CHARS)) all.push(...dreamAdvance(k, st => st.t === 'craft' && st.id === id ? 1 : 0));
   if (!all.length) return;
   save(); _dreamFlash = { k: all[0].k, idx: all.map(g => g.i), t: Date.now() };
-  renderGoal(); if (tab === 'reves') renderPanel();
+  renderGoal(); if (revesShown()) renderPanel();
   const g = all[0], name = CHARS[g.k].name;
   setTimeout(() => toast(dreamReady(g.k) ? `Toutes les étapes du rêve de ${name} sont faites ! Réalisez-le depuis la carte.` : `Rêve de ${name} : « ${g.st.txt} », c’est fait !`), 900);
 });
@@ -6306,6 +6399,1610 @@ if (typeof renderNav === 'function') renderNav = (orig => function () {
 
 // ---------------- outils de test ----------------
 window.__regions = { api: () => ({ S, plan, PLACES, startTrip, tick, collect, selectComp, openSheet, renderPanel, craft, canCraft, openFiche, value, RECIPES, $, setCraftFilter: v => { craftFilter = v; }, setMktView: v => { mktView = v; } }), REGIONS, RG, RG_RES, RG_RECIPES, regionAt, originOf, valueBonus, rgState, regionGo, rgClaim, rgResChances, rgPickRes, give(rid, n = 1) { const x = RG_RES[rid]; for (let i = 0; i < n; i++) { const it = rgMakeRes(x, RG[x.region].anchor[2], [], { place: RG[x.region].anchor[2], km: kmBetween(homeObj(), { lon: RG[x.region].anchor[0], lat: RG[x.region].anchor[1] }) }); S.inv.push(it); rgState().got[rid] = (rgState().got[rid] || 0) + 1; } save(); } };
+
+// ================= LA BOUTIQUE : le cœur du jeu =================
+// Clients animaux et commandes (Comptoir), réputation et niveaux, magasin du jour (Magasin), vente aux passants (Marché).
+// Boucle : voyager -> récolter -> fabriquer -> livrer -> pièces et réputation -> acheter, construire, grandir.
+// Exposé : renderBoutique(box), openBoutique(sub), shopBadge(), shopReady().
+// État : S.shop = { rep, lvl, orders: [], served, stock: { day, items }, clients: {}, next, recipes: [], seq }.
+// Bus : émet 'order:done' { order, client } et 'rep:level' { level }.
+
+// ---------------- les clients ----------------
+// sp : espèce (dessin), likes : clés d'ingrédients (ING) préférées, cats : lieux du quotidien, tags : paysages,
+// rich : générosité, lvl : niveau de boutique à partir duquel il vient, acc : accessoire dessiné
+const BQ_CLIENTS = [
+  { id: 'noisette', name: 'Noisette', sp: 'herisson', label: 'la hérissonne', pers: 'Gourmande', cloth: '#f3aec1', acc: 'noeud', accC: '#e5687f', likes: ['sucre', 'fruit', 'pain'], cats: ['boulangerie', 'chocolaterie', 'marche'], tags: ['foret'], rich: 1, lvl: 0,
+    lines: ['Pour l’anniversaire de ma grand-mère, il me faut quelque chose de très spécial…', 'J’ai promis un goûter à toute ma classe de piano !', 'Mes piquants frissonnent rien que d’y penser…'] },
+  { id: 'ondine', name: 'Capitaine Ondine', sp: 'loutre', label: 'la loutre', pers: 'Aventurière', cloth: '#3e5f8a', acc: 'capitaine', accC: '#fbf8f0', likes: ['mer', 'coquillage', 'sable'], cats: ['poissonnerie', 'port', 'plage'], tags: ['mer', 'lac'], rich: 1.1, lvl: 0,
+    lines: ['Mon bateau repart demain à l’aube : je dois charger la cale !', 'Un marin ne part jamais sans provisions. Jamais !', 'J’ai parié avec un phoque que je trouverais ça chez vous.'] },
+  { id: 'roussette', name: 'Roussette', sp: 'renard', label: 'la renarde', pers: 'Coquette', cloth: '#7a4fa0', acc: 'perles', accC: '#fbf8f0', likes: ['tissu', 'fleur'], cats: ['mode', 'friperie', 'fleuriste'], tags: ['ville'], rich: 1.15, lvl: 0,
+    lines: ['Le bal du printemps approche et je n’ai RIEN à me mettre.', 'Il me faut de quoi assortir mon nouveau foulard, vous comprenez.', 'On m’a dit que votre boutique avait du goût. Prouvez-le-moi !'] },
+  { id: 'pompon', name: 'Pompon', sp: 'lapin', label: 'le lapin', pers: 'Jardinier', cloth: '#7fae4f', acc: 'chapeau', accC: '#e9c46a', likes: ['legume', 'graine', 'fleur'], cats: ['jardin', 'marche', 'fleuriste'], tags: ['campagne'], rich: 1, lvl: 0,
+    lines: ['Mon potager fait la tête cette année. Il faut le consoler.', 'Je prépare un concours de la plus belle carotte… chut !', 'Ma voisine la tortue m’a demandé ça. Elle est un peu lente pour venir.'] },
+  { id: 'hulotte', name: 'Madame Hulotte', sp: 'chouette', label: 'la chouette', pers: 'Savante', cloth: '#5f7ab8', acc: 'lunettes', accC: '#c9a35a', likes: ['papier', 'lumiere'], cats: ['librairie', 'bibliotheque', 'musee'], tags: ['monument'], rich: 1.2, lvl: 1,
+    lines: ['J’écris une encyclopédie des choses jolies. Il me manque un chapitre.', 'Hou hou ! Mes élèves de l’école du soir en ont besoin.', 'La science n’attend pas… enfin, si, un peu. Prenez votre temps.'] },
+  { id: 'bruno', name: 'Bruno', sp: 'ours', label: 'l’ours', pers: 'Gros dormeur', cloth: '#c94a4a', acc: 'echarpe', accC: '#f6d36b', likes: ['sucre', 'fruit', 'fromage'], cats: ['epicerie', 'ferme', 'parc'], tags: ['foret', 'montagne'], rich: 1.05, lvl: 0,
+    lines: ['L’hiver arrive, il me faut des réserves pour hiberner tranquille.', 'J’ai rêvé de ça trois nuits de suite. C’est un signe.', 'Pas pressé… mais un peu quand même, mon ventre gargouille.'] },
+  { id: 'mimi', name: 'Mimi', sp: 'souris', label: 'la souris', pers: 'Timide', cloth: '#f6c2cf', acc: 'fleur', accC: '#f6d36b', likes: ['fromage', 'graine'], cats: ['fromagerie', 'epicerie', 'boulangerie'], tags: ['campagne'], rich: 0.95, lvl: 0,
+    lines: ['Euh… bonjour… si ce n’est pas trop demander…', 'C’est pour la fête de famille. On est quarante-trois.', 'Je… je reviendrai si ce n’est pas possible. Merci !'] },
+  { id: 'filou', name: 'Filou', sp: 'raton', label: 'le raton laveur', pers: 'Collectionneur', cloth: '#5c6b94', acc: 'casquette', accC: '#e9a03a', likes: ['metal', 'verre', 'papier'], cats: ['puces', 'bricolage', 'rue'], tags: ['ville'], rich: 1.1, lvl: 0,
+    lines: ['Il me manque une seule pièce pour compléter ma collection !', 'Je ne vole rien, moi, j’achète. Comme tout le monde.', 'Ça brille ? Alors ça m’intéresse.'] },
+  { id: 'chips', name: 'Chips', sp: 'ecureuil', label: 'l’écureuil', pers: 'Énergique', cloth: '#f2c14e', acc: 'none', likes: ['fruit', 'graine', 'bois'], cats: ['parc', 'foret', 'marche'], tags: ['foret'], rich: 1, lvl: 0,
+    lines: ['Vite vite vite ! Enfin… quand vous pouvez ! Mais vite !', 'J’ai oublié où j’ai caché mes réserves. Encore.', 'C’est pour construire la plus grande cabane de la forêt !'] },
+  { id: 'gaston', name: 'Gaston', sp: 'blaireau', label: 'le blaireau', pers: 'Bricoleur', cloth: '#b07a4f', acc: 'none', likes: ['bois', 'metal', 'pierre'], cats: ['bricolage', 'route', 'puces'], tags: ['montagne'], rich: 1.05, lvl: 1,
+    lines: ['Je refais le toit de mon terrier. Avec une véranda !', 'Un bon bricoleur a toujours le bon matériau sous la patte.', 'Ma pelle s’est cassée. Rien de grave, mais il me faut du solide.'] },
+  { id: 'capucine', name: 'Capucine', sp: 'canard', label: 'la cane', pers: 'Bavarde', cloth: '#58c2b0', acc: 'noeud', accC: '#f39ab0', likes: ['pain', 'legume', 'boisson'], cats: ['boulangerie', 'etang', 'cafe'], tags: ['lac'], rich: 1, lvl: 0,
+    lines: ['Vous savez quoi ? Ma cousine se marie ! Il faut tout préparer !', 'Coin ! Pardon. Je voulais dire : bonjour !', 'On fait un pique-nique au bord de l’étang, vous êtes invités !'] },
+  { id: 'rainette', name: 'Rainette', sp: 'grenouille', label: 'la grenouille', pers: 'Rêveuse', cloth: '#f2e6a0', acc: 'fleur', accC: '#f39ab0', likes: ['fleur', 'feuille'], cats: ['etang', 'riviere', 'jardin'], tags: ['lac'], rich: 1, lvl: 1,
+    lines: ['Je décore mon nénuphar pour la nuit des lucioles.', 'J’ai fait un vœu sous la pluie… et c’est ça que j’ai demandé.', 'Croâ… c’est joli, non ? Dites que c’est joli.'] },
+  { id: 'moustache', name: 'Monsieur Moustache', sp: 'chat', label: 'le chat', pers: 'Élégant', cloth: '#3b3f5a', acc: 'monocle', accC: '#e3b94a', likes: ['boisson', 'tissu', 'sucre'], cats: ['cafe', 'mode', 'chocolaterie'], tags: ['ville'], rich: 1.3, lvl: 1,
+    lines: ['Je reçois la comtesse à cinq heures. Tout doit être parfait.', 'Je n’accepte que le meilleur. Ronron.', 'Mes moustaches ne mentent jamais : vous avez ce qu’il faut.'] },
+  { id: 'biscotte', name: 'Biscotte', sp: 'chien', label: 'le chien', pers: 'Joyeux', cloth: '#e5584f', acc: 'echarpe', accC: '#bfe1f2', likes: ['plat', 'pain', 'fromage'], cats: ['boucherie', 'boulangerie', 'parc'], tags: ['campagne'], rich: 1, lvl: 0,
+    lines: ['Ouaf ! C’est pour la fête du quartier, tout le monde vient !', 'J’ai été très sage cette semaine. Très très sage.', 'Ma queue remue toute seule rien que d’y penser !'] },
+  { id: 'frisette', name: 'Frisette', sp: 'mouton', label: 'la brebis', pers: 'Douce', cloth: '#9cc3e8', acc: 'fleur', accC: '#f6c2cf', likes: ['laine', 'tissu', 'fleur'], cats: ['ferme', 'friperie', 'coiffeur'], tags: ['montagne', 'campagne'], rich: 1, lvl: 0,
+    lines: ['Je tricote une couverture pour tous les agneaux du pré.', 'Bêêê… pardon, c’est l’émotion.', 'Pour mon salon de thé, il me faut une touche de douceur.'] },
+  { id: 'clochette', name: 'Clochette', sp: 'faon', label: 'la faonne', pers: 'Poétique', cloth: '#a6cf8e', acc: 'fleur', accC: '#fff8f0', likes: ['fleur', 'feuille', 'fruit'], cats: ['parc', 'foret', 'fleuriste'], tags: ['foret', 'montagne'], rich: 1.1, lvl: 2,
+    lines: ['J’écris un poème sur le monde entier. Il me manque une rime.', 'La forêt m’a soufflé votre nom ce matin.', 'Chaque objet raconte un voyage. Racontez-moi celui-ci.'] },
+  { id: 'eucalypso', name: 'Eucalypso', sp: 'koala', label: 'le koala', pers: 'Grand voyageur', cloth: '#e9a03a', acc: 'chapeau', accC: '#c9a97a', likes: ['feuille', 'boisson', 'bois'], cats: ['cafe', 'jardin'], tags: ['ile', 'desert'], rich: 1.35, lvl: 2,
+    lines: ['J’ai fait le tour du monde trois fois. Il me manque un souvenir.', 'Chez moi, en Australie, personne ne me croira !', 'Je collectionne les trésors de chaque région. Vous m’aidez ?'] },
+  { id: 'pingo', name: 'Pingo', sp: 'pingouin', label: 'le manchot', pers: 'Explorateur polaire', cloth: '#d9604f', acc: 'echarpe', accC: '#f6d36b', likes: ['cristal', 'flocon', 'mer'], cats: ['poissonnerie', 'glacier', 'port'], tags: ['neige', 'mer'], rich: 1.4, lvl: 3,
+    lines: ['Mon expédition part pour le pôle. Il me faut le meilleur équipement.', 'Brrr… non, je plaisante, je n’ai jamais froid.', 'Le grand nord m’attend. Mais pas sans ça !'] },
+  { id: 'grignote', name: 'Grignote', sp: 'hamster', label: 'le hamster', pers: 'Économe', cloth: '#f6d36b', acc: 'casquette', accC: '#58c2b0', likes: ['graine', 'sucre', 'fruit'], cats: ['marche', 'jardin', 'boulangerie'], tags: ['campagne'], rich: 0.9, lvl: 0,
+    lines: ['Je fais des provisions. On n’a jamais trop de provisions !', 'Mes joues sont pleines, mais mon garde-manger est vide.', 'Un bon prix, hein ? Je compte chaque pièce.'] },
+  { id: 'leonie', name: 'Grand-mère Léonie', sp: 'tortue', label: 'la tortue', pers: 'Sage centenaire', cloth: '#c9a3d9', acc: 'perles', accC: '#fbf8f0', likes: ['fleur', 'cristal', 'papier'], cats: ['fleuriste', 'librairie', 'puces'], tags: ['ile', 'monument'], rich: 1.5, lvl: 4,
+    lines: ['En cent vingt ans, je n’ai jamais vu de merveille pareille. Trouvez-m’en une.', 'Prenez votre temps, mon petit. Moi, j’ai tout le mien.', 'C’est pour mes arrière-arrière-petits-enfants.'] },
+];
+const BQC = id => BQ_CLIENTS.find(c => c.id === id);
+const BQ_SPN = { herisson: 'hérisson', loutre: 'loutre', renard: 'renard', lapin: 'lapin', chouette: 'chouette', ours: 'ours', souris: 'souris', raton: 'raton laveur', ecureuil: 'écureuil', blaireau: 'blaireau', canard: 'cane', grenouille: 'grenouille', chat: 'chat', chien: 'chien', mouton: 'brebis', faon: 'faon', koala: 'koala', pingouin: 'manchot', hamster: 'hamster', tortue: 'tortue' };
+const bqWho = c => `${c.name} ${c.label}`;
+
+// ---------------- niveaux de réputation ----------------
+// chaque niveau débloque du concret : commandes simultanées, clients plus riches, rayons du magasin, décor, titre
+const BQ_LEVELS = [
+  { name: 'Échoppe', rep: 0, slots: 3, rich: 1, stock: 6, title: 'Petite échoppe de quartier', reach: 'Des clients du quartier' },
+  { name: 'Boutique', rep: 50, slots: 3, rich: 1.15, stock: 7, title: 'Adresse que l’on recommande', reach: 'Des clients de toute la région', perks: ['+15 % de pièces par commande', 'Rayon décoration et recettes au magasin', 'Auvent rayé et enseigne peinte', 'Clients de toute la région'] },
+  { name: 'Maison réputée', rep: 160, slots: 4, rich: 1.3, stock: 8, title: 'Maison qui compte en France', reach: 'Des clients de toute la France', perks: ['4 commandes à la fois', '+30 % de pièces par commande', 'Nouveaux vêtements et matériaux', 'Plantes, vitrine et seconde étagère', 'Clients de toute la France'] },
+  { name: 'Grand comptoir', rep: 360, slots: 4, rich: 1.5, stock: 9, title: 'Renommée dans toute l’Europe', reach: 'Des clients de toute l’Europe', perks: ['+50 % de pièces par commande', 'Articles rares au magasin', 'Lanternes et tapis dans la boutique', 'Clients de toute l’Europe'] },
+  { name: 'Comptoir du monde', rep: 700, slots: 4, rich: 1.75, stock: 10, title: 'Célèbre aux quatre coins du monde', reach: 'Des clients du monde entier', perks: ['+75 % de pièces par commande', 'Commandes de Merveilles et de souvenirs', 'Guirlande et mappemonde géante', 'Clients du monde entier'] },
+  { name: 'Légende du voyage', rep: 1200, slots: 4, rich: 2, stock: 10, title: 'Légende des voyageurs', reach: 'Les clients les plus exigeants', perks: ['Pièces doublées par commande', 'Articles légendaires au magasin', 'Enseigne dorée qui scintille'] },
+];
+const bqLv = i => BQ_LEVELS[Math.max(0, Math.min(BQ_LEVELS.length - 1, i))];
+
+// ---------------- recettes vendues au magasin ----------------
+const BQ_RECIPES = [
+  { id: 'bs_brioche', kind: 'Cuisine', out: ['Brioche dorée', 'n', 'pain', 2, null, '#e3a04b'], ing: [['farine', 2], ['sucre', 1]], coins: 0, lvl: 1, price: 60 },
+  { id: 'bs_tarte_citron', kind: 'Cuisine', out: ['Tarte au citron meringuée', 'n', 'agrume', 2, null, '#f2d43b'], ing: [['agrume', 2], ['sucre', 1], ['farine', 1]], coins: 0, lvl: 1, price: 70 },
+  { id: 'bs_bouquet', kind: 'Décoration', out: ['Bouquet du voyageur', 'd', 'plante', 2, null, '#f39ab0'], ing: [['fleur', 3]], coins: 5, lvl: 2, price: 90 },
+  { id: 'bs_bonnet', kind: 'Vêtement', out: ['Bonnet tricoté à pompon', 'v', 'tete', 2, 'bonnet', '#e5584f'], ing: [['laine', 2], ['tissu', 1]], coins: 10, lvl: 2, price: 90 },
+  { id: 'bs_lampe_coq', kind: 'Décoration', out: ['Lampe coquillage', 'd', 'lampe', 3, null, '#f6cdb8'], ing: [['coquillage', 2], ['verre', 1]], coins: 20, lvl: 3, price: 140 },
+  { id: 'bs_panier', kind: 'Cuisine', out: ['Panier garni', 'n', 'plat', 3, null, '#d9a35f'], ing: [['fruit', 1], ['pain', 1], ['fromage', 1]], coins: 10, lvl: 3, price: 140 },
+  { id: 'bs_cape', kind: 'Vêtement', out: ['Cape du grand voyageur', 'v', 'dos', 3, 'cape', '#2f7f6c'], ing: [['tissu', 3], ['plume', 1]], coins: 30, lvl: 4, price: 200 },
+];
+const BQ_RIDS = new Set(BQ_RECIPES.map(r => r.id));
+BQ_RECIPES.forEach(r => { if (!RECIPES.some(x => x.id === r.id)) RECIPES.push({ id: r.id, kind: r.kind, out: r.out, ing: r.ing, coins: r.coins, shop: 1 }); });
+
+// ---------------- catalogue du magasin ----------------
+// k : 'v' vêtement, 'd' déco, 'm' matériau, 'r' recette, lvl : niveau de boutique requis
+const BQ_CAT = [
+  // vêtements (formes que drawChar sait dessiner)
+  ['v', 0, ['Bonnet rayé de la boutique', 'v', 'tete', 0, 'bonnet', '#f08aa6']], ['v', 0, ['Écharpe pistache', 'v', 'cou', 0, 'echarpe', '#a9cf8e']], ['v', 0, ['Chaussettes à cœurs', 'v', 'pieds', 0, 'chaussettes', '#f39ab0']],
+  ['v', 0, ['T-shirt du voyageur', 'v', 'haut', 0, 'tshirt', '#bfe1f2']], ['v', 0, ['Casquette de livreur', 'v', 'tete', 0, 'casquette', '#d9604f']],
+  ['v', 1, ['Béret moutarde', 'v', 'tete', 1, 'beret', '#e3b04b']], ['v', 1, ['Nœud papillon à pois', 'v', 'cou', 1, 'noeud', '#5c6b94']], ['v', 1, ['Short de marin', 'v', 'bas', 1, 'short', '#3e5f8a']], ['v', 1, ['Gants fleuris', 'v', 'mains', 1, 'gants', '#9cc38a']],
+  ['v', 2, ['Pull du comptoir', 'v', 'haut', 2, 'pull', '#c9734a']], ['v', 2, ['Jupe à fleurs', 'v', 'bas', 2, 'jupe', '#f6a6b8']], ['v', 2, ['Sac à dos de globe-trotteur', 'v', 'dos', 2, 'sac', '#7fae4f']], ['v', 2, ['Bottes de pluie jaunes', 'v', 'pieds', 2, 'bottes', '#f6d36b']],
+  ['v', 3, ['Cape de marchand', 'v', 'dos', 3, 'cape', '#7a4fa0']], ['v', 3, ['Couronne de fleurs des champs', 'v', 'tete', 3, 'fleurs', '#f6c2cf']],
+  ['v', 4, ['Sweat du Comptoir du monde', 'v', 'haut', 3, 'sweat', '#2f7f6c']], ['v', 5, ['Couronne du marchand légendaire', 'v', 'tete', 4, 'couronne', '#f2c14e']],
+  // meubles et décos pour la maison
+  ['d', 0, ['Plante verte', 'd', 'plante', 0, null, '#7fbf6a']], ['d', 0, ['Bocal de bonbons', 'd', 'bocal', 0, null, '#f3aec1']], ['d', 0, ['Tapis rayé', 'd', 'tapis', 0, null, '#e9a0a0']],
+  ['d', 1, ['Lanterne en papier', 'd', 'lanterne', 1, null, '#f6d36b']], ['d', 1, ['Herbier de montagne', 'd', 'herbier', 1, null, '#9cc38a']],
+  ['d', 2, ['Mappemonde ancienne', 'd', 'mappemonde', 2, null, '#c9a97a']], ['d', 2, ['Lampe de comptoir', 'd', 'lampe', 2, null, '#f6e08a']],
+  ['d', 3, ['Poêle en faïence', 'd', 'cheminee', 3, null, '#9fd0d8']], ['d', 3, ['Chat porte-bonheur', 'd', 'statue', 3, null, '#f2c14e']],
+  ['d', 4, ['Lanterne du bout du monde', 'd', 'lanterne', 3, null, '#9fe0d0']], ['d', 5, ['Fontaine de jade', 'd', 'statue', 4, null, '#7fc4a0']],
+  // graines et matériaux de base
+  ['m', 0, ['Sac de farine', 'm', 'farine', 0, null, '#f4efe2']], ['m', 0, ['Pelote de laine', 'm', 'laine', 0, null, '#efe6d2']], ['m', 0, ['Planche de bois', 'm', 'bois', 0, null, '#c99a6a']],
+  ['m', 0, ['Sachet de graines', 'm', 'graine', 0, null, '#a9784f']], ['m', 0, ['Sucre en morceaux', 'n', 'sucre', 0, null, '#f6efe0']], ['m', 0, ['Pomme rouge', 'n', 'pomme', 0, null, '#e5584f']],
+  ['m', 1, ['Bobine de fil', 'm', 'tissu', 0, null, '#e9a0a0']], ['m', 1, ['Papier kraft', 'm', 'papier', 0, null, '#d9b98a']], ['m', 1, ['Pot de miel', 'n', 'sucre', 0, null, '#f2b13e']],
+  ['m', 2, ['Éclat de cristal', 'm', 'cristal', 1, null, '#bfe3f6']], ['m', 2, ['Plume d’oie', 'm', 'plume', 1, null, '#fbf8f0']], ['m', 3, ['Coquillages de brocante', 'm', 'coquillage', 1, null, '#f6cdb8']],
+].map(([k, lvl, def], i) => ({ key: k + i, k, lvl, def }));
+BQ_RECIPES.forEach(r => BQ_CAT.push({ key: 'r_' + r.id, k: 'r', lvl: r.lvl, rec: r.id }));
+
+// ---------------- état ----------------
+let bView = 'comptoir';
+function bqState() {
+  if (!S.shop || typeof S.shop !== 'object') S.shop = {};
+  const s = S.shop;
+  if (typeof s.rep !== 'number' || !isFinite(s.rep)) s.rep = 0;
+  if (typeof s.lvl !== 'number') s.lvl = 0;
+  if (!Array.isArray(s.orders)) s.orders = [];
+  if (typeof s.served !== 'number') s.served = 0;
+  if (!s.stock || typeof s.stock !== 'object') s.stock = { day: 0, items: [] };
+  if (!Array.isArray(s.stock.items)) s.stock.items = [];
+  if (!s.clients || typeof s.clients !== 'object') s.clients = {};
+  if (!Array.isArray(s.recipes)) s.recipes = [];
+  if (typeof s.next !== 'number') s.next = 0;
+  if (typeof s.seq !== 'number') s.seq = 0;
+  if (typeof s.earned !== 'number') s.earned = 0;
+  s.orders = s.orders.filter(o => o && Array.isArray(o.req) && BQC(o.client));
+  s.lvl = bqLevelOf(s.rep);
+  return s;
+}
+function bqLevelOf(rep) { let l = 0; BQ_LEVELS.forEach((L, i) => { if (rep >= L.rep) l = i; }); return l; }
+const bqHome = () => { try { return typeof rgHome === 'function' ? rgHome() : null; } catch (e) { return null; } };
+const bqRound5 = n => Math.max(5, Math.round(n / 5) * 5);
+
+// ---------------- objets : compter, réserver, consommer ----------------
+function bqWorn() { const s = new Set(); for (const o of Object.values(S.outfits || {})) if (o && o.worn) for (const [sl, id] of Object.entries(o.worn)) if (id && o[sl] && o[sl] !== 'none') s.add(id); return s; }
+function bqMatch(r, it) {
+  if (!it) return false;
+  if (r.k === 'ing') return (it.cat === 'm' || it.cat === 'n') && ING[r.key] && ING[r.key][0].includes(it.sub);
+  if (r.k === 'item' || r.k === 'craft') return it.name === r.name || it.name === r.name + ' (chef-d’œuvre)';
+  if (r.k === 'reg') return it.rid === r.rid;
+  return false;
+}
+// les objets demandés précisément d'abord, puis les ingrédients génériques ; un objet porté seulement en dernier recours
+// (la livraison demande alors l'accord du joueur, via styleGuard)
+function bqAllocate(o) {
+  const worn = bqWorn(), used = new Set(), out = [];
+  const order = o.req.map((r, i) => ({ r, i })).sort((a, b) => (a.r.k === 'ing') - (b.r.k === 'ing'));
+  for (const { r, i } of order) {
+    const c = S.inv.filter(it => !used.has(it) && bqMatch(r, it))
+      .sort((a, b) => (worn.has(a.id) ? 1 : 0) - (worn.has(b.id) ? 1 : 0) || (r.k === 'reg' ? 0 : (a.rid ? 1 : 0) - (b.rid ? 1 : 0)) || ((a.special || a.edition) ? 1 : 0) - ((b.special || b.edition) ? 1 : 0) || a.rarity - b.rarity);
+    const take = c.slice(0, r.n); take.forEach(x => used.add(x));
+    out[i] = { have: Math.min(c.length, r.n), take };
+  }
+  return out;
+}
+const bqReady = o => bqAllocate(o).every((a, i) => a.have >= o.req[i].n);
+function shopReady() { try { return bqState().orders.filter(bqReady).length; } catch (e) { return 0; } }
+// pastille près de l'onglet Boutique : nombre de clients qui attendent (shopReady() : commandes livrables)
+function shopBadge() { try { return bqState().orders.length; } catch (e) { return 0; } }
+function shopBadgeText() { const n = shopBadge(), r = shopReady(); return r ? `${r} commande${r > 1 ? 's' : ''} prête${r > 1 ? 's' : ''} à livrer !` : n ? `${n} client${n > 1 ? 's' : ''} attend${n > 1 ? 'ent' : ''} !` : ''; }
+
+// ---------------- génération des commandes ----------------
+const BQ_NEAR_CATS = ['boulangerie', 'cafe', 'marche', 'epicerie', 'fleuriste', 'librairie', 'parc', 'rue', 'fromagerie', 'chocolaterie', 'glacier', 'jardin', 'poste', 'bricolage', 'mode', 'friperie', 'puces', 'boucherie', 'bibliotheque', 'musee', 'coiffeur', 'ferme', 'etang', 'riviere', 'pharmacie', 'route'];
+const bqPoiOK = c => typeof POI_CATS !== 'undefined' && POI_CATS[c] && LOOT[c];
+// meilleur lieu du quotidien pour un ingrédient : celui où il tombe le plus souvent (objets communs)
+const _bqCatFor = {};
+function bqCatFor(key, prefer) {
+  const subs = ING[key] ? ING[key][0] : []; if (!subs.length) return null;
+  const score = c => { const l = LOOT[c] || []; const tot = l.reduce((a, d) => a + 1 / (1 + d[3] * 1.6), 0); return l.filter(d => (d[1] === 'm' || d[1] === 'n') && subs.includes(d[2])).reduce((a, d) => a + 1 / (1 + d[3] * 1.6), 0) / (tot || 1); };
+  const pf = (prefer || []).filter(c => bqPoiOK(c) && score(c) >= 0.25).sort((a, b) => score(b) - score(a));
+  if (pf.length) return pf[0];
+  if (!(key in _bqCatFor)) { const all = BQ_NEAR_CATS.filter(bqPoiOK).map(c => ({ c, s: score(c) })).sort((a, b) => b.s - a.s); _bqCatFor[key] = all.length && all[0].s >= 0.12 ? all[0].c : null; }
+  return _bqCatFor[key];
+}
+const bqItemOf = (def, extra = {}) => ({ name: def[0], cat: def[1], sub: def[2], rarity: def[3], look: def[4] || null, color: def[5] || null, ...extra });
+function bqSampleIng(key) {
+  const subs = ING[key] ? ING[key][0] : [];
+  for (const l of Object.values(LOOT)) { const d = l.find(x => (x[1] === 'm' || x[1] === 'n') && subs.includes(x[2]) && x[3] === 0); if (d) return bqItemOf(d); }
+  return { name: '', cat: 'm', sub: subs[0] || 'pierre', rarity: 0 };
+}
+function bqReqValue(r) {
+  try {
+    if (r.k === 'ing') return value({ ...bqSampleIng(r.key), id: '' }) * r.n;
+    if (r.k === 'item') return value(bqItemOf(r.def)) * r.n;
+    if (r.k === 'reg') { const x = RG_RES[r.rid], R = RG[x.region], km = kmBetween(homeObj(), { lon: R.anchor[0], lat: R.anchor[1] }); return value({ name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, rid: x.id, origin: { region: R.id, km } }) * r.n; }
+    if (r.k === 'craft') { const rc = RECIPES.find(x => x.id === r.id); const ingV = rc.ing.reduce((a, [key, n]) => a + (key.startsWith('r:') ? bqReqValue({ k: 'reg', rid: key.slice(2), n }) : value({ ...bqSampleIng(key), id: '' }) * n), 0); return (ingV + (rc.coins || 0) + value(bqItemOf(rc.out)) * 0.5) * r.n; }
+  } catch (e) {}
+  return 10 * (r.n || 1);
+}
+const bqPick = (arr, w) => { if (!arr.length) return null; if (!w) return arr[Math.floor(Math.random() * arr.length)]; const ws = arr.map(w), t = ws.reduce((a, b) => a + b, 0); let r = Math.random() * t; for (let i = 0; i < arr.length; i++) { r -= ws[i]; if (r <= 0) return arr[i]; } return arr[0]; };
+function bqRegionsFor(L) {
+  if (typeof REGIONS === 'undefined') return [];
+  const home = bqHome();
+  if (L <= 1) return home ? [home] : [];
+  const g = L === 2 ? 0 : L === 3 ? 1 : 9;
+  return REGIONS.filter(R => R.g <= g && R.id !== 'grand_large');
+}
+const bqRecOwned = id => !BQ_RIDS.has(id) || bqState().recipes.includes(id);
+// recettes ordinaires faciles à réaliser près de chez soi
+const BQ_EASY_CRAFT = ['tarte', 'confiture', 'herbier', 'plante', 'moufles', 'tapis', 'globe', 'salade', 'collier', 'bocal', 'pull', 'echarpe'];
+const BQ_GEN = {
+  ing(c, L, easy) {
+    const keys = c.likes.filter(k => ING[k] && bqCatFor(k, c.cats));
+    const key = bqPick(keys.length ? keys : ['sucre', 'fruit', 'papier', 'fleur'].filter(k => bqCatFor(k)));
+    if (!key) return null;
+    return { k: 'ing', key, n: easy ? 2 : 2 + (L >= 2 ? 1 : 0) + (Math.random() < 0.3 ? 1 : 0), src: { cat: bqCatFor(key, c.cats) } };
+  },
+  item(c, L) {
+    const cats = c.cats.filter(bqPoiOK); const cat = bqPick(cats); if (!cat) return null;
+    const pool = LOOT[cat].filter(d => d[3] <= (L >= 3 ? 1 : 0) && d[1] !== 't');
+    const def = bqPick(pool, d => d[3] ? 0.5 : 1); if (!def) return null;
+    return { k: 'item', name: def[0], def, n: 1, src: { cat } };
+  },
+  craft(c, L) {
+    const pool = RECIPES.filter(r => !r.multi && bqRecOwned(r.id) && (BQ_EASY_CRAFT.includes(r.id) || (L >= 2 && r.out[3] <= 3)) && r.ing.every(([k]) => !k.startsWith('r:')));
+    const r = bqPick(pool, r => (c.likes.some(k => r.ing.some(([x]) => x === k)) ? 3 : 1)); if (!r) return null;
+    return { k: 'craft', id: r.id, name: r.out[0], def: r.out, n: 1 };
+  },
+  reg(c, L) {
+    const regs = bqRegionsFor(L); if (!regs.length) return null;
+    const maxR = [0, 0, 1, 1, 2, 3][L] || 0;
+    const pool = [];
+    regs.forEach(R => R.res.forEach(x => { if (x.rar <= maxR) pool.push(x); }));
+    const x = bqPick(pool, x => (c.likes.some(k => ING[k] && ING[k][0].includes(x.sub)) ? 3 : 1) * (x.rar ? 0.6 : 1)); if (!x) return null;
+    return { k: 'reg', rid: x.id, name: x.name, n: x.rar === 0 && L >= 2 && Math.random() < 0.5 ? 2 : 1, src: { region: x.region } };
+  },
+  tag(c, L) {
+    const tag = bqPick(c.tags.filter(t => LOOT[t])); if (!tag) return null;
+    const def = bqPick(LOOT[tag].filter(d => d[3] === 0 && d[1] !== 't')); if (!def) return null;
+    return { k: 'item', name: def[0], def, n: 1, src: { tag } };
+  },
+  merveille(c, L) {
+    if (typeof RG_RECIPES === 'undefined') return null;
+    const r = bqPick(RG_RECIPES.filter(r => r.out[3] <= (L >= 5 ? 4 : 3))); if (!r) return null;
+    return { k: 'craft', id: r.id, name: r.out[0], def: r.out, n: 1, wonder: 1 };
+  },
+  souvenir(c, L) {
+    const p = bqPick(PLACES.filter(p => p.name !== S.home && p.special && (L >= 5 || zoneOfSafe(p) !== 'monde'))); if (!p) return null;
+    return { k: 'item', name: p.special[0], def: [p.special[0], p.special[1], p.special[2], 3, p.special[4], p.special[5]], n: 1, src: { place: p.name }, souvenir: 1 };
+  },
+};
+const zoneOfSafe = p => { try { return typeof zoneOf === 'function' ? zoneOf(p) : 'fr'; } catch (e) { return 'fr'; } };
+function bqGenFor(c, L, served) {
+  const easy = served < 2;
+  const W = easy ? { ing: 5, item: 2 } : [
+    { ing: 4, item: 3, craft: 1.5 },
+    { ing: 3, item: 2, craft: 2, reg: 3, tag: 1.5 },
+    { ing: 2, item: 1.5, craft: 2, reg: 4, tag: 2 },
+    { ing: 1.5, item: 1, craft: 2, reg: 4.5, tag: 2, souvenir: 1 },
+    { ing: 1, item: 1, craft: 1.5, reg: 4, tag: 1.5, souvenir: 1.5, merveille: 2 },
+    { ing: 1, item: 1, craft: 1.5, reg: 4, tag: 1.5, souvenir: 1.5, merveille: 3 },
+  ][L];
+  const kinds = Object.keys(W);
+  const req = [];
+  for (let tries = 0; tries < 12 && !req.length; tries++) { const g = bqPick(kinds, k => W[k]); const r = BQ_GEN[g](c, L, easy); if (r) req.push(r); }
+  if (!req.length) req.push({ k: 'ing', key: 'sucre', n: 2, src: { cat: 'boulangerie' } });
+  if (!easy && L >= 2 && Math.random() < 0.35) {
+    const g = bqPick(['ing', 'item', 'reg'].filter(k => W[k]), k => W[k]); const r = BQ_GEN[g](c, L, false);
+    if (r && !req.some(x => x.k === r.k && (x.key || x.name || x.rid) === (r.key || r.name || r.rid))) req.push(r);
+  }
+  return req;
+}
+function bqNewOrder(forceEasy) {
+  const s = bqState(), L = s.lvl, now = Date.now();
+  const busy = new Set(s.orders.map(o => o.client));
+  let pool = BQ_CLIENTS.filter(c => c.lvl <= L && !busy.has(c.id) && !((s.clients[c.id] || {}).away > now));
+  if (forceEasy) pool = pool.filter(c => c.cats.some(bqPoiOK));
+  if (!pool.length) return null;
+  const c = bqPick(pool, c => 1 / (1 + ((s.clients[c.id] || {}).served || 0) * 0.3) * (c.lvl === L && L > 0 ? 1.6 : 1));
+  const req = bqGenFor(c, L, forceEasy ? 0 : s.served);
+  const val = req.reduce((a, r) => a + bqReqValue(r), 0);
+  const deadline = !forceEasy && Math.random() < 0.3 ? now + (24 + Math.floor(Math.random() * 24)) * 3600e3 : 0;
+  const coinsR = bqRound5((25 + 2.5 * val) * bqLv(L).rich * c.rich * (deadline ? 1.25 : 1));
+  const rep = Math.round(Math.min(70, 12 + val / 5 + L * 2 + req.length * 3 + (req.some(r => r.wonder) ? 15 : 0)));
+  const o = { id: uidGen(), client: c.id, line: pick(c.lines), req, coins: coinsR, rep, at: now, deadline, seq: ++s.seq };
+  // parfois une récompense en plus : une recette du magasin pas encore connue, ou un objet rare
+  if (!forceEasy && Math.random() < 0.22) {
+    const rec = BQ_RECIPES.find(r => r.lvl <= L + 1 && !s.recipes.includes(r.id));
+    if (rec && Math.random() < 0.5) o.bonus = { rec: rec.id };
+    else { const tags = c.cats.filter(x => LOOT[x]).concat(c.tags.filter(x => LOOT[x])); const pl = [].concat(...tags.map(t => LOOT[t])).filter(d => d[3] === 2 && d[1] !== 't'); const d = bqPick(pl); if (d) o.bonus = { def: d }; }
+  }
+  return o;
+}
+// rythme d'arrivée : très rapide au début, puis une commande toutes les 20 à 40 minutes
+function bqInterval(served) { const m = served < 3 ? 2 + Math.random() * 2 : served < 8 ? 8 + Math.random() * 7 : 20 + Math.random() * 20; return Math.round(m * 60e3); }
+function bqTickOrders() {
+  const s = bqState(), now = Date.now(), slots = bqLv(s.lvl).slots;
+  let changed = false;
+  // délais dépassés : le client repart (il reviendra)
+  const gone = s.orders.filter(o => o.deadline && now > o.deadline);
+  if (gone.length) { gone.forEach(o => { const cs = s.clients[o.client] || (s.clients[o.client] = {}); cs.away = now + 2 * 3600e3; toast(`${BQC(o.client).name} n’a pas pu attendre plus longtemps, mais reviendra plus tard.`); }); s.orders = s.orders.filter(o => !gone.includes(o)); changed = true; }
+  // premières commandes : tout de suite
+  if (!s.orders.length && !s.served && !s.started) { s.started = now; for (let i = 0; i < 2; i++) { const o = bqNewOrder(true); if (o) s.orders.push(o); } s.next = now + bqInterval(0); changed = true; }
+  if (!s.next) s.next = now + bqInterval(s.served);
+  let guard = 0;
+  while (s.orders.length < slots && now >= s.next && guard++ < 6) {
+    const o = bqNewOrder(false); if (o) s.orders.push(o);
+    s.next = Math.max(s.next, now - 3600e3) + bqInterval(s.served);
+    changed = true;
+  }
+  if (s.orders.length >= slots && now >= s.next) s.next = now + 60e3; // file pleine : le prochain client attend dehors
+  if (!s.orders.length && s.next > now + 120e3) { s.next = now + 90e3; changed = true; } // comptoir vide : quelqu'un arrive bientôt
+  return changed;
+}
+
+// ---------------- libellés et icônes des demandes ----------------
+function bqReqIcon(r) {
+  try {
+    if (r.k === 'ing') return itemIcon(bqSampleIng(r.key));
+    if (r.k === 'item' || r.k === 'craft') return itemIcon(bqItemOf(r.def));
+    if (r.k === 'reg') { const x = RG_RES[r.rid]; return itemIcon({ name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color }); }
+  } catch (e) {}
+  return '';
+}
+function bqReqLabel(r) {
+  if (r.k === 'ing') return ING[r.key] ? ING[r.key][1] : r.key;
+  if (r.k === 'reg') return RG_RES[r.rid] ? RG_RES[r.rid].name : r.rid;
+  return r.name;
+}
+function bqReqWhere(r) {
+  const s = r.src || {};
+  if (r.k === 'craft') return r.wonder ? 'Merveille à fabriquer (atelier)' : 'À fabriquer à l’atelier';
+  if (s.cat && POI_CATS[s.cat]) return `${POI_CATS[s.cat][0]} près de chez vous`;
+  if (s.tag) return `Lieu ${TAGQ[s.tag] || TAGL[s.tag] || s.tag}`;
+  if (s.place) return `Souvenir de ${s.place}`;
+  if (s.region && typeof RG !== 'undefined' && RG[s.region]) { const R = RG[s.region], h = bqHome(); return h && h.id === R.id ? `Spécialité de votre région (${R.short})` : `Spécialité ${rgDe(R)}`; }
+  return '';
+}
+function bqRarity(r) { if (r.k === 'reg') return RG_RES[r.rid] ? RG_RES[r.rid].rar : 0; if (r.def) return r.def[3] || 0; return 0; }
+
+// ---------------- livrer, refuser, partir chercher ----------------
+function bqDeliver(id, srcEl, depth = 0) {
+  const s = bqState(), o = s.orders.find(x => x.id === id); if (!o || !bqReady(o)) return;
+  const c = BQC(o.client), alloc = bqAllocate(o), given = [];
+  // un vêtement porté par un compagnon : on demande avant de le livrer (un objet à la fois)
+  const worn = bqWorn(), wornIt = [].concat(...alloc.map(a => a.take)).find(it => worn.has(it.id));
+  if (wornIt && depth < 8 && typeof styleGuard === 'function') { styleGuard(wornIt.id, 'livrer', () => bqDeliver(id, srcEl, depth + 1)); return; }
+  alloc.forEach(a => a.take.forEach(it => { const i = S.inv.indexOf(it); if (i >= 0) { S.inv.splice(i, 1); given.push(it); } }));
+  s.orders = s.orders.filter(x => x !== o);
+  const lv0 = s.lvl;
+  s.rep += o.rep; s.served++; s.earned += o.coins;
+  const cs = s.clients[c.id] || (s.clients[c.id] = {}); cs.served = (cs.served || 0) + 1; cs.last = Date.now();
+  S.stats.orders = (S.stats.orders || 0) + 1;
+  let bonusTxt = '';
+  if (o.bonus && o.bonus.rec && !s.recipes.includes(o.bonus.rec)) { s.recipes.push(o.bonus.rec); const r = BQ_RECIPES.find(x => x.id === o.bonus.rec); bonusTxt = ` et la recette « ${r.out[0]} »`; }
+  else if (o.bonus && o.bonus.def) { const it = makeItem(o.bonus.def, 1, `Cadeau de ${c.name}`, [], { fixed: Math.max(2, o.bonus.def[3]) }); S.inv.push(it); S.dex[it.name] = true; bonusTxt = ` et « ${it.name} »`; }
+  gainCoins(o.coins);
+  if (s.orders.length < bqLv(s.lvl).slots) s.next = Math.min(s.next || Infinity, Date.now() + (s.served < 3 ? 60e3 : 4 * 60e3));
+  s.lvl = bqLevelOf(s.rep);
+  save();
+  try { GAME.emit('order:done', { order: o, client: c, items: given }); } catch (e) {}
+  bqHearts(srcEl);
+  setTimeout(() => {
+    renderTop(); renderPanel();
+    if (s.lvl > lv0) bqLevelUp(s.lvl);
+    else if (typeof reactionPopup === 'function') reactionPopup(S.sel, 'rire', `${c.name} repart le sourire aux lèvres ! +${o.coins} pièces, +${o.rep} réputation${bonusTxt}.`);
+  }, 650);
+}
+function bqLevelUp(L) {
+  const lv = bqLv(L);
+  try { GAME.emit('rep:level', { level: L }); } catch (e) {}
+  if (typeof confetti === 'function') { try { confetti(true); } catch (e) {} }
+  const perks = (lv.perks || []).map(p => `<li>${esc(p)}</li>`).join('');
+  const html = `<div class="bq-lvup"><div class="bq-lvart">${bqShopSVG(L, true)}</div><span class="bq-kick">Nouveau niveau de boutique</span><h2>${esc(lv.name)} !</h2><p class="bq-title">« ${esc(lv.title)} »</p><ul class="bq-perks">${perks}</ul><button class="btn green big wide" data-closemodal="1">Formidable !</button></div>`;
+  if (typeof showModal === 'function') showModal(html); else toast(`Votre boutique devient : ${lv.name} !`);
+}
+function bqRefuse(id) {
+  const s = bqState(), o = s.orders.find(x => x.id === id); if (!o) return;
+  const c = BQC(o.client), cs = s.clients[c.id] || (s.clients[c.id] = {});
+  cs.away = Date.now() + 2 * 3600e3;
+  s.orders = s.orders.filter(x => x !== o);
+  s.next = Math.min(s.next || Infinity, Date.now() + 5 * 60e3);
+  save(); renderPanel();
+  toast(`${c.name} comprend très bien et reviendra plus tard.`);
+}
+// le premier élément qui manque : où aller le chercher ?
+function bqGo(id) {
+  const s = bqState(), o = s.orders.find(x => x.id === id); if (!o) return;
+  const alloc = bqAllocate(o), i = o.req.findIndex((r, j) => alloc[j].have < r.n);
+  if (i < 0) return bqDeliver(id);
+  const r = o.req[i];
+  // un compagnon libre
+  if (S.trips[S.sel] && r.k !== 'craft') {
+    const free = Object.keys(CHARS).find(k => !S.trips[k]);
+    if (!free) { toast('Tous vos compagnons sont en voyage. Attendez le retour de l’un d’eux !'); return; }
+    selectComp(free);
+  }
+  const step = bqStepFor(r);
+  if (!step) { openSheet('voyage'); return; }
+  if (step.region) {
+    closeSheet();
+    if (typeof regionGo === 'function') regionGo(step.region); else openSheet('voyage');
+    return;
+  }
+  if (step.t !== 'craft') closeSheet();
+  if (typeof goDreamStep === 'function') { try { goDreamStep(step); } catch (e) { console.error(e); openSheet('voyage'); } }
+  else openSheet('voyage');
+  if (step.t !== 'craft') setTimeout(() => toast(`Pour ${BQC(o.client).name} : ${bqReqLabel(r).toLowerCase()} · ${bqReqWhere(r).toLowerCase()}. Choisissez la durée, puis partez !`), 900);
+}
+function bqStepFor(r) {
+  if (r.k === 'craft') {
+    const rc = RECIPES.find(x => x.id === r.id);
+    if (rc && !canCraft(rc)) {
+      // il manque un ingrédient : on va d'abord le chercher
+      const miss = rc.ing.find(([key, n]) => ingCount(key) < n);
+      if (miss && miss[0].startsWith('r:')) { const x = RG_RES[miss[0].slice(2)]; return bqStepFor({ k: 'reg', rid: x.id, src: { region: x.region } }); }
+      if (miss) { const cat = bqCatFor(miss[0]); if (cat) return { t: 'visit', cat }; }
+    }
+    return { t: 'craft', id: r.id };
+  }
+  const s = r.src || {};
+  if (s.cat) return { t: 'visit', cat: s.cat };
+  if (s.tag) return { t: 'visit', tag: s.tag };
+  if (s.place) return { t: 'place', name: s.place };
+  if (s.region) { const h = bqHome(); if (h && h.id === s.region) return { t: 'visit', cat: 'marche' }; return { region: s.region }; }
+  return null;
+}
+
+// ---------------- magasin ----------------
+function bqArticle(a) {
+  if (a.k === 'r') { const r = BQ_RECIPES.find(x => x.id === a.rec); return { rec: r, it: bqItemOf(r.out), price: r.price, name: `Recette : ${r.out[0]}` }; }
+  if (a.k === 'x') return { it: a.it, price: a.price, name: a.it.name, rare: 1 };
+  const it = bqItemOf(a.def);
+  return { it, price: bqRound5(value({ ...it, id: '' }) * 1.5), name: it.name };
+}
+function bqStock() {
+  const s = bqState(), dk = dayKey(), L = s.lvl;
+  if (s.stock.day === dk && s.stock.lvl === L && s.stock.items.length) return s.stock.items;
+  const keep = s.stock.day === dk ? new Set(s.stock.items.filter(x => x.sold).map(x => x.key)) : new Set();
+  seed(dk * 13 + 7 + L * 101);
+  const sh = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(srand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const n = bqLv(L).stock;
+  const ok = BQ_CAT.filter(a => a.lvl <= L && !(a.k === 'r' && s.recipes.includes(a.rec)));
+  // un panaché : vêtements, décos, matériaux, et une recette dès le niveau 2
+  const byK = k => sh(ok.filter(a => a.k === k));
+  const out = [];
+  const plan = { v: Math.ceil(n * 0.35), d: Math.ceil(n * 0.2), m: Math.ceil(n * 0.25), r: L >= 1 ? 1 : 0 };
+  for (const [k, c] of Object.entries(plan)) out.push(...byK(k).slice(0, c));
+  for (const a of sh(ok)) { if (out.length >= n) break; if (!out.includes(a)) out.push(a); }
+  const items = out.slice(0, n).map(a => ({ key: a.key }));
+  // parfois un article rare (dès « Maison réputée »)
+  if (L >= 2 && srand() < 0.6 && typeof REGIONS !== 'undefined') {
+    const pool = []; REGIONS.forEach(R => R.res.forEach(x => { if (x.rar >= 2 && x.rar <= (L >= 5 ? 4 : 3)) pool.push(x); }));
+    const x = pool[Math.floor(srand() * pool.length)];
+    if (x) { const R = RG[x.region], km = kmBetween(homeObj(), { lon: R.anchor[0], lat: R.anchor[1] }); const it = { name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color, rid: x.id, origin: { region: R.id, place: R.short, km } }; items.push({ key: 'x_' + x.id, x: { it, price: bqRound5(value({ ...it, id: '' }) * 1.6) } }); }
+  }
+  // articles du niveau suivant : visibles mais verrouillés, pour donner envie
+  if (L < BQ_LEVELS.length - 1) sh(BQ_CAT.filter(a => a.lvl === L + 1)).slice(0, 3).forEach(a => items.push({ key: a.key, locked: 1 }));
+  items.forEach(x => { if (keep.has(x.key)) x.sold = 1; });
+  s.stock = { day: dk, lvl: L, items };
+  save();
+  return items;
+}
+function bqStockArticle(x) { if (x.x) return { k: 'x', it: x.x.it, price: x.x.price }; return BQ_CAT.find(a => a.key === x.key); }
+function bqBuy(key, el) {
+  const s = bqState(), x = bqStock().find(y => y.key === key); if (!x || x.sold || x.locked) return;
+  const a = bqStockArticle(x); if (!a) return;
+  const art = bqArticle(a);
+  if (S.coins < art.price) { toast('Pas assez de pièces. Livrez une commande au Comptoir !'); return; }
+  S.coins -= art.price; x.sold = 1;
+  let msg;
+  if (art.rec) { if (!s.recipes.includes(art.rec.id)) s.recipes.push(art.rec.id); msg = `Nouvelle recette à l’atelier : « ${art.rec.out[0]} » !`; }
+  else {
+    const it = makeItem([art.it.name, art.it.cat, art.it.sub, art.it.rarity, art.it.look, art.it.color], 0, 'La boutique', [], { fixed: art.it.rarity });
+    if (art.it.rid) { it.rid = art.it.rid; it.origin = Object.assign({}, art.it.origin); } else { const h = bqHome(); if (h) it.origin = { region: h.id, place: 'La boutique', km: 0 }; }
+    S.inv.push(it); S.dex[it.name] = true; msg = `Acheté : « ${it.name} ». Il vous attend dans le sac.`;
+  }
+  S.stats.shopBought = (S.stats.shopBought || 0) + 1;
+  save();
+  bqFly(el, art.it);
+  renderTop(); renderPanel(); toast(msg);
+}
+
+// ---------------- petites animations ----------------
+function bqFX() { let l = document.getElementById('fxLayer'); if (!l) { l = document.createElement('div'); l.id = 'fxLayer'; document.body.appendChild(l); } return l; }
+function bqFly(el, it) {
+  try {
+    if (!el || (typeof reduceMotion === 'function' && reduceMotion())) return;
+    const r = el.getBoundingClientRect(), d = document.createElement('div');
+    d.className = 'bq-fly'; d.innerHTML = itemIcon(it); d.style.left = (r.left + r.width / 2 - 24) + 'px'; d.style.top = (r.top - 10) + 'px';
+    bqFX().appendChild(d); setTimeout(() => d.remove(), 1100);
+  } catch (e) {}
+}
+function bqHearts(el) {
+  try {
+    const card = el && el.closest ? el.closest('.bq-order') : null; if (card) card.classList.add('bq-served');
+    if (!el || (typeof reduceMotion === 'function' && reduceMotion())) return;
+    const r = (card || el).getBoundingClientRect(), L = bqFX();
+    for (let i = 0; i < 8; i++) { const h = document.createElement('i'); h.className = 'bq-heart'; h.style.left = (r.left + 30 + Math.random() * 60) + 'px'; h.style.top = (r.top + 30 + Math.random() * 20) + 'px'; h.style.setProperty('--dx', (Math.random() * 80 - 40).toFixed(0) + 'px'); h.style.animationDelay = (i * 0.05).toFixed(2) + 's'; h.innerHTML = '<svg viewBox="0 0 20 20"><path d="M10 17.5C3 12.5 1.5 9.5 1.5 6.8 1.5 4.2 3.5 2.5 5.8 2.5c1.8 0 3.2 1 4.2 2.6 1-1.6 2.4-2.6 4.2-2.6 2.3 0 4.3 1.7 4.3 4.3 0 2.7-1.5 5.7-8.5 10.7Z" fill="#f08aa6" stroke="#5b4636" stroke-width="1.4"/></svg>'; L.appendChild(h); setTimeout(() => h.remove(), 1300); }
+  } catch (e) {}
+}
+
+// ---------------- dessin des clients (portrait en buste) ----------------
+const BQ_SP = {
+  herisson: { fur: '#c49a72', dark: '#7a5a3f', face: '#f6e3c8', ears: 'round', er: 7, back: 'spikes' },
+  loutre: { fur: '#a87a56', dark: '#7a5338', face: '#f2dcc0', ears: 'round', er: 6.5, whisk: 1 },
+  renard: { fur: '#ec8a4f', dark: '#c9603a', face: '#fff5ea', ears: 'pointy', tip: '#5b4636', cheeks: 1 },
+  lapin: { fur: '#f4efe6', dark: '#d9cfc0', face: '#fffaf2', ears: 'long', inner: '#f6b8c8' },
+  chouette: { fur: '#b08a6a', dark: '#8a6448', face: '#f2e2c8', ears: 'tufts', beak: '#f2b03b', disc: 1 },
+  ours: { fur: '#a0704f', dark: '#7a5338', face: '#e9cfa8', ears: 'round', er: 10 },
+  souris: { fur: '#b9b4c4', dark: '#8a8496', face: '#f4f0f6', ears: 'big', inner: '#f6b8c8', whisk: 1 },
+  raton: { fur: '#a6a6b2', dark: '#6a6a78', face: '#f4f2ee', ears: 'pointy', mask: '#4a4a56', inner: '#5b5b66', tip: '#5b5b66' },
+  ecureuil: { fur: '#d9783f', dark: '#b05a2f', face: '#fbe6cc', ears: 'tufts', back: 'tail' },
+  blaireau: { fur: '#5f5f6a', dark: '#3d3d48', face: '#f4f2ee', ears: 'round', er: 6, stripe: 1 },
+  canard: { fur: '#f6d36b', dark: '#e3b04b', face: null, ears: 'none', beak: '#f2963b', bill: 1, tuft: 1 },
+  grenouille: { fur: '#8fcf7f', dark: '#6faf5f', face: '#d8f0c8', ears: 'frog', wide: 1 },
+  chat: { fur: '#e9a25f', dark: '#c97a3a', face: '#fff5ea', ears: 'pointy', inner: '#f6b8c8', whisk: 1, stripes: 1 },
+  chien: { fur: '#e9cfa0', dark: '#b08050', face: '#fffaf2', ears: 'floppy' },
+  mouton: { fur: '#f2dcc8', dark: '#d9bfa8', face: '#f8e8da', ears: 'side', wool: 1 },
+  faon: { fur: '#c9905a', dark: '#a06a3a', face: '#fbe6cc', ears: 'side', spots: 1 },
+  koala: { fur: '#a9aab6', dark: '#7a7b88', face: '#e8e8ee', ears: 'big', inner: '#f4f2f6', bignose: 1 },
+  pingouin: { fur: '#3d4258', dark: '#262a3a', face: '#fbfbf6', ears: 'none', beak: '#f2a03a', pface: 1 },
+  hamster: { fur: '#f2c08a', dark: '#d99a5f', face: '#fffaf0', ears: 'round', er: 6.5, puffy: 1 },
+  tortue: { fur: '#9cc88a', dark: '#6f9f5f', face: '#d8ecc8', ears: 'none', back: 'shell' },
+};
+function clientSVG(c, mood, uid) {
+  const P = BQ_SP[c.sp] || BQ_SP.ours, L = '#5b4636', sw = 'stroke="#5b4636" stroke-width="2.4" stroke-linejoin="round"';
+  const joy = mood === 'joie', u = 'bq' + (uid || c.id);
+  let s = `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" class="bq-cl" role="img" aria-label="${esc(c.name)}, ${BQ_SP[c.sp] ? BQ_SPN[c.sp] : ''}">`;
+  // dos : piquants, queue, carapace, laine
+  if (P.back === 'spikes') { let d = 'M22 70'; for (let i = 0; i <= 10; i++) { const a = Math.PI * (1.05 + i * 0.09), r1 = 44, r2 = 34; d += ` L${(60 + Math.cos(a) * r1).toFixed(1)} ${(60 + Math.sin(a) * r1).toFixed(1)} L${(60 + Math.cos(a + 0.045) * r2).toFixed(1)} ${(60 + Math.sin(a + 0.045) * r2).toFixed(1)}`; } s += `<path d="${d} L98 70Z" fill="${P.dark}" ${sw}/>`; }
+  if (P.back === 'tail') s += `<path d="M86 112 C112 108 116 70 100 52 C92 42 104 30 112 38 C122 50 120 96 96 116Z" fill="${P.fur}" ${sw}/><path d="M104 46 C110 56 112 80 102 100" fill="none" stroke="${P.dark}" stroke-width="2" opacity=".6"/>`;
+  if (P.back === 'shell') s += `<path d="M10 116 C8 86 30 70 60 70 C90 70 112 86 110 116Z" fill="#8a6a3a" ${sw}/><path d="M24 108 L36 86 L60 80 L84 86 L96 108 M36 86 L44 108 M84 86 L76 108 M60 80 L60 96" fill="none" stroke="#5b4636" stroke-width="1.6" opacity=".7"/>`;
+  // oreilles derrière la tête
+  const ear = (x, y, side) => {
+    const m = side < 0 ? '' : ` transform="translate(${2 * 60} 0) scale(-1 1)"`;
+    switch (P.ears) {
+      case 'round': return `<g${m}><circle cx="${x}" cy="${y}" r="${P.er}" fill="${P.fur}" ${sw}/><circle cx="${x}" cy="${y}" r="${P.er * 0.5}" fill="${P.dark}" opacity=".55"/></g>`;
+      case 'big': return `<g${m}><circle cx="${x - 4}" cy="${y + 2}" r="15" fill="${P.fur}" ${sw}/><circle cx="${x - 4}" cy="${y + 2}" r="9" fill="${P.inner}"/></g>`;
+      case 'pointy': return `<g${m}><path d="M${x - 12} ${y + 14} L${x - 6} ${y - 14} L${x + 10} ${y + 6}Z" fill="${P.fur}" ${sw}/><path d="M${x - 9} ${y + 8} L${x - 6} ${y - 6} L${x + 4} ${y + 5}Z" fill="${P.inner || P.face || '#fff5ea'}"/>${P.tip ? `<path d="M${x - 8.4} ${y - 3} L${x - 6} ${y - 14} L${x - 1} ${y - 6}Z" fill="${P.tip}"/>` : ''}</g>`;
+      case 'long': return `<g${m}><path d="M${x + 2} ${y + 14} C${x - 12} ${y - 10} ${x - 10} ${y - 34} ${x - 2} ${y - 36} C${x + 6} ${y - 34} ${x + 12} ${y - 10} ${x + 10} ${y + 12}Z" fill="${P.fur}" ${sw}/><path d="M${x + 3} ${y + 6} C${x - 4} ${y - 10} ${x - 4} ${y - 26} ${x} ${y - 28} C${x + 4} ${y - 26} ${x + 7} ${y - 10} ${x + 7} ${y + 6}Z" fill="${P.inner}"/></g>`;
+      case 'tufts': return `<g${m}><path d="M${x - 8} ${y + 12} L${x - 6} ${y - 10} L${x + 8} ${y + 6}Z" fill="${P.dark}" ${sw}/></g>`;
+      case 'floppy': return `<g${m}><path d="M${x + 4} ${y} C${x - 14} ${y - 4} ${x - 18} ${y + 30} ${x - 8} ${y + 36} C${x} ${y + 40} ${x + 6} ${y + 20} ${x + 8} ${y + 8}Z" fill="${P.dark}" ${sw}/></g>`;
+      case 'side': return `<g${m}><ellipse cx="${x - 10}" cy="${y + 16}" rx="12" ry="6" transform="rotate(-25 ${x - 10} ${y + 16})" fill="${P.fur}" ${sw}/><ellipse cx="${x - 10}" cy="${y + 16}" rx="7" ry="3" transform="rotate(-25 ${x - 10} ${y + 16})" fill="#f6c2cf"/></g>`;
+      case 'frog': return `<g${m}><circle cx="${x + 4}" cy="${y + 8}" r="11" fill="${P.fur}" ${sw}/></g>`;
+      default: return '';
+    }
+  };
+  // corps et vêtement
+  s += `<path d="M14 120 C14 96 34 86 60 86 C86 86 106 96 106 120Z" fill="${c.cloth}" ${sw}/><path d="M48 88 Q60 98 72 88" fill="none" stroke="#5b4636" stroke-width="2" opacity=".5"/>`;
+  if (P.ears !== 'floppy') s += ear(36, 34, -1) + ear(36, 34, 1);
+  if (P.wool) s += `<g fill="#fbf8f0" ${sw}>${[[34, 40], [46, 30], [60, 27], [74, 30], [86, 40], [92, 54], [28, 54]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="11"/>`).join('')}</g>`;
+  // tête
+  const hrx = P.wide ? 36 : P.puffy ? 34 : 31, hry = P.wide ? 25 : 28;
+  s += `<ellipse cx="60" cy="58" rx="${hrx}" ry="${hry}" fill="${P.fur}" ${sw}/>`;
+  if (P.ears === 'floppy') s += ear(34, 40, -1) + ear(34, 40, 1);
+  if (P.wool) s += `<g fill="#fbf8f0">${[[42, 36], [54, 32], [66, 32], [78, 36]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="8"/>`).join('')}</g>`;
+  if (P.stripe) s += `<path d="M54 31 C55 44 56 56 60 64 C64 56 65 44 66 31 C63 30 57 30 54 31Z" fill="#f4f2ee"/>`;
+  if (P.stripes) s += `<path d="M52 32 l2 8 M60 30 v9 M68 32 l-2 8" stroke="${P.dark}" stroke-width="3" stroke-linecap="round"/>`;
+  if (P.spots) s += `<g fill="#fff3e2" opacity=".85"><circle cx="42" cy="40" r="2.6"/><circle cx="50" cy="35" r="2"/><circle cx="76" cy="38" r="2.4"/><circle cx="70" cy="34" r="1.8"/></g>`;
+  if (P.pface) s += `<path d="M60 76 C40 76 34 64 38 52 C41 44 50 44 56 49 L60 52 L64 49 C70 44 79 44 82 52 C86 64 80 76 60 76Z" fill="${P.face}"/>`;
+  if (P.cheeks) s += `<path d="M30 60 C36 74 50 80 60 78 C70 80 84 74 90 60 C80 66 70 66 60 70 C50 66 40 66 30 60Z" fill="${P.face}"/>`;
+  if (P.disc) s += `<circle cx="48" cy="56" r="11" fill="${P.face}"/><circle cx="72" cy="56" r="11" fill="${P.face}"/>`;
+  if (P.mask) s += `<path d="M30 56 C36 48 52 50 60 56 C68 50 84 48 90 56 C86 64 72 64 60 60 C48 64 34 64 30 56Z" fill="${P.mask}"/>`;
+  if (P.tuft) s += `<path d="M58 31 C54 22 60 20 62 24 C64 18 70 22 64 31" fill="${P.fur}" ${sw}/>`;
+  // museau
+  const beak = !!P.beak;
+  if (P.face && !beak && !P.pface && !P.cheeks) s += `<ellipse cx="60" cy="${P.wide ? 66 : 68}" rx="${P.wide ? 22 : 15}" ry="${P.wide ? 8 : 10}" fill="${P.face}"/>`;
+  else if (P.cheeks) s += `<ellipse cx="60" cy="69" rx="10" ry="7" fill="${P.face}"/>`;
+  // yeux
+  const ey = P.ears === 'frog' ? 46 : 57, ex = P.ears === 'frog' ? 18 : 12;
+  if (P.ears === 'frog') s += `<circle cx="${60 - ex}" cy="${ey}" r="9" fill="#fff" ${sw}/><circle cx="${60 + ex}" cy="${ey}" r="9" fill="#fff" ${sw}/>`;
+  [60 - ex, 60 + ex].forEach(x => {
+    if (joy) s += `<path d="M${x - 4.5} ${ey + 1} Q${x} ${ey - 5} ${x + 4.5} ${ey + 1}" fill="none" stroke="#3a2a22" stroke-width="2.6" stroke-linecap="round"/>`;
+    else s += `<ellipse cx="${x}" cy="${ey}" rx="${P.ears === 'frog' ? 4.6 : 4.2}" ry="${P.ears === 'frog' ? 5 : 5}" fill="#3a2a22"/><circle cx="${x + 1.4}" cy="${ey - 1.8}" r="1.6" fill="#fff"/>`;
+  });
+  // bec, nez, bouche
+  if (P.bill) s += `<ellipse cx="60" cy="69" rx="12" ry="6" fill="${P.beak}" ${sw}/><path d="M50 69 H70" stroke="#5b4636" stroke-width="1.4" opacity=".6"/>`;
+  else if (beak) s += `<path d="M55 64 L65 64 L60 73Z" fill="${P.beak}" ${sw}/>`;
+  else {
+    const ny = P.wide ? 62 : 64;
+    if (P.bignose) s += `<ellipse cx="60" cy="${ny}" rx="7" ry="8.5" fill="#3a3a48"/>`;
+    else s += `<ellipse cx="60" cy="${ny}" rx="3.6" ry="2.6" fill="#4a3528"/>`;
+    s += joy ? `<path d="M53 ${ny + 4} Q60 ${ny + 12} 67 ${ny + 4}Z" fill="#c45a6a" stroke="#4a3528" stroke-width="1.6" stroke-linejoin="round"/>` : P.wide ? `<path d="M48 ${ny + 4} Q60 ${ny + 10} 72 ${ny + 4}" fill="none" stroke="#4a3528" stroke-width="2" stroke-linecap="round"/>` : `<path d="M55 ${ny + 4} q2.5 3 5 0 q2.5 3 5 0" fill="none" stroke="#4a3528" stroke-width="1.8" stroke-linecap="round"/>`;
+    if (P.whisk) s += `<path d="M42 66 h-10 M42 70 l-9 3 M78 66 h10 M78 70 l9 3" stroke="#5b4636" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>`;
+  }
+  if (P.puffy) s += `<ellipse cx="36" cy="68" rx="9" ry="7" fill="${P.face}"/><ellipse cx="84" cy="68" rx="9" ry="7" fill="${P.face}"/>`;
+  s += `<ellipse cx="${60 - ex - 9}" cy="${ey + 9}" rx="5" ry="3" fill="#f49a98" opacity=".7"/><ellipse cx="${60 + ex + 9}" cy="${ey + 9}" rx="5" ry="3" fill="#f49a98" opacity=".7"/>`;
+  // accessoire
+  const a = c.accC || '#f39ab0';
+  switch (c.acc) {
+    case 'noeud': s += `<g transform="translate(80 33) rotate(15)"><path d="M0 0 L-11 -7 L-11 7Z M0 0 L11 -7 L11 7Z" fill="${a}" ${sw}/><circle r="3.4" fill="${a}" ${sw}/></g>`; break;
+    case 'fleur': s += `<g transform="translate(${P.ears === 'long' ? 76 : 38} ${P.ears === 'long' ? 34 : 36})">${[0, 1, 2, 3, 4].map(k => `<circle cx="${(Math.cos(k * 1.256) * 5).toFixed(1)}" cy="${(Math.sin(k * 1.256) * 5).toFixed(1)}" r="4" fill="${a}" stroke="#5b4636" stroke-width="1.2"/>`).join('')}<circle r="2.8" fill="#f2c14e"/></g>`; break;
+    case 'chapeau': s += `<ellipse cx="60" cy="${33}" rx="34" ry="7" fill="${a}" ${sw}/><path d="M42 33 C42 16 78 16 78 33Z" fill="${a}" ${sw}/><path d="M43 29 H77" stroke="#d9604f" stroke-width="3.4"/>`; break;
+    case 'capitaine': s += `<path d="M36 36 C36 22 84 22 84 36Z" fill="${a}" ${sw}/><path d="M34 36 H86 L82 41 H38Z" fill="#2f3b5c" ${sw}/><circle cx="60" cy="30" r="3" fill="#f2c14e"/>`; break;
+    case 'casquette': s += `<path d="M36 40 C36 22 84 22 84 40Z" fill="${a}" ${sw}/><path d="M80 38 C92 38 98 41 96 43 L80 43Z" fill="${a}" ${sw}/>`; break;
+    case 'lunettes': s += `<circle cx="${60 - ex}" cy="${ey}" r="8" fill="#fff" fill-opacity=".25" stroke="${a}" stroke-width="2.2"/><circle cx="${60 + ex}" cy="${ey}" r="8" fill="#fff" fill-opacity=".25" stroke="${a}" stroke-width="2.2"/><path d="M${60 - ex + 8} ${ey} H${60 + ex - 8}" stroke="${a}" stroke-width="2"/>`; break;
+    case 'monocle': s += `<circle cx="${60 + ex}" cy="${ey}" r="8" fill="#fff" fill-opacity=".25" stroke="${a}" stroke-width="2.2"/><path d="M${60 + ex + 6} ${ey + 6} C${80} 82 76 92 72 96" fill="none" stroke="${a}" stroke-width="1.4"/><path d="M48 33 C48 18 72 18 72 33Z M42 33 H78" fill="#3b3f5a" stroke="#5b4636" stroke-width="2.4"/>`; break;
+    case 'echarpe': s += `<path d="M34 86 C44 94 76 94 86 86 L88 94 C74 102 46 102 32 94Z" fill="${a}" ${sw}/><path d="M74 96 L78 116 L86 114 L82 94Z" fill="${a}" ${sw}/>`; break;
+    case 'perles': s += `<g fill="${a}" stroke="#5b4636" stroke-width="1.2">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `<circle cx="${(40 + i * 5).toFixed(1)}" cy="${(90 + Math.sin(i / 8 * Math.PI) * 6).toFixed(1)}" r="2.6"/>`).join('')}</g>`; break;
+  }
+  return s + `</svg>`;
+}
+const clientURI = (c, mood) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(clientSVG(c, mood).replace('<svg ', '<svg width="120" height="120" '));
+
+// ---------------- la boutique dessinée ----------------
+function bqShopSVG(L, mini) {
+  const s0 = bqState(), night = isNight(), ink = '#5b4636', sw = `stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"`;
+  L = L == null ? s0.lvl : L;
+  const W = 360, H = 210;
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="bq-shop" role="img" aria-label="La boutique, niveau ${esc(bqLv(L).name)}">`;
+  s += `<defs><pattern id="bqwp${L}" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="${L >= 1 ? '#f8e6cc' : '#f3e2c8'}"/>${L >= 1 ? '<rect width="12" height="24" fill="#f6dcc0" opacity=".7"/>' : '<circle cx="6" cy="6" r="1.6" fill="#e9cfae"/><circle cx="18" cy="18" r="1.6" fill="#e9cfae"/>'}</pattern></defs>`;
+  // mur et sol
+  s += `<rect width="${W}" height="${H}" fill="url(#bqwp${L})"/>`;
+  s += `<rect y="168" width="${W}" height="42" fill="#c99a6a"/>` + [0, 1, 2].map(i => `<path d="M0 ${178 + i * 11} H${W}" stroke="#b5875a" stroke-width="1.2"/>`).join('') + `<rect y="164" width="${W}" height="6" fill="#a87a50"/>`;
+  if (L >= 3) s += `<ellipse cx="180" cy="192" rx="120" ry="12" fill="#d9604f" opacity=".9" ${sw}/><ellipse cx="180" cy="192" rx="96" ry="7" fill="none" stroke="#f6d36b" stroke-width="2.4"/>`;
+  // fenêtre (à gauche)
+  const sky = night ? '#3b4a7a' : '#bfe1f2';
+  s += `<rect x="16" y="${L >= 1 ? 52 : 36}" width="76" height="70" rx="8" fill="${sky}" ${sw}/>`;
+  const wy = L >= 1 ? 52 : 36;
+  s += night ? `<circle cx="72" cy="${wy + 18}" r="7" fill="#f4efd2"/><circle cx="34" cy="${wy + 14}" r="1.4" fill="#fff"/><circle cx="50" cy="${wy + 26}" r="1.2" fill="#fff"/>` : `<circle cx="72" cy="${wy + 18}" r="9" fill="#fbd76a"/><ellipse cx="38" cy="${wy + 20}" rx="13" ry="5" fill="#fff" opacity=".9"/>`;
+  s += `<path d="M16 ${wy + 50} C34 ${wy + 40} 60 ${wy + 46} 92 ${wy + 40} V${wy + 62} a8 8 0 0 1 -8 8 H24 a8 8 0 0 1 -8 -8Z" fill="#9fc79a"/>`;
+  s += `<path d="M54 ${wy} V${wy + 70} M16 ${wy + 35} H92" stroke="${ink}" stroke-width="2.4"/><rect x="12" y="${wy + 68}" width="84" height="7" rx="3" fill="#d9b48a" ${sw}/>`;
+  if (L >= 2) s += `<g transform="translate(20 ${wy + 52})"><path d="M2 14 L4 22 H16 L18 14Z" fill="#d98763" ${sw}/><path d="M10 14 C8 6 2 4 0 2 C6 2 10 8 10 14Z M10 14 C12 4 18 2 22 0 C20 8 14 12 10 14Z" fill="#7fbf6a" stroke="${ink}" stroke-width="1.6"/></g>`;
+  // étagères (à droite), avec les trésors du sac
+  const shelfX = 258, inv = S.inv.slice().sort((a, b) => b.rarity - a.rarity || b.date - a.date).filter(i => i.cat !== 't');
+  const shelves = L >= 2 ? [70, 112] : [92];
+  shelves.forEach((y, si) => {
+    s += `<rect x="${shelfX}" y="${y}" width="92" height="6" rx="2" fill="#a87a50" ${sw}/><path d="M${shelfX + 8} ${y + 6} l4 8 M${shelfX + 84} ${y + 6} l-4 8" stroke="${ink}" stroke-width="2.2"/>`;
+    for (let i = 0; i < 3; i++) {
+      const it = inv[si * 3 + i], x = shelfX + 6 + i * 28;
+      if (it) s += `<svg x="${x}" y="${y - 26}" width="26" height="26" viewBox="0 0 40 40">${itemIcon(it).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</svg>`;
+      else s += `<rect x="${x + 4}" y="${y - 18}" width="16" height="18" rx="4" fill="${['#f3aec1', '#bfe3f6', '#f6d36b'][i]}" ${sw}/><rect x="${x + 6}" y="${y - 22}" width="12" height="5" rx="2" fill="#c9a97a" stroke="${ink}" stroke-width="1.6"/>`;
+    }
+  });
+  if (L >= 4) s += `<g transform="translate(296 132)"><path d="M10 34 H30 M20 34 V26" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><circle cx="20" cy="14" r="13" fill="#9cc8e2" ${sw}/><path d="M12 8 c4 -2 8 2 6 6 c-2 4 -6 2 -8 6 M26 6 c4 2 4 8 0 10" fill="#cfe2a8" stroke="${ink}" stroke-width="1.2"/></g>`;
+  else if (L >= 2) s += `<g transform="translate(318 132)"><path d="M2 20 L4 32 H24 L26 20Z" fill="#d98763" ${sw}/><path d="M14 20 C12 10 6 6 0 6 C4 12 8 16 14 20Z M14 20 C16 8 22 4 28 4 C26 12 20 16 14 20Z M14 20 C14 10 14 4 13 -2 C18 6 18 14 14 20Z" fill="#6fae7d" stroke="${ink}" stroke-width="1.6"/></g>`;
+  // auvent / enseigne
+  if (L >= 1) {
+    let aw = '';
+    for (let i = 0; i < 12; i++) aw += `<path d="M${i * 30} 0 H${i * 30 + 30} V22 a15 9 0 0 1 -30 0Z" fill="${i % 2 ? '#fff8ea' : L >= 5 ? '#2f7f6c' : '#d9604f'}" ${sw}/>`;
+    s += aw;
+  } else s += `<rect x="0" y="0" width="${W}" height="10" fill="#a87a50"/>`;
+  const sign = bqLv(L).name, gold = L >= 5;
+  s += `<g transform="translate(180 ${L >= 1 ? 40 : 22})"><path d="M-20 -14 V-6 M20 -14 V-6" stroke="${ink}" stroke-width="2"/><rect x="${-12 - sign.length * (sign.length > 14 ? 3.9 : 4.4)}" y="-6" width="${24 + sign.length * (sign.length > 14 ? 7.8 : 8.8)}" height="26" rx="8" fill="${gold ? '#f6c445' : '#fff8ea'}" ${sw}/><text x="0" y="12.5" text-anchor="middle" font-family="Baloo 2, Fredoka, sans-serif" font-weight="800" font-size="${sign.length > 14 ? 13.5 : 15}" fill="${gold ? '#7a4a12' : '#4a3528'}">${esc(sign)}</text></g>`;
+  if (gold) s += [[100, 40], [262, 36], [130, 70], [236, 76]].map(([x, y]) => `<path d="${starPath(x, y, 5)}" fill="#fff6c9" stroke="#c98f1e" stroke-width="1"/>`).join('');
+  if (L >= 4) { let g = `<path d="M96 58 Q180 82 264 58" fill="none" stroke="${ink}" stroke-width="1.4"/>`; for (let i = 0; i < 9; i++) { const t = (i + 0.5) / 9, x = 96 + t * 168, y = 58 + Math.sin(t * Math.PI) * 12; g += `<path d="M${x - 5} ${y} L${x + 5} ${y} L${x} ${y + 10}Z" fill="${['#f08aa6', '#f6c445', '#5fbf7f', '#5f87c9'][i % 4]}" stroke="${ink}" stroke-width="1"/>`; } s += g; }
+  if (L >= 3) [104, 256].forEach(x => { s += `<path d="M${x} ${L >= 1 ? 30 : 10} V58" stroke="${ink}" stroke-width="1.6"/><rect x="${x - 8}" y="58" width="16" height="22" rx="6" fill="#f6d36b" ${sw}/><circle cx="${x}" cy="69" r="13" fill="#f6d36b" opacity=".25"/>`; });
+  // le compagnon derrière le comptoir (ou un compagnon resté à la maison)
+  const k = !S.trips[S.sel] ? S.sel : Object.keys(CHARS).find(x => !S.trips[x]);
+  if (k) s += drawChar(k, S.outfits[k], s0.orders.length && !mini ? 'content' : 'rire', 'bqk' + (mini ? 'm' : '') + L).replace('<svg ', `<svg x="128" y="${mini ? 56 : 52}" width="104" height="114" `);
+  else s += `<g transform="translate(180 112)"><rect x="-34" y="-16" width="68" height="30" rx="6" fill="#fff8ea" ${sw}/><text y="4" text-anchor="middle" font-family="Caveat, cursive" font-size="15" fill="#4a3528">En voyage !</text></g>`;
+  // le comptoir
+  s += `<rect x="96" y="128" width="168" height="46" rx="6" fill="#c98a5a" ${sw}/><rect x="90" y="122" width="180" height="10" rx="4" fill="#e3b07a" ${sw}/>`;
+  s += `<path d="M110 140 H250 M110 156 H250" stroke="#a87a50" stroke-width="2" opacity=".6"/>`;
+  s += `<g transform="translate(118 112)"><path d="M0 10 C0 0 16 0 16 10Z" fill="#f2c14e" ${sw}/><rect x="-3" y="9" width="22" height="4" rx="2" fill="#c9a35a" ${sw}/><circle cx="8" cy="-1" r="2.2" fill="#f2c14e" stroke="${ink}" stroke-width="1.4"/></g>`;
+  s += `<g transform="translate(230 100)"><rect x="0" y="6" width="26" height="18" rx="3" fill="#7fb6d9" ${sw}/><rect x="4" y="0" width="18" height="8" rx="2" fill="#bfe1f2" ${sw}/><circle cx="13" cy="15" r="3" fill="#f6d36b"/></g>`;
+  // les clients qui attendent
+  if (!mini) {
+    const os = s0.orders.slice(0, 2);
+    os.forEach((o, i) => {
+      const c = BQC(o.client); if (!c) return;
+      const ready = bqReady(o), x = i === 0 ? 262 : 4, y = i === 0 ? 92 : 104, sz = i === 0 ? 92 : 80;
+      s += clientSVG(c, ready ? 'joie' : 'content', 'shop' + i).replace('<svg ', `<svg x="${x}" y="${y}" width="${sz}" height="${sz}" `);
+      if (ready) s += `<g transform="translate(${x + sz - 18} ${y + 6})"><circle r="11" fill="#5fbf7f" ${sw}/><path d="M-5 0 L-1.5 4 L5 -4" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+    });
+  }
+  return s + `</svg>`;
+}
+
+// ---------------- affichage ----------------
+const BQ_ICONS = {
+  boutique: '<path d="M4 12 L6 5 H24 L26 12Z" fill="#f3aec1" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4 12 q2.75 3 5.5 0 q2.75 3 5.5 0 q2.75 3 5.5 0 q2.75 3 5.5 0" fill="#fff3e2" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><rect x="6" y="14" width="18" height="12" fill="#fff3e2" stroke="currentColor" stroke-width="2"/><rect x="12.5" y="18" width="5" height="8" rx="1" fill="#c98a5a" stroke="currentColor" stroke-width="1.5"/>',
+  comptoir: '<path d="M5 21 C5 12 25 12 25 21Z" fill="#f6c445" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="3" y="21" width="24" height="4" rx="2" fill="#c98a5a" stroke="currentColor" stroke-width="1.8"/><circle cx="15" cy="10.5" r="2.3" fill="#f6c445" stroke="currentColor" stroke-width="1.6"/>',
+  magasin: '<path d="M7 11 H23 L25 26 H5Z" fill="#9fd1d8" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 11 C10 4 20 4 20 11" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15 l1.2 2.5 2.7.4-2 1.9.5 2.7-2.4-1.3-2.4 1.3.5-2.7-2-1.9 2.7-.4Z" fill="#f6c445" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>',
+};
+const BQ_STAR = '<svg class="bq-star" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.8 L12.4 7.2 L18.2 7.6 L13.8 11.4 L15.2 17.2 L10 14.1 L4.8 17.2 L6.2 11.4 L1.8 7.6 L7.6 7.2Z" fill="#f6c445" stroke="#5b4636" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+function bqSubtabs() {
+  const s = bqState(), r = shopReady();
+  const t = [['comptoir', 'Comptoir', BQ_ICONS.comptoir, r ? `<i class="bq-sdot">${r}</i>` : ''], ['magasin', 'Magasin', BQ_ICONS.magasin, ''], ['marche', 'Marché', (typeof NAV_ICONS !== 'undefined' && NAV_ICONS.marche) || '', '']];
+  void s;
+  return `<div class="subtabs bq-subs" role="tablist">${t.map(([k, l, ic, b]) => `<button role="tab" data-bsub="${k}" aria-selected="${bView === k}">${b}<svg viewBox="0 0 30 30" aria-hidden="true">${ic}</svg><span>${l}</span></button>`).join('')}</div>`;
+}
+function bqRepHTML() {
+  const s = bqState(), L = s.lvl, lv = bqLv(L), nx = BQ_LEVELS[L + 1];
+  const f = nx ? (s.rep - lv.rep) / (nx.rep - lv.rep) : 1;
+  return `<div class="bq-rep"><div class="bq-lvbadge" aria-hidden="true"><b>${L + 1}</b></div><div class="bq-repx"><div class="bq-reph"><b>${esc(lv.name)}</b><span>${esc(lv.title)}</span></div><div class="bq-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(f * 100)}" aria-label="Réputation"><i style="width:${(Math.max(0.03, f) * 100).toFixed(1)}%"></i><span>${BQ_STAR}${nx ? `${s.rep - lv.rep} / ${nx.rep - lv.rep}` : `${s.rep} · niveau maximum`}</span></div>${nx ? `<div class="bq-next"><span>Prochain : <b>${esc(nx.name)}</b></span>${(nx.perks || []).slice(0, 2).map(p => `<i>${esc(p)}</i>`).join('')}</div>` : ''}</div></div>`;
+}
+function bqOrderCard(o) {
+  const c = BQC(o.client), alloc = bqAllocate(o), ready = alloc.every((a, i) => a.have >= o.req[i].n), now = Date.now();
+  const lines = o.req.map((r, i) => { const a = alloc[i], ok = a.have >= r.n, rar = bqRarity(r); return `<li class="${ok ? 'ok' : ''}" style="--rc:${RARC[rar]}"><span class="bq-ri">${bqReqIcon(r)}</span><span class="bq-rx"><b>${r.n > 1 ? r.n + ' × ' : ''}${esc(bqReqLabel(r))}</b><i>${esc(bqReqWhere(r))}</i></span><em>${ok ? '<svg viewBox="0 0 20 20" aria-label="prêt"><circle cx="10" cy="10" r="9" fill="#5fbf7f" stroke="#3a8f5a" stroke-width="1.6"/><path d="M5.6 10.4 L8.6 13.2 L14.4 7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : `${a.have}/${r.n}`}</em></li>`; }).join('');
+  let bonus = '';
+  if (o.bonus && o.bonus.rec) { const r = BQ_RECIPES.find(x => x.id === o.bonus.rec); bonus = `<span class="bq-bonus" title="Recette offerte"><span class="bq-bi">${itemIcon(bqItemOf(r.out))}</span>Recette</span>`; }
+  else if (o.bonus && o.bonus.def) bonus = `<span class="bq-bonus" title="${esc(o.bonus.def[0])}"><span class="bq-bi">${itemIcon(bqItemOf(o.bonus.def, { rarity: 2 }))}</span>Cadeau rare</span>`;
+  const dl = o.deadline ? `<span class="bq-dl" data-bqcd="${o.deadline}">${fmtDur(o.deadline - now)}</span>` : '';
+  const regGo = o.req.find((r, i) => alloc[i].have < r.n);
+  const goLbl = !regGo ? '' : regGo.k === 'craft' && canCraft(RECIPES.find(x => x.id === regGo.id) || { ing: [], coins: 0 }) ? 'Fabriquer' : 'Partir chercher';
+  return `<article class="bq-order${ready ? ' ready' : ''}" data-oid="${o.id}">${ready ? '<span class="bq-ribbon">Prêt à livrer !</span>' : ''}
+    <div class="bq-oh"><img class="bq-face" src="${clientURI(c, ready ? 'joie' : 'content')}" alt=""><div class="bq-ohx"><b>${esc(c.name)}</b><span>${esc(BQ_SPN[c.sp] || '')} · ${esc(c.pers)}</span><p>« ${esc(o.line)} »</p></div></div>
+    <ul class="bq-req">${lines}</ul>
+    <div class="bq-rew"><span class="bq-coins">${coins(o.coins)}</span><span class="bq-repg">${BQ_STAR}+${o.rep}</span>${bonus}${dl}</div>
+    <div class="bq-acts">${ready ? `<button class="btn green bq-deliver" data-bdeliver="${o.id}">Livrer</button>` : `<button class="btn gold bq-go" data-bgo="${o.id}">${goLbl}</button>`}<button class="bq-refuse" data-brefuse="${o.id}" aria-label="Refuser la commande de ${esc(c.name)}">Refuser</button></div>
+  </article>`;
+}
+function renderComptoir(box) {
+  const s = bqState(); bqTickOrders();
+  const lv = bqLv(s.lvl), now = Date.now();
+  let h = `<div class="bq-hero">${bqShopSVG()}</div>` + bqRepHTML();
+  const ready = shopReady();
+  h += `<div class="bq-intro"><b>${s.orders.length ? (ready ? `${ready} commande${ready > 1 ? 's' : ''} prête${ready > 1 ? 's' : ''} à livrer !` : `${s.orders.length} client${s.orders.length > 1 ? 's' : ''} attend${s.orders.length > 1 ? 'ent' : ''} au comptoir`) : 'Le comptoir est calme…'}</b><span>Réunissez ce qu’ils demandent en voyage ou à l’atelier, puis livrez : pièces et réputation garanties.</span></div>`;
+  h += `<div class="bq-orders">` + s.orders.slice().sort((a, b) => bqReady(b) - bqReady(a) || a.seq - b.seq).map(bqOrderCard).join('');
+  for (let i = s.orders.length; i < lv.slots; i++) h += `<div class="bq-slot"><svg viewBox="0 0 30 30" aria-hidden="true">${BQ_ICONS.comptoir}</svg><span>${i === s.orders.length ? `Prochain client dans <b data-bqcd="${s.next}">${fmtDur(s.next - now)}</b>` : 'Place libre au comptoir'}</span></div>`;
+  h += `</div>`;
+  const served = Object.entries(s.clients).filter(([, v]) => v.served).length;
+  h += `<p class="small bq-foot">${s.served} commande${s.served > 1 ? 's' : ''} livrée${s.served > 1 ? 's' : ''} · ${served}/${BQ_CLIENTS.length} clients déjà servis · ${coins(s.earned)} gagnées au comptoir. ${lv.reach}.</p>`;
+  box.innerHTML = h;
+}
+function renderMagasin(box) {
+  const s = bqState(), items = bqStock();
+  let h = phead(null, 'Le magasin', `Les articles du jour, changés chaque matin. Vous avez ${coins(S.coins)}.`);
+  const grp = [['v', 'Vêtements et accessoires'], ['d', 'Meubles et décos'], ['m', 'Graines et matériaux'], ['r', 'Recettes à débloquer'], ['x', 'Article rare du jour']];
+  const open = items.filter(x => !x.locked), locked = items.filter(x => x.locked);
+  for (const [k, title] of grp) {
+    const list = open.filter(x => (x.x ? 'x' : (BQ_CAT.find(a => a.key === x.key) || {}).k) === k); if (!list.length) continue;
+    h += `<h3 class="bq-h3">${title}</h3><div class="bq-grid">${list.map(x => bqShopCard(x)).join('')}</div>`;
+  }
+  if (locked.length) h += `<h3 class="bq-h3 bq-lockh">Au niveau « ${esc(bqLv(s.lvl + 1).name)} »</h3><div class="bq-grid">${locked.map(x => bqShopCard(x)).join('')}</div><p class="small">Livrez des commandes au Comptoir pour gagner de la réputation et débloquer ces articles.</p>`;
+  h += `<p class="small">Le stock change chaque jour. Plus votre boutique est réputée, plus il y a d’articles, et plus ils sont beaux.</p>`;
+  box.innerHTML = h;
+}
+function bqShopCard(x) {
+  const a = bqStockArticle(x); if (!a) return '';
+  const art = bqArticle(a), it = art.it, can = S.coins >= art.price;
+  const sub = art.rec ? `Recette · ${art.rec.kind}` : it.rid ? `${RARITY[it.rarity]} · spécialité ${typeof RG !== 'undefined' && RG[it.origin.region] ? esc(rgDe(RG[it.origin.region])) : ''}` : `${RARITY[it.rarity]} · ${it.cat === 'v' ? SLOT_LABEL[it.sub] : CAT_LABEL[it.cat]}`;
+  const btn = x.locked ? `<span class="bq-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="10.5" width="13" height="10" rx="2.5" fill="#cfc5b4" stroke="#5b4636" stroke-width="2"/><path d="M8.5 10.5 V8 a3.5 3.5 0 0 1 7 0 V10.5" stroke="#5b4636" stroke-width="2.2" fill="none"/></svg>Niveau ${a.lvl + 1}</span>` : x.sold ? '<span class="bq-sold">Acheté</span>' : `<button class="btn ${can ? 'gold' : 'cream'} sm" data-bbuy="${x.key}" ${can ? '' : 'disabled'}>${coins(art.price)}</button>`;
+  return `<div class="bq-art${x.locked ? ' locked' : ''}${x.sold ? ' sold' : ''}${art.rare ? ' rare' : ''}" style="--rc:${RARC[it.rarity]}"><div class="bq-aico">${itemIcon(it)}${art.rec ? '<i class="bq-recb">Recette</i>' : ''}</div><b>${esc(art.rec ? art.rec.out[0] : art.name)}</b><span>${sub}</span>${btn}</div>`;
+}
+function renderBoutique(box) {
+  bqState();
+  if (bView === 'magasin') renderMagasin(box);
+  else if (bView === 'marche' && typeof renderMarket === 'function') {
+    renderMarket(box);
+    box.insertAdjacentHTML('afterbegin', `<div class="bq-tip">${BQ_STAR}<span>Vendre aux passants, c’est bien pour vider le sac. Mais une commande du <b>Comptoir</b> rapporte souvent <b>3 à 5 fois plus</b>.</span><button class="btn cream sm" data-bsub="comptoir">Comptoir</button></div>`);
+  } else { bView = 'comptoir'; renderComptoir(box); }
+  box.insertAdjacentHTML('afterbegin', bqSubtabs());
+}
+function openBoutique(sub) {
+  if (sub && ['comptoir', 'magasin', 'marche'].includes(sub)) bView = sub;
+  if (typeof openSheet === 'function') openSheet('boutique');
+  const b = $('panelBody'); if (b) b.scrollTop = 0;
+}
+
+// ---------------- branchements ----------------
+// onglet : tant que la navigation (10_ui.js) ne connaît pas 'boutique', on l'affiche nous-mêmes
+const BQ_SELF_TAB = !(typeof NAV !== 'undefined' && Array.isArray(NAV) && NAV.some(x => x[0] === 'boutique'));
+if (typeof SHEET_TITLES !== 'undefined' && !SHEET_TITLES.boutique) SHEET_TITLES.boutique = 'La boutique';
+if (typeof NAV_ICONS !== 'undefined' && !NAV_ICONS.boutique) NAV_ICONS.boutique = BQ_ICONS.boutique;
+if (BQ_SELF_TAB && typeof renderPanel === 'function') renderPanel = (orig => function () {
+  const r = orig.apply(this, arguments);
+  if (tab === 'boutique') {
+    try {
+      const sheet = $('sheet'); sheet.hidden = false; document.body.classList.add('sheet-open');
+      $('sheetTitle').textContent = SHEET_TITLES.boutique || 'La boutique'; $('sheetIcon').innerHTML = BQ_ICONS.boutique;
+      sheet.dataset.kind = 'boutique'; sheet.dataset.sub = bView;
+      renderBoutique($('panelBody'));
+    } catch (e) { console.error('boutique', e); }
+  }
+  return r;
+})(renderPanel);
+
+// « Sert à… » : « Commande de Noisette la hérissonne »
+if (typeof USE_KIND !== 'undefined' && !USE_KIND.commande) USE_KIND.commande = ['Boutique', '#ffe1ec', '#b8456a'];
+if (typeof USE_ORDER !== 'undefined' && !USE_ORDER.includes('commande')) USE_ORDER.unshift('commande');
+if (typeof GAME !== 'undefined') GAME.addUses(it => {
+  if (!it || !S.shop || !Array.isArray(S.shop.orders)) return [];
+  const out = [];
+  S.shop.orders.forEach(o => { const c = BQC(o.client); if (c && o.req.some(r => bqMatch(r, it) || (r.k === 'craft' && (RECIPES.find(x => x.id === r.id) || { ing: [] }).ing.some(([key]) => key.startsWith('r:') ? it.rid === key.slice(2) : ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'))))) out.push({ txt: `Commande de ${bqWho(c)}`, kind: 'commande' }); });
+  return out;
+});
+// les commandes passent avant les autres usages dans « Sert à… »
+if (typeof GAME !== 'undefined' && Array.isArray(GAME._uses) && GAME._uses.length > 1) GAME._uses.unshift(GAME._uses.pop());
+
+// recettes achetées au magasin : verrouillées à l'atelier tant qu'on ne les a pas
+if (typeof canCraft === 'function') canCraft = (orig => function (r) { if (r && BQ_RIDS.has(r.id) && !bqRecOwned(r.id)) return false; return orig.apply(this, arguments); })(canCraft);
+if (typeof renderAtelier === 'function') renderAtelier = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try {
+    let n = 0;
+    box.querySelectorAll('[data-craft]').forEach(b => { if (BQ_RIDS.has(b.dataset.craft) && !bqRecOwned(b.dataset.craft)) { const card = b.closest('.rec'); if (card) { card.remove(); n++; } } });
+    box.querySelectorAll('[data-craft]').forEach(b => { if (BQ_RIDS.has(b.dataset.craft)) { const x = b.closest('.rec'); const nm = x && x.querySelector('.rx b'); if (nm && !nm.querySelector('.bq-new')) nm.insertAdjacentHTML('beforeend', ' <i class="bq-new">Boutique</i>'); } });
+    const list = box.querySelector('.recipes');
+    if (n && list) list.insertAdjacentHTML('afterend', `<button class="bq-recmore" data-bopen="magasin">${n} recette${n > 1 ? 's' : ''} de plus à découvrir au Magasin de la boutique</button>`);
+  } catch (e) { console.error(e); }
+  return r;
+})(renderAtelier);
+
+// au retour de voyage ou après une fabrication : prévenir quand une commande devient livrable
+let bqReadyIds = new Set();
+function bqCheckReady(where) {
+  const s = bqState(), now = s.orders.filter(bqReady), nw = now.filter(o => !bqReadyIds.has(o.id));
+  bqReadyIds = new Set(now.map(o => o.id));
+  if (!nw.length) return;
+  const names = nw.map(o => BQC(o.client).name).join(' et ');
+  const html = `<div class="bq-haul"><img src="${clientURI(BQC(nw[0].client), 'joie')}" alt=""><span><b>Commande prête !</b><small>${esc(names)} ${nw.length > 1 ? 'peuvent' : 'peut'} être servi${nw.length > 1 ? 's' : ''} à la boutique.</small></span><button class="btn green sm" data-bopen="comptoir">Livrer</button></div>`;
+  const m = $('modal'), btn = where === 'haul' && m && !m.hidden ? m.querySelector('.mbox > button:last-child') : null;
+  if (btn) btn.insertAdjacentHTML('beforebegin', html);
+  else toast(`Commande prête : ${names} attend${nw.length > 1 ? 'ent' : ''} à la boutique !`);
+  if (typeof renderNav === 'function') renderNav();
+}
+if (typeof GAME !== 'undefined') {
+  GAME.on('trip:return', () => setTimeout(() => bqCheckReady('haul'), 30));
+  GAME.on('craft', () => setTimeout(() => bqCheckReady('craft'), 30));
+}
+
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-bsub],[data-bdeliver],[data-bgo],[data-brefuse],[data-bbuy],[data-bopen]'); if (!el || el.disabled) return;
+  const d = el.dataset;
+  if (d.bsub) { bView = d.bsub; renderPanel(); const b = $('panelBody'); if (b) b.scrollTop = 0; return; }
+  if (d.bdeliver) return bqDeliver(d.bdeliver, el);
+  if (d.bgo) return bqGo(d.bgo);
+  if (d.brefuse) return bqRefuse(d.brefuse);
+  if (d.bbuy) return bqBuy(d.bbuy, el);
+  if (d.bopen) { const m = $('modal'); if (m) m.hidden = true; openBoutique(d.bopen); return; }
+});
+
+// horloge : arrivée des clients, délais, comptes à rebours
+function bqTick() {
+  try {
+    const changed = bqTickOrders();
+    if (changed) { save(); if (tab === 'boutique' && bView === 'comptoir') renderPanel(); else if (typeof renderNav === 'function') renderNav(); }
+    const now = Date.now();
+    document.querySelectorAll('[data-bqcd]').forEach(e => { e.textContent = fmtDur(+e.dataset.bqcd - now); });
+  } catch (e) { console.error('boutique', e); }
+}
+bqState(); bqTickOrders(); bqReadyIds = new Set(bqState().orders.filter(bqReady).map(o => o.id));
+setInterval(bqTick, 4000);
+
+// ---------------- styles ----------------
+(function bqCSS() {
+  const st = document.createElement('style'); st.id = 'boutiqueCSS';
+  st.textContent = `
+.bq-subs{margin-bottom:10px}
+.bq-subs .bq-sdot{position:absolute;top:0;right:calc(50% - 24px);min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--green);color:#fff;border:2px solid #fff;font:800 11px/14px var(--display);font-style:normal}
+.bq-hero{border:3px solid var(--ink);border-radius:20px;overflow:hidden;background:#f8e6cc;box-shadow:0 4px 0 rgba(74,53,40,.35);line-height:0}
+.bq-shop{width:100%;height:auto;display:block}
+.bq-shop .cc .root{animation:none}
+.bq-rep{display:flex;gap:10px;align-items:center;margin:12px 0 4px;background:#fff;border:2.5px solid var(--ink);border-radius:18px;padding:10px 12px;box-shadow:0 3px 0 rgba(74,53,40,.25)}
+.bq-lvbadge{flex:none;width:50px;height:50px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a8,#f6c445 60%,#e0a52a);border:3px solid var(--ink);display:grid;place-items:center;box-shadow:inset 0 -4px 0 rgba(0,0,0,.12)}
+.bq-lvbadge b{font:800 24px/1 var(--display);color:#7a4a12}
+.bq-repx{flex:1;min-width:0}
+.bq-reph{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.bq-reph b{font:800 19px/1.1 var(--display)}
+.bq-reph span{font-size:12.5px;color:var(--ink2);font-style:italic}
+.bq-bar{position:relative;height:22px;margin-top:5px;background:#f2e3c4;border:2.5px solid var(--ink);border-radius:12px;overflow:hidden}
+.bq-bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(#ffd96a,#f2b33a);border-right:2px solid var(--ink);transition:width .6s cubic-bezier(.2,1.2,.4,1)}
+.bq-bar span{position:relative;display:flex;align-items:center;justify-content:center;gap:4px;height:100%;font:800 12.5px/1 var(--display)}
+.bq-star{width:15px;height:15px;flex:none;vertical-align:-2px}
+.bq-next{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center;font-size:12px;color:var(--ink2)}
+.bq-next span{margin-right:2px}
+.bq-next i{font-style:normal;background:#fff3c9;border:1.5px solid #e9cf86;border-radius:8px;padding:1px 6px;color:#7a5a12;font-weight:700}
+.bq-intro{margin:12px 2px 8px;display:flex;flex-direction:column;gap:2px}
+.bq-intro b{font:800 18px/1.15 var(--display)}
+.bq-intro span{font-size:13px;color:var(--muted)}
+.bq-orders{display:flex;flex-direction:column;gap:12px}
+.bq-order{position:relative;background:#fffdf7;border:2.5px solid var(--ink);border-radius:18px;padding:12px;box-shadow:0 4px 0 rgba(74,53,40,.3);transition:transform .25s,opacity .4s}
+.bq-order.ready{background:#effaf2;border-color:#2f7f6c;box-shadow:0 4px 0 #2f7f6c,0 0 0 4px rgba(95,191,127,.25);animation:bqGlow 1.6s ease-in-out infinite alternate}
+@keyframes bqGlow{to{box-shadow:0 4px 0 #2f7f6c,0 0 0 7px rgba(95,191,127,.12)}}
+.bq-order.bq-served{transform:scale(.96) translateY(-6px);opacity:0}
+.bq-ribbon{position:absolute;top:-11px;right:14px;background:var(--green);color:#fff;font:800 13px/1 var(--display);padding:5px 10px 4px;border:2px solid var(--ink);border-radius:10px;text-shadow:0 1px 0 var(--greenD);transform:rotate(2deg)}
+.bq-oh{display:flex;gap:10px;align-items:flex-start}
+.bq-face{flex:none;width:66px;height:66px;border-radius:16px;background:#fbeed8;border:2px solid var(--ink)}
+.bq-order.ready .bq-face{background:#d9f2e2}
+.bq-ohx{min-width:0;flex:1}
+.bq-ohx b{font:800 17px/1.1 var(--display);display:block}
+.bq-ohx span{font-size:12px;color:var(--ink2);font-weight:700}
+.bq-ohx p{margin:4px 0 0;font:600 16.5px/1.2 var(--hand);color:#6a4a3a}
+.bq-req{list-style:none;margin:10px 0 8px;padding:0;display:flex;flex-direction:column;gap:6px}
+.bq-req li{display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--line);border-left:5px solid var(--rc);border-radius:12px;padding:5px 8px}
+.bq-req li.ok{border-color:#9fd8b4;border-left-color:var(--rc);background:#f3fbf6}
+.bq-ri{flex:none;width:34px;height:34px}.bq-ri svg{width:100%;height:100%}
+.bq-rx{flex:1;min-width:0;display:flex;flex-direction:column}
+.bq-rx b{font:700 14.5px/1.2 var(--display)}
+.bq-rx i{font-style:normal;font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bq-req em{flex:none;font:800 14px var(--display);font-style:normal;color:var(--ink2)}
+.bq-req em svg{width:22px;height:22px;display:block}
+.bq-rew{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.bq-rew>span{display:inline-flex;align-items:center;gap:4px;background:#fff6dc;border:2px solid #ead9a6;border-radius:10px;padding:2px 8px;font:800 14px var(--display)}
+.bq-rew .bq-coins .money{font:800 15px var(--display)}
+.bq-bonus{background:#f3ebff!important;border-color:#d2c2f2!important;color:#5a3f9a}
+.bq-bi{width:20px;height:20px;display:inline-block}.bq-bi svg{width:100%;height:100%}
+.bq-dl{background:#ffece6!important;border-color:#f2c4b4!important;color:#b0482f}
+.bq-dl::before{content:"";width:12px;height:12px;border-radius:50%;border:2px solid currentColor;box-sizing:border-box;margin-right:2px}
+.bq-acts{display:flex;align-items:center;gap:10px;margin-top:10px}
+.bq-acts .btn{flex:1}
+.bq-deliver{font-size:18px;animation:pulse .8s ease-in-out infinite alternate}
+.bq-refuse{flex:none;background:none;border:0;color:var(--muted);font:700 13px var(--display);text-decoration:underline;cursor:pointer;padding:6px}
+.bq-slot{display:flex;align-items:center;gap:10px;border:2.5px dashed #d9c39a;border-radius:18px;padding:12px 14px;color:var(--ink2);font-size:14px;background:rgba(255,255,255,.4)}
+.bq-slot svg{width:30px;height:30px;flex:none;opacity:.7}
+.bq-foot{margin-top:12px}
+.bq-h3{margin:14px 0 8px;font:800 16px var(--display)}
+.bq-lockh{color:var(--muted)}
+.bq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.bq-art{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;background:#fff;border:2.5px solid var(--ink);border-radius:16px;padding:10px 6px 8px;box-shadow:0 3px 0 rgba(74,53,40,.25)}
+.bq-art.rare{background:linear-gradient(#fff,#f6efff);border-color:#7a5fb8}
+.bq-art.rare::before{content:"Rare";position:absolute;top:-9px;left:8px;background:#9a6fd6;color:#fff;font:800 11px/1 var(--display);padding:3px 7px;border-radius:8px;border:2px solid var(--ink)}
+.bq-aico{position:relative;width:58px;height:58px;border-radius:14px;background:#fbf3e3;border:2px solid var(--rc);display:grid;place-items:center}
+.bq-aico svg{width:46px;height:46px}
+.bq-recb{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);background:var(--teal);color:#fff;font:800 10px/1 var(--display);font-style:normal;padding:2px 5px;border-radius:6px;white-space:nowrap}
+.bq-art b{font:700 13.5px/1.15 var(--display);margin-top:4px}
+.bq-art>span{font-size:11px;color:var(--muted);line-height:1.2}
+.bq-art .btn{margin-top:auto}
+.bq-art.locked{background:#f4efe6;border-style:dashed;box-shadow:none}
+.bq-art.locked .bq-aico{filter:grayscale(.85) opacity(.55)}
+.bq-art.sold{opacity:.55}
+.bq-lock,.bq-sold{margin-top:auto;display:inline-flex;align-items:center;gap:3px;font:800 12.5px var(--display);color:var(--muted)}
+.bq-lock svg{width:16px;height:16px}
+.bq-tip{display:flex;align-items:center;gap:8px;background:#fff6dc;border:2px solid #ead9a6;border-radius:14px;padding:8px 10px;margin-bottom:10px;font-size:13px}
+.bq-tip span{flex:1}
+.bq-fly{position:fixed;width:48px;height:48px;z-index:60;pointer-events:none;animation:bqFly 1s cubic-bezier(.2,1.4,.5,1) forwards}
+.bq-fly svg{width:100%;height:100%;filter:drop-shadow(0 3px 0 rgba(74,53,40,.3))}
+@keyframes bqFly{0%{transform:scale(.4);opacity:0}25%{transform:translateY(-34px) scale(1.25);opacity:1}100%{transform:translateY(-90px) scale(.7);opacity:0}}
+.bq-heart{position:fixed;width:22px;height:22px;z-index:60;pointer-events:none;animation:bqHeart 1.1s ease-out forwards}
+.bq-heart svg{width:100%;height:100%}
+@keyframes bqHeart{0%{transform:scale(.3);opacity:0}20%{opacity:1;transform:scale(1.1)}100%{transform:translate(var(--dx),-110px) scale(.8);opacity:0}}
+.bq-lvup{text-align:center}
+.bq-lvart{border:3px solid var(--ink);border-radius:18px;overflow:hidden;line-height:0;margin-bottom:10px}
+.bq-kick{font:800 12px var(--display);text-transform:uppercase;letter-spacing:.08em;color:var(--teal)}
+.bq-lvup h2{margin:2px 0}
+.bq-title{font:600 19px var(--hand);margin:0 0 8px;color:var(--ink2)}
+.bq-perks{list-style:none;padding:0;margin:0 0 12px;display:flex;flex-direction:column;gap:5px;text-align:left}
+.bq-perks li{background:#effaf2;border:2px solid #9fd8b4;border-radius:12px;padding:6px 10px 6px 30px;position:relative;font-weight:700;font-size:14px}
+.bq-perks li::before{content:"";position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--green);border:2px solid #2f7f6c}
+.bq-haul{display:flex;align-items:center;gap:10px;background:#effaf2;border:2.5px solid #2f7f6c;border-radius:16px;padding:8px 10px;margin:10px 0;text-align:left}
+.bq-haul img{width:48px;height:48px;flex:none;border-radius:12px;background:#d9f2e2;border:2px solid var(--ink)}
+.bq-haul span{flex:1;display:flex;flex-direction:column}
+.bq-haul b{font:800 15px var(--display)}
+.bq-haul small{font-size:12.5px;color:var(--ink2)}
+.bq-new{font-style:normal;font:800 10.5px var(--display);background:#ffe1ec;color:#b8456a;border-radius:6px;padding:1px 5px;vertical-align:2px}
+.bq-recmore{display:block;width:100%;margin-top:10px;background:#fff6dc;border:2px dashed #e0b84a;border-radius:14px;padding:10px;font:700 14px var(--display);color:#7a5a12;cursor:pointer}
+@media (max-width:420px){.bq-face{width:58px;height:58px}.bq-ohx p{font-size:15.5px}.bq-grid{grid-template-columns:repeat(2,1fr)}}
+@media (prefers-reduced-motion:reduce){.bq-order.ready,.bq-deliver{animation:none}}
+`;
+  document.head.appendChild(st);
+})();
+
+window.__boutique = {
+  open: openBoutique, render: renderBoutique, badge: shopBadge, ready: shopReady, state: bqState, tick: bqTick, stock: bqStock,
+  clients: BQ_CLIENTS, levels: BQ_LEVELS, clientSVG, shopSVG: bqShopSVG,
+  // tests : fournir ce qu'une commande demande
+  fill(id) {
+    const o = bqState().orders.find(x => !id || x.id === id); if (!o) return null;
+    o.req.forEach(r => {
+      for (let i = bqAllocate(o)[o.req.indexOf(r)].have; i < r.n; i++) {
+        let it;
+        if (r.k === 'ing') it = makeItem([bqSampleIng(r.key).name || 'Ingrédient', bqSampleIng(r.key).cat, bqSampleIng(r.key).sub, 0], 0, 'Test', []);
+        else if (r.k === 'reg') { const x = RG_RES[r.rid]; it = rgMakeRes(x, RG[x.region].anchor[2], [], { place: RG[x.region].anchor[2], km: 300 }); }
+        else it = makeItem(r.def, 0, 'Test', [], { fixed: r.def[3] });
+        S.inv.push(it);
+      }
+    });
+    save(); return o.id;
+  },
+  newOrder(easy) { const o = bqNewOrder(!!easy); if (o) { bqState().orders.push(o); save(); } return o; },
+  deliver: id => bqDeliver(id), refuse: id => bqRefuse(id), go: id => bqGo(id), buy: key => bqBuy(key), addRep(n) { const s = bqState(), l0 = s.lvl; s.rep += n; s.lvl = bqLevelOf(s.rep); save(); if (s.lvl > l0) bqLevelUp(s.lvl); },
+};
+
+// ================= COMPAGNONS : garde-robe, rêves, talents, concours de style =================
+// Onglet « Compagnons » (étape Boutique + Compagnons). Expose renderCompagnons(box) et openCompagnons(sub).
+// État : S.style = { contest: { week, entries, paid }, trophies: [], colors: { idObjet: couleur }, saved: { compagnon: [3 tenues] } }.
+// Une tenue portée vit dans S.outfits[k] : o[slot] = forme dessinée, o.worn[slot] = id de l'objet du sac, o.col[forme] = couleur.
+
+// ---------- état ----------
+const ST_SLOT_IDS = SLOTS.map(s => s[0]);
+const ST_LEFT = ['tete', 'cou', 'haut', 'mains'], ST_RIGHT = ['dos', 'bas', 'pieds'];
+const ST_TINT = { pistache: '#ffe1cc', mochi: '#f3e6d3', bulle: '#ffe0ea' };
+const ST_TINT2 = { pistache: '#f7b98f', mochi: '#dcc0a0', bulle: '#f6b3c8' };
+function stWeek(d = new Date()) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y = t.getUTCFullYear(), w = Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7);
+  return { y, w, key: y * 100 + w };
+}
+function stDaysLeft() { const d = new Date(), day = d.getDay() || 7; return 8 - day; } // jusqu'à lundi
+function styleState() {
+  if (!S.style || typeof S.style !== 'object') S.style = {};
+  const s = S.style;
+  if (!s.contest || typeof s.contest !== 'object') s.contest = { week: 0, entries: [] };
+  if (!Array.isArray(s.contest.entries)) s.contest.entries = [];
+  if (typeof s.contest.paid !== 'number') s.contest.paid = 0;
+  if (!Array.isArray(s.trophies)) s.trophies = [];
+  if (!s.colors || typeof s.colors !== 'object') s.colors = {};
+  if (!s.saved || typeof s.saved !== 'object') s.saved = {};
+  for (const k of Object.keys(CHARS)) {
+    if (!Array.isArray(s.saved[k])) s.saved[k] = [null, null, null];
+    while (s.saved[k].length < 3) s.saved[k].push(null);
+    if (!S.outfits[k] || typeof S.outfits[k] !== 'object') S.outfits[k] = { ...CHARS[k].outfit, col: {} };
+    const o = S.outfits[k];
+    for (const sl of ST_SLOT_IDS) if (typeof o[sl] !== 'string') o[sl] = 'none';
+    if (!o.col || typeof o.col !== 'object') o.col = {};
+    if (!o.worn || typeof o.worn !== 'object') o.worn = {};
+  }
+  const wk = stWeek().key;
+  if (s.contest.week !== wk) s.contest = { week: wk, entries: [], paid: 0 };
+  return s;
+}
+try { styleState(); } catch (e) { console.error(e); }
+
+// ---------- vêtements ----------
+const stLookLabel = look => { for (const s of SLOTS) for (const [l, v] of s[2]) if (v === look) return l; return { chapeau: 'Chapeau', couronne: 'Couronne' }[look] || look; };
+const stOrigId = (k, slot) => `orig:${k}:${slot}`;
+// le vêtement de départ d'un compagnon (son écharpe, sa mandarine, ses bottes) reste toujours disponible pour lui
+function stOrigItem(k, slot) {
+  const look = CHARS[k].outfit[slot]; if (!look || look === 'none') return null;
+  return { id: stOrigId(k, slot), name: `${stLookLabel(look)} de ${CHARS[k].name}`, cat: 'v', sub: slot, look, rarity: 0, color: IC[look], from: 'Tenue de départ', tags: [], orig: k };
+}
+function stItem(id, k) {
+  if (!id) return null;
+  if (String(id).startsWith('orig:')) { const [, kk, slot] = String(id).split(':'); return CHARS[kk] && (!k || kk === k) ? stOrigItem(kk, slot) : null; }
+  return S.inv.find(i => i.id === id) || null;
+}
+const stColor = it => (S.style && S.style.colors[it.id]) || it.color || IC[it.look] || '#e9c46a';
+const stIcon = it => itemIcon({ ...it, color: stColor(it) });
+// ce que porte k sur un emplacement : objet du sac, vêtement de départ, ou ancien vêtement sans objet
+function stWorn(k, slot) {
+  const o = S.outfits[k]; if (!o) return null;
+  const look = o[slot]; if (!look || look === 'none') return null;
+  const id = o.worn && o.worn[slot];
+  const it = stItem(id, k);
+  if (it) return it;
+  const orig = stOrigItem(k, slot);
+  if (orig && orig.look === look) return orig;
+  return { id: `old:${k}:${slot}`, name: stLookLabel(look), cat: 'v', sub: slot, look, rarity: 0, color: (o.col && o.col[look]) || IC[look], from: 'Ancienne tenue', tags: [], old: true };
+}
+function stOwned(k, slot) {
+  const list = S.inv.filter(i => i.cat === 'v' && i.sub === slot && i.look).sort((a, b) => b.rarity - a.rarity || (b.date || 0) - (a.date || 0));
+  const orig = stOrigItem(k, slot);
+  return orig ? [orig, ...list] : list;
+}
+// qui porte l'objet id ? (renvoie la clé du compagnon ou null)
+function styleWornBy(id) {
+  if (!id) return null;
+  for (const [k, o] of Object.entries(S.outfits)) if (o && o.worn) for (const sl of ST_SLOT_IDS) if (o.worn[sl] === id && o[sl] && o[sl] !== 'none') return k;
+  return null;
+}
+const styleIsWorn = id => !!styleWornBy(id);
+// un compagnon ne garde jamais un vêtement qui a quitté le sac (vendu, livré, mis en vente…) ; un objet n'habille qu'un compagnon
+function styleSanitize() {
+  let ch = false; const ids = new Set(S.inv.map(i => i.id)), seen = new Set();
+  for (const [k, o] of Object.entries(S.outfits || {})) {
+    if (!o || !o.worn) continue;
+    for (const sl of ST_SLOT_IDS) {
+      const id = o.worn[sl]; if (!id) continue;
+      const orig = String(id).startsWith('orig:');
+      if ((!orig && !ids.has(id)) || (orig && !String(id).startsWith(`orig:${k}:`)) || seen.has(id)) { o[sl] = 'none'; o.worn[sl] = null; ch = true; continue; }
+      seen.add(id);
+    }
+  }
+  if (S.style && S.style.colors) for (const id of Object.keys(S.style.colors)) if (!id.startsWith('orig:') && !ids.has(id) && Math.random() < 0.02) delete S.style.colors[id]; // petit ménage
+  return ch;
+}
+function styleEquip(k, it, quiet) {
+  styleState();
+  const o = S.outfits[k], sl = it.sub; let lent = null;
+  for (const [k2, o2] of Object.entries(S.outfits)) if (k2 !== k && o2.worn && o2.worn[sl] === it.id) { o2[sl] = 'none'; o2.worn[sl] = null; lent = k2; GAME.emit('outfit:change', { who: k2, slot: sl }); }
+  o[sl] = it.look; o.worn[sl] = it.id; o.col[it.look] = stColor(it);
+  S.stats.worn = (S.stats.worn || 0) + 1;
+  if (!quiet) { save(); GAME.emit('outfit:change', { who: k, slot: sl, item: it.id }); }
+  return lent;
+}
+function styleUnequip(k, slot, quiet) {
+  const o = S.outfits[k]; if (!o) return;
+  o[slot] = 'none'; if (o.worn) o.worn[slot] = null;
+  if (!quiet) { save(); GAME.emit('outfit:change', { who: k, slot }); }
+}
+// bouton « Essayer / Retirer » du sac
+function styleToggleWear(k, it) {
+  const o = S.outfits[k];
+  if (o.worn && o.worn[it.sub] === it.id && o[it.sub] !== 'none') { styleUnequip(k, it.sub); renderAll(); reactionPopup(k, 'content', 'Hop, rangé !'); return; }
+  const lent = styleEquip(k, it);
+  renderAll();
+  reactionPopup(k, 'rire', lent ? `${CHARS[lent].name} me prête « ${it.name} » !` : `Comment tu me trouves avec « ${it.name} » ?`);
+}
+// avant de vendre, livrer ou utiliser un objet : si un compagnon le porte, on demande
+function styleGuard(id, verb, go) {
+  const k = styleWornBy(id), it = S.inv.find(i => i.id === id);
+  if (!k || !it) return go();
+  styleGuard._go = () => { styleUnequip(k, it.sub, true); go(); renderComps(); };
+  showModal(`<div class="stgm">${drawChar(k, S.outfits[k], 'triste', 'stg')}</div><h2>${CHARS[k].name} le porte !</h2><p>${CHARS[k].name} porte « <b>${esc(it.name)}</b> » en ce moment. Voulez-vous le lui retirer pour le ${esc(verb)} ?</p><div class="stgb"><button class="btn cream" data-stg="no">Le garder</button><button class="btn gold" data-stg="ok">Retirer et ${esc(verb)}</button></div>`);
+}
+// toute sauvegarde vérifie qu'aucun compagnon ne porte un objet disparu
+if (typeof save === 'function') save = (orig => function () {
+  try { if (styleSanitize()) setTimeout(() => { try { renderComps(); } catch (e) {} }, 0); } catch (e) {}
+  return orig.apply(this, arguments);
+})(save);
+
+// ---------- couleurs ----------
+const ST_DYES = [['#f4b7c4', 'Rose bonbon'], ['#f6a68a', 'Corail'], ['#f8cf9c', 'Pêche'], ['#f6e08a', 'Citron'], ['#c6e6a4', 'Pistache'], ['#a9dcc8', 'Menthe'], ['#b8d8f0', 'Ciel'], ['#9fb6e8', 'Myrtille'], ['#c9b8ea', 'Lavande'], ['#e8c0e6', 'Lilas'], ['#fbf6ec', 'Crème'], ['#d9b48a', 'Caramel']];
+function stHSL(hex) {
+  const n = parseInt(String(hex || '#cccccc').slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
+  if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+  return { h, s, l };
+}
+const ST_FAM = {
+  rose: c => { const { h, s, l } = stHSL(c); return (h >= 290 || h < 14) && s >= 0.3 && l >= 0.58; },
+  jaune: c => { const { h, s, l } = stHSL(c); return h >= 38 && h < 66 && s >= 0.4 && l >= 0.45; },
+  bleu: c => { const { h, s } = stHSL(c); return h >= 185 && h < 250 && s >= 0.2; },
+  vert: c => { const { h, s } = stHSL(c); return h >= 70 && h < 175 && s >= 0.15; },
+  violet: c => { const { h, s } = stHSL(c); return h >= 250 && h < 300 && s >= 0.2; },
+  sombre: c => stHSL(c).l < 0.42,
+  clair: c => { const { s, l } = stHSL(c); return l >= 0.74 && (s >= 0.2 || l >= 0.9); },
+  chaud: c => { const { h, s, l } = stHSL(c); return (h < 50 || h >= 340) && s >= 0.35 && l >= 0.35; },
+  dore: c => { const { h, s, l } = stHSL(c); return h >= 35 && h < 55 && s >= 0.45 && l >= 0.45 && l < 0.82; },
+  brun: c => { const { h, s, l } = stHSL(c); return h >= 15 && h < 45 && l < 0.7 && l >= 0.25 && s < 0.65; },
+};
+function stHueFam(c) { const { h, s, l } = stHSL(c); if (s < 0.18 || l > 0.94) return 'neutre'; return h < 15 || h >= 330 ? 'rouge' : h < 40 ? 'orange' : h < 70 ? 'jaune' : h < 170 ? 'vert' : h < 250 ? 'bleu' : 'violet'; }
+function styleDye(k, slot, color) {
+  const it = stWorn(k, slot); if (!it) return;
+  const o = S.outfits[k];
+  if (it.old) { if (color) o.col[it.look] = color; else delete o.col[it.look]; }
+  else { if (color) S.style.colors[it.id] = color; else delete S.style.colors[it.id]; o.col[it.look] = stColor(it); }
+  save(); GAME.emit('outfit:change', { who: k, slot, color });
+}
+
+// ---------- tenues enregistrées ----------
+function stSnapshot(k) { const out = {}; for (const sl of ST_SLOT_IDS) { const it = stWorn(k, sl); out[sl] = it && !it.old ? it.id : null; } return { slots: out, at: Date.now() }; }
+function stOutfitOf(k, snap) {
+  const o = { tete: 'none', cou: 'none', haut: 'none', bas: 'none', mains: 'none', pieds: 'none', dos: 'none', col: {} };
+  for (const sl of ST_SLOT_IDS) { const it = stItem(snap.slots[sl], k); if (it) { o[sl] = it.look; o.col[it.look] = stColor(it); } }
+  return o;
+}
+function styleSaveOutfit(k, i) { styleState().saved[k][i] = stSnapshot(k); save(); }
+function styleLoadOutfit(k, i) {
+  const snap = styleState().saved[k][i]; if (!snap) return 0;
+  let miss = 0;
+  for (const sl of ST_SLOT_IDS) {
+    const id = snap.slots[sl];
+    if (!id) { styleUnequip(k, sl, true); continue; }
+    const it = stItem(id, k);
+    if (it) styleEquip(k, it, true); else { miss++; styleUnequip(k, sl, true); }
+  }
+  save(); GAME.emit('outfit:change', { who: k, load: i });
+  return miss;
+}
+
+// ---------- concours de style ----------
+// critères mesurables sur la tenue ; chaque critère renvoie entre 0 et 1
+function stCtx(k) {
+  const list = [];
+  for (const sl of ST_SLOT_IDS) {
+    const it = stWorn(k, sl); if (!it) continue;
+    const og = !it.orig && !it.old && typeof originOf === 'function' ? originOf(it) : null;
+    const reg = og && typeof RG !== 'undefined' && RG[og.region] ? og.region : null;
+    list.push({ slot: sl, it, look: it.look, color: (S.outfits[k].col && S.outfits[k].col[it.look]) || stColor(it), rarity: it.rarity || 0, name: it.name || '', tags: it.tags || [], region: reg, group: reg ? RG[reg].g : null, multi: og && og.multi ? og.multi : null });
+  }
+  const by = {}; list.forEach(x => by[x.slot] = x);
+  return { k, list, by, n: list.length };
+}
+const ST_CR = {
+  slots: n => c => Math.min(1, c.n / n),
+  look: (...ls) => c => c.list.some(x => ls.includes(x.look)) ? 1 : 0,
+  looks: (n, ...ls) => c => Math.min(1, c.list.filter(x => ls.includes(x.look)).length / n),
+  not: (...ls) => c => c.n && !c.list.some(x => ls.includes(x.look)) ? 1 : 0,
+  col: (fam, n) => c => Math.min(1, c.list.filter(x => ST_FAM[fam](x.color)).length / n),
+  allCol: fam => c => c.n >= 3 ? c.list.filter(x => ST_FAM[fam](x.color)).length / c.n : 0,
+  tags: (tags, n) => c => Math.min(1, c.list.filter(x => x.tags.some(t => tags.includes(t))).length / n),
+  name: (re, n) => c => Math.min(1, c.list.filter(x => re.test(x.name)).length / n),
+  regions: n => c => { const s = new Set(); c.list.forEach(x => { if (x.region) s.add(x.region); (x.multi || []).forEach(r => s.add(r)); }); return Math.min(1, s.size / n); },
+  region: (id, n) => c => Math.min(1, c.list.filter(x => x.region === id).length / n),
+  france: n => c => Math.min(1, new Set(c.list.filter(x => x.group === 0).map(x => x.region)).size / n),
+  rarity: avg => c => c.n ? Math.min(1, c.list.reduce((a, x) => a + x.rarity, 0) / c.n / avg) : 0,
+  rare: (r, n) => c => Math.min(1, c.list.filter(x => x.rarity >= r).length / n),
+  hues: n => c => Math.min(1, new Set(c.list.map(x => stHueFam(x.color)).filter(f => f !== 'neutre')).size / n),
+  comp: k => Object.assign(c => c.k === k ? 1 : 0, { bonus: 1 }),
+};
+// j : juré qui y tient le plus (0 Madame Froufrou : élégance · 1 Capitaine Moustache : le thème · 2 Lulu Paillettes : couleurs et fantaisie)
+const ST_THEMES = [
+  { id: 'montagne', name: 'Hiver à la montagne', desc: 'Il neige sur les sommets : il faut être bien emmitouflé !', prize: ['Bonnet des cimes', 'v', 'tete', 3, 'bonnet', '#9fb6e8'],
+    crit: [{ txt: 'Un bonnet bien chaud', f: ST_CR.look('bonnet'), w: 2, j: 1 }, { txt: 'Une écharpe ou un foulard', f: ST_CR.look('echarpe', 'foulard'), w: 1.5, j: 0 }, { txt: 'Des gants ou des moufles', f: ST_CR.look('gants', 'moufles'), w: 1.5, j: 1 }, { txt: 'Un pull ou un sweat', f: ST_CR.look('pull', 'sweat'), w: 1, j: 0 }, { txt: 'Un objet trouvé à la montagne ou dans la neige', f: ST_CR.tags(['montagne', 'neige'], 1), w: 1.5, j: 1 }, { txt: 'Pas de short par ce froid', f: ST_CR.not('short'), w: 0.5, j: 2 }] },
+  { id: 'plage', name: 'Journée à la plage', desc: 'Soleil, sable chaud et petites vagues : tenue légère exigée.', prize: ['Chapeau de paille des vagues', 'v', 'tete', 3, 'chapeau', '#f6e08a'],
+    crit: [{ txt: 'Un chapeau ou une casquette contre le soleil', f: ST_CR.look('chapeau', 'casquette'), w: 2, j: 1 }, { txt: 'Un t-shirt', f: ST_CR.look('tshirt'), w: 1, j: 0 }, { txt: 'Un short ou une jupe', f: ST_CR.look('short', 'jupe'), w: 1.5, j: 1 }, { txt: 'Deux couleurs claires et ensoleillées', f: ST_CR.col('clair', 2), w: 1, j: 2 }, { txt: 'Un objet rapporté de la mer, d’une île ou d’une plage', f: ST_CR.tags(['mer', 'ile', 'plage', 'port', 'piscine', 'glacier'], 1), w: 1.5, j: 1 }, { txt: 'Pas de moufles à la plage !', f: ST_CR.not('moufles', 'bonnet'), w: 1, j: 2 }, { txt: 'Bulle, la reine de l’eau', f: ST_CR.comp('bulle'), w: 0.5, j: 2 }] },
+  { id: 'gala', name: 'Gala chic', desc: 'Tapis rouge et petits fours : on sort le grand jeu.', prize: ['Nœud de gala nuit étoilée', 'v', 'cou', 3, 'noeud', '#3b4a7a'],
+    crit: [{ txt: 'Un nœud papillon', f: ST_CR.look('noeud'), w: 2, j: 0 }, { txt: 'Au moins 5 vêtements', f: ST_CR.slots(5), w: 1.5, j: 0 }, { txt: 'Des vêtements rares (Rare en moyenne)', f: ST_CR.rarity(2), w: 1.5, j: 0 }, { txt: 'Une cape pour l’entrée', f: ST_CR.look('cape'), w: 1, j: 1 }, { txt: 'Une touche sombre ou dorée', f: c => Math.max(ST_CR.col('sombre', 1)(c), ST_CR.col('dore', 1)(c)), w: 1, j: 2 }, { txt: 'Pas de bottes de pluie au gala', f: ST_CR.not('bottes'), w: 0.5, j: 0 }] },
+  { id: 'piquenique', name: 'Pique-nique champêtre', desc: 'Une nappe à carreaux dans l’herbe, et un panier plein de bonnes choses.', prize: ['Couronne de pâquerettes', 'v', 'tete', 3, 'fleurs', '#fff8f0'],
+    crit: [{ txt: 'Des fleurs ou un chapeau', f: ST_CR.look('fleurs', 'chapeau'), w: 2, j: 2 }, { txt: 'Un sac ou un panier sur le dos', f: ST_CR.look('sac'), w: 1.5, j: 1 }, { txt: 'Du vert ou du jaune', f: c => Math.min(1, ST_CR.col('vert', 1)(c) + ST_CR.col('jaune', 1)(c)), w: 1.5, j: 2 }, { txt: 'Un objet de la campagne, d’un parc, d’une ferme ou de la forêt', f: ST_CR.tags(['campagne', 'parc', 'ferme', 'foret', 'agrumes'], 1), w: 1.5, j: 1 }, { txt: 'Au moins 3 vêtements', f: ST_CR.slots(3), w: 1, j: 0 }] },
+  { id: 'monde', name: 'Tour du monde', desc: 'Une tenue qui raconte un grand voyage : des objets de trois régions différentes.', prize: ['Cape des grands voyageurs', 'v', 'dos', 3, 'cape', '#9fb6e8'],
+    crit: [{ txt: 'Des objets de 3 régions différentes', f: ST_CR.regions(3), w: 3, j: 1 }, { txt: 'Un sac à dos de voyageur', f: ST_CR.look('sac'), w: 1, j: 1 }, { txt: 'Au moins 4 vêtements', f: ST_CR.slots(4), w: 1, j: 0 }, { txt: 'Au moins 3 couleurs différentes', f: ST_CR.hues(3), w: 1, j: 2 }] },
+  { id: 'rose', name: 'Tout en rose', desc: 'Du rose, du rose, et encore du rose. Lulu Paillettes préside le jury !', prize: ['Écharpe barbe à papa', 'v', 'cou', 3, 'echarpe', '#f4b7c4'],
+    crit: [{ txt: 'Au moins 4 vêtements roses', f: ST_CR.col('rose', 4), w: 3, j: 2 }, { txt: 'Que du rose (rien d’autre)', f: ST_CR.allCol('rose'), w: 1.5, j: 2 }, { txt: 'Un nœud ou des fleurs', f: ST_CR.look('noeud', 'fleurs'), w: 1, j: 0 }, { txt: 'Bulle, déjà toute rose', f: ST_CR.comp('bulle'), w: 0.5, j: 2 }] },
+  { id: 'bretagne', name: 'Spécial Bretagne', desc: 'Crêpes, phares et crachin : une tenue qui sent les embruns bretons.', prize: ['Ciré jaune de Bretagne', 'v', 'haut', 3, 'sweat', '#f6d36b'],
+    crit: [{ txt: 'Un objet venu de Bretagne', f: ST_CR.region('bretagne', 1), w: 2.5, j: 1 }, { txt: 'Des bottes de pluie pour le crachin', f: ST_CR.look('bottes'), w: 1.5, j: 1 }, { txt: 'Du jaune (comme un ciré)', f: ST_CR.col('jaune', 1), w: 1, j: 2 }, { txt: 'Du bleu marine ou du blanc, façon marinière', f: c => Math.min(1, ST_CR.col('bleu', 1)(c) + ST_CR.col('clair', 1)(c) * 0.5), w: 1, j: 0 }, { txt: 'Un objet rapporté de la mer ou d’un port', f: ST_CR.tags(['mer', 'port', 'plage', 'poissonnerie'], 1), w: 1, j: 1 }] },
+  { id: 'pluie', name: 'Jour de pluie', desc: 'Plic, ploc ! Les flaques sont faites pour sauter dedans.', prize: ['Bottes arc-en-flaque', 'v', 'pieds', 3, 'bottes', '#9fb6e8'],
+    crit: [{ txt: 'Des bottes de pluie', f: ST_CR.look('bottes'), w: 2.5, j: 1 }, { txt: 'Une cape ou un sweat à capuche', f: ST_CR.look('cape', 'sweat'), w: 1.5, j: 1 }, { txt: 'Une couleur vive : jaune ou bleu', f: c => Math.min(1, ST_CR.col('jaune', 1)(c) + ST_CR.col('bleu', 1)(c)), w: 1, j: 2 }, { txt: 'Un chapeau ou une casquette', f: ST_CR.look('chapeau', 'casquette'), w: 1, j: 0 }, { txt: 'Bulle, qui adore la pluie', f: ST_CR.comp('bulle'), w: 0.5, j: 2 }] },
+  { id: 'sport', name: 'Champion du sport', desc: 'Échauffement, sifflet, c’est parti ! Une tenue pour courir (même Mochi).', prize: ['Casquette de champion', 'v', 'tete', 3, 'casquette', '#f6a68a'],
+    crit: [{ txt: 'Une casquette', f: ST_CR.look('casquette'), w: 1.5, j: 1 }, { txt: 'Un t-shirt ou un sweat', f: ST_CR.look('tshirt', 'sweat'), w: 1.5, j: 1 }, { txt: 'Un short', f: ST_CR.look('short'), w: 1.5, j: 1 }, { txt: 'Des chaussettes', f: ST_CR.look('chaussettes'), w: 1, j: 0 }, { txt: 'Deux couleurs vives différentes', f: ST_CR.hues(2), w: 1, j: 2 }, { txt: 'Pas de cape (on se prend les pieds dedans)', f: ST_CR.not('cape'), w: 0.5, j: 0 }] },
+  { id: 'foret', name: 'Petit explorateur des bois', desc: 'Loupe, carnet et sac à dos : en route pour la grande forêt.', prize: ['Sac d’explorateur mousse', 'v', 'dos', 3, 'sac', '#a9dcc8'],
+    crit: [{ txt: 'Un sac à dos', f: ST_CR.look('sac'), w: 2, j: 1 }, { txt: 'Un chapeau, un bonnet ou un béret', f: ST_CR.look('chapeau', 'bonnet', 'beret'), w: 1, j: 0 }, { txt: 'Du vert ou du brun', f: c => Math.min(1, ST_CR.col('vert', 1)(c) + ST_CR.col('brun', 1)(c)), w: 1.5, j: 2 }, { txt: 'Un objet trouvé en forêt ou dans un parc', f: ST_CR.tags(['foret', 'parc', 'camping'], 1), w: 1.5, j: 1 }, { txt: 'De bonnes bottes ou des chaussettes', f: ST_CR.look('bottes', 'chaussettes'), w: 1, j: 0 }, { txt: 'Pistache, l’exploratrice', f: ST_CR.comp('pistache'), w: 0.5, j: 2 }] },
+  { id: 'royal', name: 'Royauté d’un jour', desc: 'Sa Majesté fait son entrée ! Couronne et cape de rigueur.', prize: ['Couronne de sucre d’orge', 'v', 'tete', 3, 'couronne', '#f4b7c4'],
+    crit: [{ txt: 'Une couronne', f: ST_CR.look('couronne'), w: 2.5, j: 1 }, { txt: 'Une cape royale', f: ST_CR.look('cape'), w: 2, j: 1 }, { txt: 'Un objet Épique ou Légendaire', f: ST_CR.rare(3, 1), w: 1.5, j: 0 }, { txt: 'Du doré ou du violet', f: c => Math.min(1, ST_CR.col('dore', 1)(c) + ST_CR.col('violet', 1)(c)), w: 1, j: 2 }, { txt: 'Au moins 4 vêtements', f: ST_CR.slots(4), w: 1, j: 0 }] },
+  { id: 'pastel', name: 'Douceur pastel', desc: 'Des couleurs tendres comme des macarons : tout en douceur.', prize: ['Pull guimauve', 'v', 'haut', 3, 'pull', '#e8c0e6'],
+    crit: [{ txt: 'Au moins 4 vêtements de couleur claire', f: ST_CR.col('clair', 4), w: 2.5, j: 2 }, { txt: '3 couleurs différentes', f: ST_CR.hues(3), w: 1.5, j: 2 }, { txt: 'Rien de sombre', f: c => c.n && !c.list.some(x => ST_FAM.sombre(x.color)) ? 1 : 0, w: 1, j: 0 }, { txt: 'Au moins 5 vêtements', f: ST_CR.slots(5), w: 1, j: 0 }] },
+  { id: 'cocooning', name: 'Cocooning chez Mochi', desc: 'Un plaid, un thé bien chaud et des chaussettes moelleuses. Zen.', prize: ['Chaussettes nuage', 'v', 'pieds', 3, 'chaussettes', '#fbf6ec'],
+    crit: [{ txt: 'Un pull tout doux', f: ST_CR.look('pull'), w: 2, j: 1 }, { txt: 'Des chaussettes moelleuses', f: ST_CR.look('chaussettes'), w: 1.5, j: 1 }, { txt: 'Une écharpe', f: ST_CR.look('echarpe'), w: 1, j: 0 }, { txt: 'Des couleurs chaudes', f: ST_CR.col('chaud', 2), w: 1, j: 2 }, { txt: 'Mochi, maître du cocooning', f: ST_CR.comp('mochi'), w: 0.8, j: 2 }, { txt: 'Pas de bottes à la maison', f: ST_CR.not('bottes'), w: 0.5, j: 0 }] },
+  { id: 'arcenciel', name: 'Arc-en-ciel', desc: 'Toutes les couleurs à la fois ! Le jury veut un vrai feu d’artifice.', prize: ['Cape arc-en-ciel', 'v', 'dos', 3, 'cape', '#c9b8ea'],
+    crit: [{ txt: '5 couleurs différentes', f: ST_CR.hues(5), w: 3, j: 2 }, { txt: 'Au moins 6 vêtements', f: ST_CR.slots(6), w: 1.5, j: 0 }, { txt: 'Un objet Rare ou mieux', f: ST_CR.rare(2, 1), w: 1, j: 0 }, { txt: 'Un objet trouvé un jour d’arc-en-ciel… ou un objet magique', f: ST_CR.name(/arc|étoil|lune|magique|enchant/i, 1), w: 0.5, j: 1 }] },
+  { id: 'france', name: 'Tour de France', desc: 'Une tenue cocorico : des objets de trois régions de France.', prize: ['Béret tricolore', 'v', 'tete', 3, 'beret', '#9fb6e8'],
+    crit: [{ txt: 'Des objets de 3 régions de France', f: ST_CR.france(3), w: 3, j: 1 }, { txt: 'Un béret, bien sûr', f: ST_CR.look('beret'), w: 1.5, j: 0 }, { txt: 'Du bleu, du blanc ou du rouge', f: c => Math.min(1, ST_CR.hues(2)(c)), w: 1, j: 2 }, { txt: 'Au moins 4 vêtements', f: ST_CR.slots(4), w: 1, j: 0 }] },
+];
+const ST_JURY = [
+  { name: 'Madame Froufrou', role: 'Chouette styliste', col: '#c9a07a',
+    say: ['Mes plumes se hérissent !', 'Hmm. On a déjà vu plus chic.', 'Joli, mais je reste sur ma faim.', 'Très, très élégant. Hou hou !', 'Hou hou ! Un chef-d’œuvre de la mode !'] },
+  { name: 'Capitaine Moustache', role: 'Morse globe-trotter', col: '#a8907c',
+    say: ['Moussaillon, tu t’es trompé de semaine ?', 'Je cherche le thème avec ma longue-vue…', 'Le thème est là… à moitié.', 'Ça sent le voyage, j’aime ça !', 'Par mes moustaches ! C’est exactement le thème !'] },
+  { name: 'Lulu Paillettes', role: 'Souris fantaisie', col: '#c7c3cf',
+    say: ['Snif. Je suis triste pour ce pauvre compagnon.', 'Bof bof… où sont les paillettes ?', 'Mignon ! Mais il manque un petit truc…', 'Trop mignon, mon cœur fait boum !', 'Kyaaa ! Ça brille de partout !'] },
+];
+function stJuryFace(i) {
+  const L = '#5b4636';
+  if (i === 0) return `<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M10 14 L13 4 L19 11 M38 14 L35 4 L29 11" fill="#c9a07a" stroke="${L}" stroke-width="2" stroke-linejoin="round"/><ellipse cx="24" cy="27" rx="17" ry="17" fill="#c9a07a" stroke="${L}" stroke-width="2"/><ellipse cx="24" cy="33" rx="10" ry="9" fill="#f3e2c6"/><circle cx="17" cy="23" r="6.5" fill="#fff" stroke="${L}" stroke-width="1.8"/><circle cx="31" cy="23" r="6.5" fill="#fff" stroke="${L}" stroke-width="1.8"/><circle cx="17.5" cy="23.5" r="3" fill="${L}"/><circle cx="30.5" cy="23.5" r="3" fill="${L}"/><circle cx="16.5" cy="22.3" r="1" fill="#fff"/><circle cx="29.5" cy="22.3" r="1" fill="#fff"/><path d="M24 26 l-3 4 h6Z" fill="#f2a93b" stroke="${L}" stroke-width="1.4" stroke-linejoin="round"/><path d="M33 8 l5 -3 v6Z M33 8 l-5 -3 v6Z" fill="#f08aa6" stroke="${L}" stroke-width="1.2" stroke-linejoin="round" transform="translate(4 2)"/></svg>`;
+  if (i === 1) return `<svg viewBox="0 0 48 48" aria-hidden="true"><ellipse cx="24" cy="28" rx="18" ry="16" fill="#a8907c" stroke="${L}" stroke-width="2"/><path d="M9 15 H39 L36 8 H12Z" fill="#3b4a7a" stroke="${L}" stroke-width="2" stroke-linejoin="round"/><rect x="7" y="14" width="34" height="4" rx="2" fill="#2f3b5c" stroke="${L}" stroke-width="1.6"/><circle cx="24" cy="11" r="2" fill="#f6c445"/><circle cx="18" cy="24" r="2.4" fill="${L}"/><circle cx="30" cy="24" r="2.4" fill="${L}"/><path d="M19 37 v7 M29 37 v7" stroke="#fffaf0" stroke-width="3.2" stroke-linecap="round"/><path d="M19 37 v7 M29 37 v7" stroke="${L}" stroke-width="1" stroke-linecap="round" opacity=".4"/><path d="M10 33 C14 28 20 29 24 31 C28 29 34 28 38 33 C34 37 28 36 24 34 C20 36 14 37 10 33Z" fill="#f3ead8" stroke="${L}" stroke-width="1.6"/><ellipse cx="24" cy="29" rx="3" ry="2" fill="#6b4a3c"/></svg>`;
+  return `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="10" cy="15" r="9" fill="#c7c3cf" stroke="${L}" stroke-width="2"/><circle cx="38" cy="15" r="9" fill="#c7c3cf" stroke="${L}" stroke-width="2"/><circle cx="10" cy="15" r="5" fill="#f6b3c8"/><circle cx="38" cy="15" r="5" fill="#f6b3c8"/><ellipse cx="24" cy="29" rx="15" ry="14" fill="#c7c3cf" stroke="${L}" stroke-width="2"/><circle cx="18.5" cy="27" r="2.6" fill="${L}"/><circle cx="29.5" cy="27" r="2.6" fill="${L}"/><circle cx="17.7" cy="26" r=".9" fill="#fff"/><circle cx="28.7" cy="26" r=".9" fill="#fff"/><circle cx="24" cy="33" r="2.2" fill="#f08aa6" stroke="${L}" stroke-width="1"/><ellipse cx="14" cy="33" rx="2.6" ry="1.6" fill="#f6a6b8"/><ellipse cx="34" cy="33" rx="2.6" ry="1.6" fill="#f6a6b8"/><path d="M38 34 l1.2 2.6 2.8.4 -2 2 .5 2.8 -2.5-1.3 -2.5 1.3.5-2.8 -2-2 2.8-.4Z" fill="#f6e08a" stroke="${L}" stroke-width="1"/></svg>`;
+}
+function styleTheme() { const w = stWeek(); return ST_THEMES[(w.y * 53 + w.w) % ST_THEMES.length]; }
+const stLcf = s => s.charAt(0).toLowerCase() + s.slice(1);
+function styleJudge(k, th) {
+  th = th || styleTheme();
+  const c = stCtx(k);
+  const res = th.crit.map(cr => { let v = 0; try { v = Math.max(0, Math.min(1, cr.f(c) || 0)); } catch (e) {} return { cr, v }; });
+  const tot = res.reduce((a, r) => a + r.cr.w, 0), overall = res.reduce((a, r) => a + r.v * r.cr.w, 0) / tot;
+  const jury = ST_JURY.map((J, j) => {
+    const mine = res.filter(r => r.cr.j === j), wsum = mine.reduce((a, r) => a + r.cr.w, 0);
+    const focus = wsum ? mine.reduce((a, r) => a + r.v * r.cr.w, 0) / wsum : overall;
+    let sc = c.n ? 0.55 * overall + 0.45 * focus : 0;
+    const stars = Math.max(1, Math.min(5, Math.round(sc * 5 + 0.25)));
+    const pool = (mine.length ? mine : res);
+    const good = pool.filter(r => r.v >= 0.99).sort((a, b) => b.cr.w - a.cr.w)[0] || res.filter(r => r.v >= 0.99).sort((a, b) => b.cr.w - a.cr.w)[0];
+    const bad = pool.filter(r => r.v < 0.99 && !r.cr.f.bonus).sort((a, b) => b.cr.w * (1 - b.v) - a.cr.w * (1 - a.v))[0] || res.filter(r => r.v < 0.99 && !r.cr.f.bonus).sort((a, b) => b.cr.w * (1 - b.v) - a.cr.w * (1 - a.v))[0];
+    let txt = J.say[stars - 1];
+    if (!c.n) txt = ['Euh… il est venu sans vêtements ?', 'Tout nu au concours ? Quelle audace !', 'Hihi, il a oublié de s’habiller !'][j];
+    else {
+      if (good) txt += ` J’ai adoré : ${stLcf(good.cr.txt)}.`;
+      if (bad) txt += ` ${good ? 'Mais il' : 'Il'} manquait : ${stLcf(bad.cr.txt)}${bad.v > 0 ? ' (presque !)' : ''}.`;
+      else txt += ' Rien à redire !';
+    }
+    return { s: stars, txt };
+  });
+  const avg = jury.reduce((a, j) => a + j.s, 0) / 3;
+  return { res, overall, jury, avg: Math.round(avg * 10) / 10, stars: Math.max(1, Math.min(5, Math.round(avg))) };
+}
+const ST_PRIZE_COINS = [0, 20, 50, 100, 200, 350]; // cumulé : on ne paie que la différence avec le meilleur palier déjà atteint
+const ST_MEDALS = { 3: ['bronze', '#d9905a', 'Trophée de bronze'], 4: ['argent', '#b9c4cc', 'Trophée d’argent'], 5: ['or', '#f2c14e', 'Trophée d’or'] };
+const stTriesLeft = () => Math.max(0, 3 - styleState().contest.entries.length);
+const stBest = () => { const e = styleState().contest.entries; return e.length ? e.reduce((a, b) => (b.avg > a.avg ? b : a)) : null; };
+function styleEnter(k) {
+  const s = styleState(), th = styleTheme();
+  if (stTriesLeft() <= 0) { toast('Plus d’essai cette semaine : revenez lundi pour un nouveau thème !'); return null; }
+  const J = styleJudge(k, th), prevBest = stBest();
+  const o = S.outfits[k], looks = {}; ST_SLOT_IDS.forEach(sl => looks[sl] = o[sl]);
+  const entry = { who: k, avg: J.avg, stars: J.stars, at: Date.now(), jury: J.jury.map(j => [j.s, j.txt]), look: { ...looks, col: { ...o.col } } };
+  s.contest.entries.push(entry);
+  const rec = !prevBest || J.avg > prevBest.avg;
+  // récompenses des nouveaux paliers atteints
+  const gains = [], tier = J.stars;
+  if (tier > s.contest.paid) {
+    const c = ST_PRIZE_COINS[tier] - ST_PRIZE_COINS[s.contest.paid];
+    if (c > 0) { gainCoins(c); gains.push(coins(c)); }
+    for (let t = s.contest.paid + 1; t <= tier; t++) {
+      if (ST_MEDALS[t]) {
+        const [id, col, lab] = ST_MEDALS[t];
+        s.trophies.push({ week: s.contest.week, theme: th.id, name: th.name, medal: id, stars: t, who: k, at: Date.now() });
+        const tr = { id: uidGen(), name: `${lab} : ${th.name}`, cat: 'd', sub: 'statue', rarity: t === 5 ? 4 : t === 4 ? 3 : 2, color: col, from: 'Concours de style', tags: [], date: Date.now(), trophy: id };
+        S.inv.push(tr); S.dex[tr.name] = true; gains.push(`<b>${esc(tr.name)}</b> (à exposer dans la maison)`);
+      }
+      if (t === 4) {
+        const it = makeItem(th.prize, 0, `Concours : ${th.name}`, [], { fixed: th.prize[3] }); it.edition = 'Exclusif concours'; it.contest = th.id;
+        S.inv.push(it); S.dex[it.name] = true; gains.push(`<b class="rar r${it.rarity}">« ${esc(it.name)} »</b>, vêtement exclusif`);
+      }
+    }
+    s.contest.paid = tier;
+  }
+  addXP(k, 15 * J.stars);
+  save();
+  try { GAME.emit('contest:done', { score: J.avg, stars: J.stars, who: k, theme: th.id, best: rec }); } catch (e) {}
+  return { J, entry, gains, rec, th };
+}
+
+// ---------- rendu ----------
+let stSlot = null, stJoy = 0, stJoyLine = '';
+const ST_JOY = {
+  pistache: ['Tadaa ! Prête pour l’aventure !', 'Ça me va bien, hein ?', 'Je vais faire tourner les têtes… et les pigeons !', 'Je suis la plus jolie de la forêt !'],
+  mochi: ['Mmh. Élégant et confortable.', 'Pépin dit que ça me va bien.', 'Je me sens… très zen là-dedans.', 'Un capybara chic. C’est moi.'],
+  bulle: ['Bloup ! Trop jolie !', 'On va à la plage habillée comme ça ?', 'Je fais des bulles de joie !', 'Bloup bloup, je brille !'],
+};
+const ST_DYE_LINE = { pistache: 'Ooh, cette couleur ! On dirait un fruit !', mochi: 'Une couleur douce. J’approuve.', bulle: 'Bloup ! Une nouvelle couleur !' };
+function stStars(n, max = 5) { let h = ''; for (let i = 1; i <= max; i++) h += `<i class="sts ${i <= Math.round(n) ? 'on' : ''}" style="--d:${i * 0.12}s">★</i>`; return `<span class="stst" aria-label="${n} étoiles sur ${max}">${h}</span>`; }
+function stSelector() {
+  return `<div class="stsel" role="tablist" aria-label="Choisir un compagnon">${Object.keys(CHARS).map(k => {
+    const p = S.prog[k], t = S.trips[k];
+    return `<button role="tab" class="stc" data-stc="${k}" aria-selected="${S.sel === k}" style="--tint:${ST_TINT[k]};--tint2:${ST_TINT2[k]}"><img src="${portraitURI(k, S.sel === k ? 'rire' : 'content')}" alt=""><span><b>${CHARS[k].name}</b><i>niv. ${p.lvl}${t ? (t.done ? ' · rentré !' : ' · en voyage') : ''}</i></span></button>`;
+  }).join('')}</div>`;
+}
+function stSlotBtn(k, sl) {
+  const it = stWorn(k, sl), n = stOwned(k, sl).length, lab = SLOT_LABEL[sl];
+  const ic = it ? stIcon(it) : itemIcon({ cat: 'v', sub: sl, look: sl === 'dos' ? 'sac' : null, color: '#efe4d0' });
+  return `<button class="wrs ${it ? 'full' : 'vide'} ${stSlot === sl ? 'on' : ''}" data-wslot="${sl}" aria-pressed="${stSlot === sl}" aria-label="${lab} : ${it ? esc(it.name) : 'vide'}"><span class="wri" style="--rc:${it ? RARC[it.rarity] : 'var(--ink)'}">${ic}${it ? '' : '<em>+</em>'}</span><b>${lab}</b>${n ? `<i class="wrn">${n}</i>` : ''}</button>`;
+}
+function stCharSVG(k, mood, uid) { return drawChar(k, S.outfits[k], mood, uid); }
+function renderWardrobe(k) {
+  const ch = CHARS[k];
+  if (!stSlot || !ST_SLOT_IDS.includes(stSlot)) stSlot = ST_SLOT_IDS.find(sl => stOwned(k, sl).length && !stWorn(k, sl)) || 'tete';
+  const joy = Date.now() - stJoy < 1600, worn = ST_SLOT_IDS.filter(sl => stWorn(k, sl)).length;
+  let h = `<div class="wr" style="--tint:${ST_TINT[k]};--tint2:${ST_TINT2[k]}">`;
+  h += `<div class="wrstage"><svg class="wrgar" viewBox="0 0 300 26" preserveAspectRatio="none" aria-hidden="true"><path d="M0 4 Q150 26 300 4" fill="none" stroke="#a87a50" stroke-width="1.6"/>${[...Array(9)].map((_, i) => { const x = 18 + i * 33, y = 4 + Math.sin(Math.PI * x / 300) * 11; return `<path d="M${x - 8} ${y - 1} L${x + 8} ${y - 1} L${x} ${y + 12}Z" fill="${['#f4b7c4', '#f6e08a', '#a9dcc8', '#b8d8f0', '#c9b8ea'][i % 5]}" stroke="#7a5f50" stroke-width="1"/>`; }).join('')}</svg>`;
+  h += `<div class="wrcol">${ST_LEFT.map(sl => stSlotBtn(k, sl)).join('')}</div>`;
+  h += `<div class="wrmid"><div class="wrchar ${joy ? 'joy' : ''}" data-wrchar="${k}">${stCharSVG(k, joy ? 'rire' : 'content', 'wr' + k)}${joy ? `<span class="wrspark" aria-hidden="true">${'<i>★</i>'.repeat(6)}</span>` : ''}</div>${joy && stJoyLine ? `<p class="wrsay">${esc(stJoyLine)}</p>` : ''}<span class="wrplate">${ch.name} <small>${worn} vêtement${worn > 1 ? 's' : ''}</small></span></div>`;
+  h += `<div class="wrcol">${ST_RIGHT.map(sl => stSlotBtn(k, sl)).join('')}<button class="wrs wrsave" data-wjump="saved" aria-label="Tenues enregistrées"><span class="wri"><svg viewBox="0 0 40 40"><path d="M10 6 H30 V34 L20 27 L10 34Z" fill="#f4b7c4" stroke="#5b4636" stroke-width="1.8" stroke-linejoin="round"/><path d="M20 11 l1.8 3.6 4 .6 -2.9 2.8.7 4 -3.6-1.9 -3.6 1.9.7-4 -2.9-2.8 4-.6Z" fill="#fff8ea"/></svg></span><b>Tenues</b></button></div>`;
+  h += `</div>`;
+  // emplacement choisi
+  const it = stWorn(k, stSlot), list = stOwned(k, stSlot), lab = SLOT_LABEL[stSlot];
+  h += `<div class="wrpanel"><div class="wrph"><span class="wrpk">${lab}</span><b>${it ? esc(it.name) : 'Rien pour l’instant'}</b>${it ? `<button class="btn cream sm" data-wunwear="${stSlot}">Retirer</button>` : ''}</div>`;
+  if (it) {
+    const cur = (S.outfits[k].col && S.outfits[k].col[it.look]) || stColor(it), base = it.color || IC[it.look];
+    h += `<div class="wrdye"><span class="wrdl">Teinture</span><div class="wrsw">${ST_DYES.map(([c, n]) => `<button class="sw" data-wdye="${c}" style="--c:${c}" aria-pressed="${cur.toLowerCase() === c}" title="${n}" aria-label="Teindre en ${n}"></button>`).join('')}<button class="sw reset" data-wdye="" style="--c:${base}" title="Couleur d’origine" aria-label="Couleur d’origine" aria-pressed="${cur.toLowerCase() === String(base).toLowerCase()}"><svg viewBox="0 0 20 20"><path d="M6 7 a6 6 0 1 1 -1 6" fill="none" stroke="#5b4636" stroke-width="2" stroke-linecap="round"/><path d="M3 4 v4 h4" fill="none" stroke="#5b4636" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div>`;
+  }
+  if (list.length) {
+    h += `<div class="wrgrid">${list.map(x => {
+      const on = !!(it && it.id === x.id), by = on ? k : x.orig ? null : styleWornBy(x.id);
+      const prov = x.orig ? 'Tenue de départ' : (typeof rgPill === 'function' && rgPill(x, 'short')) || esc(x.from || '');
+      return `<button class="wrv ${on ? 'on' : ''}" data-wput="${x.id}" style="--rc:${RARC[x.rarity]}" aria-pressed="${on}"><span class="wrvi">${stIcon(x)}</span><b>${esc(x.name)}</b><i style="color:${RARC[x.rarity]}">${RARITY[x.rarity]}${x.edition ? ' · ' + esc(x.edition) : ''}</i><span class="wrvp">${prov}</span>${on ? '<em class="wrtag">Porté</em>' : by && by !== k ? `<em class="wrtag lend">Porté par ${CHARS[by].name}</em>` : ''}</button>`;
+    }).join('')}</div>`;
+  } else h += `<p class="wrempty">Aucun vêtement « ${lab.toLowerCase()} » dans le sac pour l’instant.</p>`;
+  if (!it) h += `<div class="wrshop"><svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS.boutique}</svg><span>Trouve des vêtements en voyage ou au magasin.</span><button class="btn gold sm" data-wshop="1">Magasin</button></div>`;
+  h += `</div>`;
+  // tenues enregistrées
+  const saved = styleState().saved[k];
+  h += `<h3 id="wrSaved">Tenues enregistrées</h3><div class="wrsaved">${saved.map((sn, i) => sn ? `<div class="wrout"><div class="wroc">${drawChar(k, stOutfitOf(k, sn), 'content', `so${k}${i}`)}</div><b>Tenue ${i + 1}</b><div class="wrob"><button class="btn green sm" data-wload="${i}">Mettre</button><button class="btn cream sm" data-wsave="${i}" title="Remplacer par la tenue actuelle">Enregistrer</button></div></div>` : `<div class="wrout vide"><div class="wroc"><span>+</span></div><b>Tenue ${i + 1}</b><div class="wrob"><button class="btn cream sm" data-wsave="${i}">Enregistrer</button></div></div>`).join('')}</div>`;
+  // petit rappel du concours
+  const th = styleTheme(), left = stTriesLeft();
+  h += `<button class="wrcontest" data-stgo="concours"><svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS.concours}</svg><span><i>Concours de la semaine</i><b>${esc(th.name)}</b></span><em>${left ? `${left} essai${left > 1 ? 's' : ''}` : 'Terminé'}</em></button>`;
+  return h + `</div>`;
+}
+function renderTalents(k) {
+  const ch = CHARS[k], p = S.prog[k], need = needXP(p.lvl), f = Math.min(1, p.xp / need);
+  let h = `<div class="tlhead" style="--tint:${ST_TINT[k]}"><div class="tlch">${drawChar(k, S.outfits[k], 'fier', 'tl' + k)}</div><div class="tlx"><span class="kick">${esc(ch.species)} · ${esc(ch.perso)}</span><b>${ch.name}</b><span class="tllv">Niveau ${p.lvl}</span><div class="tlbar"><i style="width:${(f * 100).toFixed(1)}%"></i></div><span class="small">${p.xp} / ${need} exp. · encore ${need - p.xp} pour le niveau ${p.lvl + 1}</span></div></div>`;
+  h += `<h3>Talents</h3><ol class="tlist">${TALENTS[k].map(([l, n, d]) => {
+    const on = p.lvl >= l, next = !on && TALENTS[k].find(x => p.lvl < x[0]) && TALENTS[k].find(x => p.lvl < x[0])[0] === l;
+    return `<li class="tl ${on ? 'on' : next ? 'next' : ''}"><span class="tlb">${on ? '<svg viewBox="0 0 20 20"><path d="M5 10.5 l3.5 3.5 L15 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' : l}</span><div><b>${esc(n)}</b><span>${esc(d)}</span><i>${on ? 'Débloqué' : `Niveau ${l}${next ? ` · encore ${l - p.lvl} niveau${l - p.lvl > 1 ? 'x' : ''}` : ''}`}</i></div></li>`;
+  }).join('')}<li class="tl ${p.lvl >= 7 ? 'on' : ''}"><span class="tlb">+</span><div><b>Chance grandissante</b><span>Chaque niveau rend les trouvailles rares un peu plus fréquentes (actuellement +${Math.round(lvlLuck(k) * 100)} %).</span></div></li></ol>`;
+  h += `<h3>Gagner de l’expérience</h3><ul class="tlhow"><li><b>Voyages et récoltes</b><span>Chaque voyage rapporte de l’expérience.</span></li><li><b>Rêves réalisés</b><span>Un niveau entier d’un coup !</span></li><li><b>Plats adorés</b><span>${esc(ch.name)} adore ${esc(ch.love)}.</span></li><li><b>Atelier et quêtes</b><span>+25 par objet fabriqué, +40 par quête du jour.</span></li><li><b>Concours de style</b><span>+15 par étoile obtenue.</span></li></ul>`;
+  h += `<p class="small">${esc(ch.bio)} N’aime pas : ${esc(ch.hate)}.</p>`;
+  return h;
+}
+function renderContest(k) {
+  const s = styleState(), th = styleTheme(), J = styleJudge(k, th), left = stTriesLeft(), best = stBest(), w = stWeek(), dl = stDaysLeft();
+  let h = `<div class="cthero"><span class="ctrib">Concours de style · semaine ${w.w}</span><h2>${esc(th.name)}</h2><p>${esc(th.desc)}</p><div class="ctmeta"><span>${dl > 1 ? `Encore ${dl} jours` : 'Dernier jour !'}</span><span class="cttry" aria-label="${left} essais restants">${[0, 1, 2].map(i => `<i class="${i < left ? 'on' : ''}"></i>`).join('')} ${left} essai${left > 1 ? 's' : ''}</span></div></div>`;
+  h += `<div class="ctjury">${ST_JURY.map((j, i) => `<div class="ctj"><span class="ctjf">${stJuryFace(i)}</span><b>${j.name}</b><i>${j.role}</i></div>`).join('')}</div>`;
+  h += `<h3>Ce que le jury regarde</h3><ul class="ctcrit">${J.res.map(r => `<li class="${r.v >= 0.99 ? 'ok' : r.v > 0 ? 'mid' : ''}"><span class="ctck">${r.v >= 0.99 ? '✓' : r.v > 0 ? '½' : ''}</span><span>${esc(r.cr.txt)}</span></li>`).join('')}</ul>`;
+  h += `<div class="ctstage" style="--tint:${ST_TINT[k]}"><div class="ctch">${drawChar(k, S.outfits[k], 'fier', 'ct' + k)}</div><div class="ctgo"><b>${CHARS[k].name} est prêt${k === 'mochi' ? '' : 'e'} ?</b><span class="small">Les cases cochées ci-dessus plaisent au jury. Ajustez la tenue à la garde-robe, puis inscrivez-vous.</span><button class="btn green big" data-ctenter="${k}" ${left ? '' : 'disabled'}>${left ? `Inscrire ${CHARS[k].name} !` : 'Plus d’essai'}</button><button class="btn cream sm" data-stgo="garde">Modifier la tenue</button></div></div>`;
+  if (best) h += `<h3>Meilleur résultat de la semaine</h3><div class="ctbest"><div class="ctbc">${drawChar(best.who, best.look, 'amour', 'cb')}</div><div><b>${CHARS[best.who].name}</b>${stStars(best.stars)}<span class="ctavg">${String(best.avg).replace('.', ',')} / 5</span><span class="small">${s.contest.entries.length} essai${s.contest.entries.length > 1 ? 's' : ''} sur 3</span></div></div>`;
+  h += `<h3>Récompenses</h3><ol class="ctlad">${[1, 2, 3, 4, 5].map(t => `<li class="${s.contest.paid >= t ? 'got' : ''}"><span class="ctls">${t}★</span><span>${coins(ST_PRIZE_COINS[t] - ST_PRIZE_COINS[t - 1])}${ST_MEDALS[t] ? ` + ${ST_MEDALS[t][2].toLowerCase()}` : ''}${t === 4 ? ` + « ${esc(th.prize[0])} »` : ''}</span>${s.contest.paid >= t ? '<i>✓</i>' : ''}</li>`).join('')}</ol>`;
+  const tr = s.trophies.slice().reverse();
+  h += `<h3>Vitrine des trophées</h3>`;
+  h += tr.length ? `<div class="cttro">${tr.slice(0, 18).map(t => `<div class="ctt m-${t.medal}" title="${esc(t.name)}"><svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS.concours}</svg><b>${esc(t.name)}</b><i>${t.medal === 'or' ? 'Or' : t.medal === 'argent' ? 'Argent' : 'Bronze'} · ${CHARS[t.who] ? CHARS[t.who].name : ''}</i></div>`).join('')}</div><p class="small">Chaque trophée arrive aussi dans le sac : posez-le dans la maison pour l’exposer.</p>` : `<p class="wrempty">Pas encore de trophée. Trois étoiles suffisent pour le bronze !</p>`;
+  return h;
+}
+function renderCompagnons(box) {
+  styleState(); styleSanitize();
+  const k = S.sel;
+  let h = stSelector();
+  if (compView === 'reves') { box.innerHTML = h + `<div class="streves" id="stReves"></div>`; const d = box.querySelector('#stReves'); if (typeof renderReves === 'function') renderReves(d); else d.innerHTML = `<p class="empty">Les rêves arrivent bientôt.</p>`; return; }
+  if (compView === 'talents') h += renderTalents(k);
+  else if (compView === 'concours') h += renderContest(k);
+  else h += renderWardrobe(k);
+  box.innerHTML = h;
+}
+function openCompagnons(sub) {
+  const m = { garde: 'garde', garderobe: 'garde', 'garde-robe': 'garde', tenues: 'garde', reves: 'reves', quetes: 'reves', succes: 'reves', talents: 'talents', concours: 'concours' };
+  const was = tab === 'compagnons' && compView;
+  if (sub && m[sub]) compView = m[sub];
+  openSheet('compagnons', true);
+  if (was !== compView) $('panelBody').scrollTop = 0;
+}
+function styleSubDot(k) { return k === 'concours' && styleState().contest.entries.length === 0; }
+function stRefresh() { if (tab === 'compagnons') renderPanel(); }
+
+// ---------- verdict du jury ----------
+function stShowResult(r) {
+  const { J, gains, rec, th, entry } = r, k = entry.who;
+  showModal(`<div class="ctres"><span class="ctrib">${esc(th.name)}</span><div class="ctrc">${drawChar(k, S.outfits[k], J.stars >= 4 ? 'amour' : J.stars >= 3 ? 'rire' : 'triste', 'ctr')}</div><h2>${J.stars >= 4 ? 'Bravo !' : J.stars >= 3 ? 'Joli défilé !' : 'Le jury a parlé…'}</h2>
+  <div class="ctvs">${J.jury.map((j, i) => `<div class="ctv" style="--d:${0.25 + i * 0.45}s"><span class="ctjf">${stJuryFace(i)}</span><div><b>${ST_JURY[i].name}</b>${stStars(j.s)}<p>${esc(j.txt)}</p></div></div>`).join('')}</div>
+  <div class="ctfin" style="--d:1.7s"><span>Note finale</span>${stStars(J.stars)}<b>${String(J.avg).replace('.', ',')} / 5</b>${rec ? '<em>Meilleur score de la semaine !</em>' : ''}</div>
+  ${gains.length ? `<div class="ctgain" style="--d:2s"><b>Gagné :</b> ${gains.join(' · ')}</div>` : `<p class="small">${J.stars < 5 ? `Un palier plus haut rapporte plus. Il reste ${stTriesLeft()} essai${stTriesLeft() > 1 ? 's' : ''}.` : ''}</p>`}
+  <button class="btn green big wide" data-closemodal="1">${J.stars >= 3 ? 'Super !' : 'Je ferai mieux !'}</button></div>`);
+  if (J.stars >= 4 && typeof confetti === 'function') setTimeout(() => { try { confetti(J.stars >= 5); } catch (e) {} }, 1800);
+}
+
+// ---------- bouton « Habiller » après un toucher sur un portrait du haut ----------
+function stDressPill(k) {
+  let p = document.getElementById('stDress');
+  if (!p) { p = document.createElement('button'); p.id = 'stDress'; p.className = 'stdress'; (document.querySelector('.game') || document.body).appendChild(p); }
+  p.dataset.stdress = k;
+  p.innerHTML = `<svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS.garde}</svg><span>Habiller ${CHARS[k].name}</span>`;
+  const btn = document.querySelector(`#hudComps .hc-btn[data-sel="${k}"]`), talk = document.getElementById('ccTalk');
+  const r = btn ? btn.getBoundingClientRect() : { left: 16, bottom: 90, width: 60 };
+  let top = r.bottom + 8;
+  if (talk && talk.classList.contains('on') && talk.classList.contains('below')) { const tr = talk.getBoundingClientRect(); top = Math.max(top, parseFloat(talk.style.top) + tr.height + 8); }
+  p.hidden = false; p.classList.remove('on');
+  const pw = p.offsetWidth || 170;
+  p.style.left = Math.max(10, Math.min(innerWidth - pw - 10, r.left + r.width / 2 - 30)) + 'px';
+  p.style.top = top + 'px';
+  requestAnimationFrame(() => p.classList.add('on'));
+  clearTimeout(stDressPill.t); stDressPill.t = setTimeout(() => { p.classList.remove('on'); setTimeout(() => { if (!p.classList.contains('on')) p.hidden = true; }, 250); }, 4200);
+}
+
+// ---------- clics ----------
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('button,[data-stc]');
+  const pill = document.getElementById('stDress');
+  if (pill && !pill.hidden && !(el && el.id === 'stDress')) { if (!(el && el.matches('.hc-btn'))) { pill.classList.remove('on'); pill.hidden = true; } }
+  if (!el || el.disabled) return;
+  const d = el.dataset;
+  if (el.matches('.hc-btn[data-sel]')) { if (tab !== 'compagnons') setTimeout(() => stDressPill(d.sel), 30); return; }
+  if (d.stdress) { el.classList.remove('on'); el.hidden = true; S.sel = d.stdress; stSlot = null; openCompagnons('garde'); return; }
+  if (d.stg) { $('modal').hidden = true; const go = styleGuard._go; styleGuard._go = null; if (d.stg === 'ok' && go) go(); return; }
+  if (d.stc) { if (S.sel !== d.stc) { S.sel = d.stc; S.unseen[d.stc] = 0; stSlot = null; save(); renderAll(); } return; }
+  if (d.stgo) { openCompagnons(d.stgo); return; }
+  if (d.wslot) { stSlot = d.wslot; stRefresh(); return; }
+  if (d.wjump) { const s = document.getElementById('wrSaved'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+  const k = S.sel;
+  if (d.wput) {
+    const it = stItem(d.wput, k); if (!it) return;
+    const cur = stWorn(k, it.sub);
+    if (cur && cur.id === it.id) { styleUnequip(k, it.sub); stJoy = 0; renderAll(); return; }
+    const lent = styleEquip(k, it);
+    stJoy = Date.now(); stJoyLine = lent ? `Merci ${CHARS[lent].name} de me le prêter !` : pick(ST_JOY[k]);
+    renderAll(); stJoyBack(); return;
+  }
+  if (d.wunwear) { styleUnequip(k, d.wunwear); stJoy = 0; renderAll(); return; }
+  if (d.wdye !== undefined && el.closest('.wrdye')) { styleDye(k, stSlot, d.wdye || null); stJoy = Date.now(); stJoyLine = ST_DYE_LINE[k]; renderAll(); stJoyBack(); return; }
+  if (d.wsave) { styleSaveOutfit(k, +d.wsave); stRefresh(); toast(`Tenue ${+d.wsave + 1} de ${CHARS[k].name} enregistrée.`); return; }
+  if (d.wload) { const miss = styleLoadOutfit(k, +d.wload); stJoy = Date.now(); stJoyLine = pick(ST_JOY[k]); renderAll(); stJoyBack(); const sc = $('panelBody'); if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); toast(miss ? `Tenue ${+d.wload + 1} chargée, mais ${miss} vêtement${miss > 1 ? 's ont' : ' a'} quitté le sac.` : `Tenue ${+d.wload + 1} : c’est parti !`); return; }
+  if (d.wshop) { if (typeof openBoutique === 'function') openBoutique('magasin'); else openSheet('boutique'); return; }
+  if (d.ctenter) { const r = styleEnter(d.ctenter); if (!r) return; renderAll(); stShowResult(r); return; }
+});
+// la joie retombe doucement : le compagnon revient à son air content
+function stJoyBack() {
+  clearTimeout(stJoyBack.t);
+  stJoyBack.t = setTimeout(() => {
+    const c = document.querySelector('[data-wrchar]'); if (!c || tab !== 'compagnons' || compView !== 'garde') return;
+    const k = c.dataset.wrchar; c.classList.remove('joy'); c.innerHTML = stCharSVG(k, 'content', 'wr' + k + 'b');
+    const say = document.querySelector('.wrsay'); if (say) say.remove();
+  }, 1700);
+}
+
+// ---------- styles ----------
+(function stCSS() {
+  const css = `
+#sheet[data-kind="compagnons"] .phead{display:none}
+@media (min-width:901px){#sheet[data-kind="compagnons"]{width:min(500px,calc(100% - 32px))}}
+.stsel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.stc{display:flex;align-items:center;gap:6px;min-width:0;background:#fff;border:2.5px solid var(--line);border-radius:16px;padding:4px 6px 4px 4px;cursor:pointer;color:var(--ink);text-align:left;transition:transform .15s}
+.stc img,.stc .livep{width:38px!important;height:42px!important;flex:none;background:var(--tint);border-radius:11px;border:2px solid var(--ink)!important;overflow:hidden;box-sizing:border-box}
+.stc span{display:flex;flex-direction:column;min-width:0}
+.stc b{font:800 14px/1.1 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stc i{font:600 11px/1.2 var(--body);font-style:normal;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stc[aria-selected="true"]{background:var(--tint);border-color:var(--ink);box-shadow:0 3px 0 var(--ink);transform:translateY(-1px)}
+.stc[aria-selected="true"] i{color:var(--ink2)}
+.wr{display:flex;flex-direction:column;gap:10px}
+.wrstage{position:relative;display:grid;grid-template-columns:62px minmax(0,1fr) 62px;gap:4px;align-items:center;padding:20px 6px 10px;border:3px solid var(--ink);border-radius:24px;box-shadow:0 4px 0 rgba(74,53,40,.35);overflow:hidden;
+  background:radial-gradient(ellipse 46% 12% at 50% 86%,rgba(255,255,255,.55) 0 98%,transparent 100%),linear-gradient(transparent 78%,#e7c89c 78%,#d9b48a 100%),repeating-linear-gradient(90deg,rgba(255,255,255,.5) 0 14px,transparent 14px 28px),linear-gradient(180deg,#fffaf0,var(--tint) 70%)}
+.wrgar{position:absolute;left:0;right:0;top:0;width:100%;height:24px;pointer-events:none}
+.wrcol{display:flex;flex-direction:column;gap:8px;align-items:center;z-index:1}
+.wrs{position:relative;width:60px;display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:0;padding:0;cursor:pointer;color:var(--ink);-webkit-tap-highlight-color:transparent}
+.wri{position:relative;width:52px;height:52px;border-radius:50%;background:#fff;border:2.5px solid var(--ink);box-shadow:0 3px 0 var(--ink);display:flex;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
+.wrs.full .wri{border-color:var(--rc);box-shadow:0 3px 0 var(--ink),inset 0 0 0 2px #fff}
+.wri svg{width:100%;height:100%}
+.wrs.vide .wri{border-style:dashed;background:rgba(255,255,255,.65);box-shadow:none}
+.wrs.vide .wri svg{opacity:.45}
+.wri em{position:absolute;right:-3px;bottom:-3px;width:19px;height:19px;border-radius:50%;background:var(--green);color:#fff;border:2px solid var(--ink);font:800 15px/14px var(--display);font-style:normal;text-align:center}
+.wrs b{font:700 12px/1.2 var(--display);background:rgba(255,250,240,.9);border-radius:6px;padding:0 4px}
+.wrs.on .wri{background:#ffe9a8;transform:scale(1.1) rotate(-4deg);outline:3px solid #fff;outline-offset:1px}
+.wrs.on b{background:var(--ink);color:#fff}
+.wrs:active .wri{transform:scale(.94)}
+.wrn{position:absolute;top:-4px;left:2px;min-width:18px;height:18px;border-radius:999px;background:var(--teal);color:#fff;border:2px solid #fff;font:800 11px/14px var(--display);font-style:normal;text-align:center;padding:0 3px;box-sizing:border-box}
+.wrsave .wri{background:#fff3f6}
+.wrmid{position:relative;display:flex;flex-direction:column;align-items:center;min-width:0}
+.wrchar{position:relative;width:100%;max-width:240px}
+.wrchar svg.cc{display:block;width:100%;height:auto}
+.wrchar.joy svg.cc .root{transform-box:view-box;transform-origin:160px 334px;animation:ccHop .62s cubic-bezier(.3,1.3,.5,1) 2}
+.wrspark{position:absolute;inset:0;pointer-events:none}
+.wrspark i{position:absolute;left:50%;top:45%;font:800 20px/1 var(--display);font-style:normal;color:#f6c445;-webkit-text-stroke:1.5px #7a5f50;animation:wrSpark 1.1s ease-out forwards;opacity:0}
+.wrspark i:nth-child(1){--x:-90px;--y:-80px}.wrspark i:nth-child(2){--x:90px;--y:-70px;animation-delay:.08s;color:#f4b7c4}.wrspark i:nth-child(3){--x:-100px;--y:10px;animation-delay:.16s;color:#a9dcc8}.wrspark i:nth-child(4){--x:96px;--y:20px;animation-delay:.1s}.wrspark i:nth-child(5){--x:-30px;--y:-120px;animation-delay:.2s;color:#c9b8ea}.wrspark i:nth-child(6){--x:40px;--y:-115px;animation-delay:.05s;color:#f4b7c4}
+@keyframes wrSpark{0%{opacity:0;transform:translate(-50%,-50%) scale(.3)}25%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1.2) rotate(40deg)}}
+.wrsay{position:absolute;top:-6px;left:50%;transform:translateX(-50%);margin:0;background:#fffaf0;border:2.5px solid var(--ink);border-radius:14px;padding:4px 10px;font:700 13px/1.2 var(--display);text-align:center;width:max-content;max-width:100%;box-shadow:0 3px 0 rgba(74,53,40,.3);animation:wrSay .3s cubic-bezier(.3,1.6,.5,1);z-index:2}
+@keyframes wrSay{from{opacity:0;transform:translate(-50%,8px) scale(.8)}}
+.wrplate{margin-top:-6px;background:#a87a50;color:#fff8ea;border:2.5px solid var(--ink);border-radius:10px;padding:1px 12px 0;font:800 16px/1.3 var(--display);box-shadow:0 3px 0 var(--ink);text-align:center;z-index:1}
+.wrplate small{display:block;font:600 11px/1.2 var(--body);opacity:.9;padding-bottom:2px}
+.wrpanel{display:flex;flex-direction:column;gap:9px;background:#fff;border:2.5px solid var(--ink);border-radius:18px;padding:10px;box-shadow:0 3px 0 rgba(74,53,40,.3)}
+.wrph{display:flex;align-items:center;gap:8px;min-width:0}
+.wrpk{flex:none;background:var(--ink);color:#fff;border-radius:8px;padding:1px 8px;font:700 13px/1.4 var(--display)}
+.wrph b{flex:1;min-width:0;font:800 16px/1.15 var(--display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn.sm{font-size:14px;padding:7px 11px 5px;border-radius:12px;box-shadow:0 3px 0 var(--ink)}
+.wrdye{display:flex;flex-direction:column;gap:5px}
+.wrdl{font:700 12px var(--display);color:var(--ink2);letter-spacing:.04em;text-transform:uppercase}
+.wrsw{display:flex;flex-wrap:wrap;gap:7px}
+.sw{width:30px;height:30px;border-radius:50%;background:var(--c);border:2.5px solid var(--ink);cursor:pointer;padding:0;box-shadow:0 2px 0 var(--ink);transition:transform .15s}
+.sw:hover{transform:translateY(-2px)}
+.sw[aria-pressed="true"]{outline:3px solid var(--teal);outline-offset:2px;transform:scale(1.08)}
+.sw.reset{display:flex;align-items:center;justify-content:center}.sw.reset svg{width:17px;height:17px;background:rgba(255,255,255,.8);border-radius:50%;padding:1px}
+.wrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.wrv{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;background:#fffaf0;border:2.5px solid var(--line);border-radius:14px;padding:6px 4px 6px;cursor:pointer;color:var(--ink);text-align:center;min-width:0;transition:transform .15s}
+.wrv:hover{transform:translateY(-2px);border-color:var(--rc)}
+.wrv:active{transform:scale(.96)}
+.wrv.on{background:#e6f6e9;border-color:var(--greenD);box-shadow:0 3px 0 var(--greenD)}
+.wrvi{width:46px;height:46px;border-radius:12px;background:#fff;border:2px solid var(--rc);display:flex;padding:5px;box-sizing:border-box}
+.wrvi svg{width:100%;height:100%}
+.wrv b{font:700 12.5px/1.15 var(--display);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:2px}
+.wrv>i{font:700 11px/1.2 var(--body);font-style:normal}
+.wrvp{font-size:10.5px;color:var(--muted);max-width:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.wrvp .rgp{font-size:10.5px;max-width:100%}
+.wrtag{position:absolute;top:-8px;right:-4px;background:var(--green);color:#fff;border:2px solid #fff;border-radius:999px;padding:0 7px;font:800 11px/16px var(--display);font-style:normal;box-shadow:0 1px 0 rgba(0,0,0,.2)}
+.wrtag.lend{background:#b9a6d9;max-width:92%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wrempty{margin:0;color:var(--muted);font-size:13.5px;text-align:center;padding:4px}
+.wrshop{display:flex;align-items:center;gap:8px;background:#fff3c4;border:2px dashed var(--goldD);border-radius:14px;padding:7px 9px}
+.wrshop svg{width:30px;height:30px;flex:none;color:var(--ink)}
+.wrshop span{flex:1;font:700 13.5px/1.25 var(--display)}
+.wrsaved{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.wrout{display:flex;flex-direction:column;align-items:center;gap:4px;background:#fff;border:2.5px solid var(--ink);border-radius:16px;padding:6px 5px 7px;box-shadow:0 3px 0 rgba(74,53,40,.3);min-width:0}
+.wrout.vide{border-style:dashed;background:#fffaf0;box-shadow:none}
+.wroc{width:100%;aspect-ratio:1/1;background:linear-gradient(180deg,#fff8ea,var(--tint));border-radius:11px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.wroc svg{width:94%;height:auto}
+.wroc span{font:800 30px var(--display);color:var(--line)}
+.wrout>b{font:800 13px var(--display)}
+.wrob{display:flex;flex-direction:column;gap:5px;width:100%}
+.wrob .btn{width:100%;padding:6px 2px 4px;font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.wrcontest{display:flex;align-items:center;gap:10px;background:linear-gradient(90deg,#fff3c4,#ffe1ec);border:2.5px solid var(--ink);border-radius:16px;padding:8px 12px;box-shadow:0 3px 0 var(--ink);cursor:pointer;color:var(--ink);text-align:left}
+.wrcontest svg{width:36px;height:36px;flex:none}
+.wrcontest span{flex:1;display:flex;flex-direction:column;min-width:0}
+.wrcontest i{font:700 11.5px var(--display);font-style:normal;color:var(--rust);text-transform:uppercase;letter-spacing:.05em}
+.wrcontest b{font:800 16px/1.15 var(--display)}
+.wrcontest em{font:800 12.5px var(--display);font-style:normal;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:1px 8px;white-space:nowrap}
+.streves{display:flex;flex-direction:column;gap:12px}.streves>*{flex-shrink:0}
+.stgm{width:120px}.stgm svg{width:100%;height:auto}
+.stgb{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+/* talents */
+.tlhead{display:flex;gap:12px;align-items:center;background:linear-gradient(180deg,#fffaf0,var(--tint));border:2.5px solid var(--ink);border-radius:20px;padding:8px 12px 8px 6px;box-shadow:0 3px 0 rgba(74,53,40,.3)}
+.tlch{width:104px;flex:none}.tlch svg{width:100%;height:auto;display:block}
+.tlx{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.tlx>b{font:800 24px/1 var(--display)}
+.tllv{align-self:flex-start;background:var(--gold);border:2px solid var(--ink);border-radius:999px;padding:0 10px;font:800 14px/1.5 var(--display)}
+.tlbar{height:12px;border:2px solid var(--ink);border-radius:999px;background:#fff;overflow:hidden}.tlbar i{display:block;height:100%;background:linear-gradient(90deg,#f6c445,#f2a93b)}
+.tlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.tl{display:flex;gap:10px;align-items:flex-start;background:#fff;border:2px solid var(--line);border-radius:14px;padding:8px 10px;opacity:.75}
+.tl.on{opacity:1;border-color:var(--greenD);background:#f1faf3}.tl.next{opacity:1;border-color:var(--goldD);border-style:dashed;background:#fffbea}
+.tlb{flex:none;width:30px;height:30px;border-radius:50%;background:#efe4d0;border:2px solid var(--ink);font:800 14px/26px var(--display);text-align:center}
+.tl.on .tlb{background:var(--green)}.tlb svg{width:20px;height:20px;margin-top:3px}
+.tl div{display:flex;flex-direction:column;gap:1px}.tl b{font:800 15px var(--display)}.tl span{font-size:13.5px;color:var(--ink2)}.tl i{font:700 12px var(--display);font-style:normal;color:var(--teal)}
+.tlhow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.tlhow li{background:#fffaf0;border:2px solid var(--line);border-radius:12px;padding:6px 9px;display:flex;flex-direction:column}.tlhow b{font:700 13.5px var(--display)}.tlhow span{font-size:12.5px;color:var(--ink2)}
+/* concours */
+.cthero{position:relative;background:linear-gradient(135deg,#ffe1ec,#fff3c4 60%,#e1f0e9);border:3px solid var(--ink);border-radius:22px;padding:12px 14px 10px;box-shadow:0 4px 0 rgba(74,53,40,.35);text-align:center}
+.ctrib{display:inline-block;background:var(--rust);color:#fff;border:2px solid var(--ink);border-radius:999px;padding:1px 12px;font:800 12px/1.5 var(--display);letter-spacing:.04em;text-transform:uppercase}
+.cthero h2{margin:6px 0 2px;font:800 26px/1.05 var(--display);text-wrap:balance}
+.cthero p{margin:0;color:var(--ink2);font-size:14px;line-height:1.35}
+.ctmeta{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:7px;font:700 13px var(--display)}
+.cttry{display:inline-flex;align-items:center;gap:3px}.cttry i{width:11px;height:11px;border-radius:50%;border:2px solid var(--ink);background:#fff}.cttry i.on{background:var(--pink)}
+.ctjury{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.ctj{display:flex;flex-direction:column;align-items:center;background:#fff;border:2px solid var(--line);border-radius:14px;padding:6px 4px;text-align:center;min-width:0}
+.ctjf{width:46px;height:46px;flex:none;display:block}.ctjf svg{width:100%;height:100%}
+.ctj b{font:800 12.5px/1.15 var(--display)}.ctj i{font-size:11px;font-style:normal;color:var(--muted)}
+.ctcrit{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.ctcrit li{display:flex;gap:8px;align-items:center;background:#fff;border:2px solid var(--line);border-radius:12px;padding:5px 9px;font-size:14px}
+.ctck{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid var(--line);font:800 13px/18px var(--display);text-align:center;color:#fff}
+.ctcrit li.ok{border-color:#9fd3ae;background:#f1faf3}.ctcrit li.ok .ctck{background:var(--green);border-color:var(--greenD)}
+.ctcrit li.mid .ctck{background:var(--gold);border-color:var(--goldD);color:var(--ink)}
+.ctstage{display:flex;gap:10px;align-items:center;background:linear-gradient(180deg,#fffaf0,var(--tint));border:2.5px solid var(--ink);border-radius:20px;padding:8px 12px 10px 6px}
+.ctch{width:120px;flex:none}.ctch svg{width:100%;height:auto;display:block}
+.ctgo{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}.ctgo>b{font:800 17px var(--display)}
+.ctgo .btn.big{white-space:normal;text-align:center}
+.ctbest{display:flex;gap:10px;align-items:center;background:#fff;border:2.5px solid var(--ink);border-radius:16px;padding:6px 10px 6px 4px}
+.ctbc{width:76px;flex:none}.ctbc svg{width:100%;height:auto;display:block}
+.ctbest>div:last-child{display:flex;flex-direction:column;gap:2px}.ctbest b{font:800 16px var(--display)}
+.ctavg{font:800 15px var(--display);color:var(--ink2)}
+.stst{display:inline-flex;gap:1px}
+.sts{font:800 20px/1 var(--display);font-style:normal;color:#e7dcc4;-webkit-text-stroke:1.2px #a89880}
+.sts.on{color:#f6c445;-webkit-text-stroke:1.2px #a87a1e}
+.ctlad{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.ctlad li{display:flex;align-items:center;gap:8px;background:#fff;border:2px solid var(--line);border-radius:12px;padding:4px 9px;font-size:13.5px}
+.ctlad li.got{background:#f1faf3;border-color:#9fd3ae}
+.ctls{flex:none;width:34px;font:800 15px var(--display);color:var(--goldD)}
+.ctlad li span:nth-child(2){flex:1}.ctlad li i{font-style:normal;font-weight:800;color:var(--greenD)}
+.cttro{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:7px}
+.ctt{display:flex;flex-direction:column;align-items:center;text-align:center;background:linear-gradient(180deg,#fffaf0,#f6ead2);border:2px solid var(--ink);border-radius:14px;padding:6px 4px}
+.ctt svg{width:36px;height:36px}.ctt.m-argent svg{filter:grayscale(1) brightness(1.15)}.ctt.m-bronze svg{filter:sepia(.6) hue-rotate(-20deg) saturate(1.3) brightness(.9)}
+.ctt b{font:700 11.5px/1.15 var(--display)}.ctt i{font-size:10.5px;font-style:normal;color:var(--muted)}
+.ctres{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%}
+.ctrc{width:110px}.ctrc svg{width:100%;height:auto}
+.ctvs{display:flex;flex-direction:column;gap:6px;width:100%}
+.ctv{display:flex;gap:8px;align-items:flex-start;text-align:left;background:#fff;border:2px solid var(--line);border-radius:14px;padding:6px 8px;animation:ctIn .45s cubic-bezier(.3,1.5,.5,1) both;animation-delay:var(--d)}
+.ctv b{font:800 14px var(--display);margin-right:6px}.ctv p{margin:2px 0 0;font-size:13.5px;line-height:1.3;color:var(--ink2)}
+.ctv .sts{font-size:16px}
+.ctfin,.ctgain{animation:ctIn .5s cubic-bezier(.3,1.5,.5,1) both;animation-delay:var(--d)}
+.ctfin{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;font:700 14px var(--display)}.ctfin b{font:800 20px var(--display)}.ctfin em{flex-basis:100%;font-style:normal;color:var(--rust);font-weight:800}
+.ctfin .sts{font-size:26px}
+.ctgain{background:#fff3c4;border:2px dashed var(--goldD);border-radius:12px;padding:6px 10px;font-size:13.5px}
+@keyframes ctIn{from{opacity:0;transform:translateY(10px) scale(.95)}}
+/* bouton « Habiller » sous un portrait */
+.stdress{position:fixed;z-index:31;display:flex;align-items:center;gap:5px;background:var(--gold);border:2.5px solid var(--ink);border-radius:999px;padding:4px 12px 3px 6px;font:800 14px var(--display);color:var(--ink);box-shadow:0 3px 0 var(--ink);cursor:pointer;opacity:0;transform:translateY(-6px) scale(.9);transition:opacity .18s,transform .28s cubic-bezier(.3,1.6,.5,1)}
+.stdress.on{opacity:1;transform:none}
+.stdress svg{width:24px;height:24px;background:#fff;border-radius:50%;border:1.5px solid var(--ink)}
+@media (max-width:420px){.wrstage{grid-template-columns:58px minmax(0,1fr) 58px;padding:20px 3px 10px}.wrs{width:56px}.wri{width:48px;height:48px;padding:7px}.wrgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.wrv b{font-size:12px}.sw{width:27px;height:27px}.wrsw{gap:6px}.stc{padding:3px 4px 3px 3px;gap:4px}.stc img,.stc .livep{width:32px!important;height:36px!important}.stc b{font-size:13px}.ctch{width:100px}.cthero h2{font-size:23px}}
+@media (prefers-reduced-motion:reduce){.wrspark,.wrchar.joy svg.cc .root{display:none;animation:none!important}.ctv,.ctfin,.ctgain{animation:none}}
+`;
+  const st = document.createElement('style'); st.id = 'stCSS'; st.textContent = css; document.head.appendChild(st);
+})();
+
+window.__style = { api: () => ({ GAME, openSheet, closeSheet, selectComp, save, renderPanel, openAchievements: typeof openAchievements === 'function' ? openAchievements : null, setQuestView: v => { questView = v; }, tabDebug: window.__tabDebug }), renderCompagnons, styleGuard, styleState, styleEquip, styleUnequip, styleDye, styleSaveOutfit, styleLoadOutfit, styleJudge, styleEnter, styleTheme, styleSanitize, styleWornBy, ST_THEMES, openCompagnons, stWeek };
 
 })();
 </script>

@@ -87,6 +87,7 @@ function gainCoins(n) {
 function value(it) {
   const base = [6, 16, 42, 120, 380][it.rarity] || 6;
   const m = { v: 1.2, m: 1, n: 0.6, d: 1.5, t: 2 }[it.cat] || 1;
+  if (it.near) return Math.round(30 * m); // spécialité d'un lieu du quotidien : souvenir, pas un trésor à revendre
   return Math.round(base * m * (it.special ? 1.8 : 1) * (it.edition ? 2.5 : 1));
 }
 

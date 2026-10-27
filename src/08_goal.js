@@ -126,7 +126,7 @@ function claimChapter() {
 function showModal(html) { const m = $('modal'); m.querySelector('.mbox').innerHTML = html; m.hidden = false; }
 function maybeIntro() {
   if (S.seenIntro) return;
-  showModal(`<div class="mart">${drawChar('pistache', S.outfits.pistache, 'rire', 'intro')}</div><h2>Bienvenue dans le Carnet de voyage !</h2><p>Pistache, Mochi et Bulle ont plein de rêves. <b>Votre mission : les réaliser !</b></p><ul class="mlist"><li><b>Regardez leur rêve</b>, en haut de l’écran, avec ses étapes.</li><li><b>Touchez « Partir »</b> : le jeu choisit le bon endroit, près de chez vous ou au bout du monde.</li><li><b>Rapportez des trésors</b> et fabriquez ce qu’il faut. Chaque rêve réalisé fait grandir le village.</li></ul><p>Le premier rêve de Pistache ne prend que deux petites balades !</p><button class="btn green big" data-closemodal="intro">C’est parti !</button>`);
+  showModal(`<div class="mart">${drawChar('pistache', S.outfits.pistache, 'rire', 'intro')}</div><h2>Bienvenue dans le Carnet de voyage !</h2><p>Pistache, Mochi et Bulle tiennent une petite boutique et rêvent de voyages. <b>Trois gestes suffisent :</b></p><ol class="mlist"><li><b>Partir</b> : touchez « Partir » en haut (un rêve) ou « Partir chercher » (une commande).</li><li><b>Livrer à la boutique</b> : les clients paient en pièces et en réputation.</li><li><b>Habiller son compagnon</b> : vêtements, couleurs et concours de style.</li></ol><p>Le premier rêve de Pistache ne prend que deux petites balades !</p><button class="btn green big" data-closemodal="intro">C’est parti !</button>`);
 }
 document.addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;

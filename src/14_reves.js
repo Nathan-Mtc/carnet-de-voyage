@@ -216,6 +216,8 @@ function dreamAdvance(k, fn) {
   });
   return gains;
 }
+// le sous-onglet Rêves (onglet Compagnons) est-il affiché ? (ancien onglet 'reves' accepté aussi)
+const revesShown = () => tab === 'reves' || (tab === 'compagnons' && typeof compView !== 'undefined' && compView === 'reves');
 let _dreamFlash = null; // étape tout juste réussie (petite animation sur la carte de rêve)
 GAME.on('trip:return', ({ who, trip, dest, items }) => {
   if (!who || !S.dreams) return;
@@ -227,7 +229,7 @@ GAME.on('trip:return', ({ who, trip, dest, items }) => {
   });
   if (!gains.length) return;
   save(); _dreamFlash = { k: who, idx: gains.map(g => g.i), t: Date.now() };
-  renderGoal();
+  renderGoal(); if (revesShown()) renderPanel();
   announceGains(gains);
 });
 GAME.on('craft', ({ id }) => {
@@ -236,7 +238,7 @@ GAME.on('craft', ({ id }) => {
   for (const k of Object.keys(CHARS)) all.push(...dreamAdvance(k, st => st.t === 'craft' && st.id === id ? 1 : 0));
   if (!all.length) return;
   save(); _dreamFlash = { k: all[0].k, idx: all.map(g => g.i), t: Date.now() };
-  renderGoal(); if (tab === 'reves') renderPanel();
+  renderGoal(); if (revesShown()) renderPanel();
   const g = all[0], name = CHARS[g.k].name;
   setTimeout(() => toast(dreamReady(g.k) ? `Toutes les étapes du rêve de ${name} sont faites ! Réalisez-le depuis la carte.` : `Rêve de ${name} : « ${g.st.txt} », c’est fait !`), 900);
 });

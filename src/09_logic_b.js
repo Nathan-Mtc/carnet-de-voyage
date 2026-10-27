@@ -36,6 +36,8 @@ function startTrip() {
   plan.dest = null; save(); renderAll();
 }
 function rollRarity(base, luck) { let r = base; while (r < 4 && Math.random() < 0.08 * (1 + luck * 0.6) * Math.pow(0.5, r - base)) r++; return r; }
+// spécialité d'un lieu du quotidien (tout près de chez soi) : un joli souvenir, mais peu cher à la revente (la boutique doit rester plus rentable)
+function poiNear(it, place) { if (!place || place.poi) it.near = 1; return it; }
 function makeItem(def, luck, place, tags, extra = {}) {
   const [name, cat, sub, base, look, color] = def;
   const rarity = extra.fixed != null ? extra.fixed : extra.special ? Math.max(base, 3) : rollRarity(base, luck);
@@ -144,7 +146,7 @@ function fireEvent(t, e) {
       if (place.secret) {
         const s = SECRETS.find(x => x.key === place.secret);
         s.loot.forEach(d => items.push(makeItem(d, 0, pName, tags, { fixed: 4, special: true, edition: S.found[s.name] ? null : 'Édition originale' })));
-      } else if (place.special && (!S.found[pName] || Math.random() < (place.poi ? 0.08 : 0.3) + t.luck * 0.1)) items.push(makeItem(place.special, t.luck, pName, tags, { special: true, edition: S.found[pName] ? null : 'Édition originale' }));
+      } else if (place.special && (!S.found[pName] || Math.random() < (place.poi ? 0.08 : 0.3) + t.luck * 0.1)) items.push(poiNear(makeItem(place.special, t.luck, pName, tags, { special: true, edition: S.found[pName] ? null : 'Édition originale' }), place));
       t.bag.push(...items); t.xp += 20;
       const p = photo([k], pName);
       J({ kind: 'photo', text: place.secret ? `${n} a trouvé ${pName} ! Personne ne croira ce qu’il a vu.` : pick([`${n} est arrivé à ${pName} ! Regarde-moi cette vue.`, `Bien arrivé à ${pName}. ${n} t’envoie une carte postale.`]), photo: p, items });
@@ -152,7 +154,7 @@ function fireEvent(t, e) {
     }
     case 'decouverte': {
       const items = lootFor(tags, t.luck, pName, 1, k);
-      if (place.special && Math.random() < 0.08 + t.luck * 0.05) items.push(makeItem(place.special, t.luck, pName, tags, { special: true }));
+      if (place.special && Math.random() < 0.08 + t.luck * 0.05) items.push(poiNear(makeItem(place.special, t.luck, pName, tags, { special: true }), place));
       t.bag.push(...items); t.xp += 8;
       J({ kind: 'photo', text: pick([`Petit détour par ${pName}.`, `${n} fait une pause à ${pName}.`, `Halte à ${pName}, ${n} sourit pour la photo.`]), photo: photo([k], pName), items });
       break;

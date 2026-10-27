@@ -279,7 +279,11 @@ function runLogin() {
   if (!S.seenIntro) return;
   if (!$('modal').hidden) { setTimeout(runLogin, 1500); return; }
   const got = checkLogin();
-  if (got) { gainCoinsSilent(got.coins); renderAll(); renderJeuBar(); loginModal(got); }
+  if (!got) return;
+  gainCoinsSilent(got.coins); renderAll(); renderJeuBar();
+  // tout premier lancement : juste après le tutoriel, un simple message plutôt qu'une deuxième grande fenêtre
+  if ((S.login.total || 0) <= 1 && !got.item) { toast(`Cadeau du jour : +${got.coins} pièces !`); if (typeof coinFX === 'function') coinFX(got.coins); return; }
+  loginModal(got);
 }
 // les pièces du cadeau sont ajoutées sans animation immédiate (l'animation part du cadeau)
 function gainCoinsSilent(n) { const r = window.__jeuReady; window.__jeuReady = false; gainCoins(n); window.__jeuReady = r; }
@@ -499,7 +503,7 @@ setInterval(() => {
   const tiers = checkTiers(), achs = checkAch();
   tiers.forEach(t => toast(tierText(t)));
   achs.forEach(achPop);
-  if (tiers.length || achs.length) { renderTop(); renderNav(); renderJeuBar(); if (tab === 'reves' || tab === 'quetes' || (tab === 'sac' && sacView === 'col')) renderPanel(); }
+  if (tiers.length || achs.length) { renderTop(); renderNav(); renderJeuBar(); if (tab === 'reves' || tab === 'quetes' || (tab === 'compagnons' && compView === 'reves') || (tab === 'sac' && sacView === 'col')) renderPanel(); }
   else layoutJeuBar();
 }, 1500);
 window.__jeu = { setEvent: i => { _evCache = { dk: dayKey(), ev: EVENTS[i] }; renderJeuBar(); }, renderGoal: () => renderGoal(), todayEvent, EVENTS, ACH, checkTiers, checkAch, checkLogin, showHaul, coinFX, confetti, goalState };
