@@ -24,10 +24,10 @@ const WATER = ['mer', 'lac', 'ile'];
 // ================= ÉTAT =================
 const SAVE = 'carnet-voyage-v2';
 const fresh = () => ({
-  v: 2, home: 'Lyon', sel: 'pistache', coins: 150, inv: [], album: [], found: {}, dex: {}, secrets: [],
-  outfits: Object.fromEntries(Object.keys(CHARS).map(k => [k, { ...CHARS[k].outfit, col: {} }])),
-  trips: { pistache: null, mochi: null, bulle: null }, unseen: { pistache: 0, mochi: 0, bulle: 0 },
-  prog: { pistache: { xp: 0, lvl: 1 }, mochi: { xp: 0, lvl: 1 }, bulle: { xp: 0, lvl: 1 } },
+  v: 2, home: 'Lyon', sel: '', coins: 150, inv: [], album: [], found: {}, dex: {}, secrets: [],
+  // v13 : les compagnons sont des individus (S.comps), créés par addComp (20_collection.js) ; les tables ci-dessous sont indexées par leur id
+  comps: {}, team: [], eggs: [],
+  outfits: {}, trips: {}, unseen: {}, prog: {},
   house: {}, market: { day: 0, refresh: 0, list: [], mine: [] }, daily: { day: 0, quests: [], chest: false }, colClaimed: {}, stats: { trips: 0, crafted: 0, sold: 0 },
   // ajouts (boucle de jeu) : chaque clé a une valeur par défaut pour les anciennes sauvegardes
   login: { last: 0, streak: 0, best: 0, total: 0 }, // cadeau quotidien et série de jours
@@ -42,15 +42,32 @@ const fresh = () => ({
 function patchSave(s) {
   const f = fresh();
   for (const k of ['stats', 'login', 'daily', 'market', 'prog', 'trips', 'unseen']) s[k] = Object.assign({}, f[k], s[k] || {});
-  for (const k of Object.keys(f.prog)) s.prog[k] = Object.assign({ xp: 0, lvl: 1 }, s.prog[k] || {});
+  for (const k of Object.keys(s.prog)) s.prog[k] = Object.assign({ xp: 0, lvl: 1 }, s.prog[k] || {});
   for (const k of ['tiers', 'achSeen', 'achClaimed', 'colClaimed', 'found', 'dex', 'house']) if (!s[k] || typeof s[k] !== 'object') s[k] = {};
   return s;
 }
 let S = fresh();
+let SAVE_LOADED = false; // une partie existait déjà (sinon : nouvelle partie, avec l'œuf mystère)
 try {
   const raw = localStorage.getItem(SAVE);
-  if (raw) { const d = JSON.parse(raw); if (d && d.v === 2) S = Object.assign(fresh(), d); }
-  else { const old = localStorage.getItem('carnet-voyage-v1'); if (old) { const d = JSON.parse(old); S.inv = d.inv || []; S.album = d.album || []; S.home = d.home || S.home; S.found = d.found || {}; S.inv.forEach(i => S.dex[i.name] = true); } }
+  if (raw) { const d = JSON.parse(raw); if (d && d.v === 2) { S = Object.assign(fresh(), d); SAVE_LOADED = true; if (!d.comps || typeof d.comps !== 'object') S.comps = null; } }
+  else { const old = localStorage.getItem('carnet-voyage-v1'); if (old) { const d = JSON.parse(old); S.inv = d.inv || []; S.album = d.album || []; S.home = d.home || S.home; S.found = d.found || {}; S.inv.forEach(i => S.dex[i.name] = true); SAVE_LOADED = true; S.comps = null; } }
+} catch (e) {}
+// ancienne sauvegarde (v12 et avant) : Pistache, Mochi et Bulle deviennent des individus, avec leurs gènes d'origine.
+// Leurs clés restent 'pistache', 'mochi' et 'bulle' : vêtements, niveaux, voyages en cours et rêves sont conservés tels quels.
+try {
+  if (!S.comps || typeof S.comps !== 'object' || Array.isArray(S.comps)) {
+    S.comps = {};
+    if (SAVE_LOADED) {
+      const OLD = [['pistache', 'panda', 1], ['mochi', 'capy', 0], ['bulle', 'axo', 1]];
+      for (const [k, sp, fem] of OLD) S.comps[k] = { id: k, sp, name: (CHARS[k] && CHARS[k].name) || k, genes: null, rarity: 0, born: S.stats && S.stats.firstDay || Date.now(), from: { how: 'depart' }, fem: !!fem };
+      S.team = OLD.map(x => x[0]);
+      for (const [k] of OLD) { if (!S.prog[k]) S.prog[k] = { xp: 0, lvl: 1 }; if (!(k in S.trips)) S.trips[k] = null; if (!(k in S.unseen)) S.unseen[k] = 0; if (!S.outfits[k]) S.outfits[k] = { ...CHARS[k].outfit, col: {} }; }
+      if (!S.comps[S.sel]) S.sel = 'pistache';
+    }
+  }
+  if (!Array.isArray(S.team)) S.team = [];
+  if (!Array.isArray(S.eggs)) S.eggs = [];
 } catch (e) {}
 try { patchSave(S); } catch (e) {}
 function save() { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) {} }
@@ -61,8 +78,11 @@ let fast = false;
 
 // ================= PROGRESSION =================
 const needXP = l => 80 + l * 50;
-const hasTalent = (k, idx) => S.prog[k].lvl >= TALENTS[k][idx][0];
-const lvlLuck = k => (S.prog[k].lvl - 1) * 0.1;
+// talents de l'espèce du compagnon k (voir TALENTS) ; hasEff(k, 'flair') : k a-t-il débloqué cet effet ?
+const talentsOf = k => TALENTS[typeof spOf === 'function' ? spOf(k) : k] || TALENTS.def;
+const hasTalent = (k, idx) => !!(S.prog[k] && talentsOf(k)[idx] && S.prog[k].lvl >= talentsOf(k)[idx][0]);
+const hasEff = (k, eff) => !!(k && S.prog[k] && talentsOf(k).some(t => t[3] === eff && S.prog[k].lvl >= t[0]));
+const lvlLuck = k => S.prog[k] ? (S.prog[k].lvl - 1) * 0.1 : 0;
 function comfort() {
   let c = 0;
   for (const v of Object.values(S.house)) { if (!v) continue; c += v.photo ? 1 : (v.item ? v.item.rarity + 1 : 0); }
@@ -70,13 +90,14 @@ function comfort() {
 }
 const comfortBonus = () => Math.min(0.5, comfort() * 0.03);
 function addXP(k, amount, why) {
-  const p = S.prog[k]; const gain = Math.round(amount * (1 + comfortBonus()));
+  const p = S.prog[k]; if (!p) return 0; const gain = Math.round(amount * (1 + comfortBonus()));
   p.xp += gain;
   let up = false;
   while (p.xp >= needXP(p.lvl)) { p.xp -= needXP(p.lvl); p.lvl++; up = true; }
   if (up) {
-    const t = TALENTS[k].find(x => x[0] === p.lvl);
-    setTimeout(() => reactionPopup(k, 'rire', t ? `Niveau ${p.lvl} ! Nouveau talent : ${t[1]}` : `Niveau ${p.lvl} ! Je me sens plus chanceux.`, true), 400);
+    // plus de fenêtre spontanée : une simple notification
+    const t = talentsOf(k).find(x => x[0] === p.lvl), n = CHARS[k] ? CHARS[k].name : '';
+    setTimeout(() => toast(t ? `${n} passe au niveau ${p.lvl} ! Nouveau talent : ${t[1]}` : `${n} passe au niveau ${p.lvl} !`), 400);
   }
   return gain;
 }

@@ -6,8 +6,11 @@
 // ---------- état ----------
 const ST_SLOT_IDS = SLOTS.map(s => s[0]);
 const ST_LEFT = ['tete', 'cou', 'haut', 'mains'], ST_RIGHT = ['dos', 'bas', 'pieds'];
-const ST_TINT = { pistache: '#ffe1cc', mochi: '#f3e6d3', bulle: '#ffe0ea' };
-const ST_TINT2 = { pistache: '#f7b98f', mochi: '#dcc0a0', bulle: '#f6b3c8' };
+// teintes par ESPÈCE (v13) : la couleur de fond de la garde-robe et des fiches
+const ST_TINT = { panda: '#ffe1cc', capy: '#f3e6d3', axo: '#ffe0ea', renard: '#e4f0fa', fennec: '#fbebd2', tanuki: '#efe5dc', paresseux: '#efe8dc', lemur: '#ecebf1', phoque: '#e2eef5', quokka: '#f6e8dc' };
+const ST_TINT2 = { panda: '#f7b98f', capy: '#dcc0a0', axo: '#f6b3c8', renard: '#b9d4ea', fennec: '#ecc98f', tanuki: '#c9ab92', paresseux: '#c8b49a', lemur: '#bdbccb', phoque: '#a9c7da', quokka: '#ddb89a' };
+const stSp = k => (typeof spOf === 'function' ? spOf(k) : k);
+const stTint = k => ST_TINT[stSp(k)] || '#fff3dc', stTint2 = k => ST_TINT2[stSp(k)] || '#ecd3a8';
 function stWeek(d = new Date()) {
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), day = t.getUTCDay() || 7;
   t.setUTCDate(t.getUTCDate() + 4 - day);
@@ -24,7 +27,7 @@ function styleState() {
   if (!Array.isArray(s.trophies)) s.trophies = [];
   if (!s.colors || typeof s.colors !== 'object') s.colors = {};
   if (!s.saved || typeof s.saved !== 'object') s.saved = {};
-  for (const k of Object.keys(CHARS)) {
+  for (const k of Object.keys(S.comps || {}).filter(k => CHARS[k])) {
     if (!Array.isArray(s.saved[k])) s.saved[k] = [null, null, null];
     while (s.saved[k].length < 3) s.saved[k].push(null);
     if (!S.outfits[k] || typeof S.outfits[k] !== 'object') S.outfits[k] = { ...CHARS[k].outfit, col: {} };
@@ -205,14 +208,14 @@ const ST_CR = {
   rarity: avg => c => c.n ? Math.min(1, c.list.reduce((a, x) => a + x.rarity, 0) / c.n / avg) : 0,
   rare: (r, n) => c => Math.min(1, c.list.filter(x => x.rarity >= r).length / n),
   hues: n => c => Math.min(1, new Set(c.list.map(x => stHueFam(x.color)).filter(f => f !== 'neutre')).size / n),
-  comp: k => Object.assign(c => c.k === k ? 1 : 0, { bonus: 1 }),
+  comp: sp => Object.assign(c => stSp(c.k) === sp ? 1 : 0, { bonus: 1 }), // bonus d'espèce (axo, panda, capy…)
 };
 // j : juré qui y tient le plus (0 Madame Froufrou : élégance · 1 Capitaine Moustache : le thème · 2 Lulu Paillettes : couleurs et fantaisie)
 const ST_THEMES = [
   { id: 'montagne', name: 'Hiver à la montagne', desc: 'Il neige sur les sommets : il faut être bien emmitouflé !', prize: ['Bonnet des cimes', 'v', 'tete', 3, 'bonnet', '#9fb6e8'],
     crit: [{ txt: 'Un bonnet bien chaud', f: ST_CR.look('bonnet'), w: 2, j: 1 }, { txt: 'Une écharpe ou un foulard', f: ST_CR.look('echarpe', 'foulard'), w: 1.5, j: 0 }, { txt: 'Des gants ou des moufles', f: ST_CR.look('gants', 'moufles'), w: 1.5, j: 1 }, { txt: 'Un pull ou un sweat', f: ST_CR.look('pull', 'sweat'), w: 1, j: 0 }, { txt: 'Un objet trouvé à la montagne ou dans la neige', f: ST_CR.tags(['montagne', 'neige'], 1), w: 1.5, j: 1 }, { txt: 'Pas de short par ce froid', f: ST_CR.not('short'), w: 0.5, j: 2 }] },
   { id: 'plage', name: 'Journée à la plage', desc: 'Soleil, sable chaud et petites vagues : tenue légère exigée.', prize: ['Chapeau de paille des vagues', 'v', 'tete', 3, 'chapeau', '#f6e08a'],
-    crit: [{ txt: 'Un chapeau ou une casquette contre le soleil', f: ST_CR.look('chapeau', 'casquette'), w: 2, j: 1 }, { txt: 'Un t-shirt', f: ST_CR.look('tshirt'), w: 1, j: 0 }, { txt: 'Un short ou une jupe', f: ST_CR.look('short', 'jupe'), w: 1.5, j: 1 }, { txt: 'Deux couleurs claires et ensoleillées', f: ST_CR.col('clair', 2), w: 1, j: 2 }, { txt: 'Un objet rapporté de la mer, d’une île ou d’une plage', f: ST_CR.tags(['mer', 'ile', 'plage', 'port', 'piscine', 'glacier'], 1), w: 1.5, j: 1 }, { txt: 'Pas de moufles à la plage !', f: ST_CR.not('moufles', 'bonnet'), w: 1, j: 2 }, { txt: 'Bulle, la reine de l’eau', f: ST_CR.comp('bulle'), w: 0.5, j: 2 }] },
+    crit: [{ txt: 'Un chapeau ou une casquette contre le soleil', f: ST_CR.look('chapeau', 'casquette'), w: 2, j: 1 }, { txt: 'Un t-shirt', f: ST_CR.look('tshirt'), w: 1, j: 0 }, { txt: 'Un short ou une jupe', f: ST_CR.look('short', 'jupe'), w: 1.5, j: 1 }, { txt: 'Deux couleurs claires et ensoleillées', f: ST_CR.col('clair', 2), w: 1, j: 2 }, { txt: 'Un objet rapporté de la mer, d’une île ou d’une plage', f: ST_CR.tags(['mer', 'ile', 'plage', 'port', 'piscine', 'glacier'], 1), w: 1.5, j: 1 }, { txt: 'Pas de moufles à la plage !', f: ST_CR.not('moufles', 'bonnet'), w: 1, j: 2 }, { txt: 'Bulle, la reine de l’eau', f: ST_CR.comp('axo'), w: 0.5, j: 2 }] },
   { id: 'gala', name: 'Gala chic', desc: 'Tapis rouge et petits fours : on sort le grand jeu.', prize: ['Nœud de gala nuit étoilée', 'v', 'cou', 3, 'noeud', '#3b4a7a'],
     crit: [{ txt: 'Un nœud papillon', f: ST_CR.look('noeud'), w: 2, j: 0 }, { txt: 'Au moins 5 vêtements', f: ST_CR.slots(5), w: 1.5, j: 0 }, { txt: 'Des vêtements rares (Rare en moyenne)', f: ST_CR.rarity(2), w: 1.5, j: 0 }, { txt: 'Une cape pour l’entrée', f: ST_CR.look('cape'), w: 1, j: 1 }, { txt: 'Une touche sombre ou dorée', f: c => Math.max(ST_CR.col('sombre', 1)(c), ST_CR.col('dore', 1)(c)), w: 1, j: 2 }, { txt: 'Pas de bottes de pluie au gala', f: ST_CR.not('bottes'), w: 0.5, j: 0 }] },
   { id: 'piquenique', name: 'Pique-nique champêtre', desc: 'Une nappe à carreaux dans l’herbe, et un panier plein de bonnes choses.', prize: ['Couronne de pâquerettes', 'v', 'tete', 3, 'fleurs', '#fff8f0'],
@@ -220,21 +223,21 @@ const ST_THEMES = [
   { id: 'monde', name: 'Tour du monde', desc: 'Une tenue qui raconte un grand voyage : des objets de trois régions différentes.', prize: ['Cape des grands voyageurs', 'v', 'dos', 3, 'cape', '#9fb6e8'],
     crit: [{ txt: 'Des objets de 3 régions différentes', f: ST_CR.regions(3), w: 3, j: 1 }, { txt: 'Un sac à dos de voyageur', f: ST_CR.look('sac'), w: 1, j: 1 }, { txt: 'Au moins 4 vêtements', f: ST_CR.slots(4), w: 1, j: 0 }, { txt: 'Au moins 3 couleurs différentes', f: ST_CR.hues(3), w: 1, j: 2 }] },
   { id: 'rose', name: 'Tout en rose', desc: 'Du rose, du rose, et encore du rose. Lulu Paillettes préside le jury !', prize: ['Écharpe barbe à papa', 'v', 'cou', 3, 'echarpe', '#f4b7c4'],
-    crit: [{ txt: 'Au moins 4 vêtements roses', f: ST_CR.col('rose', 4), w: 3, j: 2 }, { txt: 'Que du rose (rien d’autre)', f: ST_CR.allCol('rose'), w: 1.5, j: 2 }, { txt: 'Un nœud ou des fleurs', f: ST_CR.look('noeud', 'fleurs'), w: 1, j: 0 }, { txt: 'Bulle, déjà toute rose', f: ST_CR.comp('bulle'), w: 0.5, j: 2 }] },
+    crit: [{ txt: 'Au moins 4 vêtements roses', f: ST_CR.col('rose', 4), w: 3, j: 2 }, { txt: 'Que du rose (rien d’autre)', f: ST_CR.allCol('rose'), w: 1.5, j: 2 }, { txt: 'Un nœud ou des fleurs', f: ST_CR.look('noeud', 'fleurs'), w: 1, j: 0 }, { txt: 'Bulle, déjà toute rose', f: ST_CR.comp('axo'), w: 0.5, j: 2 }] },
   { id: 'bretagne', name: 'Spécial Bretagne', desc: 'Crêpes, phares et crachin : une tenue qui sent les embruns bretons.', prize: ['Ciré jaune de Bretagne', 'v', 'haut', 3, 'sweat', '#f6d36b'],
     crit: [{ txt: 'Un objet venu de Bretagne', f: ST_CR.region('bretagne', 1), w: 2.5, j: 1 }, { txt: 'Des bottes de pluie pour le crachin', f: ST_CR.look('bottes'), w: 1.5, j: 1 }, { txt: 'Du jaune (comme un ciré)', f: ST_CR.col('jaune', 1), w: 1, j: 2 }, { txt: 'Du bleu marine ou du blanc, façon marinière', f: c => Math.min(1, ST_CR.col('bleu', 1)(c) + ST_CR.col('clair', 1)(c) * 0.5), w: 1, j: 0 }, { txt: 'Un objet rapporté de la mer ou d’un port', f: ST_CR.tags(['mer', 'port', 'plage', 'poissonnerie'], 1), w: 1, j: 1 }] },
   { id: 'pluie', name: 'Jour de pluie', desc: 'Plic, ploc ! Les flaques sont faites pour sauter dedans.', prize: ['Bottes arc-en-flaque', 'v', 'pieds', 3, 'bottes', '#9fb6e8'],
-    crit: [{ txt: 'Des bottes de pluie', f: ST_CR.look('bottes'), w: 2.5, j: 1 }, { txt: 'Une cape ou un sweat à capuche', f: ST_CR.look('cape', 'sweat'), w: 1.5, j: 1 }, { txt: 'Une couleur vive : jaune ou bleu', f: c => Math.min(1, ST_CR.col('jaune', 1)(c) + ST_CR.col('bleu', 1)(c)), w: 1, j: 2 }, { txt: 'Un chapeau ou une casquette', f: ST_CR.look('chapeau', 'casquette'), w: 1, j: 0 }, { txt: 'Bulle, qui adore la pluie', f: ST_CR.comp('bulle'), w: 0.5, j: 2 }] },
+    crit: [{ txt: 'Des bottes de pluie', f: ST_CR.look('bottes'), w: 2.5, j: 1 }, { txt: 'Une cape ou un sweat à capuche', f: ST_CR.look('cape', 'sweat'), w: 1.5, j: 1 }, { txt: 'Une couleur vive : jaune ou bleu', f: c => Math.min(1, ST_CR.col('jaune', 1)(c) + ST_CR.col('bleu', 1)(c)), w: 1, j: 2 }, { txt: 'Un chapeau ou une casquette', f: ST_CR.look('chapeau', 'casquette'), w: 1, j: 0 }, { txt: 'Bulle, qui adore la pluie', f: ST_CR.comp('axo'), w: 0.5, j: 2 }] },
   { id: 'sport', name: 'Champion du sport', desc: 'Échauffement, sifflet, c’est parti ! Une tenue pour courir (même Mochi).', prize: ['Casquette de champion', 'v', 'tete', 3, 'casquette', '#f6a68a'],
     crit: [{ txt: 'Une casquette', f: ST_CR.look('casquette'), w: 1.5, j: 1 }, { txt: 'Un t-shirt ou un sweat', f: ST_CR.look('tshirt', 'sweat'), w: 1.5, j: 1 }, { txt: 'Un short', f: ST_CR.look('short'), w: 1.5, j: 1 }, { txt: 'Des chaussettes', f: ST_CR.look('chaussettes'), w: 1, j: 0 }, { txt: 'Deux couleurs vives différentes', f: ST_CR.hues(2), w: 1, j: 2 }, { txt: 'Pas de cape (on se prend les pieds dedans)', f: ST_CR.not('cape'), w: 0.5, j: 0 }] },
   { id: 'foret', name: 'Petit explorateur des bois', desc: 'Loupe, carnet et sac à dos : en route pour la grande forêt.', prize: ['Sac d’explorateur mousse', 'v', 'dos', 3, 'sac', '#a9dcc8'],
-    crit: [{ txt: 'Un sac à dos', f: ST_CR.look('sac'), w: 2, j: 1 }, { txt: 'Un chapeau, un bonnet ou un béret', f: ST_CR.look('chapeau', 'bonnet', 'beret'), w: 1, j: 0 }, { txt: 'Du vert ou du brun', f: c => Math.min(1, ST_CR.col('vert', 1)(c) + ST_CR.col('brun', 1)(c)), w: 1.5, j: 2 }, { txt: 'Un objet trouvé en forêt ou dans un parc', f: ST_CR.tags(['foret', 'parc', 'camping'], 1), w: 1.5, j: 1 }, { txt: 'De bonnes bottes ou des chaussettes', f: ST_CR.look('bottes', 'chaussettes'), w: 1, j: 0 }, { txt: 'Pistache, l’exploratrice', f: ST_CR.comp('pistache'), w: 0.5, j: 2 }] },
+    crit: [{ txt: 'Un sac à dos', f: ST_CR.look('sac'), w: 2, j: 1 }, { txt: 'Un chapeau, un bonnet ou un béret', f: ST_CR.look('chapeau', 'bonnet', 'beret'), w: 1, j: 0 }, { txt: 'Du vert ou du brun', f: c => Math.min(1, ST_CR.col('vert', 1)(c) + ST_CR.col('brun', 1)(c)), w: 1.5, j: 2 }, { txt: 'Un objet trouvé en forêt ou dans un parc', f: ST_CR.tags(['foret', 'parc', 'camping'], 1), w: 1.5, j: 1 }, { txt: 'De bonnes bottes ou des chaussettes', f: ST_CR.look('bottes', 'chaussettes'), w: 1, j: 0 }, { txt: 'Pistache, l’exploratrice', f: ST_CR.comp('panda'), w: 0.5, j: 2 }] },
   { id: 'royal', name: 'Royauté d’un jour', desc: 'Sa Majesté fait son entrée ! Couronne et cape de rigueur.', prize: ['Couronne de sucre d’orge', 'v', 'tete', 3, 'couronne', '#f4b7c4'],
     crit: [{ txt: 'Une couronne', f: ST_CR.look('couronne'), w: 2.5, j: 1 }, { txt: 'Une cape royale', f: ST_CR.look('cape'), w: 2, j: 1 }, { txt: 'Un objet Épique ou Légendaire', f: ST_CR.rare(3, 1), w: 1.5, j: 0 }, { txt: 'Du doré ou du violet', f: c => Math.min(1, ST_CR.col('dore', 1)(c) + ST_CR.col('violet', 1)(c)), w: 1, j: 2 }, { txt: 'Au moins 4 vêtements', f: ST_CR.slots(4), w: 1, j: 0 }] },
   { id: 'pastel', name: 'Douceur pastel', desc: 'Des couleurs tendres comme des macarons : tout en douceur.', prize: ['Pull guimauve', 'v', 'haut', 3, 'pull', '#e8c0e6'],
     crit: [{ txt: 'Au moins 4 vêtements de couleur claire', f: ST_CR.col('clair', 4), w: 2.5, j: 2 }, { txt: '3 couleurs différentes', f: ST_CR.hues(3), w: 1.5, j: 2 }, { txt: 'Rien de sombre', f: c => c.n && !c.list.some(x => ST_FAM.sombre(x.color)) ? 1 : 0, w: 1, j: 0 }, { txt: 'Au moins 5 vêtements', f: ST_CR.slots(5), w: 1, j: 0 }] },
   { id: 'cocooning', name: 'Cocooning chez Mochi', desc: 'Un plaid, un thé bien chaud et des chaussettes moelleuses. Zen.', prize: ['Chaussettes nuage', 'v', 'pieds', 3, 'chaussettes', '#fbf6ec'],
-    crit: [{ txt: 'Un pull tout doux', f: ST_CR.look('pull'), w: 2, j: 1 }, { txt: 'Des chaussettes moelleuses', f: ST_CR.look('chaussettes'), w: 1.5, j: 1 }, { txt: 'Une écharpe', f: ST_CR.look('echarpe'), w: 1, j: 0 }, { txt: 'Des couleurs chaudes', f: ST_CR.col('chaud', 2), w: 1, j: 2 }, { txt: 'Mochi, maître du cocooning', f: ST_CR.comp('mochi'), w: 0.8, j: 2 }, { txt: 'Pas de bottes à la maison', f: ST_CR.not('bottes'), w: 0.5, j: 0 }] },
+    crit: [{ txt: 'Un pull tout doux', f: ST_CR.look('pull'), w: 2, j: 1 }, { txt: 'Des chaussettes moelleuses', f: ST_CR.look('chaussettes'), w: 1.5, j: 1 }, { txt: 'Une écharpe', f: ST_CR.look('echarpe'), w: 1, j: 0 }, { txt: 'Des couleurs chaudes', f: ST_CR.col('chaud', 2), w: 1, j: 2 }, { txt: 'Mochi, maître du cocooning', f: ST_CR.comp('capy'), w: 0.8, j: 2 }, { txt: 'Pas de bottes à la maison', f: ST_CR.not('bottes'), w: 0.5, j: 0 }] },
   { id: 'arcenciel', name: 'Arc-en-ciel', desc: 'Toutes les couleurs à la fois ! Le jury veut un vrai feu d’artifice.', prize: ['Cape arc-en-ciel', 'v', 'dos', 3, 'cape', '#c9b8ea'],
     crit: [{ txt: '5 couleurs différentes', f: ST_CR.hues(5), w: 3, j: 2 }, { txt: 'Au moins 6 vêtements', f: ST_CR.slots(6), w: 1.5, j: 0 }, { txt: 'Un objet Rare ou mieux', f: ST_CR.rare(2, 1), w: 1, j: 0 }, { txt: 'Un objet trouvé un jour d’arc-en-ciel… ou un objet magique', f: ST_CR.name(/arc|étoil|lune|magique|enchant/i, 1), w: 0.5, j: 1 }] },
   { id: 'france', name: 'Tour de France', desc: 'Une tenue cocorico : des objets de trois régions de France.', prize: ['Béret tricolore', 'v', 'tete', 3, 'beret', '#9fb6e8'],
@@ -321,16 +324,19 @@ function styleEnter(k) {
 // ---------- rendu ----------
 let stSlot = null, stJoy = 0, stJoyLine = '';
 const ST_JOY = {
-  pistache: ['Tadaa ! Prête pour l’aventure !', 'Ça me va bien, hein ?', 'Je vais faire tourner les têtes… et les pigeons !', 'Je suis la plus jolie de la forêt !'],
-  mochi: ['Mmh. Élégant et confortable.', 'Pépin dit que ça me va bien.', 'Je me sens… très zen là-dedans.', 'Un capybara chic. C’est moi.'],
-  bulle: ['Bloup ! Trop jolie !', 'On va à la plage habillée comme ça ?', 'Je fais des bulles de joie !', 'Bloup bloup, je brille !'],
+  panda: ['Tadaa ! Prête pour l’aventure !', 'Ça me va bien, hein ?', 'Je vais faire tourner les têtes… et les pigeons !', 'Je suis la plus jolie de la forêt !'],
+  capy: ['Mmh. Élégant et confortable.', 'Pépin dit que ça me va bien.', 'Je me sens… très zen là-dedans.', 'Un capybara chic. C’est moi.'],
+  axo: ['Bloup ! Trop jolie !', 'On va à la plage habillée comme ça ?', 'Je fais des bulles de joie !', 'Bloup bloup, je brille !'],
+  def: ['Tadaa ! Comment tu me trouves ?', 'Ça me va bien, hein ?', 'En route pour l’aventure !', 'J’adore cette tenue !'],
 };
-const ST_DYE_LINE = { pistache: 'Ooh, cette couleur ! On dirait un fruit !', mochi: 'Une couleur douce. J’approuve.', bulle: 'Bloup ! Une nouvelle couleur !' };
+const ST_DYE_LINE = { panda: 'Ooh, cette couleur ! On dirait un fruit !', capy: 'Une couleur douce. J’approuve.', axo: 'Bloup ! Une nouvelle couleur !', def: 'Oh, une nouvelle couleur !' };
+const stJoyOf = k => ST_JOY[stSp(k)] || ST_JOY.def, stDyeOf = k => ST_DYE_LINE[stSp(k)] || ST_DYE_LINE.def;
 function stStars(n, max = 5) { let h = ''; for (let i = 1; i <= max; i++) h += `<i class="sts ${i <= Math.round(n) ? 'on' : ''}" style="--d:${i * 0.12}s">★</i>`; return `<span class="stst" aria-label="${n} étoiles sur ${max}">${h}</span>`; }
 function stSelector() {
-  return `<div class="stsel" role="tablist" aria-label="Choisir un compagnon">${Object.keys(CHARS).map(k => {
+  const team = (typeof teamIds === 'function' ? teamIds() : Object.keys(S.comps || {})).filter(k => CHARS[k]);
+  return `<div class="stsel" role="tablist" aria-label="Choisir un compagnon">${team.map(k => {
     const p = S.prog[k], t = S.trips[k];
-    return `<button role="tab" class="stc" data-stc="${k}" aria-selected="${S.sel === k}" style="--tint:${ST_TINT[k]};--tint2:${ST_TINT2[k]}"><img src="${portraitURI(k, S.sel === k ? 'rire' : 'content')}" alt=""><span><b>${CHARS[k].name}</b><i>niv. ${p.lvl}${t ? (t.done ? ' · rentré !' : ' · en voyage') : ''}</i></span></button>`;
+    return `<button role="tab" class="stc" data-stc="${k}" aria-selected="${S.sel === k}" style="--tint:${stTint(k)};--tint2:${stTint2(k)}"><img src="${portraitURI(k, S.sel === k ? 'rire' : 'content')}" alt=""><span><b>${esc(CHARS[k].name)}</b><i>niv. ${p.lvl}${t ? (t.done ? ' · rentré !' : ' · en voyage') : ''}</i></span></button>`;
   }).join('')}</div>`;
 }
 function stSlotBtn(k, sl) {
@@ -343,7 +349,7 @@ function renderWardrobe(k) {
   const ch = CHARS[k];
   if (!stSlot || !ST_SLOT_IDS.includes(stSlot)) stSlot = ST_SLOT_IDS.find(sl => stOwned(k, sl).length && !stWorn(k, sl)) || 'tete';
   const joy = Date.now() - stJoy < 1600, worn = ST_SLOT_IDS.filter(sl => stWorn(k, sl)).length;
-  let h = `<div class="wr" style="--tint:${ST_TINT[k]};--tint2:${ST_TINT2[k]}">`;
+  let h = `<div class="wr" style="--tint:${stTint(k)};--tint2:${stTint2(k)}">`;
   h += `<div class="wrstage"><svg class="wrgar" viewBox="0 0 300 26" preserveAspectRatio="none" aria-hidden="true"><path d="M0 4 Q150 26 300 4" fill="none" stroke="#a87a50" stroke-width="1.6"/>${[...Array(9)].map((_, i) => { const x = 18 + i * 33, y = 4 + Math.sin(Math.PI * x / 300) * 11; return `<path d="M${x - 8} ${y - 1} L${x + 8} ${y - 1} L${x} ${y + 12}Z" fill="${['#f4b7c4', '#f6e08a', '#a9dcc8', '#b8d8f0', '#c9b8ea'][i % 5]}" stroke="#7a5f50" stroke-width="1"/>`; }).join('')}</svg>`;
   h += `<div class="wrcol">${ST_LEFT.map(sl => stSlotBtn(k, sl)).join('')}</div>`;
   h += `<div class="wrmid"><div class="wrchar ${joy ? 'joy' : ''}" data-wrchar="${k}">${stCharSVG(k, joy ? 'rire' : 'content', 'wr' + k)}${joy ? `<span class="wrspark" aria-hidden="true">${'<i>★</i>'.repeat(6)}</span>` : ''}</div>${joy && stJoyLine ? `<p class="wrsay">${esc(stJoyLine)}</p>` : ''}<span class="wrplate">${ch.name} <small>${worn} vêtement${worn > 1 ? 's' : ''}</small></span></div>`;
@@ -368,19 +374,18 @@ function renderWardrobe(k) {
   // tenues enregistrées
   const saved = styleState().saved[k];
   h += `<h3 id="wrSaved">Tenues enregistrées</h3><div class="wrsaved">${saved.map((sn, i) => sn ? `<div class="wrout"><div class="wroc">${drawChar(k, stOutfitOf(k, sn), 'content', `so${k}${i}`)}</div><b>Tenue ${i + 1}</b><div class="wrob"><button class="btn green sm" data-wload="${i}">Mettre</button><button class="btn cream sm" data-wsave="${i}" title="Remplacer par la tenue actuelle">Enregistrer</button></div></div>` : `<div class="wrout vide"><div class="wroc"><span>+</span></div><b>Tenue ${i + 1}</b><div class="wrob"><button class="btn cream sm" data-wsave="${i}">Enregistrer</button></div></div>`).join('')}</div>`;
-  // petit rappel du concours
-  const th = styleTheme(), left = stTriesLeft();
-  h += `<button class="wrcontest" data-stgo="concours"><svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS.concours}</svg><span><i>Concours de la semaine</i><b>${esc(th.name)}</b></span><em>${left ? `${left} essai${left > 1 ? 's' : ''}` : 'Terminé'}</em></button>`;
+  // (le rappel du concours de style est retiré pour l'instant, comme le concours lui-même)
   return h + `</div>`;
 }
 function renderTalents(k) {
   const ch = CHARS[k], p = S.prog[k], need = needXP(p.lvl), f = Math.min(1, p.xp / need);
-  let h = `<div class="tlhead" style="--tint:${ST_TINT[k]}"><div class="tlch">${drawChar(k, S.outfits[k], 'fier', 'tl' + k)}</div><div class="tlx"><span class="kick">${esc(ch.species)} · ${esc(ch.perso)}</span><b>${ch.name}</b><span class="tllv">Niveau ${p.lvl}</span><div class="tlbar"><i style="width:${(f * 100).toFixed(1)}%"></i></div><span class="small">${p.xp} / ${need} exp. · encore ${need - p.xp} pour le niveau ${p.lvl + 1}</span></div></div>`;
-  h += `<h3>Talents</h3><ol class="tlist">${TALENTS[k].map(([l, n, d]) => {
-    const on = p.lvl >= l, next = !on && TALENTS[k].find(x => p.lvl < x[0]) && TALENTS[k].find(x => p.lvl < x[0])[0] === l;
+  let h = `<div class="tlhead" style="--tint:${stTint(k)}"><div class="tlch">${drawChar(k, S.outfits[k], 'fier', 'tl' + k)}</div><div class="tlx"><span class="kick">${esc(typeof spName === 'function' ? spName(stSp(k)) : ch.species)} · ${esc(ch.perso || '')}</span><b>${ch.name}</b><span class="tllv">Niveau ${p.lvl}</span><div class="tlbar"><i style="width:${(f * 100).toFixed(1)}%"></i></div><span class="small">${p.xp} / ${need} exp. · encore ${need - p.xp} pour le niveau ${p.lvl + 1}</span></div></div>`;
+  const TL = talentsOf(k);
+  h += `<h3>Talents</h3><ol class="tlist">${TL.map(([l, n, d]) => {
+    const on = p.lvl >= l, next = !on && TL.find(x => p.lvl < x[0]) && TL.find(x => p.lvl < x[0])[0] === l;
     return `<li class="tl ${on ? 'on' : next ? 'next' : ''}"><span class="tlb">${on ? '<svg viewBox="0 0 20 20"><path d="M5 10.5 l3.5 3.5 L15 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' : l}</span><div><b>${esc(n)}</b><span>${esc(d)}</span><i>${on ? 'Débloqué' : `Niveau ${l}${next ? ` · encore ${l - p.lvl} niveau${l - p.lvl > 1 ? 'x' : ''}` : ''}`}</i></div></li>`;
   }).join('')}<li class="tl ${p.lvl >= 7 ? 'on' : ''}"><span class="tlb">+</span><div><b>Chance grandissante</b><span>Chaque niveau rend les trouvailles rares un peu plus fréquentes (actuellement +${Math.round(lvlLuck(k) * 100)} %).</span></div></li></ol>`;
-  h += `<h3>Gagner de l’expérience</h3><ul class="tlhow"><li><b>Voyages et récoltes</b><span>Chaque voyage rapporte de l’expérience.</span></li><li><b>Rêves réalisés</b><span>Un niveau entier d’un coup !</span></li><li><b>Plats adorés</b><span>${esc(ch.name)} adore ${esc(ch.love)}.</span></li><li><b>Atelier et quêtes</b><span>+25 par objet fabriqué, +40 par quête du jour.</span></li><li><b>Concours de style</b><span>+15 par étoile obtenue.</span></li></ul>`;
+  h += `<h3>Gagner de l’expérience</h3><ul class="tlhow"><li><b>Voyages et récoltes</b><span>Chaque voyage rapporte de l’expérience.</span></li><li><b>Rêves réalisés</b><span>Un niveau entier d’un coup !</span></li><li><b>Plats adorés</b><span>${esc(ch.name)} adore ${esc(ch.love)}.</span></li><li><b>Atelier et quêtes</b><span>+25 par objet fabriqué, +40 par quête du jour.</span></li></ul>`;
   h += `<p class="small">${esc(ch.bio)} N’aime pas : ${esc(ch.hate)}.</p>`;
   return h;
 }
@@ -389,7 +394,7 @@ function renderContest(k) {
   let h = `<div class="cthero"><span class="ctrib">Concours de style · semaine ${w.w}</span><h2>${esc(th.name)}</h2><p>${esc(th.desc)}</p><div class="ctmeta"><span>${dl > 1 ? `Encore ${dl} jours` : 'Dernier jour !'}</span><span class="cttry" aria-label="${left} essais restants">${[0, 1, 2].map(i => `<i class="${i < left ? 'on' : ''}"></i>`).join('')} ${left} essai${left > 1 ? 's' : ''}</span></div></div>`;
   h += `<div class="ctjury">${ST_JURY.map((j, i) => `<div class="ctj"><span class="ctjf">${stJuryFace(i)}</span><b>${j.name}</b><i>${j.role}</i></div>`).join('')}</div>`;
   h += `<h3>Ce que le jury regarde</h3><ul class="ctcrit">${J.res.map(r => `<li class="${r.v >= 0.99 ? 'ok' : r.v > 0 ? 'mid' : ''}"><span class="ctck">${r.v >= 0.99 ? '✓' : r.v > 0 ? '½' : ''}</span><span>${esc(r.cr.txt)}</span></li>`).join('')}</ul>`;
-  h += `<div class="ctstage" style="--tint:${ST_TINT[k]}"><div class="ctch">${drawChar(k, S.outfits[k], 'fier', 'ct' + k)}</div><div class="ctgo"><b>${CHARS[k].name} est prêt${k === 'mochi' ? '' : 'e'} ?</b><span class="small">Les cases cochées ci-dessus plaisent au jury. Ajustez la tenue à la garde-robe, puis inscrivez-vous.</span><button class="btn green big" data-ctenter="${k}" ${left ? '' : 'disabled'}>${left ? `Inscrire ${CHARS[k].name} !` : 'Plus d’essai'}</button><button class="btn cream sm" data-stgo="garde">Modifier la tenue</button></div></div>`;
+  h += `<div class="ctstage" style="--tint:${stTint(k)}"><div class="ctch">${drawChar(k, S.outfits[k], 'fier', 'ct' + k)}</div><div class="ctgo"><b>${CHARS[k].name} est prêt${typeof compE === 'function' ? compE(k) : 'e'} ?</b><span class="small">Les cases cochées ci-dessus plaisent au jury. Ajustez la tenue à la garde-robe, puis inscrivez-vous.</span><button class="btn green big" data-ctenter="${k}" ${left ? '' : 'disabled'}>${left ? `Inscrire ${CHARS[k].name} !` : 'Plus d’essai'}</button><button class="btn cream sm" data-stgo="garde">Modifier la tenue</button></div></div>`;
   if (best) h += `<h3>Meilleur résultat de la semaine</h3><div class="ctbest"><div class="ctbc">${drawChar(best.who, best.look, 'amour', 'cb')}</div><div><b>${CHARS[best.who].name}</b>${stStars(best.stars)}<span class="ctavg">${String(best.avg).replace('.', ',')} / 5</span><span class="small">${s.contest.entries.length} essai${s.contest.entries.length > 1 ? 's' : ''} sur 3</span></div></div>`;
   h += `<h3>Récompenses</h3><ol class="ctlad">${[1, 2, 3, 4, 5].map(t => `<li class="${s.contest.paid >= t ? 'got' : ''}"><span class="ctls">${t}★</span><span>${coins(ST_PRIZE_COINS[t] - ST_PRIZE_COINS[t - 1])}${ST_MEDALS[t] ? ` + ${ST_MEDALS[t][2].toLowerCase()}` : ''}${t === 4 ? ` + « ${esc(th.prize[0])} »` : ''}</span>${s.contest.paid >= t ? '<i>✓</i>' : ''}</li>`).join('')}</ol>`;
   const tr = s.trophies.slice().reverse();
@@ -401,6 +406,9 @@ function renderCompagnons(box) {
   styleState(); styleSanitize();
   const k = S.sel;
   let h = stSelector();
+  if (compView === 'concours') compView = 'garde'; // concours caché pour l'instant
+  if (compView === 'refuge' && typeof renderRefuge === 'function') { renderRefuge(box); return; }
+  if (!CHARS[k]) { box.innerHTML = h + `<p class="empty">Aucun compagnon dans l’équipe.</p>`; return; }
   if (compView === 'reves') { box.innerHTML = h + `<div class="streves" id="stReves"></div>`; const d = box.querySelector('#stReves'); if (typeof renderReves === 'function') renderReves(d); else d.innerHTML = `<p class="empty">Les rêves arrivent bientôt.</p>`; return; }
   if (compView === 'talents') h += renderTalents(k);
   else if (compView === 'concours') h += renderContest(k);
@@ -408,13 +416,13 @@ function renderCompagnons(box) {
   box.innerHTML = h;
 }
 function openCompagnons(sub) {
-  const m = { garde: 'garde', garderobe: 'garde', 'garde-robe': 'garde', tenues: 'garde', reves: 'reves', quetes: 'reves', succes: 'reves', talents: 'talents', concours: 'concours' };
+  const m = { garde: 'garde', garderobe: 'garde', 'garde-robe': 'garde', tenues: 'garde', reves: 'reves', quetes: 'reves', succes: 'reves', talents: 'talents', concours: 'garde', refuge: 'refuge', equipe: 'refuge' };
   const was = tab === 'compagnons' && compView;
   if (sub && m[sub]) compView = m[sub];
   openSheet('compagnons', true);
   if (was !== compView) $('panelBody').scrollTop = 0;
 }
-function styleSubDot(k) { return k === 'concours' && styleState().contest.entries.length === 0; }
+function styleSubDot(k) { return k === 'refuge' && typeof refugeDot === 'function' ? refugeDot() : false; }
 function stRefresh() { if (tab === 'compagnons') renderPanel(); }
 
 // ---------- verdict du jury ----------
@@ -453,7 +461,7 @@ document.addEventListener('click', ev => {
   if (pill && !pill.hidden && !(el && el.id === 'stDress')) { if (!(el && el.matches('.hc-btn'))) { pill.classList.remove('on'); pill.hidden = true; } }
   if (!el || el.disabled) return;
   const d = el.dataset;
-  if (el.matches('.hc-btn[data-sel]')) { if (tab !== 'compagnons') setTimeout(() => stDressPill(d.sel), 30); return; }
+  if (el.matches('.hc-btn[data-sel]')) return; // v13 : plus de bulle « Habiller » (toucher le compagnon déjà choisi ouvre sa garde-robe)
   if (d.stdress) { el.classList.remove('on'); el.hidden = true; S.sel = d.stdress; stSlot = null; openCompagnons('garde'); return; }
   if (d.stg) { $('modal').hidden = true; const go = styleGuard._go; styleGuard._go = null; if (d.stg === 'ok' && go) go(); return; }
   if (d.stc) { if (S.sel !== d.stc) { S.sel = d.stc; S.unseen[d.stc] = 0; stSlot = null; save(); renderAll(); } return; }
@@ -466,13 +474,13 @@ document.addEventListener('click', ev => {
     const cur = stWorn(k, it.sub);
     if (cur && cur.id === it.id) { styleUnequip(k, it.sub); stJoy = 0; renderAll(); return; }
     const lent = styleEquip(k, it);
-    stJoy = Date.now(); stJoyLine = lent ? `Merci ${CHARS[lent].name} de me le prêter !` : pick(ST_JOY[k]);
+    stJoy = Date.now(); stJoyLine = lent ? `Merci ${CHARS[lent].name} de me le prêter !` : pick(stJoyOf(k));
     renderAll(); stJoyBack(); return;
   }
   if (d.wunwear) { styleUnequip(k, d.wunwear); stJoy = 0; renderAll(); return; }
-  if (d.wdye !== undefined && el.closest('.wrdye')) { styleDye(k, stSlot, d.wdye || null); stJoy = Date.now(); stJoyLine = ST_DYE_LINE[k]; renderAll(); stJoyBack(); return; }
+  if (d.wdye !== undefined && el.closest('.wrdye')) { styleDye(k, stSlot, d.wdye || null); stJoy = Date.now(); stJoyLine = stDyeOf(k); renderAll(); stJoyBack(); return; }
   if (d.wsave) { styleSaveOutfit(k, +d.wsave); stRefresh(); toast(`Tenue ${+d.wsave + 1} de ${CHARS[k].name} enregistrée.`); return; }
-  if (d.wload) { const miss = styleLoadOutfit(k, +d.wload); stJoy = Date.now(); stJoyLine = pick(ST_JOY[k]); renderAll(); stJoyBack(); const sc = $('panelBody'); if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); toast(miss ? `Tenue ${+d.wload + 1} chargée, mais ${miss} vêtement${miss > 1 ? 's ont' : ' a'} quitté le sac.` : `Tenue ${+d.wload + 1} : c’est parti !`); return; }
+  if (d.wload) { const miss = styleLoadOutfit(k, +d.wload); stJoy = Date.now(); stJoyLine = pick(stJoyOf(k)); renderAll(); stJoyBack(); const sc = $('panelBody'); if (sc) sc.scrollTo({ top: 0, behavior: 'smooth' }); toast(miss ? `Tenue ${+d.wload + 1} chargée, mais ${miss} vêtement${miss > 1 ? 's ont' : ' a'} quitté le sac.` : `Tenue ${+d.wload + 1} : c’est parti !`); return; }
   if (d.wshop) { if (typeof openBoutique === 'function') openBoutique('magasin'); else openSheet('boutique'); return; }
   if (d.ctenter) { const r = styleEnter(d.ctenter); if (!r) return; renderAll(); stShowResult(r); return; }
 });

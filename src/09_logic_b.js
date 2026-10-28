@@ -6,9 +6,9 @@ function tripPos(t) {
 function nearestPlace(lon, lat, maxKm) { let best = null, bd = maxKm; for (const p of PLACES) { const d = kmBetween({ lat, lon }, p); if (d < bd) { bd = d; best = p; } } return best; }
 function weightedType(k) {
   const w = { decouverte: 3, trouvaille: 3, choix: 3, repas: 2, rencontre: 2, marchand: 1.4, aide: 1.6, animal: 2, meteo: 1.2, pieces: 1.4, tresor: 0.5 };
-  if (hasTalent(k, 0) && k === 'pistache') w.trouvaille += 1.5;
-  if (k === 'pistache' && hasTalent(k, 2)) w.tresor *= 3;
-  if (k === 'bulle' && hasTalent(k, 1)) w.meteo *= 2.2;
+  if (hasEff(k, 'flair')) w.trouvaille += 1.5;
+  if (hasEff(k, 'tresor')) w.tresor *= 3;
+  if (hasEff(k, 'chance')) w.meteo *= 2.2;
   let r = Math.random() * Object.values(w).reduce((a, b) => a + b, 0);
   for (const [t, v] of Object.entries(w)) { r -= v; if (r <= 0) return t; }
   return 'decouverte';
@@ -27,8 +27,8 @@ function startTrip() {
   let oi = 0; events.forEach(e => { if (e.type !== 'arrivee') e.type = order[oi++]; });
   // voyages courts : un petit coup de chance de temps en temps (arc-en-ciel, étoile filante…)
   if (n <= 6 && Math.random() < 0.18) { const a = events.find(e => e.type === 'animal' || e.type === 'trouvaille'); if (a) a.type = 'meteo'; }
-  if (hasTalent(k, 0) && k === 'pistache') events.push({ at: 0.97, type: 'trouvaille' });
-  if (k === 'mochi' && hasTalent(k, 2)) events.push({ at: 0.93, type: 'pepin' });
+  if (hasEff(k, 'flair')) events.push({ at: 0.97, type: 'trouvaille' });
+  if (hasEff(k, 'oiseau')) events.push({ at: 0.93, type: 'pepin' });
   events.sort((a, b) => a.at - b.at);
   S.trips[k] = { id: uidGen(), comp: k, from, dest, dur: d.key, luck: d.luck + lvlLuck(k), total: d.ms, elapsed: 0, last: Date.now(), dist, events, journal: [], bag: [], photos: [], coins: 0, xp: 0, done: false, startedAt: Date.now() };
   const dk = dayKey(); if (S.firstTripDay !== dk) { S.firstTripDay = dk; S.trips[k].dayBonus = true; }
@@ -57,8 +57,10 @@ function lootFor(tags, luck, place, n = 1, comp = null) {
   const ev = typeof todayEvent === 'function' ? todayEvent() : null; // événement du jour
   if (ev && ev.tags && tags.some(t => ev.tags.includes(t))) n *= 2;
   if (ev && ev.luck) luck += ev.luck;
-  if (comp === 'bulle' && water && hasTalent('bulle', 0)) n *= 2;
-  if (comp === 'bulle' && water && hasTalent('bulle', 2)) luck += 1.2;
+  // talents d'habitat : chaque espèce est plus douée chez elle (l'axolotl près de l'eau, le renard dans la neige…)
+  const inHab = comp && typeof spHab === 'function' ? tags.some(t => spHab(comp).includes(t)) : water;
+  if (comp && inHab && hasEff(comp, 'hab2')) n *= 2;
+  if (comp && inHab && hasEff(comp, 'habLuck')) luck += 1.2;
   const out = [];
   for (let i = 0; i < n; i++) {
     const w = pool.map(d => (SEASON_LOOT.includes(d) || NIGHT_LOOT.includes(d) ? 0.25 : 1) / (1 + d[3] * 1.6));
@@ -68,7 +70,7 @@ function lootFor(tags, luck, place, n = 1, comp = null) {
   }
   return out;
 }
-function tasteOf(comp, item) { const t = FOOD_TASTE[comp]; if (t.love.includes(item.sub)) return 'love'; if (t.hate.includes(item.sub)) return 'hate'; return 'like'; }
+function tasteOf(comp, item) { const t = FOOD_TASTE[typeof spOf === 'function' ? spOf(comp) : comp] || FOOD_TASTE.def; if (t.love.includes(item.sub)) return 'love'; if (t.hate.includes(item.sub)) return 'hate'; return 'like'; }
 function eventPlace(t, e) {
   if (e.type === 'arrivee' || t.dest.poi) return { ...t.dest };
   const k = e.at <= 0.5 ? e.at / 0.5 : (1 - e.at) / 0.5;
@@ -91,10 +93,12 @@ const CHOICES = {
   campagne: { q: n => `Un orage gronde au-dessus des champs.`, a: ['Courir sous la pluie', 'S’abriter dans une grange', 'Aider à la récolte'], third: 'food' },
   agrumes: { q: n => `Un verger de citronniers borde le chemin.`, a: ['Grimper dans un arbre', 'Demander au fermier', 'Faire de la limonade'], third: 'coins' },
 };
+// sans réponse du joueur, chaque espèce décide selon son caractère (voir SP_INFO.temper : 0 audace, 1 prudence, 2 la troisième voie, 'eau')
+function compTemper(comp) { try { return typeof spTemper === 'function' ? spTemper(comp) : 2; } catch (e) { return 2; } }
 function autoChoice(comp, c) {
-  if (comp === 'pistache') return 0;
-  if (comp === 'mochi') return 1;
-  if (c.water !== undefined) return 0;
+  const t = compTemper(comp);
+  if (t === 0 || t === 1) return t;
+  if (t === 'eau' && c.water !== undefined) return 0;
   return 2;
 }
 function resolveChoice(t, entry, choice, auto) {
@@ -104,11 +108,11 @@ function resolveChoice(t, entry, choice, auto) {
   let text = '', items = [];
   if (!auto) bump('choices');
   if (choice === 0) {
-    let chance = 0.6 + (k === 'pistache' ? 0.1 : 0) + (k === 'pistache' && hasTalent(k, 1) ? 0.2 : 0);
-    if (k === 'mochi' && hasTalent(k, 1)) chance = 1;
+    let chance = 0.6 + (compTemper(k) === 0 ? 0.1 : 0) + (hasEff(k, 'audace') ? 0.2 : 0);
+    if (hasEff(k, 'zen')) chance = 1;
     if (Math.random() < chance) {
       items = lootFor(entry.tags, t.luck + 1.5, place, 1, k);
-      if (Math.random() < (k === 'pistache' && hasTalent(k, 2) ? 0.3 : 0.1)) items.push(treasureMap(place));
+      if (Math.random() < (hasEff(k, 'tresor') ? 0.3 : 0.1)) items.push(treasureMap(place));
       text = `Audacieux et récompensé : ${n} revient avec un trésor.`; t.xp += 15;
     } else {
       const lost = Math.min(t.coins + S.coins, 5 + Math.floor(Math.random() * 12));
@@ -175,7 +179,7 @@ function fireEvent(t, e) {
     case 'rencontre': { const pl = pick(PLAYERS); J({ kind: 'rencontre', text: `${n} croise ${pl[1]}, le compagnon de ${pl[0]}, qui voyage aussi par ici.`, other: pl, pending: true }); break; }
     case 'choix': { const ctag = tags.find(tg => CHOICES[tg]) || 'campagne'; J({ kind: 'choix', text: CHOICES[ctag].q(n), ctag, pending: true }); break; }
     case 'marchand': {
-      const offers = lootFor(tags, t.luck + 1, pName, 2).map(it => { it.rarity = Math.max(it.rarity, 1); return { item: it, price: Math.round(value(it) * (k === 'mochi' && hasTalent(k, 0) ? 0.7 : 1)) }; });
+      const offers = lootFor(tags, t.luck + 1, pName, 2).map(it => { it.rarity = Math.max(it.rarity, 1); return { item: it, price: Math.round(value(it) * (hasEff(k, 'nego') ? 0.7 : 1)) }; });
       J({ kind: 'marchand', text: `Un marchand ambulant déballe ses trésors devant ${n}.`, offers, pending: true });
       break;
     }
@@ -183,7 +187,7 @@ function fireEvent(t, e) {
     case 'animal': {
       const tg = tags.find(x => ANIMALS[x]) || 'campagne', a = ANIMALS[tg];
       let text = `${n} rencontre ${a[0]}. ${a[1].replace('{n}', n)}`;
-      if (tg === 'ville' && k === 'pistache') text = `Un pigeon ! ${n} se cache derrière un lampadaire jusqu’à ce qu’il s’envole.`;
+      if (tg === 'ville' && spOf(k) === 'panda') text = `Un pigeon ! ${n} se cache derrière un lampadaire jusqu’à ce qu’il s’envole.`;
       const items = Math.random() < 0.55 ? lootFor(tags, t.luck, pName, 1, k) : [];
       t.bag.push(...items); t.xp += 6;
       J({ kind: 'animal', text: text + (items.length ? ' Il laisse un petit cadeau.' : ''), items });
@@ -219,7 +223,7 @@ function resolveMeeting(t, entry, opt, auto) {
     t.photos.push(p); entry.photo = p; entry.outcome = `Photo souvenir avec ${other[1]} !`; t.xp += 8;
   } else {
     const water = entry.tags.some(x => WATER.includes(x));
-    const win = Math.random() < (k === 'bulle' && water ? 0.85 : k === 'pistache' ? 0.6 : 0.45);
+    const sp = spOf(k), win = Math.random() < ((sp === 'axo' || sp === 'phoque') && water ? 0.85 : compTemper(k) === 0 ? 0.6 : 0.45);
     if (win) { const g = 25; t.coins += g; entry.outcome = `Course effrénée… ${n} gagne et empoche ${g} pièces !`; }
     else entry.outcome = `${other[1]} gagne la course de justesse. ${n} rit quand même.`;
     t.xp += 12;
@@ -250,7 +254,7 @@ function autoResolve(t) {
   for (const j of t.journal) {
     if (!j.pending || j.resolved) continue;
     if (j.kind === 'choix') resolveChoice(t, j, autoChoice(t.comp, CHOICES[j.ctag]), true);
-    if (j.kind === 'rencontre') resolveMeeting(t, j, t.comp === 'bulle' ? 2 : t.comp === 'mochi' ? 1 : 0, true);
+    if (j.kind === 'rencontre') { const tp = compTemper(t.comp); resolveMeeting(t, j, tp === 0 ? 0 : tp === 1 ? 1 : 2, true); }
     if (j.kind === 'marchand') resolveMerchant(t, j, null, true);
     if (j.kind === 'aide') resolveHelp(t, j, true, true);
   }
@@ -301,7 +305,7 @@ function collect() {
   t.bag.forEach(i => { if (i.tags && i.tags.length) bump('items_tag', 1, i.tags); if (i.rarity >= 2) bump('rare'); });
   bump('postcards', t.photos.length);
   S.trips[k] = null; S.unseen[k] = 0; fast = false;
-  save(); tab = 'sac'; renderAll();
+  save(); renderAll(); // on reste sur la carte : le butin s'affiche dans la fenêtre du retour
   if (typeof showHaul === 'function') showHaul({ comp: k, trip: t, items: t.bag, coins: t.coins, xp: gained, photos: t.photos.length, newNames, extra });
   else toast(`${t.bag.length} objets rangés${t.coins > 0 ? `, ${t.coins} pièces gagnées` : ''}, +${gained} expérience.`);
 }
@@ -359,7 +363,7 @@ function postcardSVG(p, uid) {
   if (p.weather === 'neige') for (let i = 0; i < 26; i++) s += `<circle cx="${(i * 41) % 320}" cy="${(i * 19) % 150}" r="2" fill="#fff"/>`;
   if (p.snowman) s += `<circle cx="80" cy="168" r="20" fill="#fff" stroke="${L}" stroke-width="1.4"/><circle cx="80" cy="136" r="14" fill="#fff" stroke="${L}" stroke-width="1.4"/><path d="M80 138 l10 3 l-10 2Z" fill="#f2a05a"/><circle cx="75" cy="132" r="1.6" fill="${L}"/><circle cx="84" cy="132" r="1.6" fill="${L}"/><rect x="69" y="146" width="22" height="5" rx="2" fill="#d96b5f"/>`;
   const comps = p.comps || [];
-  comps.forEach((k, i) => {
+  comps.filter(k => CHARS[k]).forEach((k, i) => {
     const w = 96, x = comps.length === 1 ? (p.snowman ? 150 : 112) : 70 + i * 92;
     const o = i === 0 ? (S.outfits[k] || CHARS[k].outfit) : CHARS[k].outfit;
     s += drawChar(k, o, i === 0 ? 'rire' : 'content', uid + 'c' + i).replace('<svg ', `<svg x="${x}" y="${200 - w * 1.06}" width="${w}" height="${w * 1.1}" `);

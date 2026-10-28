@@ -1,7 +1,8 @@
 // ================= LE VILLAGE DES COMPAGNONS =================
 // Le village grandit grâce aux rêves (qui débloquent les bâtiments, via dreamUnlocks()) et aux matériaux rapportés de voyage
 // (qui servent à les construire). Chaque bâtiment construit donne un bonus à chaque retour de voyage.
-// Expose : VILLAGE_BUILDINGS, renderVillage(box), villageBuildable(), villageUnlocked(), villageBuilt(id), buildVillage(id).
+// v13 phase B : renderVillage délègue aux vues Refuge / Nurserie / Habitats de 21_nurserie.js (sous-onglets du Village).
+// Expose : VILLAGE_BUILDINGS, renderVillage(box), villageBuildingsHTML(), villageBuildable(), villageUnlocked(), villageBuilt(id), buildVillage(id).
 // Émet : 'building:built' { id }. Écoute : 'trip:return'. Enregistre : GAME.addUses (« Village : … », « Atelier : … »).
 
 // ---- sauvegarde (anciennes parties : S.village absent)
@@ -57,8 +58,9 @@ function villageDreamFor(id) {
 function villageLockText(id) {
   const d = villageDreamFor(id);
   if (!d) return 'Débloqué par un rêve de compagnon.';
-  const who = d.who && CHARS[d.who] ? CHARS[d.who].name : null, t = d.title || d.name || d.txt || d.text;
-  return `Débloqué par le rêve${who ? ' de ' + who : ''}${t ? ` : « ${t} »` : ''}.`;
+  const who = d.whoName || (d.who && CHARS[d.who] ? CHARS[d.who].name : null), t = d.title || d.name || d.txt || d.text;
+  const de = w => /^(un|une) /i.test(w) ? 'd’' + w : /^[aeiouyéèêâîôûh]/i.test(w) ? ' d’' + w : ' de ' + w;
+  return `Débloqué par le rêve${who ? de(who).replace(/^d’/, ' d’') : ''}${t ? ` : « ${t} »` : ''}.`;
 }
 
 // ---- construction
@@ -128,7 +130,7 @@ function villageSVG() {
   s += `<g transform="translate(152 128)"><ellipse cx="48" cy="86" rx="46" ry="6" fill="#3d5a2a" opacity=".16"/><rect x="66" y="10" width="11" height="22" fill="#c97a5a" ${vs}/><rect x="10" y="40" width="76" height="46" rx="3" fill="#fff3e2" ${vs}/><path d="M2 44 L48 8 L94 44Z" fill="#d9604f" ${vs}/><path d="M16 38 L48 13 L80 38" stroke="#e98a7a" stroke-width="2" fill="none"/><circle cx="48" cy="30" r="7" fill="${night ? '#fbe08a' : '#bfe1f2'}" ${vs}/><path d="M48 23 V37 M41 30 H55" stroke="${VL}" stroke-width="1.4"/><rect x="16" y="52" width="18" height="15" rx="2" fill="${night ? '#fbe08a' : '#bfe1f2'}" ${vs}/><path d="M25 52 V67" stroke="${VL}" stroke-width="1.4"/><rect x="62" y="52" width="18" height="15" rx="2" fill="${night ? '#fbe08a' : '#bfe1f2'}" ${vs}/><path d="M71 52 V67" stroke="${VL}" stroke-width="1.4"/><rect x="14" y="67" width="22" height="5" rx="2" fill="#8fcf7f" stroke="${VL}" stroke-width="1.4"/><rect x="60" y="67" width="22" height="5" rx="2" fill="#8fcf7f" stroke="${VL}" stroke-width="1.4"/><path d="M39 86 V64 a9 9 0 0 1 18 0 V86Z" fill="#c98a5a" ${vs}/><circle cx="53" cy="76" r="1.5" fill="${VL}"/></g>`;
   s += `<g data-vhome="1" class="vhome"><rect x="166" y="104" width="68" height="18" rx="9" fill="#fff8ea" stroke="${VL}" stroke-width="2"/><text x="200" y="117.5" class="vtxt">Maison</text></g>`;
   // compagnons à la maison
-  const home = Object.keys(CHARS).filter(k => !S.trips[k]);
+  const home = (typeof teamIds === 'function' ? teamIds() : Object.keys(S.comps || {})).filter(k => CHARS[k] && !S.trips[k]);
   home.forEach((k, i) => { const w = 44, x = 200 - (home.length * 40) / 2 + i * 40 - 2; s += `<g class="vchar" data-hc="${k}">${drawChar(k, S.outfits[k], night ? 'dodo' : 'content', 'vl' + k).replace('<svg ', `<svg x="${x}" y="${258 - w * 1.06}" width="${w}" height="${w * 1.1}" `)}</g>`; });
   // parcelles
   VILLAGE_BUILDINGS.forEach((b, i) => {
@@ -157,21 +159,31 @@ function villageCard(b) {
   return h + `</div>`;
 }
 const VLOCK_ICON = `<svg viewBox="-10 -12 20 28" width="16" height="20" aria-hidden="true">${VLOCK(0, 0, 1)}</svg>`;
+// v13 phase B : le Village = Refuge (habitats vivants) · Nurserie (couveuse, croisements) · Habitats (construire, agrandir).
+// Les vues Refuge, Nurserie et Habitats sont dessinées par 21_nurserie.js ; les 12 bâtiments ci-dessus restent
+// (débloqués par les rêves, bonus à chaque retour) et s'affichent en bas de l'onglet Habitats.
 function renderVillage(box) {
+  if (villView === 'bat' || villView === 'marche' || !villView) villView = 'refuge';
+  const R = { refuge: typeof nsRenderRefuge === 'function' ? nsRenderRefuge : null, nurserie: typeof nsRenderNurserie === 'function' ? nsRenderNurserie : null, habitats: typeof nsRenderHabitats === 'function' ? nsRenderHabitats : null }[villView];
+  if (R) return R(box);
+  box.innerHTML = villageBuildingsHTML(true);
+}
+// les bâtiments du village (bonus de voyage) : liste compacte et fiche du bâtiment choisi
+function villageBuildingsHTML(withSVG) {
   const v = villageState(), u = villageUnlocked();
   const n = v.built.length, nOpen = VILLAGE_BUILDINGS.filter(b => u.has(b.id) && !villageBuilt(b.id)).length;
   if (villSel && !VB(villSel)) villSel = null;
   if (!villSel) { const f = VILLAGE_BUILDINGS.find(b => u.has(b.id) && !villageBuilt(b.id)); villSel = f ? f.id : null; }
-  let html = phead(null, 'Le village', 'Chaque rêve réalisé débloque un bâtiment. Construisez-le avec les matériaux rapportés de voyage : il vous donnera un bonus à chaque retour.');
+  let html = `<h3 class="vbh">Bâtiments du village</h3><p class="small vhint">Chaque rêve réalisé débloque un bâtiment. Construit avec les matériaux de voyage, il donne un bonus à chaque retour.</p>`;
   html += `<div class="vprog"><b>${n}/${VILLAGE_BUILDINGS.length}</b><span class="vbar"><i style="width:${(n / VILLAGE_BUILDINGS.length * 100).toFixed(0)}%"></i></span><span>${nOpen ? `${nOpen} à construire` : n === VILLAGE_BUILDINGS.length ? 'Village complet !' : 'Réalisez des rêves pour en débloquer'}</span></div>`;
-  html += `<div class="vbox">${villageSVG()}</div>`;
-  html += villSel ? villageCard(VB(villSel)) : `<p class="small vhint">Touchez une parcelle pour voir le bâtiment. Les parcelles avec un cadenas se débloquent en réalisant les rêves des compagnons.</p>`;
+  if (withSVG) html += `<div class="vbox">${villageSVG()}</div>`;
+  if (villSel) html += villageCard(VB(villSel));
   const order = b => villageBuilt(b.id) ? 1 : u.has(b.id) ? 0 : 2;
-  html += `<h3>Tous les bâtiments</h3><div class="vlist">` + VILLAGE_BUILDINGS.slice().sort((a, b) => order(a) - order(b)).map(b => {
+  html += `<div class="vlist">` + VILLAGE_BUILDINGS.slice().sort((a, b) => order(a) - order(b)).map(b => {
     const built = villageBuilt(b.id), open = u.has(b.id);
     return `<button class="vrow ${built ? 'built' : open ? 'open' : 'locked'}${villSel === b.id ? ' on' : ''}" data-vsel="${b.id}">${miniArt(b.id, !open)}<span class="vrx"><b>${esc(b.name)}</b><span>${built ? esc(b.bonus) : open ? (villageCanPay(b) ? 'Prêt à construire !' : 'Débloqué · il manque des matériaux') : esc(villageLockText(b.id))}</span></span><span class="vtag">${built ? '✓' : open ? (villageCanPay(b) ? '!' : '…') : VLOCK_ICON}</span></button>`;
   }).join('') + `</div>`;
-  box.innerHTML = html;
+  return html;
 }
 
 // ---- clics
@@ -181,7 +193,7 @@ document.addEventListener('click', ev => {
   if (ev.target.closest('[data-vhome]')) { villView = 'maison'; renderPanel(); return; }
   const el = ev.target.closest('button'); if (!el || el.disabled) return;
   const d = el.dataset;
-  if (d.vsel) { villSel = d.vsel; renderPanel(); const sv = document.querySelector('#panelBody .vbox'); if (sv && sv.scrollIntoView) sv.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
+  if (d.vsel) { villSel = d.vsel; renderPanel(); const sv = document.querySelector('#panelBody .vcard'); if (sv && sv.scrollIntoView) sv.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
   if (d.vbuild) { buildVillage(d.vbuild); return; }
   if (d.vclose) { $('modal').hidden = true; return; }
 });
@@ -216,7 +228,7 @@ function villageTripBonus(e) {
   if (villageBuilt('glacier')) items.push([mk(VBONUS_ITEMS.glacier, 'Glacier du village'), 'Glacier']);
   if (villageBuilt('bibliotheque') && Math.random() < 0.2) { const r = lootFor(dest.tags && dest.tags.length ? dest.tags : ['campagne'], 3, place, 1, who)[0]; if (r) { r.rarity = Math.max(2, r.rarity); items.push([r, 'Bibliothèque']); } }
   if (villageBuilt('fontaine')) { gainCoins(15); notes.push('Fontaine : +15 pièces'); }
-  if (villageBuilt('salon_the') && S.prog[who]) { addXP(who, 20); notes.push(`Salon de thé : +20 exp. pour ${CHARS[who].name}`); }
+  if (villageBuilt('salon_the') && S.prog[who] && CHARS[who]) { addXP(who, 20); notes.push(`Salon de thé : +20 exp. pour ${CHARS[who].name}`); }
   if (!items.length && !notes.length) return;
   items.forEach(([it]) => { S.inv.push(it); S.dex[it.name] = true; });
   save();

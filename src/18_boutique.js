@@ -66,6 +66,104 @@ const BQ_LEVELS = [
 ];
 const bqLv = i => BQ_LEVELS[Math.max(0, Math.min(BQ_LEVELS.length - 1, i))];
 
+// ---------------- les commerces (v13, phase B) ----------------
+// Le joueur choisit son premier commerce au premier lancement ; d'autres s'ouvrent avec la réputation.
+// keys : ingrédients (ING) demandés · cats : lieux du quotidien où chercher · itemCats : types d'objets demandés
+// crafts : recettes demandées (ids ou fonction) · bsubs / bcats / bkinds : ce qui touche la spécialité (pièces × mult)
+// perks : avantages affichés · fast, slot, rep, tip, recx, cheap, eggs : effets réels
+const BQ_SHOPS = [
+  { id: 'boulangerie', name: 'Boulangerie-pâtisserie', short: 'Boulangerie', em: 'pain', aw: '#e3a04b', aw2: '#fff4dc', wall: '#fbe9cf', wall2: '#f4d9b0', front: '#f6e2c0', door: '#b06a3a',
+    phrase: 'L’odeur du pain chaud attire tout le quartier dès l’aube.',
+    stars: [['Baguette croustillante', 'n', 'pain', 0, null, '#e3b06b'], ['Brioche dorée', 'n', 'pain', 2, null, '#e3a04b'], ['Tarte aux pommes', 'n', 'pomme', 2, null, '#e5a04b']],
+    keys: ['pain', 'farine', 'sucre', 'fruit', 'pomme'], cats: ['boulangerie', 'chocolaterie', 'marche', 'ferme'], itemCats: ['n', 'm'],
+    crafts: ['painmaison', 'tarte', 'confiture', 'bs_brioche', 'bs_tarte_citron', 'croque', 'sandrando', 'bonhommechoc'],
+    bsubs: ['pain', 'farine', 'sucre', 'pomme'], mult: 1.35, cheap: { subs: ['farine', 'sucre'], f: 0.75 },
+    perks: ['Commandes de pain et de gâteaux : +35 % de pièces', 'Farine et sucre 25 % moins chers au magasin'],
+    lines: ['Deux croissants et une baguette bien cuite, s’il vous plaît !', 'C’est pour un goûter d’anniversaire : il faut que ça sente bon le beurre !', 'Votre pain est le meilleur du quartier, tout le monde le dit.'] },
+  { id: 'cafe', name: 'Café-salon de thé', short: 'Salon de thé', em: 'tasse', aw: '#8a5a3a', aw2: '#f6e7d2', wall: '#f3e6d6', wall2: '#e8d3bb', front: '#e9d6bf', door: '#6b4a32',
+    phrase: 'Des fauteuils moelleux, du thé fumant et des petits gâteaux.',
+    stars: [['Chocolat chaud à la chantilly', 'n', 'boisson', 2, null, '#8a5a3a'], ['Macaron de Paris', 'n', 'sucre', 1, null, '#f39ab0'], ['Thé au jasmin', 'n', 'boisson', 1, null, '#c9d48a']],
+    keys: ['boisson', 'sucre', 'agrume', 'fruit'], cats: ['cafe', 'chocolaterie', 'epicerie', 'marche'], itemCats: ['n'],
+    crafts: ['chantilly', 'salade', 'bonhommechoc', 'confiture', 'tarte'],
+    bsubs: ['boisson', 'sucre'], mult: 1.3, fast: 0.7,
+    perks: ['Boissons et douceurs : +30 % de pièces', 'Les clients arrivent plus souvent (30 % d’attente en moins)'],
+    lines: ['Un thé bien chaud et quelque chose de sucré, je vous prie.', 'Je reçois mes amies cet après-midi : il me faut de quoi faire un goûter chic.', 'Votre salon est si douillet… je pourrais y rester des heures.'] },
+  { id: 'restaurant', name: 'Restaurant', short: 'Restaurant', em: 'cloche', aw: '#d9604f', aw2: '#fff4ea', wall: '#f8e4d8', wall2: '#f0cfbd', front: '#f3dccb', door: '#8a3a2f',
+    phrase: 'Une petite table chaleureuse où chaque plat raconte un voyage.',
+    stars: [['Fondue des copains', 'n', 'fromage', 3, null, '#f2c14e'], ['Soupe du potager', 'n', 'legume', 2, null, '#8fbf5a'], ['Croque-monsieur doré', 'n', 'pain', 2, null, '#e3b06b']],
+    keys: ['plat', 'legume', 'fromage', 'pain', 'mer'], cats: ['restaurant', 'boucherie', 'fromagerie', 'marche', 'poissonnerie'], itemCats: ['n'],
+    crafts: ['soupe', 'soupepotager', 'fondue', 'plateau', 'croque', 'sandrando'],
+    bsubs: ['plat', 'legume', 'fromage', 'mer'], mult: 1.35, slot: 1,
+    perks: ['Plats cuisinés, fromages et légumes : +35 % de pièces', 'Une commande de plus à la fois au comptoir'],
+    lines: ['Une table pour quatre, et le plat du jour pour tout le monde !', 'J’ai une faim de loup… enfin, de blaireau.', 'Le chef peut-il me préparer quelque chose de réconfortant ?'] },
+  { id: 'fleuriste', name: 'Fleuriste', short: 'Fleuriste', em: 'fleur', aw: '#e07a9a', aw2: '#fff0f4', wall: '#fbe8ee', wall2: '#f4d2dc', front: '#e9f2df', door: '#5f9a6a',
+    phrase: 'Des bouquets de toutes les couleurs, cueillis aux quatre coins du monde.',
+    stars: [['Bouquet du voyageur', 'd', 'plante', 2, null, '#f39ab0'], ['Vase de fleurs fraîches', 'd', 'plante', 2, null, '#f39ab0'], ['Couronne du jardin', 'v', 'tete', 3, 'fleurs', '#f6c2cf']],
+    keys: ['fleur', 'feuille', 'graine'], cats: ['fleuriste', 'jardin', 'parc', 'marche'], itemCats: ['m', 'd'],
+    crafts: ['bs_bouquet', 'vasefleurs', 'couronnejardin', 'herbjardin', 'plante', 'herbier'],
+    bsubs: ['fleur', 'feuille', 'graine', 'plante'], mult: 1.3, rep: 1.3,
+    perks: ['Fleurs et bouquets : +30 % de pièces', '+30 % de réputation à chaque commande'],
+    lines: ['Un bouquet pour dire pardon… c’est une longue histoire.', 'Ma grand-mère adore les fleurs des pays lointains.', 'Il me faut de quoi fleurir tout mon balcon !'] },
+  { id: 'mode', name: 'Boutique de mode', short: 'Mode', em: 'cintre', aw: '#9a6fd6', aw2: '#f8f0ff', wall: '#f1e8fb', wall2: '#e2d4f4', front: '#f6eefb', door: '#5c4a8a',
+    phrase: 'Des tenues sur mesure pour compagnons élégants.',
+    stars: [['Pull douillet', 'v', 'haut', 2, 'pull', '#f1e3c8'], ['Cape cousue main', 'v', 'dos', 2, 'cape', '#c9604f'], ['Bonnet tricoté', 'v', 'tete', 2, 'bonnet', '#e9a03a']],
+    keys: ['tissu', 'laine', 'plume'], cats: ['mode', 'friperie', 'coiffeur'], itemCats: ['v'],
+    crafts: r => r.kind === 'Vêtement',
+    bcats: ['v'], mult: 1.4, cheap: { cats: ['v'], f: 0.8 },
+    perks: ['Vêtements fabriqués : +40 % de pièces', 'Vêtements 20 % moins chers au magasin'],
+    lines: ['Il me faut une tenue pour le grand bal des saisons !', 'Quelque chose de chic, mais pas trop. Vous voyez ?', 'Mon compagnon veut ressembler à une star. Aidez-moi !'] },
+  { id: 'animalerie', name: 'Animalerie', short: 'Animalerie', em: 'patte', aw: '#3faf9a', aw2: '#effaf6', wall: '#e4f4ee', wall2: '#cfe9df', front: '#f3efe2', door: '#2f7f6c',
+    phrase: 'Œufs, friandises et accessoires pour compagnons heureux.',
+    stars: [{ egg: null }, ['Sachet de graines', 'm', 'graine', 0, null, '#a9784f'], ['Panier douillet', 'd', 'tapis', 1, null, '#f3aec1']],
+    keys: ['graine', 'fruit', 'mer', 'legume'], cats: ['jardin', 'marche', 'poissonnerie', 'zoo'], itemCats: ['m', 'n'],
+    crafts: ['mobile', 'plante', 'collier'], pets: 1,
+    bkinds: ['egg', 'comp', 'bait'], mult: 1.3, eggs: 1,
+    perks: ['Œufs plus fréquents et 20 % moins chers au magasin', 'Clients qui cherchent des œufs et des compagnons : +30 %'],
+    lines: ['Mon petit a besoin de friandises, il fait la grève de la sieste.', 'On m’a dit que vous connaissiez tous les compagnons du monde !', 'Je prépare un grand panier douillet… il ne manque plus qu’un locataire.'] },
+  { id: 'glacier', name: 'Glacier', short: 'Glacier', em: 'cornet', aw: '#f08aa6', aw2: '#e6f8f2', wall: '#fdeef2', wall2: '#d9f1ea', front: '#fff6f8', door: '#58b8a0',
+    phrase: 'Des boules de glace aux parfums du monde entier.',
+    stars: [['Coupe glacée des grands jours', 'n', 'glace', 3, null, '#f6a6b8'], ['Sorbet au citron', 'n', 'glace', 1, null, '#f2e27a'], ['Salade d’agrumes', 'n', 'agrume', 2, null, '#f2c14e']],
+    keys: ['glace', 'sucre', 'fruit', 'agrume'], cats: ['glacier', 'marche', 'plage', 'chocolaterie'], itemCats: ['n'],
+    crafts: ['coupeg', 'salade', 'confiture'],
+    bsubs: ['glace', 'agrume'], mult: 1.35, tip: 10,
+    perks: ['Glaces et agrumes : +35 % de pièces', 'Pourboire : +10 pièces à chaque commande'],
+    lines: ['Trois boules ! Non, quatre ! Avec un parapluie en papier !', 'Il fait si chaud… j’ai besoin de fraîcheur, vite !', 'C’est pour fêter la fin de l’école, toute la classe arrive !'] },
+  { id: 'librairie', name: 'Librairie-papeterie', short: 'Librairie', em: 'livre', aw: '#6f64b0', aw2: '#f4f0ff', wall: '#eeeaf8', wall2: '#ddd6ef', front: '#efe7d8', door: '#4a4378',
+    phrase: 'Des livres, des cartes anciennes et du papier qui sent bon.',
+    stars: [['Mappemonde de voyageur', 'd', 'mappemonde', 2, null, '#c9a97a'], ['Nœud papillon en origami', 'v', 'cou', 1, 'noeud', '#f2d48f'], ['Plan de Paris ancien', 'm', 'papier', 1, null, '#efe2c4']],
+    keys: ['papier', 'bois', 'feuille'], cats: ['librairie', 'bibliotheque', 'poste', 'ecole'], itemCats: ['m', 'd'],
+    crafts: ['globe', 'noeudpapier', 'herbier', 'herbjardin'],
+    bsubs: ['papier', 'mappemonde', 'herbier'], mult: 1.3, recx: 2,
+    perks: ['Papier, cartes et herbiers : +30 % de pièces', 'Recettes offertes deux fois plus souvent'],
+    lines: ['Je cherche de quoi écrire la suite de mes mémoires.', 'Une jolie carte pour mon prochain voyage, s’il vous plaît.', 'Le papier qui sent bon, c’est mon petit bonheur.'] },
+  { id: 'epicerie', name: 'Épicerie du monde', short: 'Épicerie', em: 'bocal', aw: '#6f9a4f', aw2: '#f6f3dc', wall: '#eef3e0', wall2: '#dde8c6', front: '#f4ecd6', door: '#4f6f3a',
+    phrase: 'Des bocaux et des spécialités rapportés de chaque région.',
+    stars: [['Calisson', 'n', 'sucre', 1, null, '#f6e3c4'], ['Huile d’olive', 'n', 'fruit', 0, null, '#a8b45a'], ['Sel de Guérande', 'm', 'sable', 0, null, '#f4f1ea']],
+    keys: ['fromage', 'fruit', 'sucre', 'legume'], cats: ['epicerie', 'fromagerie', 'marche'], itemCats: ['n', 'm'],
+    crafts: ['plateau', 'confiture', 'salade'], reach: 1,
+    bkinds: ['reg'], mult: 1.35,
+    perks: ['Spécialités régionales : +35 % de pièces', 'Clients venus de plus loin, dès le début'],
+    lines: ['Avez-vous ce petit goût de là-bas que je ne retrouve nulle part ?', 'Je cuisine un plat de mon enfance, il me manque l’ingrédient secret.', 'Vos étagères, c’est un tour du monde !'] },
+  { id: 'brocante', name: 'Brocante des voyageurs', short: 'Brocante', em: 'lampe', aw: '#b98a4a', aw2: '#fbf1dc', wall: '#f4ead8', wall2: '#e6d4b4', front: '#e8dcc4', door: '#7a5a3a',
+    phrase: 'Des trésors chinés : lampes, vases et souvenirs du monde.',
+    stars: [['Lanterne de verre', 'd', 'lanterne', 2, null, '#bfe3f6'], ['Mobile de coquillages', 'd', 'bocal', 2, null, '#f6cdb8'], ['Statuette sculptée', 'd', 'statue', 3, null, '#c99a6a']],
+    keys: ['metal', 'verre', 'bois', 'pierre', 'coquillage'], cats: ['puces', 'bricolage', 'rue'], itemCats: ['d', 'm'],
+    crafts: r => r.kind === 'Décoration' && !r.multi, souv: 1,
+    bcats: ['d'], mult: 1.35,
+    perks: ['Décorations : +35 % de pièces', 'Souvenirs du monde demandés plus tôt (et bien payés)'],
+    lines: ['Ça a l’air vieux… et c’est exactement ce que je cherche !', 'Pour ma collection de petites merveilles, il me manque une pièce.', 'Je décore mon nouveau terrier, il me faut du caractère.'] },
+];
+const BQS = id => BQ_SHOPS.find(x => x.id === id) || null;
+// ouverture d'un nouveau commerce : niveau de boutique requis et prix
+const BQ_SHOP_SLOTS = [{ lvl: 0, cost: 0 }, { lvl: 1, cost: 300 }, { lvl: 2, cost: 900 }, { lvl: 4, cost: 2500 }];
+const bqType = () => { const s = S.shop; return s && s.type && BQS(s.type) ? BQS(s.type) : null; };
+const bqOwned = () => ((S.shop && S.shop.owned) || []).filter(BQS);
+// prochain commerce à ouvrir : { i, lvl, cost, ok } ou null s'il n'y en a plus
+function bqNextSlot() { const n = bqOwned().length, sl = BQ_SHOP_SLOTS[n]; if (!n || !sl) return null; return { i: n, lvl: sl.lvl, cost: sl.cost, ok: bqState().lvl >= sl.lvl }; }
+// choix en attente : ancienne sauvegarde sans spécialité, ou nouveau commerce débloqué pas encore vu
+const bqChoicePending = () => { try { return !bqType() && !(S.firstRun); } catch (e) { return false; } };
+function bqSlotNew() { const n = bqNextSlot(); return !!(n && n.ok && (S.shop.slotSeen || 0) < n.i + 1); }
+
 // ---------------- recettes vendues au magasin ----------------
 const BQ_RECIPES = [
   { id: 'bs_brioche', kind: 'Cuisine', out: ['Brioche dorée', 'n', 'pain', 2, null, '#e3a04b'], ing: [['farine', 2], ['sucre', 1]], coins: 0, lvl: 1, price: 60 },
@@ -119,6 +217,11 @@ function bqState() {
   if (typeof s.next !== 'number') s.next = 0;
   if (typeof s.seq !== 'number') s.seq = 0;
   if (typeof s.earned !== 'number') s.earned = 0;
+  // commerces (phase B) : type actif, commerces ouverts ; une ancienne sauvegarde n'a pas encore de spécialité
+  if (s.type && !BQS(s.type)) s.type = null;
+  if (!Array.isArray(s.owned)) s.owned = [];
+  if (s.type && !s.owned.includes(s.type)) s.owned.push(s.type);
+  if (typeof s.slotSeen !== 'number') s.slotSeen = s.owned.length;
   s.orders = s.orders.filter(o => o && Array.isArray(o.req) && BQC(o.client));
   s.lvl = bqLevelOf(s.rep);
   return s;
@@ -134,14 +237,25 @@ function bqMatch(r, it) {
   if (r.k === 'ing') return (it.cat === 'm' || it.cat === 'n') && ING[r.key] && ING[r.key][0].includes(it.sub);
   if (r.k === 'item' || r.k === 'craft') return it.name === r.name || it.name === r.name + ' (chef-d’œuvre)';
   if (r.k === 'reg') return it.rid === r.rid;
+  if (r.k === 'bait') return bqIsBait(it);
   return false;
+}
+// animalerie : les œufs (S.eggs) et les compagnons (S.comps) demandés ; jamais le dernier compagnon, jamais un voyageur
+function bqPetTake(r, usedComps) {
+  if (r.k === 'egg') { const c = (S.eggs || []).filter(e => e && (!r.sp || e.sp === r.sp)).sort((a, b) => (a.rarity || 0) - (b.rarity || 0)); return c.slice(0, r.n).map(e => ({ egg: e.id })); }
+  const team = typeof teamIds === 'function' ? teamIds() : [], all = Object.keys(S.comps || {});
+  const c = all.filter(k => !usedComps.has(k) && (typeof spOf === 'function' ? spOf(k) : '') === r.sp && !S.trips[k])
+    .sort((a, b) => (team.includes(a) ? 1 : 0) - (team.includes(b) ? 1 : 0) || (S.comps[a].rarity || 0) - (S.comps[b].rarity || 0) || ((S.prog[a] || {}).lvl || 1) - ((S.prog[b] || {}).lvl || 1));
+  const max = Math.max(0, all.length - 1 - usedComps.size);
+  return c.slice(0, Math.min(r.n, max)).map(k => ({ comp: k }));
 }
 // les objets demandés précisément d'abord, puis les ingrédients génériques ; un objet porté seulement en dernier recours
 // (la livraison demande alors l'accord du joueur, via styleGuard)
 function bqAllocate(o) {
-  const worn = bqWorn(), used = new Set(), out = [];
+  const worn = bqWorn(), used = new Set(), out = [], usedComps = new Set();
   const order = o.req.map((r, i) => ({ r, i })).sort((a, b) => (a.r.k === 'ing') - (b.r.k === 'ing'));
   for (const { r, i } of order) {
+    if (r.k === 'egg' || r.k === 'comp') { const take = bqPetTake(r, usedComps); take.forEach(x => x.comp && usedComps.add(x.comp)); out[i] = { have: take.length, take, pet: 1 }; continue; }
     const c = S.inv.filter(it => !used.has(it) && bqMatch(r, it))
       .sort((a, b) => (worn.has(a.id) ? 1 : 0) - (worn.has(b.id) ? 1 : 0) || (r.k === 'reg' ? 0 : (a.rid ? 1 : 0) - (b.rid ? 1 : 0)) || ((a.special || a.edition) ? 1 : 0) - ((b.special || b.edition) ? 1 : 0) || a.rarity - b.rarity);
     const take = c.slice(0, r.n); take.forEach(x => used.add(x));
@@ -179,6 +293,9 @@ function bqReqValue(r) {
     if (r.k === 'ing') return value({ ...bqSampleIng(r.key), id: '' }) * r.n;
     if (r.k === 'item') return value(bqItemOf(r.def)) * r.n;
     if (r.k === 'reg') { const x = RG_RES[r.rid], R = RG[x.region], km = kmBetween(homeObj(), { lon: R.anchor[0], lat: R.anchor[1] }); return value({ name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, rid: x.id, origin: { region: R.id, km } }) * r.n; }
+    if (r.k === 'egg') return (r.sp ? 150 : 95) * 0.25 * r.n;
+    if (r.k === 'comp') return (typeof mkCompPrice === 'function' ? mkCompPrice({ sp: r.sp, rarity: 0, lvl: 1 }) : 180) * 0.3 * r.n;
+    if (r.k === 'bait') return 35 * r.n;
     if (r.k === 'craft') { const rc = RECIPES.find(x => x.id === r.id); const ingV = rc.ing.reduce((a, [key, n]) => a + (key.startsWith('r:') ? bqReqValue({ k: 'reg', rid: key.slice(2), n }) : value({ ...bqSampleIng(key), id: '' }) * n), 0); return (ingV + (rc.coins || 0) + value(bqItemOf(rc.out)) * 0.5) * r.n; }
   } catch (e) {}
   return 10 * (r.n || 1);
@@ -256,21 +373,99 @@ function bqGenFor(c, L, served) {
   }
   return req;
 }
+// ---------------- commandes selon le commerce ----------------
+const bqIsBait = it => { try { if (typeof nsBaitSps === 'function' && it && nsBaitSps(it).length) return true; if (typeof baitOf === 'function') return !!baitOf(it); if (typeof isBait === 'function') return !!isBait(it); } catch (e) {} return !!(it && (it.bait || it.sub === 'appat' || it.sub === 'appât')); };
+const bqSpIds = () => (typeof SP_IDS !== 'undefined' ? SP_IDS : ['panda', 'capy', 'axo']);
+const bqSpName = sp => { try { return typeof spName === 'function' ? spName(sp) : sp; } catch (e) { return sp; } };
+const bqCraftOK = (T, r) => typeof T.crafts === 'function' ? T.crafts(r) : T.crafts.includes(r.id);
+const BQ_GEN_SHOP = {
+  ing(T, c, L, easy) {
+    const keys = T.keys.filter(k => ING[k] && bqCatFor(k, T.cats));
+    const key = bqPick(keys, k => (c.likes.includes(k) ? 2 : 1)); if (!key) return null;
+    return { k: 'ing', key, n: easy ? 2 : 2 + (L >= 2 ? 1 : 0) + (Math.random() < 0.3 ? 1 : 0), src: { cat: bqCatFor(key, T.cats) } };
+  },
+  item(T, c, L) {
+    const cat = bqPick(T.cats.filter(x => bqPoiOK(x) && LOOT[x].some(d => T.itemCats.includes(d[1])))); if (!cat) return null;
+    const subs = new Set([].concat(...T.keys.map(k => ING[k] ? ING[k][0] : []), T.bsubs || []));
+    let defs = LOOT[cat].filter(d => d[3] <= (L >= 3 ? 1 : 0) && T.itemCats.includes(d[1]));
+    const fitting = defs.filter(d => subs.has(d[2]) || (T.bcats && T.bcats.includes(d[1]))); if (fitting.length) defs = fitting; // ce que vend vraiment le commerce
+    const def = bqPick(defs, d => d[3] ? 0.5 : 1); if (!def) return null;
+    return { k: 'item', name: def[0], def, n: 1, src: { cat } };
+  },
+  craft(T, c, L, easy) {
+    const pool = RECIPES.filter(r => !r.multi && bqCraftOK(T, r) && bqRecOwned(r.id) && r.ing.every(([k]) => !k.startsWith('r:')) && r.out[3] <= (easy ? 2 : L >= 2 ? 4 : 3));
+    const r = bqPick(pool, r => (r.out[3] <= 2 ? 2 : 1)); if (!r) return null;
+    return { k: 'craft', id: r.id, name: r.out[0], def: r.out, n: 1 };
+  },
+  reg(T, c, L) {
+    const regs = bqRegionsFor(Math.min(5, L + (T.reach || 0))); if (!regs.length) return null;
+    const subs = new Set([].concat(...T.keys.map(k => ING[k] ? ING[k][0] : []))), maxR = [0, 0, 1, 1, 2, 3][L] || 0, pool = [];
+    regs.forEach(R => R.res.forEach(x => { if (x.rar <= maxR && (T.reach || subs.has(x.sub) || T.itemCats.includes(x.cat) && x.cat !== 'm')) pool.push(x); }));
+    const x = bqPick(pool, x => (subs.has(x.sub) ? 3 : 1) * (x.rar ? 0.6 : 1)); if (!x) return null;
+    return { k: 'reg', rid: x.id, name: x.name, n: 1, src: { region: x.region } };
+  },
+  egg(T, c, L) { const sp = L >= 2 && Math.random() < 0.5 ? bqPick(bqSpIds()) : null; return { k: 'egg', sp, n: 1, name: sp ? `Œuf de ${bqSpName(sp).toLowerCase()}` : 'Œuf de compagnon' }; },
+  comp(T, c, L) { const sp = bqPick(bqSpIds()); return { k: 'comp', sp, n: 1, name: bqSpName(sp) }; },
+  bait() { return S.inv.some(bqIsBait) ? { k: 'bait', n: 1, name: 'Appât pour compagnons' } : null; },
+  souvenir(T, c, L) { return BQ_GEN.souvenir(c, Math.max(L, 3)); },
+  merveille(T, c, L) { return BQ_GEN.merveille(c, L); },
+};
+function bqGenShop(T, c, L, served) {
+  const easy = served < 2;
+  let W = easy ? { ing: 5, item: 2, craft: T.itemCats.includes('v') ? 3 : 0 } : [
+    { ing: 4, item: 3, craft: 2 },
+    { ing: 3, item: 2, craft: 2.5, reg: 2 },
+    { ing: 2.5, item: 2, craft: 3, reg: 3 },
+    { ing: 2, item: 1.5, craft: 3, reg: 3.5, souvenir: 0.5 },
+    { ing: 1.5, item: 1, craft: 3, reg: 3.5, souvenir: 1, merveille: 1 },
+    { ing: 1.5, item: 1, craft: 3, reg: 3.5, souvenir: 1, merveille: 1.5 },
+  ][L];
+  W = Object.assign({}, W);
+  if (T.itemCats.includes('v')) W.craft = (W.craft || 0) * 1.8; // mode : surtout des vêtements fabriqués
+  if (T.reach) W.reg = Math.max(W.reg || 0, easy ? 1.5 : 4); // épicerie : spécialités régionales dès le début
+  if (T.souv && !easy) W.souvenir = (W.souvenir || 0) + 1.2;
+  if (T.pets && (served >= 1 || !easy)) { W.egg = 3.2; if (L >= 1) W.comp = 2.4; W.bait = 1; }
+  const kinds = Object.keys(W).filter(k => W[k] > 0), req = [];
+  for (let t = 0; t < 14 && !req.length; t++) { const g = bqPick(kinds, k => W[k]); const r = BQ_GEN_SHOP[g](T, c, L, easy); if (r) req.push(r); }
+  if (!req.length) { const r = BQ_GEN_SHOP.ing(T, c, L, true) || BQ_GEN.ing(c, L, true); if (r) req.push(r); }
+  if (!easy && L >= 2 && Math.random() < 0.35 && !req.some(r => r.k === 'comp')) {
+    const g = bqPick(['ing', 'item', 'reg'].filter(k => W[k]), k => W[k]); const r = g && BQ_GEN_SHOP[g](T, c, L, false);
+    if (r && !req.some(x => x.k === r.k && (x.key || x.name || x.rid) === (r.key || r.name || r.rid))) req.push(r);
+  }
+  return req;
+}
+// sous-types touchés par une demande (pour la spécialité du commerce)
+function bqReqSubs(r) {
+  if (r.k === 'ing') return ING[r.key] ? ING[r.key][0] : [];
+  if (r.k === 'reg') return RG_RES[r.rid] ? [RG_RES[r.rid].sub] : [];
+  if (r.def) return [r.def[2]];
+  return [];
+}
+function bqIsSpec(T, req) {
+  if (!T) return false;
+  return req.some(r => (T.bkinds && T.bkinds.includes(r.k)) || (T.bsubs && bqReqSubs(r).some(x => T.bsubs.includes(x))) || (T.bcats && r.def && T.bcats.includes(r.def[1])));
+}
 function bqNewOrder(forceEasy) {
-  const s = bqState(), L = s.lvl, now = Date.now();
+  const s = bqState(), L = s.lvl, now = Date.now(), T = bqType();
   const busy = new Set(s.orders.map(o => o.client));
   let pool = BQ_CLIENTS.filter(c => c.lvl <= L && !busy.has(c.id) && !((s.clients[c.id] || {}).away > now));
   if (forceEasy) pool = pool.filter(c => c.cats.some(bqPoiOK));
   if (!pool.length) return null;
-  const c = bqPick(pool, c => 1 / (1 + ((s.clients[c.id] || {}).served || 0) * 0.3) * (c.lvl === L && L > 0 ? 1.6 : 1));
-  const req = bqGenFor(c, L, forceEasy ? 0 : s.served);
+  // les clients qui aiment ce que vend le commerce viennent plus souvent
+  const fit = c => T ? (c.likes.some(k => T.keys.includes(k)) || c.cats.some(x => T.cats.includes(x)) ? 3 : 1) : 1;
+  const c = bqPick(pool, c => fit(c) / (1 + ((s.clients[c.id] || {}).served || 0) * 0.3) * (c.lvl === L && L > 0 ? 1.6 : 1));
+  const req = T ? bqGenShop(T, c, L, forceEasy ? 0 : s.served) : bqGenFor(c, L, forceEasy ? 0 : s.served);
   const val = req.reduce((a, r) => a + bqReqValue(r), 0);
   const deadline = !forceEasy && Math.random() < 0.3 ? now + (24 + Math.floor(Math.random() * 24)) * 3600e3 : 0;
-  const coinsR = bqRound5((25 + 2.5 * val) * bqLv(L).rich * c.rich * (deadline ? 1.25 : 1));
-  const rep = Math.round(Math.min(70, 12 + val / 5 + L * 2 + req.length * 3 + (req.some(r => r.wonder) ? 15 : 0)));
-  const o = { id: uidGen(), client: c.id, line: pick(c.lines), req, coins: coinsR, rep, at: now, deadline, seq: ++s.seq };
+  const spec = bqIsSpec(T, req);
+  const coinsR = bqRound5(((25 + 2.5 * val) * bqLv(L).rich * c.rich * (deadline ? 1.25 : 1) * (spec ? T.mult || 1 : 1)) + (T && T.tip ? T.tip : 0));
+  const rep = Math.round(Math.min(90, (12 + val / 5 + L * 2 + req.length * 3 + (req.some(r => r.wonder) ? 15 : 0)) * (T && T.rep ? T.rep : 1)));
+  // la phrase du client : celle du commerce, la sienne, ou une demande d'adoption
+  const cr = req.find(r => r.k === 'comp');
+  const line = cr ? `Je rêve d’adopter ${typeof spArticle === 'function' ? spArticle(cr.sp) : 'un compagnon'}. Son panier est déjà prêt !` : T && Math.random() < 0.55 ? pick(T.lines) : pick(c.lines);
+  const o = { id: uidGen(), client: c.id, line, req, coins: coinsR, rep, at: now, deadline, seq: ++s.seq, shop: T ? T.id : null, spec: spec ? 1 : 0 };
   // parfois une récompense en plus : une recette du magasin pas encore connue, ou un objet rare
-  if (!forceEasy && Math.random() < 0.22) {
+  if (!forceEasy && Math.random() < 0.22 * (T && T.recx ? T.recx : 1)) {
     const rec = BQ_RECIPES.find(r => r.lvl <= L + 1 && !s.recipes.includes(r.id));
     if (rec && Math.random() < 0.5) o.bonus = { rec: rec.id };
     else { const tags = c.cats.filter(x => LOOT[x]).concat(c.tags.filter(x => LOOT[x])); const pl = [].concat(...tags.map(t => LOOT[t])).filter(d => d[3] === 2 && d[1] !== 't'); const d = bqPick(pl); if (d) o.bonus = { def: d }; }
@@ -278,9 +473,11 @@ function bqNewOrder(forceEasy) {
   return o;
 }
 // rythme d'arrivée : très rapide au début, puis une commande toutes les 20 à 40 minutes
-function bqInterval(served) { const m = served < 3 ? 2 + Math.random() * 2 : served < 8 ? 8 + Math.random() * 7 : 20 + Math.random() * 20; return Math.round(m * 60e3); }
+function bqInterval(served) { const m = served < 3 ? 2 + Math.random() * 2 : served < 8 ? 8 + Math.random() * 7 : 20 + Math.random() * 20, T = bqType(); return Math.round(m * 60e3 * (T && T.fast ? T.fast : 1)); }
+// commandes simultanées : selon le niveau, plus une pour le restaurant
+const bqSlots = () => { const s = bqState(), T = bqType(); return bqLv(s.lvl).slots + (T && T.slot ? T.slot : 0); };
 function bqTickOrders() {
-  const s = bqState(), now = Date.now(), slots = bqLv(s.lvl).slots;
+  const s = bqState(), now = Date.now(), slots = bqSlots();
   let changed = false;
   // délais dépassés : le client repart (il reviendra)
   const gone = s.orders.filter(o => o.deadline && now > o.deadline);
@@ -300,8 +497,18 @@ function bqTickOrders() {
 }
 
 // ---------------- libellés et icônes des demandes ----------------
+// petit œuf ou petit compagnon dessiné (animalerie, marché mondial)
+function bqEggSVG(sp, uid) {
+  try { if (typeof drawEgg === 'function') { const s = drawEgg(sp || null, null, 0, uid || ('bqe' + uidGen())); if (typeof s === 'string' && s.includes('<svg')) return s; } } catch (e) {}
+  try { if (typeof eggArt === 'function') return eggArt({ sp, col: ['#fff3e2', '#f3aec1'] }, 0, uid || ('bqe' + uidGen())); } catch (e) {}
+  return '';
+}
+function bqCompSVG(look, uid) { try { return drawChar(look, null, 'content', uid || ('bqc' + uidGen())); } catch (e) { return ''; } }
 function bqReqIcon(r) {
   try {
+    if (r.k === 'egg') return bqEggSVG(r.sp, 'bqre' + (r.sp || 'x'));
+    if (r.k === 'comp') return bqCompSVG({ sp: r.sp, genes: null, hybrid: null }, 'bqrc' + r.sp);
+    if (r.k === 'bait') { const b = S.inv.find(bqIsBait); return itemIcon(b || { name: 'Appât', cat: 'm', sub: 'graine', rarity: 1, color: '#e9a03a' }); }
     if (r.k === 'ing') return itemIcon(bqSampleIng(r.key));
     if (r.k === 'item' || r.k === 'craft') return itemIcon(bqItemOf(r.def));
     if (r.k === 'reg') { const x = RG_RES[r.rid]; return itemIcon({ name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color }); }
@@ -311,27 +518,42 @@ function bqReqIcon(r) {
 function bqReqLabel(r) {
   if (r.k === 'ing') return ING[r.key] ? ING[r.key][1] : r.key;
   if (r.k === 'reg') return RG_RES[r.rid] ? RG_RES[r.rid].name : r.rid;
+  if (r.k === 'egg') return r.sp ? `Œuf de ${bqSpName(r.sp).toLowerCase()}` : 'Un œuf de compagnon';
+  if (r.k === 'comp') return `Un ${bqSpName(r.sp).toLowerCase()} à adopter`;
   return r.name;
 }
 function bqReqWhere(r) {
   const s = r.src || {};
   if (r.k === 'craft') return r.wonder ? 'Merveille à fabriquer (atelier)' : 'À fabriquer à l’atelier';
+  if (r.k === 'egg') return 'Magasin, marché mondial ou voyage';
+  if (r.k === 'comp') return 'Marché mondial, œufs ou rencontres (pas un voyageur)';
+  if (r.k === 'bait') return 'Un appât du sac : fruits, poisson, thé…';
   if (s.cat && POI_CATS[s.cat]) return `${POI_CATS[s.cat][0]} près de chez vous`;
   if (s.tag) return `Lieu ${TAGQ[s.tag] || TAGL[s.tag] || s.tag}`;
   if (s.place) return `Souvenir de ${s.place}`;
   if (s.region && typeof RG !== 'undefined' && RG[s.region]) { const R = RG[s.region], h = bqHome(); return h && h.id === R.id ? `Spécialité de votre région (${R.short})` : `Spécialité ${rgDe(R)}`; }
   return '';
 }
-function bqRarity(r) { if (r.k === 'reg') return RG_RES[r.rid] ? RG_RES[r.rid].rar : 0; if (r.def) return r.def[3] || 0; return 0; }
+function bqRarity(r) { if (r.k === 'comp') return 2; if (r.k === 'egg') return r.sp ? 2 : 1; if (r.k === 'reg') return RG_RES[r.rid] ? RG_RES[r.rid].rar : 0; if (r.def) return r.def[3] || 0; return 0; }
 
 // ---------------- livrer, refuser, partir chercher ----------------
-function bqDeliver(id, srcEl, depth = 0) {
+function bqDeliver(id, srcEl, depth = 0, petOK = false) {
   const s = bqState(), o = s.orders.find(x => x.id === id); if (!o || !bqReady(o)) return;
   const c = BQC(o.client), alloc = bqAllocate(o), given = [];
+  // confier un compagnon : on demande d'abord (c'est le joueur qui a touché « Livrer », ce n'est pas une fenêtre spontanée)
+  const pets = [].concat(...alloc.filter(a => a.pet).map(a => a.take)), comps = pets.filter(x => x.comp).map(x => x.comp);
+  if (comps.length && !petOK) {
+    const k = comps[0], ch = CHARS[k], p = S.prog[k] || { lvl: 1 };
+    showModal(`<div class="bq-adopt"><img class="bq-adimg" src="${portraitURI(k, 'rire')}" alt=""><h2>Confier ${esc(ch ? ch.name : '')} à ${esc(c.name)} ?</h2><p>${esc(ch ? ch.species : '')} · niveau ${p.lvl} · ${RARITY[(S.comps[k] || {}).rarity || 0]}. ${esc(c.name)} promet d’en prendre grand soin. Ce compagnon quittera votre refuge.</p><div class="bq-adacts"><button class="btn cream" data-closemodal="1">Garder</button><button class="btn green" data-bqadopt="${o.id}">Confier</button></div></div>`);
+    return;
+  }
   // un vêtement porté par un compagnon : on demande avant de le livrer (un objet à la fois)
-  const worn = bqWorn(), wornIt = [].concat(...alloc.map(a => a.take)).find(it => worn.has(it.id));
-  if (wornIt && depth < 8 && typeof styleGuard === 'function') { styleGuard(wornIt.id, 'livrer', () => bqDeliver(id, srcEl, depth + 1)); return; }
-  alloc.forEach(a => a.take.forEach(it => { const i = S.inv.indexOf(it); if (i >= 0) { S.inv.splice(i, 1); given.push(it); } }));
+  const worn = bqWorn(), wornIt = [].concat(...alloc.filter(a => !a.pet).map(a => a.take)).find(it => worn.has(it.id));
+  if (wornIt && depth < 8 && typeof styleGuard === 'function') { styleGuard(wornIt.id, 'livrer', () => bqDeliver(id, srcEl, depth + 1, petOK)); return; }
+  if (comps.length && typeof removeComp === 'function') { for (const k of comps) if (!removeComp(k, { quiet: true, why: 'client' })) { toast('Ce compagnon ne peut pas partir pour l’instant.'); return; } }
+  else if (comps.length) return;
+  pets.filter(x => x.egg).forEach(x => { S.eggs = (S.eggs || []).filter(e => e.id !== x.egg); });
+  alloc.filter(a => !a.pet).forEach(a => a.take.forEach(it => { const i = S.inv.indexOf(it); if (i >= 0) { S.inv.splice(i, 1); given.push(it); } }));
   s.orders = s.orders.filter(x => x !== o);
   const lv0 = s.lvl;
   s.rep += o.rep; s.served++; s.earned += o.coins;
@@ -341,7 +563,7 @@ function bqDeliver(id, srcEl, depth = 0) {
   if (o.bonus && o.bonus.rec && !s.recipes.includes(o.bonus.rec)) { s.recipes.push(o.bonus.rec); const r = BQ_RECIPES.find(x => x.id === o.bonus.rec); bonusTxt = ` et la recette « ${r.out[0]} »`; }
   else if (o.bonus && o.bonus.def) { const it = makeItem(o.bonus.def, 1, `Cadeau de ${c.name}`, [], { fixed: Math.max(2, o.bonus.def[3]) }); S.inv.push(it); S.dex[it.name] = true; bonusTxt = ` et « ${it.name} »`; }
   gainCoins(o.coins);
-  if (s.orders.length < bqLv(s.lvl).slots) s.next = Math.min(s.next || Infinity, Date.now() + (s.served < 3 ? 60e3 : 4 * 60e3));
+  if (s.orders.length < bqSlots()) s.next = Math.min(s.next || Infinity, Date.now() + (s.served < 3 ? 60e3 : 4 * 60e3));
   s.lvl = bqLevelOf(s.rep);
   save();
   try { GAME.emit('order:done', { order: o, client: c, items: given }); } catch (e) {}
@@ -356,9 +578,8 @@ function bqLevelUp(L) {
   const lv = bqLv(L);
   try { GAME.emit('rep:level', { level: L }); } catch (e) {}
   if (typeof confetti === 'function') { try { confetti(true); } catch (e) {} }
-  const perks = (lv.perks || []).map(p => `<li>${esc(p)}</li>`).join('');
-  const html = `<div class="bq-lvup"><div class="bq-lvart">${bqShopSVG(L, true)}</div><span class="bq-kick">Nouveau niveau de boutique</span><h2>${esc(lv.name)} !</h2><p class="bq-title">« ${esc(lv.title)} »</p><ul class="bq-perks">${perks}</ul><button class="btn green big wide" data-closemodal="1">Formidable !</button></div>`;
-  if (typeof showModal === 'function') showModal(html); else toast(`Votre boutique devient : ${lv.name} !`);
+  // règle du joueur : aucune fenêtre ne s'ouvre toute seule → une notification non bloquante (les avantages restent affichés au comptoir)
+  toast(`Votre boutique devient « ${lv.name} » !${(lv.perks || [])[0] ? ' ' + lv.perks[0] + '.' : ''}`);
 }
 function bqRefuse(id) {
   const s = bqState(), o = s.orders.find(x => x.id === id); if (!o) return;
@@ -375,10 +596,16 @@ function bqGo(id) {
   const alloc = bqAllocate(o), i = o.req.findIndex((r, j) => alloc[j].have < r.n);
   if (i < 0) return bqDeliver(id);
   const r = o.req[i];
+  // œufs et compagnons : le marché mondial (ou le magasin pour un œuf)
+  if (r.k === 'egg' || r.k === 'comp' || r.k === 'bait') {
+    if (r.k === 'bait') { try { obFilter = 'comp'; } catch (e) {} if (typeof openSheet === 'function') openSheet('sac'); toast('Un appât, c’est un objet qui attire un compagnon : fruits, poisson, thé… Regardez « Pour mes compagnons ».'); return; }
+    if (typeof openMarche === 'function') { openMarche('comp', r.sp || ''); return; }
+    return openBoutique('magasin');
+  }
   // un compagnon libre
   if (S.trips[S.sel] && r.k !== 'craft') {
-    const free = Object.keys(CHARS).find(k => !S.trips[k]);
-    if (!free) { toast('Tous vos compagnons sont en voyage. Attendez le retour de l’un d’eux !'); return; }
+    const free = (typeof teamIds === 'function' ? teamIds() : Object.keys(S.comps || {})).find(k => !S.trips[k]);
+    if (!free) { toast('Toute l’équipe est en voyage. Attendez le retour de l’un d’eux, ou changez l’équipe au refuge !'); return; }
     selectComp(free);
   }
   const step = bqStepFor(r);
@@ -413,17 +640,21 @@ function bqStepFor(r) {
 }
 
 // ---------------- magasin ----------------
+// prix réduits par la spécialité du commerce (farine à la boulangerie, vêtements à la mode, œufs à l'animalerie)
+function bqCheapF(it, egg) { const T = bqType(); if (!T) return 1; if (egg) return T.eggs ? 0.8 : 1; const c = T.cheap; if (!c || !it) return 1; return (c.subs && c.subs.includes(it.sub)) || (c.cats && c.cats.includes(it.cat)) ? c.f : 1; }
 function bqArticle(a) {
+  if (a.k === 'o') { const nm = a.sp ? `Œuf de ${bqSpName(a.sp).toLowerCase()}` : 'Œuf commun'; return { egg: { sp: a.sp }, it: { name: nm, cat: 'o', rarity: a.sp ? 2 : 1 }, price: bqRound5(a.price * bqCheapF(null, 1)), name: nm }; }
   if (a.k === 'r') { const r = BQ_RECIPES.find(x => x.id === a.rec); return { rec: r, it: bqItemOf(r.out), price: r.price, name: `Recette : ${r.out[0]}` }; }
   if (a.k === 'x') return { it: a.it, price: a.price, name: a.it.name, rare: 1 };
   const it = bqItemOf(a.def);
-  return { it, price: bqRound5(value({ ...it, id: '' }) * 1.5), name: it.name };
+  return { it, price: bqRound5(value({ ...it, id: '' }) * 1.5 * bqCheapF(it)), name: it.name };
 }
 function bqStock() {
-  const s = bqState(), dk = dayKey(), L = s.lvl;
-  if (s.stock.day === dk && s.stock.lvl === L && s.stock.items.length) return s.stock.items;
-  const keep = s.stock.day === dk ? new Set(s.stock.items.filter(x => x.sold).map(x => x.key)) : new Set();
-  seed(dk * 13 + 7 + L * 101);
+  const s = bqState(), dk = dayKey(), L = s.lvl, T = bqType(), tid = T ? T.id : '';
+  if (s.stock.day === dk && s.stock.lvl === L && (s.stock.type || '') === tid && s.stock.items.length) return s.stock.items;
+  // les articles achetés aujourd'hui restent achetés, même si l'on change de commerce
+  const keep = s.stock.day === dk ? new Set([...(s.stock.sold || []), ...s.stock.items.filter(x => x.sold).map(x => x.key)]) : new Set();
+  seed(dk * 13 + 7 + L * 101 + [...tid].reduce((a, ch) => a + ch.charCodeAt(0) * 31, 0));
   const sh = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(srand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const n = bqLv(L).stock;
   const ok = BQ_CAT.filter(a => a.lvl <= L && !(a.k === 'r' && s.recipes.includes(a.rec)));
@@ -440,30 +671,38 @@ function bqStock() {
     const x = pool[Math.floor(srand() * pool.length)];
     if (x) { const R = RG[x.region], km = kmBetween(homeObj(), { lon: R.anchor[0], lat: R.anchor[1] }); const it = { name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color, rid: x.id, origin: { region: R.id, place: R.short, km } }; items.push({ key: 'x_' + x.id, x: { it, price: bqRound5(value({ ...it, id: '' }) * 1.6) } }); }
   }
+  // œufs de compagnons : un œuf commun (espèce surprise) chaque jour, parfois un œuf d'une espèce précise ; l'animalerie en a plus
+  const sps = bqSpIds();
+  items.unshift({ key: 'o_commun', o: { sp: null, price: 120 } });
+  if (T && T.eggs) items.unshift({ key: 'o_commun2', o: { sp: null, price: 120 } });
+  if (srand() < (T && T.eggs ? 1 : 0.35)) { const sp = sps[Math.floor(srand() * sps.length)]; items.unshift({ key: 'o_' + sp, o: { sp, price: 220 } }); }
+  if (T && T.eggs && L >= 2) { const sp = sps[Math.floor(srand() * sps.length)]; if (!items.some(x => x.key === 'o_' + sp)) items.unshift({ key: 'o_' + sp, o: { sp, price: 220 } }); }
   // articles du niveau suivant : visibles mais verrouillés, pour donner envie
   if (L < BQ_LEVELS.length - 1) sh(BQ_CAT.filter(a => a.lvl === L + 1)).slice(0, 3).forEach(a => items.push({ key: a.key, locked: 1 }));
   items.forEach(x => { if (keep.has(x.key)) x.sold = 1; });
-  s.stock = { day: dk, lvl: L, items };
+  s.stock = { day: dk, lvl: L, type: tid, items, sold: [...keep] };
   save();
   return items;
 }
-function bqStockArticle(x) { if (x.x) return { k: 'x', it: x.x.it, price: x.x.price }; return BQ_CAT.find(a => a.key === x.key); }
+function bqStockArticle(x) { if (x.o) return { k: 'o', sp: x.o.sp, price: x.o.price }; if (x.x) return { k: 'x', it: x.x.it, price: x.x.price }; return BQ_CAT.find(a => a.key === x.key); }
 function bqBuy(key, el) {
   const s = bqState(), x = bqStock().find(y => y.key === key); if (!x || x.sold || x.locked) return;
   const a = bqStockArticle(x); if (!a) return;
   const art = bqArticle(a);
   if (S.coins < art.price) { toast('Pas assez de pièces. Livrez une commande au Comptoir !'); return; }
-  S.coins -= art.price; x.sold = 1;
+  S.coins -= art.price; x.sold = 1; if (!Array.isArray(s.stock.sold)) s.stock.sold = []; if (!s.stock.sold.includes(key)) s.stock.sold.push(key);
   let msg;
-  if (art.rec) { if (!s.recipes.includes(art.rec.id)) s.recipes.push(art.rec.id); msg = `Nouvelle recette à l’atelier : « ${art.rec.out[0]} » !`; }
+  if (art.egg) { if (typeof addEgg === 'function') { const eid = addEgg({ sp: art.egg.sp || undefined, from: { how: 'magasin', place: 'La boutique' }, hatchMs: 3 * 60e3 }), eg = (S.eggs || []).find(x => x.id === eid); if (eg) eg.paid = art.price; } msg = `${art.name} acheté ! Il éclora au refuge dans 3 minutes.`; }
+  else if (art.rec) { if (!s.recipes.includes(art.rec.id)) s.recipes.push(art.rec.id); msg = `Nouvelle recette à l’atelier : « ${art.rec.out[0]} » !`; }
   else {
     const it = makeItem([art.it.name, art.it.cat, art.it.sub, art.it.rarity, art.it.look, art.it.color], 0, 'La boutique', [], { fixed: art.it.rarity });
     if (art.it.rid) { it.rid = art.it.rid; it.origin = Object.assign({}, art.it.origin); } else { const h = bqHome(); if (h) it.origin = { region: h.id, place: 'La boutique', km: 0 }; }
+    it.paid = art.price;
     S.inv.push(it); S.dex[it.name] = true; msg = `Acheté : « ${it.name} ». Il vous attend dans le sac.`;
   }
   S.stats.shopBought = (S.stats.shopBought || 0) + 1;
   save();
-  bqFly(el, art.it);
+  if (!art.egg) bqFly(el, art.it);
   renderTop(); renderPanel(); toast(msg);
 }
 
@@ -589,15 +828,142 @@ function clientSVG(c, mood, uid) {
 }
 const clientURI = (c, mood) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(clientSVG(c, mood).replace('<svg ', '<svg width="120" height="120" '));
 
+// ---------------- les commerces dessinés : emblème et façade ----------------
+// emblème dans une boîte de 40 × 40, centré en (20, 20)
+function bqEmblem(em) {
+  const L = '#5b4636', sw = `stroke="${L}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"`;
+  switch (em) {
+    case 'pain': return `<path d="M5 25 C5 11 35 11 35 25 C35 30 5 30 5 25Z" fill="#e3a04b" ${sw}/><path d="M12 17 l3 6 M19 15.5 l3 6.5 M26 17 l3 6" stroke="#fff3dc" stroke-width="2.2" stroke-linecap="round"/>`;
+    case 'tasse': return `<path d="M9 31 H31" stroke="${L}" stroke-width="2.6" stroke-linecap="round"/><path d="M8 17 H27 V23 C27 30 8 30 8 23Z" fill="#fff8ea" ${sw}/><path d="M27 19 h3 a3 3 0 0 1 0 6 h-3" fill="none" ${sw}/><path d="M14 13 q-2 -3 0 -6 M20 13 q-2 -3 0 -6" fill="none" stroke="#c98a5a" stroke-width="2" stroke-linecap="round"/><path d="M11 21 H24" stroke="#8a5a3a" stroke-width="3" stroke-linecap="round"/>`;
+    case 'cloche': return `<path d="M5 29 H35" stroke="${L}" stroke-width="2.6" stroke-linecap="round"/><path d="M8 27 C8 15 32 15 32 27Z" fill="#dfe6ee" ${sw}/><circle cx="20" cy="13" r="2.4" fill="#dfe6ee" ${sw}/><path d="M13 21 q2 -3 5 -3.5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/>`;
+    case 'fleur': return `<path d="M20 22 V35 M20 30 q-6 -1 -8 -6 q6 0 8 6" fill="#7fbf6a" ${sw}/>` + [0, 72, 144, 216, 288].map(a => `<ellipse cx="20" cy="9" rx="4.6" ry="6" fill="#f39ab0" ${sw} transform="rotate(${a} 20 15)"/>`).join('') + `<circle cx="20" cy="15" r="3.6" fill="#f6d36b" ${sw}/>`;
+    case 'cintre': return `<path d="M20 9 a3 3 0 1 1 3 3 c-1.5 0 -3 1 -3 2.5 V15" fill="none" ${sw}/><path d="M20 15 L6 22 H34Z" fill="none" ${sw}/><path d="M13 21 L10 34 H30 L27 21 Q20 24 13 21Z" fill="#c9a3f0" ${sw}/><path d="M17 27 h6" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`;
+    case 'patte': return `<ellipse cx="20" cy="26" rx="8" ry="7" fill="#f6b8c8" ${sw}/>` + [[9, 17, 3.6], [15, 10, 3.8], [25, 10, 3.8], [31, 17, 3.6]].map(([x, y, r]) => `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 1.2}" fill="#f6b8c8" ${sw}/>`).join('');
+    case 'cornet': return `<path d="M13 20 L20 36 L27 20Z" fill="#e3b06b" ${sw}/><path d="M15 23 l9 4 M16.5 27 l6 3" stroke="#b9783f" stroke-width="1.4"/><circle cx="16" cy="16" r="6" fill="#f6a6b8" ${sw}/><circle cx="24" cy="15" r="6" fill="#bfe6d4" ${sw}/><circle cx="20" cy="9" r="5" fill="#fff3dc" ${sw}/><circle cx="21" cy="4.5" r="1.8" fill="#e5584f"/>`;
+    case 'livre': return `<path d="M4 11 C10 9 16 10 20 13 C24 10 30 9 36 11 V31 C30 29 24 30 20 33 C16 30 10 29 4 31Z" fill="#fff8ea" ${sw}/><path d="M20 13 V33" stroke="${L}" stroke-width="2"/><path d="M8 16 q5 -1 9 1 M8 21 q5 -1 9 1 M23 17 q5 -2 9 -1 M23 22 q5 -2 9 -1" stroke="#9a8fd0" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+    case 'bocal': return `<rect x="11" y="6" width="18" height="6" rx="2" fill="#d9604f" ${sw}/><path d="M10 13 H30 V32 a3 3 0 0 1 -3 3 H13 a3 3 0 0 1 -3 -3Z" fill="#cfe8f2" ${sw}/><circle cx="16" cy="25" r="3" fill="#f2c14e"/><circle cx="23" cy="28" r="3" fill="#e5584f"/><circle cx="22" cy="21" r="2.5" fill="#7fbf6a"/><rect x="13" y="15" width="14" height="5" rx="1.5" fill="#fff8ea" stroke="${L}" stroke-width="1.4"/>`;
+    case 'lampe': return `<path d="M20 4 V8" stroke="${L}" stroke-width="2.2" stroke-linecap="round"/><path d="M13 12 C13 8 27 8 27 12Z" fill="#b98a4a" ${sw}/><rect x="13" y="12" width="14" height="16" rx="3" fill="#f6e08a" ${sw}/><path d="M20 15 v10" stroke="#fff6c9" stroke-width="3" stroke-linecap="round"/><path d="M11 28 H29 L27 33 H13Z" fill="#b98a4a" ${sw}/>`;
+    default: return `<rect x="8" y="12" width="24" height="20" rx="3" fill="#fff8ea" ${sw}/><path d="M6 13 L10 6 H30 L34 13Z" fill="#f3aec1" ${sw}/>`;
+  }
+}
+// un produit phare dessiné dans un rectangle (objet du jeu ou œuf)
+function bqStarSVG(st, x, y, w, uid) {
+  if (st && !Array.isArray(st) && 'egg' in st) return bqEggSVG(st.egg, uid).replace('<svg ', `<svg x="${x}" y="${y - w * 0.1}" width="${w}" height="${w * 1.1}" `);
+  return `<svg x="${x}" y="${y}" width="${w}" height="${w}" viewBox="0 0 40 40">${itemIcon(bqItemOf(st)).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</svg>`;
+}
+// façade d'un commerce (choix du commerce, onglets des commerces ouverts)
+function bqFacadeSVG(T, uid, opt = {}) {
+  const L = '#5b4636', sw = `stroke="${L}" stroke-width="2.4" stroke-linejoin="round"`, u = 'bf' + (uid || T.id);
+  let s = `<svg viewBox="0 0 200 172" xmlns="http://www.w3.org/2000/svg" class="bq-fac" role="img" aria-label="${esc(T.name)}">`;
+  s += `<defs><linearGradient id="${u}k" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cfe9f6"/><stop offset="1" stop-color="#f4fbff"/></linearGradient><linearGradient id="${u}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e4f3fa"/><stop offset="1" stop-color="#b9dcec"/></linearGradient></defs>`;
+  s += `<rect width="200" height="172" fill="url(#${u}k)"/><ellipse cx="38" cy="16" rx="16" ry="6" fill="#fff" opacity=".9"/><ellipse cx="170" cy="11" rx="12" ry="4.5" fill="#fff" opacity=".8"/>`;
+  // la maison
+  s += `<rect x="14" y="20" width="172" height="136" fill="${T.front}" ${sw}/><rect x="14" y="20" width="172" height="136" fill="${T.wall2}" opacity=".35"/>`;
+  s += `<rect x="8" y="12" width="184" height="12" rx="4" fill="${T.door}" ${sw}/>`;
+  // enseigne
+  const n = T.short, fs = n.length > 11 ? 12.5 : 14.5, bw = Math.min(150, 26 + n.length * fs * 0.6);
+  s += `<rect x="${100 - bw / 2}" y="29" width="${bw}" height="22" rx="7" fill="#fff8ea" ${sw}/><text x="100" y="44.5" text-anchor="middle" font-family="Baloo 2, Fredoka, Trebuchet MS, sans-serif" font-weight="800" font-size="${fs}" fill="#4a3528">${esc(n)}</text>`;
+  // auvent rayé
+  for (let i = 0; i < 8; i++) { const x = 16 + i * 21; s += `<path d="M${x} 56 H${x + 21} V68 a10.5 7 0 0 1 -21 0Z" fill="${i % 2 ? T.aw2 : T.aw}" ${sw}/>`; }
+  // vitrine avec les produits phares
+  s += `<rect x="22" y="80" width="94" height="58" rx="5" fill="url(#${u}g)" ${sw}/><path d="M26 86 l14 -4 M28 96 l20 -8" stroke="#fff" stroke-width="2.6" stroke-linecap="round" opacity=".7"/>`;
+  s += `<rect x="24" y="124" width="90" height="5" rx="2" fill="${T.door}" opacity=".8"/>`;
+  (T.stars || []).slice(0, 3).forEach((st, i) => { s += bqStarSVG(st, 27 + i * 29, 96, 28, u + 's' + i); });
+  // jardinière
+  s += `<rect x="20" y="139" width="98" height="9" rx="3" fill="${T.door}" ${sw}/>` + [30, 44, 58, 72, 86, 100, 110].map((x, i) => `<circle cx="${x}" cy="137" r="${3.4 + (i % 2)}" fill="${['#f39ab0', '#f6d36b', '#fff', '#9fd0f0'][i % 4]}" stroke="${L}" stroke-width="1.2"/>`).join('');
+  // porte et son emblème
+  s += `<path d="M128 156 V88 a22 14 0 0 1 44 0 V156Z" fill="${T.door}" ${sw}/><circle cx="150" cy="96" r="13" fill="#fff8ea" ${sw}/><g transform="translate(139 85) scale(.55)">${bqEmblem(T.em)}</g>`;
+  s += `<circle cx="164" cy="128" r="2.6" fill="#f2c14e" stroke="${L}" stroke-width="1.4"/><rect x="132" y="113" width="30" height="10" rx="3" fill="#fff8ea" stroke="${L}" stroke-width="1.4"/><text x="147" y="120.6" text-anchor="middle" font-family="Baloo 2, Trebuchet MS, sans-serif" font-weight="800" font-size="6" letter-spacing=".2" fill="#4a3528">OUVERT</text>`;
+  // trottoir
+  s += `<rect y="156" width="200" height="16" fill="#e8dcc6"/><path d="M0 157 H200" stroke="${L}" stroke-width="2.4"/><path d="M30 164 h18 M84 166 h22 M140 163 h20" stroke="#cdbb98" stroke-width="2" stroke-linecap="round"/>`;
+  if (opt.lock) s += `<rect width="200" height="172" fill="#f4efe6" opacity=".6"/>`;
+  return s + `</svg>`;
+}
+const bqFacadeURI = (T, uid) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(bqFacadeSVG(T, uid).replace('<svg ', '<svg width="200" height="172" '));
+
+// ---------------- choisir, ouvrir et changer de commerce ----------------
+// mode : 'first' (premier lancement), 'free' (ancienne sauvegarde : gratuit), 'buy' (un commerce de plus)
+let bqCh = null;
+function bqChooseOpen(mode, next) {
+  bqCh = { mode, next: next || null, pick: null };
+  if (mode === 'first' && S.firstRun) { S.firstRun.stage = 'commerce'; save(); }
+  bqChooseRender();
+}
+function bqChooseRender() {
+  const C = bqCh; if (!C) return;
+  const owned = bqOwned(), slot = bqNextSlot(), cost = C.mode === 'buy' && slot ? slot.cost : 0;
+  if (C.pick) {
+    const T = BQS(C.pick);
+    const stars = T.stars.map((st, i) => { const egg = !Array.isArray(st); return `<li><span class="bqc-si">${egg ? bqEggSVG(st.egg, 'bqcs' + i) : itemIcon(bqItemOf(st))}</span><b>${egg ? 'Œufs de compagnons' : esc(st[0])}</b></li>`; }).join('');
+    const uses = [...new Set(T.keys)].map(k => ING[k] ? `<i>${esc(ING[k][1])}</i>` : '').join('');
+    showModal(`<div class="bqc bqc-one"><div class="bqc-big">${bqFacadeSVG(T, 'bqcbig')}</div><span class="bqc-kick">${C.mode === 'first' ? 'Votre premier commerce' : C.mode === 'buy' ? 'Nouveau commerce' : 'Votre spécialité'}</span><h2>${esc(T.name)}</h2><p class="bqc-ph">${esc(T.phrase)}</p>
+      <h3>Produits phares</h3><ul class="bqc-stars">${stars}</ul>
+      <h3>Ressources utilisées</h3><p class="bqc-uses">${uses}</p>
+      <h3>Avantages</h3><ul class="bqc-perks">${T.perks.map(p => `<li>${esc(p)}</li>`).join('')}</ul>
+      <div class="bqc-acts"><button class="btn cream" data-bqcback="1">Voir les autres</button><button class="btn green" data-bqcopen="${T.id}" ${cost && S.coins < cost ? 'disabled' : ''}>${cost ? `Ouvrir · ${coins(cost)}` : 'Ouvrir ce commerce'}</button></div>
+      ${cost && S.coins < cost ? `<p class="small">Il vous manque ${cost - S.coins} pièces.</p>` : ''}</div>`);
+    const mb = document.querySelector('#modal .mbox'); if (mb) mb.scrollTop = 0;
+    return;
+  }
+  const list = BQ_SHOPS.filter(T => !owned.includes(T.id));
+  const head = C.mode === 'first' ? `<span class="bqc-kick">Dernière étape</span><h2>Quel commerce ouvrez-vous ?</h2><p class="bqc-ph">Vos compagnons rapporteront de voyage de quoi servir vos clients. Vous pourrez ouvrir d’autres commerces plus tard.</p>`
+    : C.mode === 'buy' ? `<span class="bqc-kick">Votre réputation grandit</span><h2>Ouvrir un nouveau commerce</h2><p class="bqc-ph">Coût : ${coins(cost)}. Vous passerez de l’un à l’autre quand vous voudrez.</p>`
+    : `<span class="bqc-kick">Nouveau</span><h2>Choisissez la spécialité de votre boutique</h2><p class="bqc-ph">C’est gratuit. Les clients et leurs commandes s’adapteront à votre commerce.</p>`;
+  showModal(`<div class="bqc">${head}<div class="bqc-grid">${list.map(T => `<button class="bqc-card" data-bqcpick="${T.id}" style="--aw:${T.aw}"><span class="bqc-fac">${bqFacadeSVG(T, 'g' + T.id)}</span><b>${esc(T.name)}</b><span>${esc(T.phrase)}</span></button>`).join('')}</div>${C.mode !== 'first' ? '<button class="btn cream" data-bqcclose="1">Plus tard</button>' : ''}</div>`);
+  const mb = document.querySelector('#modal .mbox'); if (mb) mb.scrollTop = 0;
+}
+function bqOpenShop(id) {
+  const C = bqCh, T = BQS(id); if (!C || !T) return;
+  const s = bqState(), slot = bqNextSlot(), cost = C.mode === 'buy' && slot ? slot.cost : 0;
+  if (C.mode === 'buy' && (!slot || !slot.ok)) return;
+  if (cost && S.coins < cost) { toast('Pas assez de pièces pour ouvrir ce commerce.'); return; }
+  if (cost) S.coins -= cost;
+  if (!s.owned.includes(id)) s.owned.push(id);
+  s.type = id; s.slotSeen = Math.max(s.slotSeen || 0, s.owned.length);
+  // une partie qui commence : les premiers clients viennent pour ce commerce
+  if (!s.served) { s.orders = []; s.started = 0; s.next = 0; }
+  else s.next = Math.min(s.next || Infinity, Date.now() + 60e3);
+  s.stock.items = []; // le magasin s'adapte au commerce
+  bqCh = null; save();
+  try { GAME.emit('shop:open', { type: id, mode: C.mode }); } catch (e) {}
+  if (C.mode === 'first') { if (S.firstRun) S.firstRun.stage = 'done'; bqTickOrders(); save(); return (C.next || firstRunNext)(); }
+  $('modal').hidden = true;
+  bqTickOrders(); save(); bView = 'comptoir';
+  renderTop(); renderPanel();
+  toast(C.mode === 'buy' ? `Votre ${T.short.toLowerCase()} ouvre ses portes ! Changez de commerce en haut du comptoir.` : `Votre boutique devient : ${T.name} !`);
+}
+function bqSwitch(id) {
+  const s = bqState(); if (!s.owned.includes(id) || s.type === id) return;
+  s.type = id; s.next = Math.min(s.next || Infinity, Date.now() + 3 * 60e3); save(); renderPanel();
+  toast(`Bienvenue à la ${BQS(id).short.toLowerCase()} ! Les prochains clients viendront pour elle.`.replace('à la Restaurant', 'au restaurant'));
+}
+// barre des commerces, en haut du comptoir
+function bqShopsBar() {
+  const s = bqState(), T = bqType();
+  if (!T) return `<div class="bq-pick"><span class="bq-pdot" aria-hidden="true"></span><div><b>Choisissez la spécialité de votre boutique</b><span>Boulangerie, salon de thé, fleuriste, animalerie… Les clients s’adapteront. C’est gratuit.</span></div><button class="btn gold sm" data-bqchoose="free">Choisir</button></div>`;
+  const nx = bqNextSlot(), isNew = bqSlotNew();
+  let h = `<div class="bq-shops" role="tablist" aria-label="Mes commerces">`;
+  h += bqOwned().map(id => { const X = BQS(id); return `<button role="tab" class="bq-shopc" data-bqswitch="${id}" aria-selected="${id === s.type}" style="--aw:${X.aw}"><span class="bq-shopi"><svg viewBox="0 0 40 40" aria-hidden="true">${bqEmblem(X.em)}</svg></span><span>${esc(X.short)}</span></button>`; }).join('');
+  if (nx) h += nx.ok ? `<button class="bq-shopc add" data-bqchoose="buy">${isNew ? '<i class="bq-pdot"></i>' : ''}<span class="bq-shopi">+</span><span>Ouvrir · ${coins(nx.cost)}</span></button>`
+    : `<span class="bq-shopc lock" title="Débloqué au niveau ${nx.lvl + 1} de la boutique"><span class="bq-shopi"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="10.5" width="13" height="10" rx="2.5" fill="#cfc5b4" stroke="#5b4636" stroke-width="2"/><path d="M8.5 10.5 V8 a3.5 3.5 0 0 1 7 0 V10.5" stroke="#5b4636" stroke-width="2.2" fill="none"/></svg></span><span>${bqOwned().length + 1}ᵉ commerce : niv. ${nx.lvl + 1}</span></span>`;
+  h += `</div><div class="bq-perkl">${T.perks.map(p => `<i>${esc(p)}</i>`).join('')}</div>`;
+  if (isNew) { s.slotSeen = nx.i + 1; save(); } // vu : le point rouge s'éteint au prochain affichage
+  return h;
+}
+// (l'étape du premier lancement est branchée dans 22_marche.js, chargé après 20_collection.js)
+
 // ---------------- la boutique dessinée ----------------
 function bqShopSVG(L, mini) {
   const s0 = bqState(), night = isNight(), ink = '#5b4636', sw = `stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"`;
   L = L == null ? s0.lvl : L;
   const W = 360, H = 210;
   let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="bq-shop" role="img" aria-label="La boutique, niveau ${esc(bqLv(L).name)}">`;
-  s += `<defs><pattern id="bqwp${L}" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="${L >= 1 ? '#f8e6cc' : '#f3e2c8'}"/>${L >= 1 ? '<rect width="12" height="24" fill="#f6dcc0" opacity=".7"/>' : '<circle cx="6" cy="6" r="1.6" fill="#e9cfae"/><circle cx="18" cy="18" r="1.6" fill="#e9cfae"/>'}</pattern></defs>`;
+  // le décor suit le commerce ouvert (couleurs du mur, auvent, enseigne, produits sur les étagères, emblème du comptoir)
+  const TT = bqType(), pid = 'bqwp' + L + (TT ? TT.id : '') + (mini ? 'm' : '');
+  const wA = TT ? TT.wall : L >= 1 ? '#f8e6cc' : '#f3e2c8', wB = TT ? TT.wall2 : '#f6dcc0';
+  s += `<defs><pattern id="${pid}" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="${wA}"/>${L >= 1 || TT ? `<rect width="12" height="24" fill="${wB}" opacity=".7"/>` : '<circle cx="6" cy="6" r="1.6" fill="#e9cfae"/><circle cx="18" cy="18" r="1.6" fill="#e9cfae"/>'}</pattern></defs>`;
   // mur et sol
-  s += `<rect width="${W}" height="${H}" fill="url(#bqwp${L})"/>`;
+  s += `<rect width="${W}" height="${H}" fill="url(#${pid})"/>`;
   s += `<rect y="168" width="${W}" height="42" fill="#c99a6a"/>` + [0, 1, 2].map(i => `<path d="M0 ${178 + i * 11} H${W}" stroke="#b5875a" stroke-width="1.2"/>`).join('') + `<rect y="164" width="${W}" height="6" fill="#a87a50"/>`;
   if (L >= 3) s += `<ellipse cx="180" cy="192" rx="120" ry="12" fill="#d9604f" opacity=".9" ${sw}/><ellipse cx="180" cy="192" rx="96" ry="7" fill="none" stroke="#f6d36b" stroke-width="2.4"/>`;
   // fenêtre (à gauche)
@@ -616,29 +982,32 @@ function bqShopSVG(L, mini) {
     for (let i = 0; i < 3; i++) {
       const it = inv[si * 3 + i], x = shelfX + 6 + i * 28;
       if (it) s += `<svg x="${x}" y="${y - 26}" width="26" height="26" viewBox="0 0 40 40">${itemIcon(it).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</svg>`;
+      else if (TT && TT.stars[(si * 3 + i) % 3]) s += bqStarSVG(TT.stars[(si * 3 + i) % 3], x, y - 26, 26, pid + 'st' + si + i);
       else s += `<rect x="${x + 4}" y="${y - 18}" width="16" height="18" rx="4" fill="${['#f3aec1', '#bfe3f6', '#f6d36b'][i]}" ${sw}/><rect x="${x + 6}" y="${y - 22}" width="12" height="5" rx="2" fill="#c9a97a" stroke="${ink}" stroke-width="1.6"/>`;
     }
   });
   if (L >= 4) s += `<g transform="translate(296 132)"><path d="M10 34 H30 M20 34 V26" stroke="${ink}" stroke-width="3" stroke-linecap="round"/><circle cx="20" cy="14" r="13" fill="#9cc8e2" ${sw}/><path d="M12 8 c4 -2 8 2 6 6 c-2 4 -6 2 -8 6 M26 6 c4 2 4 8 0 10" fill="#cfe2a8" stroke="${ink}" stroke-width="1.2"/></g>`;
   else if (L >= 2) s += `<g transform="translate(318 132)"><path d="M2 20 L4 32 H24 L26 20Z" fill="#d98763" ${sw}/><path d="M14 20 C12 10 6 6 0 6 C4 12 8 16 14 20Z M14 20 C16 8 22 4 28 4 C26 12 20 16 14 20Z M14 20 C14 10 14 4 13 -2 C18 6 18 14 14 20Z" fill="#6fae7d" stroke="${ink}" stroke-width="1.6"/></g>`;
   // auvent / enseigne
-  if (L >= 1) {
+  const hasAw = L >= 1 || !!TT;
+  if (hasAw) {
     let aw = '';
-    for (let i = 0; i < 12; i++) aw += `<path d="M${i * 30} 0 H${i * 30 + 30} V22 a15 9 0 0 1 -30 0Z" fill="${i % 2 ? '#fff8ea' : L >= 5 ? '#2f7f6c' : '#d9604f'}" ${sw}/>`;
+    for (let i = 0; i < 12; i++) aw += `<path d="M${i * 30} 0 H${i * 30 + 30} V22 a15 9 0 0 1 -30 0Z" fill="${i % 2 ? (TT ? TT.aw2 : '#fff8ea') : L >= 5 ? '#2f7f6c' : TT ? TT.aw : '#d9604f'}" ${sw}/>`;
     s += aw;
   } else s += `<rect x="0" y="0" width="${W}" height="10" fill="#a87a50"/>`;
-  const sign = bqLv(L).name, gold = L >= 5;
-  s += `<g transform="translate(180 ${L >= 1 ? 40 : 22})"><path d="M-20 -14 V-6 M20 -14 V-6" stroke="${ink}" stroke-width="2"/><rect x="${-12 - sign.length * (sign.length > 14 ? 3.9 : 4.4)}" y="-6" width="${24 + sign.length * (sign.length > 14 ? 7.8 : 8.8)}" height="26" rx="8" fill="${gold ? '#f6c445' : '#fff8ea'}" ${sw}/><text x="0" y="12.5" text-anchor="middle" font-family="Baloo 2, Fredoka, sans-serif" font-weight="800" font-size="${sign.length > 14 ? 13.5 : 15}" fill="${gold ? '#7a4a12' : '#4a3528'}">${esc(sign)}</text></g>`;
+  const sign = TT ? TT.short : bqLv(L).name, gold = L >= 5;
+  s += `<g transform="translate(180 ${hasAw ? 40 : 22})"><path d="M-20 -14 V-6 M20 -14 V-6" stroke="${ink}" stroke-width="2"/><rect x="${-12 - sign.length * (sign.length > 14 ? 3.9 : 4.4)}" y="-6" width="${24 + sign.length * (sign.length > 14 ? 7.8 : 8.8)}" height="26" rx="8" fill="${gold ? '#f6c445' : '#fff8ea'}" ${sw}/><text x="0" y="12.5" text-anchor="middle" font-family="Baloo 2, Fredoka, sans-serif" font-weight="800" font-size="${sign.length > 14 ? 13.5 : 15}" fill="${gold ? '#7a4a12' : '#4a3528'}">${esc(sign)}</text></g>`;
   if (gold) s += [[100, 40], [262, 36], [130, 70], [236, 76]].map(([x, y]) => `<path d="${starPath(x, y, 5)}" fill="#fff6c9" stroke="#c98f1e" stroke-width="1"/>`).join('');
   if (L >= 4) { let g = `<path d="M96 58 Q180 82 264 58" fill="none" stroke="${ink}" stroke-width="1.4"/>`; for (let i = 0; i < 9; i++) { const t = (i + 0.5) / 9, x = 96 + t * 168, y = 58 + Math.sin(t * Math.PI) * 12; g += `<path d="M${x - 5} ${y} L${x + 5} ${y} L${x} ${y + 10}Z" fill="${['#f08aa6', '#f6c445', '#5fbf7f', '#5f87c9'][i % 4]}" stroke="${ink}" stroke-width="1"/>`; } s += g; }
   if (L >= 3) [104, 256].forEach(x => { s += `<path d="M${x} ${L >= 1 ? 30 : 10} V58" stroke="${ink}" stroke-width="1.6"/><rect x="${x - 8}" y="58" width="16" height="22" rx="6" fill="#f6d36b" ${sw}/><circle cx="${x}" cy="69" r="13" fill="#f6d36b" opacity=".25"/>`; });
   // le compagnon derrière le comptoir (ou un compagnon resté à la maison)
-  const k = !S.trips[S.sel] ? S.sel : Object.keys(CHARS).find(x => !S.trips[x]);
+  const k = CHARS[S.sel] && !S.trips[S.sel] ? S.sel : (typeof teamIds === 'function' ? teamIds() : []).find(x => !S.trips[x]);
   if (k) s += drawChar(k, S.outfits[k], s0.orders.length && !mini ? 'content' : 'rire', 'bqk' + (mini ? 'm' : '') + L).replace('<svg ', `<svg x="128" y="${mini ? 56 : 52}" width="104" height="114" `);
   else s += `<g transform="translate(180 112)"><rect x="-34" y="-16" width="68" height="30" rx="6" fill="#fff8ea" ${sw}/><text y="4" text-anchor="middle" font-family="Caveat, cursive" font-size="15" fill="#4a3528">En voyage !</text></g>`;
   // le comptoir
   s += `<rect x="96" y="128" width="168" height="46" rx="6" fill="#c98a5a" ${sw}/><rect x="90" y="122" width="180" height="10" rx="4" fill="#e3b07a" ${sw}/>`;
   s += `<path d="M110 140 H250 M110 156 H250" stroke="#a87a50" stroke-width="2" opacity=".6"/>`;
+  if (TT) s += `<circle cx="180" cy="151" r="15" fill="#fff8ea" ${sw}/><g transform="translate(167 138) scale(.65)">${bqEmblem(TT.em)}</g>`;
   s += `<g transform="translate(118 112)"><path d="M0 10 C0 0 16 0 16 10Z" fill="#f2c14e" ${sw}/><rect x="-3" y="9" width="22" height="4" rx="2" fill="#c9a35a" ${sw}/><circle cx="8" cy="-1" r="2.2" fill="#f2c14e" stroke="${ink}" stroke-width="1.4"/></g>`;
   s += `<g transform="translate(230 100)"><rect x="0" y="6" width="26" height="18" rx="3" fill="#7fb6d9" ${sw}/><rect x="4" y="0" width="18" height="8" rx="2" fill="#bfe1f2" ${sw}/><circle cx="13" cy="15" r="3" fill="#f6d36b"/></g>`;
   // les clients qui attendent
@@ -663,7 +1032,8 @@ const BQ_ICONS = {
 const BQ_STAR = '<svg class="bq-star" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.8 L12.4 7.2 L18.2 7.6 L13.8 11.4 L15.2 17.2 L10 14.1 L4.8 17.2 L6.2 11.4 L1.8 7.6 L7.6 7.2Z" fill="#f6c445" stroke="#5b4636" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 function bqSubtabs() {
   const s = bqState(), r = shopReady();
-  const t = [['comptoir', 'Comptoir', BQ_ICONS.comptoir, r ? `<i class="bq-sdot">${r}</i>` : ''], ['magasin', 'Magasin', BQ_ICONS.magasin, ''], ['marche', 'Marché', (typeof NAV_ICONS !== 'undefined' && NAV_ICONS.marche) || '', '']];
+  const mk = typeof mkUnseen === 'function' ? mkUnseen() : 0, pend = bqChoicePending() || bqSlotNew();
+  const t = [['comptoir', 'Comptoir', BQ_ICONS.comptoir, r ? `<i class="bq-sdot">${r}</i>` : pend ? '<i class="bq-rdot" aria-label="Nouveau"></i>' : ''], ['magasin', 'Magasin', BQ_ICONS.magasin, ''], ['marche', typeof renderMarche === 'function' ? 'Marché mondial' : 'Marché', (typeof NAV_ICONS !== 'undefined' && NAV_ICONS.marche) || '', mk ? '<i class="bq-rdot" aria-label="Ventes conclues"></i>' : '']];
   void s;
   return `<div class="subtabs bq-subs" role="tablist">${t.map(([k, l, ic, b]) => `<button role="tab" data-bsub="${k}" aria-selected="${bView === k}">${b}<svg viewBox="0 0 30 30" aria-hidden="true">${ic}</svg><span>${l}</span></button>`).join('')}</div>`;
 }
@@ -680,22 +1050,22 @@ function bqOrderCard(o) {
   else if (o.bonus && o.bonus.def) bonus = `<span class="bq-bonus" title="${esc(o.bonus.def[0])}"><span class="bq-bi">${itemIcon(bqItemOf(o.bonus.def, { rarity: 2 }))}</span>Cadeau rare</span>`;
   const dl = o.deadline ? `<span class="bq-dl" data-bqcd="${o.deadline}">${fmtDur(o.deadline - now)}</span>` : '';
   const regGo = o.req.find((r, i) => alloc[i].have < r.n);
-  const goLbl = !regGo ? '' : regGo.k === 'craft' && canCraft(RECIPES.find(x => x.id === regGo.id) || { ing: [], coins: 0 }) ? 'Fabriquer' : 'Partir chercher';
+  const goLbl = !regGo ? '' : regGo.k === 'egg' || regGo.k === 'comp' ? 'Au marché' : regGo.k === 'bait' ? 'Nurserie' : regGo.k === 'craft' && canCraft(RECIPES.find(x => x.id === regGo.id) || { ing: [], coins: 0 }) ? 'Fabriquer' : 'Partir chercher';
   return `<article class="bq-order${ready ? ' ready' : ''}" data-oid="${o.id}">${ready ? '<span class="bq-ribbon">Prêt à livrer !</span>' : ''}
-    <div class="bq-oh"><img class="bq-face" src="${clientURI(c, ready ? 'joie' : 'content')}" alt=""><div class="bq-ohx"><b>${esc(c.name)}</b><span>${esc(BQ_SPN[c.sp] || '')} · ${esc(c.pers)}</span><p>« ${esc(o.line)} »</p></div></div>
+    <div class="bq-oh"><img class="bq-face" src="${clientURI(c, ready ? 'joie' : 'content')}" alt=""><div class="bq-ohx"><b>${esc(c.name)}</b><span>${esc(BQ_SPN[c.sp] || '')} · ${esc(c.pers)}${o.shop && BQS(o.shop) && bqOwned().length > 1 ? ` · <em class="bq-oshop">${esc(BQS(o.shop).short)}</em>` : ''}</span><p>« ${esc(o.line)} »</p></div></div>
     <ul class="bq-req">${lines}</ul>
-    <div class="bq-rew"><span class="bq-coins">${coins(o.coins)}</span><span class="bq-repg">${BQ_STAR}+${o.rep}</span>${bonus}${dl}</div>
+    <div class="bq-rew"><span class="bq-coins">${coins(o.coins)}</span><span class="bq-repg">${BQ_STAR}+${o.rep}</span>${o.spec && BQS(o.shop) ? `<span class="bq-spec" title="${esc(BQS(o.shop).perks[0])}">Spécialité</span>` : ''}${bonus}${dl}</div>
     <div class="bq-acts">${ready ? `<button class="btn green bq-deliver" data-bdeliver="${o.id}">Livrer</button>` : `<button class="btn gold bq-go" data-bgo="${o.id}">${goLbl}</button>`}<button class="bq-refuse" data-brefuse="${o.id}" aria-label="Refuser la commande de ${esc(c.name)}">Refuser</button></div>
   </article>`;
 }
 function renderComptoir(box) {
   const s = bqState(); bqTickOrders();
   const lv = bqLv(s.lvl), now = Date.now();
-  let h = `<div class="bq-hero">${bqShopSVG()}</div>` + bqRepHTML();
+  let h = bqShopsBar() + `<div class="bq-hero">${bqShopSVG()}</div>` + bqRepHTML();
   const ready = shopReady();
   h += `<div class="bq-intro"><b>${s.orders.length ? (ready ? `${ready} commande${ready > 1 ? 's' : ''} prête${ready > 1 ? 's' : ''} à livrer !` : `${s.orders.length} client${s.orders.length > 1 ? 's' : ''} attend${s.orders.length > 1 ? 'ent' : ''} au comptoir`) : 'Le comptoir est calme…'}</b><span>Réunissez ce qu’ils demandent en voyage ou à l’atelier, puis livrez : pièces et réputation garanties.</span></div>`;
   h += `<div class="bq-orders">` + s.orders.slice().sort((a, b) => bqReady(b) - bqReady(a) || a.seq - b.seq).map(bqOrderCard).join('');
-  for (let i = s.orders.length; i < lv.slots; i++) h += `<div class="bq-slot"><svg viewBox="0 0 30 30" aria-hidden="true">${BQ_ICONS.comptoir}</svg><span>${i === s.orders.length ? `Prochain client dans <b data-bqcd="${s.next}">${fmtDur(s.next - now)}</b>` : 'Place libre au comptoir'}</span></div>`;
+  for (let i = s.orders.length; i < bqSlots(); i++) h += `<div class="bq-slot"><svg viewBox="0 0 30 30" aria-hidden="true">${BQ_ICONS.comptoir}</svg><span>${i === s.orders.length ? `Prochain client dans <b data-bqcd="${s.next}">${fmtDur(s.next - now)}</b>` : 'Place libre au comptoir'}</span></div>`;
   h += `</div>`;
   const served = Object.entries(s.clients).filter(([, v]) => v.served).length;
   h += `<p class="small bq-foot">${s.served} commande${s.served > 1 ? 's' : ''} livrée${s.served > 1 ? 's' : ''} · ${served}/${BQ_CLIENTS.length} clients déjà servis · ${coins(s.earned)} gagnées au comptoir. ${lv.reach}.</p>`;
@@ -704,10 +1074,10 @@ function renderComptoir(box) {
 function renderMagasin(box) {
   const s = bqState(), items = bqStock();
   let h = phead(null, 'Le magasin', `Les articles du jour, changés chaque matin. Vous avez ${coins(S.coins)}.`);
-  const grp = [['v', 'Vêtements et accessoires'], ['d', 'Meubles et décos'], ['m', 'Graines et matériaux'], ['r', 'Recettes à débloquer'], ['x', 'Article rare du jour']];
+  const grp = [['o', 'Œufs de compagnons'], ['v', 'Vêtements et accessoires'], ['d', 'Meubles et décos'], ['m', 'Graines et matériaux'], ['r', 'Recettes à débloquer'], ['x', 'Article rare du jour']];
   const open = items.filter(x => !x.locked), locked = items.filter(x => x.locked);
   for (const [k, title] of grp) {
-    const list = open.filter(x => (x.x ? 'x' : (BQ_CAT.find(a => a.key === x.key) || {}).k) === k); if (!list.length) continue;
+    const list = open.filter(x => (x.o ? 'o' : x.x ? 'x' : (BQ_CAT.find(a => a.key === x.key) || {}).k) === k); if (!list.length) continue;
     h += `<h3 class="bq-h3">${title}</h3><div class="bq-grid">${list.map(x => bqShopCard(x)).join('')}</div>`;
   }
   if (locked.length) h += `<h3 class="bq-h3 bq-lockh">Au niveau « ${esc(bqLv(s.lvl + 1).name)} »</h3><div class="bq-grid">${locked.map(x => bqShopCard(x)).join('')}</div><p class="small">Livrez des commandes au Comptoir pour gagner de la réputation et débloquer ces articles.</p>`;
@@ -717,6 +1087,10 @@ function renderMagasin(box) {
 function bqShopCard(x) {
   const a = bqStockArticle(x); if (!a) return '';
   const art = bqArticle(a), it = art.it, can = S.coins >= art.price;
+  if (art.egg) {
+    const btn = x.sold ? '<span class="bq-sold">Acheté</span>' : `<button class="btn ${can ? 'gold' : 'cream'} sm" data-bbuy="${x.key}" ${can ? '' : 'disabled'}>${coins(art.price)}</button>`;
+    return `<div class="bq-art bq-eggart${x.sold ? ' sold' : ''}" style="--rc:${RARC[it.rarity]}"><div class="bq-aico bq-eggi">${bqEggSVG(art.egg.sp, 'bqse' + x.key)}</div><b>${esc(art.name)}</b><span>${art.egg.sp ? `${esc(bqSpName(art.egg.sp))} garanti` : 'Espèce surprise'} · éclot en 3 min</span>${btn}</div>`;
+  }
   const sub = art.rec ? `Recette · ${art.rec.kind}` : it.rid ? `${RARITY[it.rarity]} · spécialité ${typeof RG !== 'undefined' && RG[it.origin.region] ? esc(rgDe(RG[it.origin.region])) : ''}` : `${RARITY[it.rarity]} · ${it.cat === 'v' ? SLOT_LABEL[it.sub] : CAT_LABEL[it.cat]}`;
   const btn = x.locked ? `<span class="bq-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="10.5" width="13" height="10" rx="2.5" fill="#cfc5b4" stroke="#5b4636" stroke-width="2"/><path d="M8.5 10.5 V8 a3.5 3.5 0 0 1 7 0 V10.5" stroke="#5b4636" stroke-width="2.2" fill="none"/></svg>Niveau ${a.lvl + 1}</span>` : x.sold ? '<span class="bq-sold">Acheté</span>' : `<button class="btn ${can ? 'gold' : 'cream'} sm" data-bbuy="${x.key}" ${can ? '' : 'disabled'}>${coins(art.price)}</button>`;
   return `<div class="bq-art${x.locked ? ' locked' : ''}${x.sold ? ' sold' : ''}${art.rare ? ' rare' : ''}" style="--rc:${RARC[it.rarity]}"><div class="bq-aico">${itemIcon(it)}${art.rec ? '<i class="bq-recb">Recette</i>' : ''}</div><b>${esc(art.rec ? art.rec.out[0] : art.name)}</b><span>${sub}</span>${btn}</div>`;
@@ -724,6 +1098,7 @@ function bqShopCard(x) {
 function renderBoutique(box) {
   bqState();
   if (bView === 'magasin') renderMagasin(box);
+  else if (bView === 'marche' && typeof renderMarche === 'function') renderMarche(box);
   else if (bView === 'marche' && typeof renderMarket === 'function') {
     renderMarket(box);
     box.insertAdjacentHTML('afterbegin', `<div class="bq-tip">${BQ_STAR}<span>Vendre aux passants, c’est bien pour vider le sac. Mais une commande du <b>Comptoir</b> rapporte souvent <b>3 à 5 fois plus</b>.</span><button class="btn cream sm" data-bsub="comptoir">Comptoir</button></div>`);
@@ -755,12 +1130,13 @@ if (BQ_SELF_TAB && typeof renderPanel === 'function') renderPanel = (orig => fun
 })(renderPanel);
 
 // « Sert à… » : « Commande de Noisette la hérissonne »
-if (typeof USE_KIND !== 'undefined' && !USE_KIND.commande) USE_KIND.commande = ['Boutique', '#ffe1ec', '#b8456a'];
-if (typeof USE_ORDER !== 'undefined' && !USE_ORDER.includes('commande')) USE_ORDER.unshift('commande');
+// (kind 'client' : contrat phase B ; 'commande' gardé pour compatibilité)
+if (typeof USE_KIND !== 'undefined') { if (!USE_KIND.client) USE_KIND.client = ['Client', '#ffe1ec', '#b8456a']; if (!USE_KIND.commande) USE_KIND.commande = USE_KIND.client; }
+if (typeof USE_ORDER !== 'undefined' && !USE_ORDER.includes('client')) USE_ORDER.unshift('client');
 if (typeof GAME !== 'undefined') GAME.addUses(it => {
   if (!it || !S.shop || !Array.isArray(S.shop.orders)) return [];
   const out = [];
-  S.shop.orders.forEach(o => { const c = BQC(o.client); if (c && o.req.some(r => bqMatch(r, it) || (r.k === 'craft' && (RECIPES.find(x => x.id === r.id) || { ing: [] }).ing.some(([key]) => key.startsWith('r:') ? it.rid === key.slice(2) : ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'))))) out.push({ txt: `Commande de ${bqWho(c)}`, kind: 'commande' }); });
+  S.shop.orders.forEach(o => { const c = BQC(o.client); if (c && o.req.some(r => bqMatch(r, it) || (r.k === 'craft' && (RECIPES.find(x => x.id === r.id) || { ing: [] }).ing.some(([key]) => key.startsWith('r:') ? it.rid === key.slice(2) : ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'))))) out.push({ txt: `Commande de ${bqWho(c)}`, kind: 'client' }); });
   return out;
 });
 // les commandes passent avant les autres usages dans « Sert à… »
@@ -794,13 +1170,34 @@ function bqCheckReady(where) {
   if (typeof renderNav === 'function') renderNav();
 }
 if (typeof GAME !== 'undefined') {
+  // tout début de partie : tant qu'aucun client n'a été servi, la première commande demande un objet ordinaire que le voyageur vient de rapporter
+  // (le joueur comprend dès le 1er retour que ses trouvailles servent à ses clients)
+  GAME.on('trip:return', e => {
+    try {
+      const s = bqState(); if (s.served || !s.orders.length || s.orders.some(bqReady)) return;
+      const T = bqType(), got = (e && e.items || []).filter(it => it && !it.rid && !it.special && !it.edition && (it.rarity || 0) <= 1 && ['n', 'm', 'v', 'd'].includes(it.cat));
+      if (!got.length) return;
+      const fits = it => T && (T.keys || []).some(k => ING[k] && ING[k][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'));
+      const it = got.find(fits) || got.find(x => T && (T.itemCats || []).includes(x.cat)) || got[0];
+      const o = s.orders[0];
+      o.req = [{ k: 'item', name: it.name, def: [it.name, it.cat, it.sub, 0, it.look || null, it.color || null], n: 1, src: { place: it.from || '' } }];
+      save();
+    } catch (er) { console.error('boutique', er); }
+  });
   GAME.on('trip:return', () => setTimeout(() => bqCheckReady('haul'), 30));
   GAME.on('craft', () => setTimeout(() => bqCheckReady('craft'), 30));
 }
 
 document.addEventListener('click', ev => {
-  const el = ev.target.closest('[data-bsub],[data-bdeliver],[data-bgo],[data-brefuse],[data-bbuy],[data-bopen]'); if (!el || el.disabled) return;
+  const el = ev.target.closest('[data-bsub],[data-bdeliver],[data-bgo],[data-brefuse],[data-bbuy],[data-bopen],[data-bqadopt],[data-bqchoose],[data-bqcpick],[data-bqcback],[data-bqcopen],[data-bqcclose],[data-bqswitch]'); if (!el || el.disabled) return;
   const d = el.dataset;
+  if (d.bqadopt) { $('modal').hidden = true; return bqDeliver(d.bqadopt, null, 0, true); }
+  if (d.bqchoose) return bqChooseOpen(d.bqchoose === 'buy' ? 'buy' : 'free');
+  if (d.bqcpick) { if (bqCh) { bqCh.pick = d.bqcpick; bqChooseRender(); } return; }
+  if (d.bqcback) { if (bqCh) { bqCh.pick = null; bqChooseRender(); } return; }
+  if (d.bqcopen) return bqOpenShop(d.bqcopen);
+  if (d.bqcclose) { bqCh = null; $('modal').hidden = true; return; }
+  if (d.bqswitch) return bqSwitch(d.bqswitch);
   if (d.bsub) { bView = d.bsub; renderPanel(); const b = $('panelBody'); if (b) b.scrollTop = 0; return; }
   if (d.bdeliver) return bqDeliver(d.bdeliver, el);
   if (d.bgo) return bqGo(d.bgo);
@@ -925,6 +1322,59 @@ setInterval(bqTick, 4000);
 .bq-recmore{display:block;width:100%;margin-top:10px;background:#fff6dc;border:2px dashed #e0b84a;border-radius:14px;padding:10px;font:700 14px var(--display);color:#7a5a12;cursor:pointer}
 @media (max-width:420px){.bq-face{width:58px;height:58px}.bq-ohx p{font-size:15.5px}.bq-grid{grid-template-columns:repeat(2,1fr)}}
 @media (prefers-reduced-motion:reduce){.bq-order.ready,.bq-deliver{animation:none}}
+/* commerces (phase B) */
+.bq-subs button{position:relative}
+.bq-rdot{position:absolute;top:2px;right:calc(50% - 22px);width:12px;height:12px;border-radius:50%;background:var(--rust,#d9604f);border:2px solid #fff;box-shadow:0 0 0 1.5px var(--ink)}
+.bq-pick{display:flex;align-items:center;gap:10px;background:#fff6dc;border:2.5px solid var(--goldD,#c9952a);border-radius:18px;padding:10px 12px;margin-bottom:10px;box-shadow:0 3px 0 rgba(74,53,40,.25);position:relative}
+.bq-pick>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.bq-pick b{font:800 15.5px/1.2 var(--display)}.bq-pick span{font-size:12.5px;color:var(--ink2);line-height:1.3}
+.bq-pick .btn{flex:none}
+.bq-pdot{flex:none;width:12px;height:12px;border-radius:50%;background:var(--rust,#d9604f);border:2px solid #fff;box-shadow:0 0 0 1.5px var(--ink)}
+.bq-shops{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 6px;margin:0 -2px 2px;scrollbar-width:none}
+.bq-shops::-webkit-scrollbar{display:none}
+.bq-shopc{position:relative;flex:none;display:inline-flex;align-items:center;gap:6px;padding:4px 11px 4px 4px;border-radius:999px;border:2.5px solid var(--line);background:#fff;font:800 13.5px var(--display);color:var(--ink2);cursor:pointer;white-space:nowrap}
+.bq-shopc[aria-selected="true"]{border-color:var(--ink);background:color-mix(in srgb,var(--aw) 22%,#fff);color:var(--ink);box-shadow:0 3px 0 rgba(74,53,40,.3)}
+.bq-shopi{width:30px;height:30px;border-radius:50%;background:#fff8ea;border:2px solid var(--ink);display:grid;place-items:center;font:800 20px/1 var(--display);color:var(--ink)}
+.bq-shopi svg{width:24px;height:24px}
+.bq-shopc.add{border-style:dashed;border-color:var(--ink);background:#fff6dc;color:var(--ink)}
+.bq-shopc.add .bq-pdot{position:absolute;top:-4px;right:-4px}
+.bq-shopc.lock{cursor:default;opacity:.75;border-style:dashed}
+.bq-shopc.lock .bq-shopi svg{width:16px;height:16px}
+.bq-perkl{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 8px}
+.bq-perkl i{font-style:normal;font:700 11.5px/1.25 var(--display);background:#effaf2;border:1.5px solid #9fd8b4;color:#2f6f50;border-radius:8px;padding:2px 7px}
+.bq-spec{background:#effaf2!important;border-color:#9fd8b4!important;color:#2f6f50}
+.bq-oshop{font-style:normal;color:var(--teal)}
+.bq-eggi svg{width:40px!important;height:48px!important}
+.bq-adopt{display:flex;flex-direction:column;align-items:center;gap:8px}
+.bq-adimg{width:110px;height:120px;border-radius:20px;background:#fff3e2;border:2.5px solid var(--ink)}
+.bq-adacts{display:flex;gap:10px;width:100%}.bq-adacts .btn{flex:1}
+/* choix du commerce */
+.bqc{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;text-align:center}
+.bqc-kick{font:800 12px var(--display);letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--teal);border:2px solid var(--ink);border-radius:999px;padding:3px 12px 1px}
+.bqc h2{margin:0}
+.bqc-ph{margin:0;font-size:14px;color:var(--ink2);line-height:1.4;text-wrap:balance}
+.bqc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%;margin:4px 0}
+.bqc-card{display:flex;flex-direction:column;align-items:stretch;gap:3px;background:#fff;border:2.5px solid var(--ink);border-radius:16px;padding:5px 5px 8px;cursor:pointer;text-align:left;box-shadow:0 3px 0 rgba(74,53,40,.3);font:inherit;color:var(--ink);transition:transform .15s}
+.bqc-card:hover{transform:translateY(-2px)}.bqc-card:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(74,53,40,.3)}
+.bqc-fac{display:block;line-height:0;border-radius:11px;border:2px solid var(--line);overflow:hidden;background:#e4f3fa}.bqc-fac svg{width:100%;height:auto}
+.bqc-card b{font:800 14.5px/1.15 var(--display);padding:0 3px;margin-top:2px}
+.bqc-card span{font-size:11.5px;line-height:1.3;color:var(--ink2);padding:0 3px}
+.bqc-big{width:100%;max-width:300px;border:3px solid var(--ink);border-radius:18px;overflow:hidden;line-height:0}
+.bqc-big svg{width:100%;height:auto}
+.bqc h3{margin:6px 0 0;font:800 15px var(--display);align-self:flex-start}
+.bqc-stars{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%}
+.bqc-stars li{display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:2px solid var(--line);border-radius:12px;padding:6px 4px}
+.bqc-si{width:42px;height:42px;display:grid;place-items:center}.bqc-si svg{width:100%;height:100%}
+.bqc-stars b{font:700 11.5px/1.15 var(--display)}
+.bqc-uses{display:flex;flex-wrap:wrap;gap:4px;width:100%}
+.bqc-uses i{font-style:normal;font:700 12px var(--display);background:#fff3e2;border:1.5px solid #e9cfae;border-radius:8px;padding:2px 8px}
+.bqc-perks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px;width:100%;text-align:left}
+.bqc-perks li{background:#effaf2;border:2px solid #9fd8b4;border-radius:12px;padding:6px 10px 6px 30px;position:relative;font-weight:700;font-size:13.5px}
+.bqc-perks li::before{content:"";position:absolute;left:9px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:var(--green);border:2px solid #2f7f6c}
+.bqc-acts{display:flex;gap:8px;width:100%;margin-top:6px}.bqc-acts .btn{flex:1;min-width:0;padding-left:8px;padding-right:8px;font-size:16px;white-space:nowrap}
+@media (max-width:420px){.bqc-acts .btn{font-size:14.5px}}
+.mbox:has(.bqc){max-width:560px}
+@media (min-width:700px){.bqc-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 `;
   document.head.appendChild(st);
 })();
@@ -938,7 +1388,10 @@ window.__boutique = {
     o.req.forEach(r => {
       for (let i = bqAllocate(o)[o.req.indexOf(r)].have; i < r.n; i++) {
         let it;
-        if (r.k === 'ing') it = makeItem([bqSampleIng(r.key).name || 'Ingrédient', bqSampleIng(r.key).cat, bqSampleIng(r.key).sub, 0], 0, 'Test', []);
+        if (r.k === 'egg') { addEgg({ sp: r.sp || undefined, from: 'test' }); continue; }
+        if (r.k === 'comp') { addComp({ sp: r.sp, from: 'test' }); continue; }
+        if (r.k === 'bait') it = makeItem(['Appât test', 'm', 'appat', 1], 0, 'Test', []);
+        else if (r.k === 'ing') it = makeItem([bqSampleIng(r.key).name || 'Ingrédient', bqSampleIng(r.key).cat, bqSampleIng(r.key).sub, 0], 0, 'Test', []);
         else if (r.k === 'reg') { const x = RG_RES[r.rid]; it = rgMakeRes(x, RG[x.region].anchor[2], [], { place: RG[x.region].anchor[2], km: 300 }); }
         else it = makeItem(r.def, 0, 'Test', [], { fixed: r.def[3] });
         S.inv.push(it);
@@ -946,6 +1399,7 @@ window.__boutique = {
     });
     save(); return o.id;
   },
+  shops: BQ_SHOPS, choose: (mode) => bqChooseOpen(mode || 'free'), openShop: id => bqOpenShop(id), switchTo: id => bqSwitch(id), type: () => bqType(), facade: bqFacadeSVG,
   newOrder(easy) { const o = bqNewOrder(!!easy); if (o) { bqState().orders.push(o); save(); } return o; },
   deliver: id => bqDeliver(id), refuse: id => bqRefuse(id), go: id => bqGo(id), buy: key => bqBuy(key), addRep(n) { const s = bqState(), l0 = s.lvl; s.rep += n; s.lvl = bqLevelOf(s.rep); save(); if (s.lvl > l0) bqLevelUp(s.lvl); },
 };

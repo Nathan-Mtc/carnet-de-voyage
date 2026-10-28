@@ -105,7 +105,13 @@ const WONDERS = { arc: ['Éclat d’arc-en-ciel', 'm', 'lumiere', 3], etoile: ['
 const SHOP_DECOR = [['Plante verte', 'd', 'plante', 0, null, '#7fbf6a'], ['Tapis rayé', 'd', 'tapis', 0, null, '#e9a0a0'], ['Lanterne en papier', 'd', 'lanterne', 1, null, '#f6d36b'], ['Mappemonde ancienne', 'd', 'mappemonde', 2, null, '#c9a97a'], ['Bocal de bonbons', 'd', 'bocal', 0, null, '#f3aec1'], ['Herbier de montagne', 'd', 'herbier', 1, null, '#9cc38a']];
 const RARITY = ['Commun', 'Peu commun', 'Rare', 'Épique', 'Légendaire'];
 const RARC = ['#9a95a3', '#4f9f78', '#4f88cf', '#9a6fd6', '#d99a25'];
-const FOOD_TASTE = { pistache: { love: ['pomme', 'fruit'], hate: ['mer'] }, mochi: { love: ['agrume'], hate: ['mer'] }, bulle: { love: ['mer'], hate: ['agrume'] } };
+// goûts par ESPÈCE (v13 : les compagnons sont des individus ; voir tasteOf et spOf). `def` : valeur par défaut
+const FOOD_TASTE = {
+  panda: { love: ['pomme', 'fruit'], hate: ['mer'] }, capy: { love: ['agrume'], hate: ['mer'] }, axo: { love: ['mer'], hate: ['agrume'] },
+  renard: { love: ['mer', 'fromage'], hate: ['agrume'] }, fennec: { love: ['sucre', 'fruit'], hate: ['glace'] }, tanuki: { love: ['plat', 'pain', 'legume'], hate: ['agrume'] },
+  paresseux: { love: ['fruit', 'legume'], hate: ['boisson'] }, lemur: { love: ['fruit', 'agrume'], hate: ['fromage'] }, phoque: { love: ['mer'], hate: ['legume'] },
+  quokka: { love: ['legume', 'pomme'], hate: ['mer'] }, def: { love: ['fruit'], hate: [] },
+};
 const DURS = [
   { key: 'eclair', label: 'Balade éclair', ms: 60e3, ev: 4, luck: 0, hint: '1 min, pour tester' },
   { key: 'court', label: 'Petite escapade', ms: 10 * 60e3, ev: 6, luck: 0.5, hint: '10 min' },
@@ -115,10 +121,21 @@ const DURS = [
 ];
 const PLAYERS = [['Lina', 'Tofu', 'mochi'], ['Sacha', 'Praline', 'pistache'], ['Noé', 'Gnocchi', 'bulle'], ['Jade', 'Mistral', 'pistache'], ['Yanis', 'Bigoudi', 'mochi'], ['Chloé', 'Pixel', 'bulle'], ['Maël', 'Biscuit', 'pistache'], ['Inès', 'Nuage', 'bulle'], ['Hugo', 'Caramel', 'mochi'], ['Léa', 'Paprika', 'pistache']];
 
+// talents par ESPÈCE : [niveau, nom, description, effet]. Effets : flair (une trouvaille de plus), audace (choix audacieux réussis),
+// tresor (cartes au trésor ×3), nego (marchands et comptoir), zen (ne rate jamais), oiseau (Pépin), hab2 (trouvailles ×2 dans son habitat),
+// chance (merveilles plus fréquentes), habLuck (objets plus rares dans son habitat). Habitat : SP_HAB (20_collection.js).
 const TALENTS = {
-  pistache: [[2, 'Flair', 'Une trouvaille de plus à chaque voyage.'], [4, 'Grimpeuse', 'Ses choix audacieux réussissent bien plus souvent.'], [6, 'Chasseuse de trésors', 'Trouve trois fois plus de cartes au trésor.']],
-  mochi: [[2, 'Négociateur', 'Marchands moins chers, comptoir plus généreux.'], [4, 'Zen absolu', 'Ne rate jamais rien et ne perd jamais de pièces.'], [6, 'Ami des oiseaux', 'Pépin rapporte un objet à chaque voyage.']],
-  bulle: [[2, 'Nageuse', 'Trouvailles doublées près de l’eau.'], [4, 'Porte-bonheur', 'Arcs-en-ciel et étoiles filantes bien plus fréquents.'], [6, 'Plongeuse', 'Objets beaucoup plus rares près de l’eau.']],
+  panda: [[2, 'Flair', 'Une trouvaille de plus à chaque voyage.', 'flair'], [4, 'Grimpeuse', 'Ses choix audacieux réussissent bien plus souvent.', 'audace'], [6, 'Chasseuse de trésors', 'Trouve trois fois plus de cartes au trésor.', 'tresor']],
+  capy: [[2, 'Négociateur', 'Marchands moins chers, comptoir plus généreux.', 'nego'], [4, 'Zen absolu', 'Ne rate jamais rien et ne perd jamais de pièces.', 'zen'], [6, 'Ami des oiseaux', 'Pépin rapporte un objet à chaque voyage.', 'oiseau']],
+  axo: [[2, 'Nageuse', 'Trouvailles doublées près de l’eau.', 'hab2'], [4, 'Porte-bonheur', 'Arcs-en-ciel et étoiles filantes bien plus fréquents.', 'chance'], [6, 'Plongeuse', 'Objets beaucoup plus rares près de l’eau.', 'habLuck']],
+  renard: [[2, 'Pisteur des neiges', 'Trouvailles doublées dans la neige et en montagne.', 'hab2'], [4, 'Flair polaire', 'Une trouvaille de plus à chaque voyage.', 'flair'], [6, 'Plongeon dans la neige', 'Objets beaucoup plus rares dans la neige et en montagne.', 'habLuck']],
+  fennec: [[2, 'Grandes oreilles', 'Trouvailles doublées dans le désert.', 'hab2'], [4, 'Marchand des sables', 'Marchands moins chers, comptoir plus généreux.', 'nego'], [6, 'Trésors des dunes', 'Trouve trois fois plus de cartes au trésor.', 'tresor']],
+  tanuki: [[2, 'Farceur', 'Marchands moins chers, comptoir plus généreux.', 'nego'], [4, 'Fouineur', 'Une trouvaille de plus à chaque voyage.', 'flair'], [6, 'Porte-bonheur', 'Arcs-en-ciel et étoiles filantes bien plus fréquents.', 'chance']],
+  paresseux: [[2, 'Zen absolu', 'Ne rate jamais rien et ne perd jamais de pièces.', 'zen'], [4, 'Ami des lianes', 'Trouvailles doublées en forêt et sur les îles.', 'hab2'], [6, 'Rêveur', 'Arcs-en-ciel et étoiles filantes bien plus fréquents.', 'chance']],
+  lemur: [[2, 'Acrobate', 'Ses choix audacieux réussissent bien plus souvent.', 'audace'], [4, 'Cueilleur', 'Trouvailles doublées en forêt et sur les îles.', 'hab2'], [6, 'Œil de lune', 'Objets beaucoup plus rares en forêt et sur les îles.', 'habLuck']],
+  phoque: [[2, 'Nageur', 'Trouvailles doublées en mer et sur la banquise.', 'hab2'], [4, 'Zen sur la glace', 'Ne rate jamais rien et ne perd jamais de pièces.', 'zen'], [6, 'Plongeur', 'Objets beaucoup plus rares en mer et sur la banquise.', 'habLuck']],
+  quokka: [[2, 'Sourire magique', 'Marchands moins chers, comptoir plus généreux.', 'nego'], [4, 'Flair', 'Une trouvaille de plus à chaque voyage.', 'flair'], [6, 'Porte-bonheur', 'Arcs-en-ciel et étoiles filantes bien plus fréquents.', 'chance']],
+  def: [[2, 'Flair', 'Une trouvaille de plus à chaque voyage.', 'flair'], [4, 'Débrouillard', 'Marchands moins chers, comptoir plus généreux.', 'nego'], [6, 'Porte-bonheur', 'Arcs-en-ciel et étoiles filantes bien plus fréquents.', 'chance']],
 };
 
 const ANIMALS = {

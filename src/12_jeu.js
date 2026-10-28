@@ -252,14 +252,25 @@ function giftItem(r) {
   S.inv.push(it); S.dex[it.name] = true; S.stats.maxRar = Math.max(S.stats.maxRar || 0, r);
   return it;
 }
-function checkLogin() {
+// v13 : la visite du jour fait avancer la série ; le cadeau attend dans le menu (un point discret) et se récupère quand on veut
+function markVisit() {
   const L = S.login, today = dayNum();
-  if (L.last === today) return null;
+  if (L.claimed === undefined) L.claimed = L.last || 0; // ancienne sauvegarde : le cadeau du dernier jour joué avait déjà été donné
+  if (L.last === today) return false;
   L.streak = L.last === today - 1 ? (L.streak || 0) + 1 : 1;
   L.last = today; L.best = Math.max(L.best || 0, L.streak); L.total = (L.total || 0) + 1;
-  const idx = (L.streak - 1) % 7, r = LOGIN_REWARDS[idx];
+  save();
+  return true;
+}
+const giftPending = () => !!(S.login && S.login.last && S.login.claimed !== S.login.last);
+function checkLogin() {
+  markVisit();
+  const L = S.login;
+  if (!giftPending()) return null;
+  const idx = ((L.streak || 1) - 1) % 7, r = LOGIN_REWARDS[idx];
   const got = { idx, coins: r.coins || 0, item: null };
   if (r.item != null) got.item = giftItem(r.item);
+  L.claimed = L.last;
   save();
   return got;
 }
@@ -275,42 +286,54 @@ function loginModal(got) {
   showModal(`<span class="streak">${FLAME} ${L.streak} jour${L.streak > 1 ? 's' : ''} de suite</span><h2>${got ? (L.total > 1 || (S.stats.trips || 0) > 0 ? 'Bon retour !' : 'Cadeau de bienvenue !') : 'Cadeaux quotidiens'}</h2>${gotTxt}<div class="dgrid">${cells}</div><p class="small">Revenez chaque jour : les cadeaux grandissent jusqu’au 7ᵉ jour. Si vous manquez un jour, la série recommence.</p><div class="evcard"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>Aujourd’hui : ${esc(ev.name)}</b><br>${esc(ev.short)}</p></div><button class="btn green big" data-closemodal="1" data-jeu="logindone">${got ? 'Merci !' : 'Fermer'}</button>`);
   if (got) setTimeout(() => { if (got.coins) { lastPointer = { x: innerWidth / 2, y: innerHeight / 2, t: Date.now() }; coinFX(got.coins); } }, 350);
 }
-function runLogin() {
-  if (!S.seenIntro) return;
-  if (!$('modal').hidden) { setTimeout(runLogin, 1500); return; }
-  const got = checkLogin();
-  if (!got) return;
-  gainCoinsSilent(got.coins); renderAll(); renderJeuBar();
-  // tout premier lancement : juste après le tutoriel, un simple message plutôt qu'une deuxième grande fenêtre
-  if ((S.login.total || 0) <= 1 && !got.item) { toast(`Cadeau du jour : +${got.coins} pièces !`); if (typeof coinFX === 'function') coinFX(got.coins); return; }
-  loginModal(got);
+function runLogin() { markVisit(); renderJeuBar(); } // plus de fenêtre automatique : un point sur le menu
+// récupérer le cadeau du jour (depuis le menu)
+function claimGift() {
+  const got = checkLogin(); if (!got) return null;
+  gainCoins(got.coins); renderTop(); renderJeuBar();
+  toast(`Cadeau du jour : ${got.coins ? `+${got.coins} pièces` : ''}${got.coins && got.item ? ' et ' : ''}${got.item ? `« ${got.item.name} »` : ''} !`);
+  return got;
 }
 // les pièces du cadeau sont ajoutées sans animation immédiate (l'animation part du cadeau)
 function gainCoinsSilent(n) { const r = window.__jeuReady; window.__jeuReady = false; gainCoins(n); window.__jeuReady = r; }
 
 // ================= PALIERS DE COLLECTION =================
+// v13 : un palier atteint ne donne plus sa récompense tout seul : il attend dans le menu (S.tierPending) et se récupère quand on veut
 function checkTiers() {
   const out = [];
+  if (!Array.isArray(S.tierPending)) S.tierPending = [];
   for (const c of collections()) {
     const reached = colTierReached(c), have = S.tiers[c.key] || 0;
     if (reached <= have) continue;
-    for (let i = have; i < reached; i++) {
-      if (i < 2) {
-        const coinsR = tierReward(c, i); gainCoins(coinsR);
-        let it = null;
-        if (i === 1) { // 50 % : un objet rare de cette collection
-          const defs = (LOOT[c.key] || []).filter(d => d[1] !== 'n');
-          if (defs.length) { const d = pick(defs); it = makeItem(d, 0, `Palier : ${c.label}`, [c.key], { fixed: Math.max(2, d[3]) }); S.inv.push(it); S.dex[it.name] = true; }
-        }
-        out.push({ c, i, coins: coinsR, item: it });
-      } else out.push({ c, i, coins: 0, full: true });
-    }
+    for (let i = have; i < reached; i++) { S.tierPending.push({ key: c.key, i }); out.push({ c, i, pending: true, full: i >= 2 }); }
     S.tiers[c.key] = reached;
   }
   if (out.length) save();
   return out;
 }
-const tierText = t => t.full ? `Collection « ${t.c.label} » complète ! Votre trophée vous attend dans Sac & Album › Collections.` : `Palier ${TIERS[t.i].label} · ${t.c.label} : +${t.coins} pièces${t.item ? ` et « ${t.item.name} »` : ''}`;
+function claimTier(idx) {
+  const P = S.tierPending || [], p = P[idx]; if (!p) return null;
+  P.splice(idx, 1);
+  const c = collections().find(x => x.key === p.key); if (!c) { save(); return null; }
+  const r = grantTier(c, p.i); save(); renderTop(); renderJeuBar();
+  return r;
+}
+function grantTier(c, i) {
+  if (i >= 2) { // collection complète : le trophée (comme le bouton « Trophée » des collections)
+    if (S.colClaimed[c.key]) return { c, i, coins: 0, full: true };
+    S.colClaimed[c.key] = true; gainCoins(colReward(c));
+    S.inv.push({ id: uidGen(), name: `Trophée : ${c.label}`, cat: 'd', sub: 'statue', rarity: c.big ? 4 : 3, color: c.big ? '#f2c14e' : (TAGC[c.key] || '#c9a97a'), from: 'Collection complète', tags: [], date: Date.now() });
+    return { c, i, coins: colReward(c), full: true };
+  }
+  const coinsR = tierReward(c, i); gainCoins(coinsR);
+  let it = null;
+  if (i === 1) { // 50 % : un objet rare de cette collection
+    const defs = (LOOT[c.key] || []).filter(d => d[1] !== 'n');
+    if (defs.length) { const d = pick(defs); it = makeItem(d, 0, `Palier : ${c.label}`, [c.key], { fixed: Math.max(2, d[3]) }); S.inv.push(it); S.dex[it.name] = true; }
+  }
+  return { c, i, coins: coinsR, item: it };
+}
+const tierText = t => t.pending ? `Palier ${TIERS[t.i].label} · ${t.c.label} atteint ! Récompense à récupérer dans le menu.` : t.full ? `Collection « ${t.c.label} » complète ! +${t.coins} pièces et un trophée pour la maison.` : `Palier ${TIERS[t.i].label} · ${t.c.label} : +${t.coins} pièces${t.item ? ` et « ${t.item.name} »` : ''}`;
 
 // ================= SUCCÈS =================
 const st_ = k => S.stats[k] || 0;
@@ -347,8 +370,8 @@ const ACH = [
   { id: 'photo', name: 'Photographe', desc: 'Rassembler 30 cartes postales', p: () => [S.album.length, 30], r: 100 },
   { id: 'gourmet', name: 'Gourmet', desc: 'Offrir 10 repas aux compagnons', p: () => [st_('fed'), 10], r: 60 },
   { id: 'coeur', name: 'Grand cœur', desc: 'Répondre à 20 choix en voyage', p: () => [st_('choices'), 20], r: 80 },
-  { id: 'aguerri', name: 'Compagnon aguerri', desc: 'Faire monter un compagnon au niveau 5', p: () => [Math.max(...lvls()), 5], r: 150 },
-  { id: 'trio', name: 'Les trois amis', desc: 'Les trois compagnons au niveau 3', p: () => [Math.min(...lvls()), 3], r: 150 },
+  { id: 'aguerri', name: 'Compagnon aguerri', desc: 'Faire monter un compagnon au niveau 5', p: () => [Math.max(0, ...lvls()), 5], r: 150 },
+  { id: 'trio', name: 'Les trois amis', desc: 'Trois compagnons au niveau 3', p: () => [lvls().filter(l => l >= 3).length, 3], r: 150 },
   { id: 'fidele', name: 'Fidèle', desc: 'Revenir 3 jours de suite', p: () => [S.login.best || 0, 3], r: 80 },
   { id: 'assidu', name: 'Assidu', desc: 'Revenir 7 jours de suite', p: () => [S.login.best || 0, 7], r: 250 },
 ];
@@ -389,7 +412,7 @@ function achHTML() {
 function colsHTML() {
   const cols = collections().map(c => ({ c, got: colGot(c), n: c.names.length, tier: colTierReached(c) }));
   cols.sort((a, b) => ((b.tier === 3 && !S.colClaimed[b.c.key]) - (a.tier === 3 && !S.colClaimed[a.c.key])) || (!!S.colClaimed[a.c.key] - !!S.colClaimed[b.c.key]) || (b.got / b.n - a.got / a.n));
-  let h = `<p class="small" style="margin:0 0 8px">Chaque type de lieu a sa collection. À 25 % et 50 % des objets découverts, vous recevez une récompense automatiquement. À 100 %, un trophée pour la maison.</p><div class="tcols">`;
+  let h = `<p class="small" style="margin:0 0 8px">Chaque type de lieu a sa collection. À 25 % et 50 % des objets découverts, une récompense vous attend dans le menu. À 100 %, un trophée pour la maison.</p><div class="tcols">`;
   h += cols.map(({ c, got, n, tier }) => {
     const claimed = S.colClaimed[c.key], f = got / n;
     const pills = TIERS.map((t, i) => `<span class="${tier > i ? 'on' : ''}">${tier > i ? '✓ ' : ''}${t.label} · ${coins(tierReward(c, i))}${i === 1 ? ' + objet' : i === 2 ? ' + trophée' : ''}</span>`).join('');
@@ -404,9 +427,9 @@ function haulCard(it, i, isNew) {
 }
 function showHaul(h) {
   const items = h.items.slice().sort((a, b) => b.rarity - a.rarity);
-  const top = items.length ? items[0].rarity : 0, name = CHARS[h.comp].name;
+  const top = items.length ? items[0].rarity : 0, name = CHARS[h.comp] ? CHARS[h.comp].name : '';
   const tiers = checkTiers(), achs = checkAch();
-  const extra = (h.extra || []).map(x => `<li>${esc(x)}</li>`).concat(tiers.map(t => `<li>${esc(tierText(t))}</li>`), achs.length ? [`<li class="ach">${achs.length > 1 ? 'Succès débloqués' : 'Succès débloqué'} : <b>${achs.map(a => esc(a.name)).join(', ')}</b>. Récompense${achs.length > 1 ? 's' : ''} dans Rêves › Succès.</li>`] : []);
+  const extra = (h.extra || []).map(x => `<li>${esc(x)}</li>`).concat(tiers.map(t => `<li>${esc(tierText(t))}</li>`), achs.length ? [`<li class="ach">${achs.length > 1 ? 'Succès débloqués' : 'Succès débloqué'} : <b>${achs.map(a => esc(a.name)).join(', ')}</b>. Récompense${achs.length > 1 ? 's' : ''} à récupérer dans le menu.</li>`] : []);
   const newN = items.filter(i => h.newNames.has(i.name)).length;
   showModal(`<div class="hhead"><img src="${portraitURI(h.comp, 'rire')}" alt=""><div><h2>${name} est de retour !</h2><div class="hstats"><span>${items.length} objet${items.length > 1 ? 's' : ''}</span>${newN ? `<span>${newN} nouveau${newN > 1 ? 'x' : ''}</span>` : ''}${h.coins > 0 ? `<span>${COIN}+${h.coins}</span>` : ''}<span>+${h.xp} exp.</span>${h.photos ? `<span>${h.photos} carte${h.photos > 1 ? 's' : ''} postale${h.photos > 1 ? 's' : ''}</span>` : ''}</div></div></div>${top >= 3 ? `<span class="hbig r${top}">${top >= 4 ? 'Trouvaille légendaire !' : 'Trouvaille épique !'}</span>` : ''}<div class="haul">${items.map((it, i) => haulCard(it, i, h.newNames.has(it.name))).join('')}</div>${extra.length ? `<ul class="hextra">${extra.join('')}</ul>` : ''}<button class="btn green big wide" data-closemodal="1">Tout ranger dans le sac</button>`);
   if (top >= 3) setTimeout(() => confetti(top >= 4), 300 + Math.min(items.length, 8) * 60);
@@ -415,6 +438,8 @@ function showHaul(h) {
 
 // ================= BARRE DU JEU (écran principal) =================
 function renderJeuBar() {
+  // v13 : plus de barre sur la carte (événement, série, trophée) : tout est rangé dans le menu, signalé par un simple point
+  if (typeof renderMenuDot === 'function') { renderMenuDot(); eventMapCSS(); return; }
   let bar = $('jeuBar');
   if (!bar) { bar = document.createElement('div'); bar.id = 'jeuBar'; const g = $('goal'); g.parentNode.insertBefore(bar, g.nextSibling); }
   const ev = todayEvent(), ready = achReady().length, L = S.login;
@@ -476,7 +501,7 @@ maybeIntro = (orig => function () {
   window.__jeuReady = true;
   renderJeuBar();
   // succès et paliers déjà mérités avec une ancienne sauvegarde : accordés en silence au premier lancement
-  if (!S.jeuInit) { const tt = checkTiers(); if (tt.length) setTimeout(() => toast(`Paliers de collection déjà atteints : +${tt.reduce((a, t) => a + t.coins, 0)} pièces !`), 1200); for (const a of ACH) if (achDone(a)) S.achSeen[a.id] = S.achSeen[a.id] || Date.now(); S.jeuInit = 1; save(); renderAll(); }
+  if (!S.jeuInit) { checkTiers(); for (const a of ACH) if (achDone(a)) S.achSeen[a.id] = S.achSeen[a.id] || Date.now(); S.jeuInit = 1; save(); renderAll(); }
   setTimeout(runLogin, 700);
 })(maybeIntro);
 
@@ -488,11 +513,12 @@ document.addEventListener('click', ev => {
   if (d.jeu === 'event') return eventModal();
   if (d.jeu === 'goevent') return goEvent();
   if (d.jeu === 'login') return loginModal(null);
+  if (d.jeu === 'gift') { claimGift(); if (tab === 'menu') renderPanel(); return; }
   if (d.jeu === 'ach') return openAchievements();
   if (d.ach) return claimAch(d.ach);
   if (d.claimq) { S.stats.qclaimed = (S.stats.qclaimed || 0) + 1; save(); }
   if (d.feed) { S.stats.fed = (S.stats.fed || 0) + 1; save(); }
-  if (d.claimc) { S.tiers[d.claimc] = 3; renderJeuBar(); }
+  if (d.claimc) { S.tiers[d.claimc] = 3; S.tierPending = (S.tierPending || []).filter(p => !(p.key === d.claimc && p.i >= 2)); renderJeuBar(); }
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && window.__jeuReady) { _evCache.dk = 0; renderJeuBar(); runLogin(); } });
 
@@ -500,9 +526,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && wi
 setInterval(() => {
   if (!window.__jeuReady) return;
   if (!$('modal').hidden) return; // on attend la fin d'une fenêtre (le butin affiche déjà ses propres annonces)
-  const tiers = checkTiers(), achs = checkAch();
-  tiers.forEach(t => toast(tierText(t)));
-  achs.forEach(achPop);
+  const tiers = checkTiers(), achs = checkAch(); // pas d'annonce : un point apparaît sur le menu
   if (tiers.length || achs.length) { renderTop(); renderNav(); renderJeuBar(); if (tab === 'reves' || tab === 'quetes' || (tab === 'compagnons' && compView === 'reves') || (tab === 'sac' && sacView === 'col')) renderPanel(); }
   else layoutJeuBar();
 }, 1500);

@@ -115,7 +115,7 @@ function liveAskText(n, j) {
 
 // ---------------- état du fil : quoi montrer ? ----------------
 function liveState() {
-  const keys = Object.keys(CHARS), order = [S.sel, ...keys.filter(k => k !== S.sel)];
+  const keys = (typeof teamIds === 'function' ? teamIds() : Object.keys(S.comps || {})).filter(k => CHARS[k]), order = [S.sel, ...keys.filter(k => k !== S.sel)].filter(k => keys.includes(k));
   for (const k of order) { const t = S.trips[k]; if (t && t.done) return { mode: 'home', k, t }; }
   for (const k of order) { const t = S.trips[k]; if (t && !t.done) { const i = livePend(t); if (i >= 0) return { mode: 'ask', k, t, i }; } }
   for (const k of order) { const t = S.trips[k]; if (t && !t.done) return { mode: 'feed', k, t }; }
@@ -125,7 +125,15 @@ let liveSig = '', liveLastEntry = '';
 function renderLive(force) {
   let bar = $('liveBar');
   if (!bar) { bar = document.createElement('div'); bar.id = 'liveBar'; const tc = $('tripCard'); (tc ? tc.parentNode : document.querySelector('.game')).insertBefore(bar, tc ? tc.nextSibling : null); }
-  const st = (typeof tab === 'undefined' || tab === 'carte') ? liveState() : null;
+  let st = (typeof tab === 'undefined' || tab === 'carte') && !document.body.classList.contains('firstrun') ? liveState() : null;
+  // v13 : « rentré » et « choix » passent par la carte d'action ; le fil ne reste que pendant un voyage, en une ligne,
+  // et seulement pour un compagnon dont la carte d'action ne parle pas déjà
+  if (st) {
+    const tc = $('tripCard'), shownK = tc && !tc.hidden ? tc.dataset.k : null;
+    const ks = (typeof teamIds === 'function' ? teamIds() : []).filter(k => CHARS[k] && S.trips[k] && !S.trips[k].done && k !== shownK);
+    const k = ks.includes(S.sel) ? S.sel : ks[0];
+    st = k ? { mode: 'feed', k, t: S.trips[k] } : null;
+  }
   if (!st) { bar.hidden = true; liveSig = ''; return; }
   bar.hidden = false;
   const { mode, k, t } = st, n = CHARS[k].name, f = Math.min(1, t.elapsed / t.total), pct = Math.min(99, Math.floor(f * 100));
@@ -164,8 +172,6 @@ function liveLayout() {
 // sur la carte de voyage du compagnon choisi : quand il est rentré, le gros bouton du fil la remplace
 if (typeof renderTripCard === 'function') renderTripCard = (orig => function () {
   const r = orig.apply(this, arguments);
-  const t = S.trips[S.sel], box = $('tripCard');
-  if (box && t && t.done && tab === 'carte') box.hidden = true;
   renderLive(true);
   return r;
 })(renderTripCard);

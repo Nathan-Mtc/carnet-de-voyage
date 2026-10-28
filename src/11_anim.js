@@ -12,17 +12,43 @@
 .cc.m-fier .tilt{transform:rotate(-4deg)}
 .cc .eyes.eo.blink{animation:ccBlink .17s ease-in-out}
 @keyframes ccBlink{50%{transform:scaleY(.08)}}
-.sp-pistache .ear{animation:ccTwitch 5.3s ease-in-out infinite}
-.sp-pistache .ear+.ear{animation-duration:6.9s;animation-delay:-2.3s}
+.ear.e-panda{animation:ccTwitch 5.3s ease-in-out infinite}
+.ear.e-panda+.ear{animation-duration:6.9s;animation-delay:-2.3s}
 @keyframes ccTwitch{0%,84%,100%{transform:rotate(0)}87%{transform:rotate(-10deg)}90%{transform:rotate(6deg)}93%{transform:rotate(-3deg)}96%{transform:rotate(0)}}
-.sp-mochi .breath,.sp-mochi .bob{animation-duration:4.8s}
-.sp-mochi .ear{animation:ccFlick 7.6s ease-in-out infinite}
-.sp-mochi .ear+.ear{animation-duration:9.3s;animation-delay:-3.1s}
+.sp-capy .breath,.sp-capy .bob{animation-duration:4.8s}
+.ear.e-capy{animation:ccFlick 7.6s ease-in-out infinite}
+.ear.e-capy+.ear{animation-duration:9.3s;animation-delay:-3.1s}
 @keyframes ccFlick{0%,91%,100%{transform:rotate(0)}94%{transform:rotate(16deg)}97%{transform:rotate(-6deg)}}
-.sp-bulle .breath,.sp-bulle .bob{animation-duration:2.7s}
-.sp-bulle .wave{animation-duration:1.9s}
-.sp-bulle .bubs{transform-box:view-box;animation:ccBubs 6.8s ease-out infinite}
+.sp-axo .breath,.sp-axo .bob{animation-duration:2.7s}
+.wave.e-axo{animation-duration:1.9s}
+.sp-axo .bubs{transform-box:view-box;animation:ccBubs 6.8s ease-out infinite}
 @keyframes ccBubs{0%,60%{opacity:0;transform:translate(0,10px)}66%{opacity:1}92%{opacity:.85;transform:translate(7px,-24px)}100%{opacity:0;transform:translate(9px,-32px)}}
+.ear.e-renard,.ear.e-lemur{animation:ccTwitch 6.1s ease-in-out infinite}
+.ear.e-renard+.ear,.ear.e-lemur+.ear{animation-duration:7.7s;animation-delay:-3s}
+.ear.e-fennec{animation:ccSwivel 5.6s ease-in-out infinite}
+.ear.e-fennec+.ear{animation-duration:6.4s;animation-delay:-2.6s}
+@keyframes ccSwivel{0%,70%,100%{transform:rotate(0)}76%{transform:rotate(-7deg)}82%{transform:rotate(4deg)}88%{transform:rotate(-2deg)}}
+.ear.e-tanuki,.ear.e-quokka{animation:ccFlick 6.8s ease-in-out infinite}
+.ear.e-tanuki+.ear,.ear.e-quokka+.ear{animation-duration:8.1s;animation-delay:-2.7s}
+.swish.t-renard{animation:ccFluff 3.8s ease-in-out infinite}
+@keyframes ccFluff{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(5deg)}}
+.swish.t-lemur{animation:ccFluff 4.4s ease-in-out infinite}
+.swish.t-tanuki{animation-duration:3.3s}
+.swish.t-fennec{animation-duration:2.3s}
+.swish.t-quokka{animation:ccFluff 2.2s ease-in-out infinite}
+.t-phoque{transform-box:view-box;transform-origin:236px 328px;animation:ccFlap 3.2s ease-in-out infinite}
+@keyframes ccFlap{0%,100%{transform:rotate(0)}50%{transform:rotate(-4deg)}}
+.sp-paresseux .breath,.sp-paresseux .bob{animation-duration:6s}
+.sp-phoque .bob{animation-duration:3.9s}
+.sp-quokka .breath,.sp-quokka .bob{animation-duration:2.6s}
+.cc .aura{transform-box:view-box;transform-origin:160px 196px;animation:ccAura 3.6s ease-in-out infinite}
+@keyframes ccAura{0%,100%{opacity:.7;transform:scale(.96)}50%{opacity:1;transform:scale(1.03)}}
+.ccegg .eggwob{transform-box:view-box;transform-origin:60px 130px}
+.ccegg.cr1 .eggwob{animation:ccEggWob 3.2s ease-in-out infinite}
+.ccegg.cr2 .eggwob{animation:ccEggWob 1.6s ease-in-out infinite}
+.ccegg.cr3 .eggwob{animation:ccEggHop 1.4s ease-in-out infinite}
+@keyframes ccEggWob{0%,60%,100%{transform:rotate(0)}68%{transform:rotate(-6deg)}76%{transform:rotate(5deg)}84%{transform:rotate(-3deg)}92%{transform:rotate(1deg)}}
+@keyframes ccEggHop{0%,55%,100%{transform:none}65%{transform:translateY(-6px) rotate(-3deg)}75%{transform:none}82%{transform:translateY(-3px) rotate(2deg)}}
 .twk{transform-box:fill-box;transform-origin:center;animation:ccTwk 1.5s ease-in-out infinite}
 @keyframes ccTwk{0%,100%{transform:scale(.7);opacity:.7}50%{transform:scale(1.15);opacity:1}}
 .cc.hop .root{transform-box:view-box;transform-origin:160px 334px;animation:ccHop .62s cubic-bezier(.3,1.3,.5,1)}
@@ -46,7 +72,7 @@
 .ccP{position:fixed;z-index:29;pointer-events:none;width:20px;height:20px;margin:-10px 0 0 -10px;animation:ccFloat 1.25s ease-out forwards}
 .ccP svg{width:100%;height:100%;display:block}
 @keyframes ccFloat{0%{opacity:0;transform:translate(0,4px) scale(.4)}18%{opacity:1;transform:translate(calc(var(--dx)*.3),calc(var(--dy,-62px)*.2)) scale(1.05)}100%{opacity:0;transform:translate(var(--dx),var(--dy,-62px)) scale(.85) rotate(var(--rot))}}
-@media (prefers-reduced-motion:reduce){.cc *,.cc,.ccP,#ccTalk{animation:none!important;transition:none!important}.cc.tl .tilt,.cc.tr .tilt{transform:none}.ccP{display:none}}
+@media (prefers-reduced-motion:reduce){.cc *,.cc,.ccegg *,.ccP,#ccTalk{animation:none!important;transition:none!important}.cc.tl .tilt,.cc.tr .tilt{transform:none}.ccP{display:none}}
 `;
   const st = document.createElement('style');
   st.id = 'ccAnim'; st.textContent = css; document.head.appendChild(st);
@@ -66,12 +92,12 @@
     if (!root) return;
     root.querySelectorAll('img').forEach(img => {
       const inf = uriInfo.get(img.getAttribute('src')); if (!inf) return;
-      const k = inf[0];
+      const k = inf[0]; if (!CHARS[k]) return;
       const mood = inf[1] === 'content' && ctx !== 'panel' && asleep(k) ? 'dodo' : inf[1];
       const sp = document.createElement('span');
       sp.className = 'livep'; sp.dataset.k = k; sp.dataset.mood = mood;
       if (ctx === 'hud') sp.setAttribute('aria-hidden', 'true');
-      else { sp.tabIndex = 0; sp.setAttribute('role', 'button'); sp.setAttribute('aria-label', `Câliner ${CHARS[k].name}`); }
+      else { sp.tabIndex = 0; sp.setAttribute('role', 'button'); sp.setAttribute('aria-label', `Câliner ${CHARS[k] ? CHARS[k].name : ''}`); }
       sp.innerHTML = svgFor(k, mood);
       img.replaceWith(sp);
     });
@@ -140,14 +166,17 @@
     icecream: () => `<svg viewBox="0 0 20 20"><path d="M6 10 L10 19 L14 10Z" fill="#e8b46a" stroke="${L}" stroke-width="1.3" stroke-linejoin="round"/><circle cx="10" cy="8" r="5" fill="#f9c6d6" stroke="${L}" stroke-width="1.3"/><circle cx="8.3" cy="6.5" r="1.3" fill="#fff" opacity=".7"/></svg>`,
     zz: () => `<svg viewBox="0 0 20 20"><text x="4" y="16" font-family="Fredoka,sans-serif" font-weight="700" font-size="16" fill="#fff" stroke="${L}" stroke-width="1.6" paint-order="stroke">z</text></svg>`,
   };
-  const TREATS = { pistache: ['apple', 'apple', 'bread'], mochi: ['citrus', 'tea'], bulle: ['bubble', 'bubble', 'icecream'] };
+  // friandises et humeurs par ESPÈCE (spOf), avec une valeur par défaut pour les nouvelles espèces
+  const TREATS = { panda: ['apple', 'apple', 'bread'], capy: ['citrus', 'tea'], axo: ['bubble', 'bubble', 'icecream'], renard: ['heart', 'icecream'], fennec: ['bread', 'apple'], tanuki: ['bread', 'tea'], paresseux: ['apple', 'tea'], lemur: ['citrus', 'apple'], phoque: ['bubble', 'icecream'], quokka: ['apple', 'citrus'], def: ['apple', 'heart'] };
+  const spk = k => (typeof spOf === 'function' ? spOf(k) : k);
+  const calm = k => ['capy', 'paresseux'].includes(spk(k));
   function burst(el, k, kind) {
     if (still()) return;
     const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height * 0.3;
-    const n = k === 'mochi' ? 4 : 6, top = r.top < 90;
+    const n = calm(k) ? 4 : 6, top = r.top < 90;
     for (let i = 0; i < n; i++) {
       const p = document.createElement('div');
-      const type = kind === 'sleep' ? (i % 2 ? 'zz' : 'heart') : (i % 2 ? pick(TREATS[k]) : 'heart');
+      const type = kind === 'sleep' ? (i % 2 ? 'zz' : 'heart') : (i % 2 ? pick(TREATS[spk(k)] || TREATS.def) : 'heart');
       p.className = 'ccP'; p.innerHTML = PART[type]();
       p.style.left = (cx + rnd(-r.width * 0.35, r.width * 0.35)) + 'px';
       p.style.top = (cy + rnd(-6, 10)) + 'px';
@@ -180,21 +209,22 @@
   }
   const lastLine = {};
   function lineFor(k, sleeping) {
-    const ch = CHARS[k], ln = ch.lines, t = S.trips[k];
-    let pool = ln.tap;
+    const ch = CHARS[k], ln = (ch && ch.lines) || { tap: ['…'] }, t = S.trips[k];
+    let pool = ln.tap || ['…'];
     if (sleeping) pool = (ln.night || []).concat(ln.wake || []);
     else if (t && !t.done) pool = (ln.away || []).concat(ln.tap.slice(0, 2));
     let l = pick(pool), tries = 0;
     while (pool.length > 1 && l === lastLine[k] && tries++ < 6) l = pick(pool);
     return (lastLine[k] = l);
   }
-  const TAP_MOODS = { pistache: ['rire', 'amour', 'curieux', 'rire'], mochi: ['amour', 'fier', 'content'], bulle: ['rire', 'amour', 'surpris', 'rire'] };
+  const TAP_MOODS = { panda: ['rire', 'amour', 'curieux', 'rire'], capy: ['amour', 'fier', 'content'], axo: ['rire', 'amour', 'surpris', 'rire'], paresseux: ['amour', 'content', 'fier'], def: ['rire', 'amour', 'curieux', 'surpris'] };
   function react(sp, anchor) {
     const k = sp.dataset.k, sleeping = sp.dataset.mood === 'dodo';
-    const mood = sleeping ? (Math.random() < 0.5 ? 'surpris' : 'dodo') : pick(TAP_MOODS[k]);
+    if (!CHARS[k]) return;
+    const mood = sleeping ? (Math.random() < 0.5 ? 'surpris' : 'dodo') : pick(TAP_MOODS[spk(k)] || TAP_MOODS.def);
     clearTimeout(sp._t); sp._busy = true;
     const svg = setMood(sp, mood);
-    hop(svg, k === 'mochi' || sleeping);
+    hop(svg, calm(k) || sleeping);
     burst(sp, k, sleeping ? 'sleep' : '');
     say(anchor || sp, lineFor(k, sleeping));
     sp._t = setTimeout(() => { sp._busy = false; if (sp.isConnected) setMood(sp, sp.dataset.mood); }, 2200);
@@ -211,7 +241,7 @@
     const sp = ev.target.closest('.livep');
     if (sp) { react(sp); return; }
     const hc = ev.target.closest('[data-hc]');
-    if (hc) { const svg = hc.querySelector('svg.cc'); hop(svg, hc.dataset.hc === 'mochi'); burst(hc, hc.dataset.hc, ''); }
+    if (hc) { const svg = hc.querySelector('svg.cc'); hop(svg, calm(hc.dataset.hc)); burst(hc, hc.dataset.hc, ''); }
   });
   document.addEventListener('keydown', ev => {
     if (ev.key !== 'Enter' && ev.key !== ' ') return;

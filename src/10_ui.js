@@ -3,21 +3,23 @@
 // Les anciens noms d'onglets restent valables : openSheet('marche'), openSheet('reves'), openSheet('quetes')… sont redirigés
 // vers le bon onglet et le bon sous-onglet (voir TAB_ALIAS).
 const NAV = [['carte', 'Carte'], ['boutique', 'Boutique'], ['compagnons', 'Compagnons'], ['village', 'Village'], ['sac', 'Sac']];
-const SHEET_TITLES = { sac: 'Sac & Album', boutique: 'La boutique', compagnons: 'Les compagnons', reves: 'Les rêves', village: 'Le village', atelier: 'L\u2019atelier', marche: 'Le marché', maison: 'La maison', quetes: 'Quêtes', album: 'L\u2019album' };
+const SHEET_TITLES = { menu: 'Le carnet', sac: 'Sac & Album', boutique: 'La boutique', compagnons: 'Les compagnons', reves: 'Les rêves', village: 'Le village', atelier: 'L\u2019atelier', marche: 'Le marché', maison: 'La maison', quetes: 'Quêtes', album: 'L\u2019album' };
 const SUBTABS = {
-  compagnons: [['garde', 'Garde-robe', 'garde'], ['reves', 'Rêves', 'reves'], ['talents', 'Talents', 'talents'], ['concours', 'Concours', 'concours']],
-  village: [['bat', 'Bâtiments', 'village'], ['maison', 'Maison', 'maison'], ['atelier', 'Atelier', 'atelier']],
+  // le concours de style est retiré de l'interface pour l'instant (son code reste dans 19_style.js) ; le refuge accueille toute la collection
+  compagnons: [['garde', 'Garde-robe', 'garde'], ['reves', 'Rêves', 'reves'], ['talents', 'Talents', 'talents'], ['refuge', 'Équipe', 'refuge'], ['compedium', 'Compédium', 'compedium']],
+  // v13 phase B : le village = refuge (habitats) + nurserie (couveuse, croisements) ; voir 21_nurserie.js
+  village: [['refuge', 'Refuge', 'refuge'], ['nurserie', 'Nurserie', 'nurserie'], ['habitats', 'Habitats', 'habitats'], ['atelier', 'Atelier', 'atelier'], ['maison', 'Maison', 'maison']],
   sac: [['sac', 'Sac', 'sac1'], ['col', 'Collections', 'col'], ['album', 'Cartes postales', 'album']],
 };
 // ancien nom d'onglet -> [onglet, sous-onglet]
 const TAB_ALIAS = {
-  atelier: ['village', 'atelier'], maison: ['village', 'maison'], batiments: ['village', 'bat'], village: ['village', 'bat'],
+  atelier: ['village', 'atelier'], maison: ['village', 'maison'], batiments: ['village', 'habitats'], village: ['village', 'refuge'], habitats: ['village', 'habitats'], nurserie: ['village', 'nurserie'], couveuse: ['village', 'nurserie'], croisements: ['village', 'nurserie'],
   marche: ['boutique', 'marche'], magasin: ['boutique', 'magasin'], comptoir: ['boutique', 'comptoir'], shop: ['boutique'],
   reves: ['compagnons', 'reves'], quetes: ['compagnons', 'reves'], succes: ['compagnons', 'reves'], carnet: ['compagnons', 'reves'],
-  garderobe: ['compagnons', 'garde'], tenues: ['compagnons', 'garde'], talents: ['compagnons', 'talents'], concours: ['compagnons', 'concours'],
+  garderobe: ['compagnons', 'garde'], tenues: ['compagnons', 'garde'], talents: ['compagnons', 'talents'], concours: ['compagnons', 'garde'], refuge: ['compagnons', 'refuge'], equipe: ['compagnons', 'refuge'], compedium: ['compagnons', 'compedium'],
   album: ['sac', 'album'], cartes: ['sac', 'album'], collections: ['sac', 'col'], sac: ['sac', 'sac'],
 };
-let sacView = 'sac', villView = 'bat', compView = 'garde';
+let sacView = 'sac', villView = 'refuge', compView = 'garde';
 // sous-onglet courant d'un onglet, et son changement (la boutique gère elle-même ses sous-onglets via openBoutique)
 function getSub(t) { return t === 'village' ? villView : t === 'sac' ? sacView : t === 'compagnons' ? compView : t === 'boutique' ? bqSubSafe() : ''; }
 function bqSubSafe() { try { return bView; } catch (e) { return ''; } } // bView vit dans 18_boutique.js
@@ -46,14 +48,14 @@ const NAV_ICONS = {
   quetes: '<path d="M8 5 H22 V25 H8Z" fill="#fff3e2" stroke="currentColor" stroke-width="2"/><path d="M6 5 H24 M6 25 H24" stroke="#a87a50" stroke-width="3.4" stroke-linecap="round"/><path d="M11 11 h8 M11 15 h8 M11 19 h5" stroke="currentColor" stroke-width="1.6"/>',
   album: '<rect x="4" y="7" width="22" height="17" rx="2" fill="#bfe1f2" stroke="currentColor" stroke-width="2"/><path d="M4 21 L11 14 L16 19 L19 16 L26 22" fill="#8fbf7f" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="20" cy="12" r="2.4" fill="#fbd76a"/>',
 };
-function selectComp(k) { S.sel = k; S.unseen[k] = 0; if (S.trips[k]) plan.dest = null; fast = false; save(); renderAll(); const t = S.trips[k]; if (t) { const p = tripPos(t); zoomTo(p[0], p[1]); } }
+function selectComp(k) { if (!S.comps || !S.comps[k]) return; S.sel = k; S.unseen[k] = 0; if (S.trips[k]) plan.dest = null; fast = false; save(); renderAll(); const t = S.trips[k]; if (t) { const p = tripPos(t); zoomTo(p[0], p[1]); } }
 function resolveTab(name) {
   if (name === 'quetes' && questView === 'col') return ['sac', 'col']; // les collections vivent maintenant dans Sac & Album
   return TAB_ALIAS[name] || [name];
 }
 // openSheet(nom) : ouvre un onglet ; les anciens noms sont redirigés vers le bon onglet et le bon sous-onglet
 function openSheet(name, keepSub) {
-  if (name === 'village' && keepSub && villView === 'marche') villView = 'bat';
+  if (name === 'village' && keepSub && (villView === 'marche' || villView === 'bat')) villView = 'refuge';
   const [t, sub] = resolveTab(name);
   // la boutique (18_boutique.js) choisit elle-même son sous-onglet : Comptoir, Magasin ou Marché
   if (t === 'boutique' && sub && !keepSub && typeof openBoutique === 'function' && !openSheet._bq) {
@@ -69,19 +71,24 @@ function openSheet(name, keepSub) {
   if (changed) $('panelBody').scrollTop = 0;
 }
 function closeSheet() { const rc = $('react'); if (rc) rc.hidden = true; tab = 'carte'; if (!S.trips[S.sel]) plan.dest = null; renderPanel(); drawMarks(); }
+// les compagnons de l'équipe (3 au plus), affichés dans le HUD ; ce sont eux qui voyagent (voir 20_collection.js)
+const hudTeam = () => (typeof teamIds === 'function' ? teamIds() : Object.keys(S.comps || {})).filter(k => CHARS[k] && S.prog[k]);
 function renderTop() { $('coins').innerHTML = coins(S.coins); }
 function renderComps() {
-  $('hudComps').innerHTML = Object.entries(CHARS).map(([k, ch]) => {
-    const t = S.trips[k], p = S.prog[k], f = Math.min(1, p.xp / needXP(p.lvl));
+  const team = hudTeam(), total = Object.keys(S.comps || {}).length;
+  $('hudComps').innerHTML = team.map(k => {
+    const ch = CHARS[k], t = S.trips[k], p = S.prog[k], f = Math.min(1, p.xp / needXP(p.lvl));
     const st = !t ? 'home' : t.done ? 'done' : 'away';
     const C = 2 * Math.PI * 27;
-    return `<button class="hc-btn ${S.sel === k ? 'on' : ''}" data-sel="${k}" aria-pressed="${S.sel === k}" aria-label="${ch.name}, niveau ${p.lvl}"><svg class="ring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="27" fill="#fffaf0" stroke="#e7dcc4" stroke-width="5"/><circle cx="30" cy="30" r="27" fill="none" stroke="#f2c14e" stroke-width="5" stroke-dasharray="${(C * f).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 30 30)" stroke-linecap="round"/></svg><img src="${portraitURI(k, t && t.done ? 'rire' : 'content')}" alt=""><span class="lv">${p.lvl}</span><span class="nm">${ch.name}</span>${st !== 'home' ? `<span class="st ${st}">${st === 'done' ? '!' : '<svg viewBox="0 0 12 12"><path d="M3 11 L5 6 L8 8 L9 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'}</span>` : ''}</button>`;
-  }).join('');
+    return `<button class="hc-btn ${S.sel === k ? 'on' : ''}" data-sel="${k}" aria-pressed="${S.sel === k}" aria-label="${ch.name}, niveau ${p.lvl}"><svg class="ring" viewBox="0 0 60 60"><circle cx="30" cy="30" r="27" fill="#fffaf0" stroke="#e7dcc4" stroke-width="5"/><circle cx="30" cy="30" r="27" fill="none" stroke="#f2c14e" stroke-width="5" stroke-dasharray="${(C * f).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 30 30)" stroke-linecap="round"/></svg><img src="${portraitURI(k, t && t.done ? 'rire' : 'content')}" alt=""><span class="lv">${p.lvl}</span><span class="nm">${esc(ch.name)}</span>${st !== 'home' ? `<span class="st ${st}">${st === 'done' ? '!' : '<svg viewBox="0 0 12 12"><path d="M3 11 L5 6 L8 8 L9 3" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'}</span>` : ''}</button>`;
+  }).join('') + `<button class="hc-add" data-refuge="1" aria-label="Refuge : changer l’équipe (${total} compagnon${total > 1 ? 's' : ''})"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>${total > team.length ? `<i>${total}</i>` : ''}</button>`;
   renderTripCard();
 }
 function renderTripCard() {
   const k = S.sel, ch = CHARS[k], t = S.trips[k], box = $('tripCard');
-  if (tab !== 'carte') { box.hidden = true; return; }
+  if (tab !== 'carte' || !ch) { box.hidden = true; return; }
+  // v13 : une seule carte d'action compacte (la prochaine chose utile, un seul bouton) : 20_collection.js
+  if (typeof renderActionCard === 'function') { try { return renderActionCard(box); } catch (e) { console.error(e); } }
   box.hidden = false;
   if (!t) {
     box.className = 'tripcard idle';
@@ -119,14 +126,14 @@ function renderNav() {
   let shop = 0; try { if (typeof shopBadge === 'function') shop = shopBadge() || 0; } catch (e) {}
   const cols = collections().filter(c => !S.colClaimed[c.key] && c.names.every(n => S.dex[n])).length;
   const sold = S.market.mine.filter(m => !m.sold).length;
-  const build = typeof villageBuildable === 'function' ? villageBuildable().length : 0;
+  const build = typeof nsVillageBadge === 'function' ? nsVillageBadge() : typeof villageBuildable === 'function' ? villageBuildable().length : 0;
   const cur = tab === 'voyage' ? 'carte' : (resolveTab(tab)[0]);
   $('nav').innerHTML = NAV.map(([k, l]) => {
     let b = '';
     if (k === 'compagnons' && q) b = `<i class="tb">${q}</i>`;
     if (k === 'boutique') b = shop ? `<i class="tb">${typeof shop === 'number' ? shop : esc(shop)}</i>` : sold ? `<i class="tb soft" title="Annonces en cours au marché">${sold}</i>` : '';
     if (k === 'sac' && cols) b = `<i class="tb">${cols}</i>`;
-    if (k === 'village' && build) b = `<i class="tb" title="Bâtiment à construire">${build}</i>`;
+    if (k === 'village' && build) b = `<i class="tb" title="Œuf à faire éclore ou bâtiment à construire">${build}</i>`;
     if (k === 'carte' && Object.values(S.trips).some(t => t && (t.done || t.journal.some(j => j.pending && !j.resolved)))) b = `<i class="tb">!</i>`;
     return `<button data-nav="${k}" class="${cur === k ? 'on' : ''}" aria-current="${cur === k ? 'page' : 'false'}"><svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS[k]}</svg><span>${l}</span>${b}</button>`;
   }).join('');
@@ -137,7 +144,7 @@ function renderPanel() {
   const sheet = $('sheet');
   if (tab === 'carte') { sheet.hidden = true; document.body.classList.remove('sheet-open'); return; }
   { const [t, sub] = resolveTab(tab); if (t !== tab) { setSub(t, sub); tab = t; } } // ancien nom posé directement dans « tab »
-  if (tab === 'village' && villView === 'marche') villView = 'bat'; // le marché a déménagé dans la boutique
+  if (tab === 'village' && (villView === 'marche' || villView === 'bat')) villView = 'refuge'; // le marché a déménagé dans la boutique
   sheet.hidden = false; document.body.classList.add('sheet-open');
   const t = S.trips[S.sel];
   $('sheetTitle').textContent = tab === 'voyage' ? (t ? 'Journal de voyage' : plan.dest ? (plan.dest.poi ? 'Récolter ici' : 'Préparer le voyage') : 'Partir en voyage') : (SHEET_TITLES[tab] || '');
@@ -145,7 +152,7 @@ function renderPanel() {
   sheet.dataset.kind = tab;
   sheet.dataset.sub = getSub(tab);
   const box = $('panelBody');
-  const R = { voyage: renderVoyage, boutique: renderBoutiqueTab, compagnons: renderCompagnonsTab, village: renderVillageTab, sac: renderSacTab }[tab];
+  const R = { menu: typeof renderMenu === 'function' ? renderMenu : null, voyage: renderVoyage, boutique: renderBoutiqueTab, compagnons: renderCompagnonsTab, village: renderVillageTab, sac: renderSacTab }[tab];
   try { if (R) R(box); else box.innerHTML = ''; } catch (e) { console.error(e); box.innerHTML = `<p class="empty">Oups, cet écran n’a pas pu s’afficher.</p>`; }
   const subs = SUBTABS[tab];
   if (subs) {
@@ -156,7 +163,9 @@ function renderPanel() {
 // pastille rouge sur un sous-onglet : quelque chose attend le joueur
 function subDot(t, k) {
   try {
-    if (t === 'village' && k === 'bat') return typeof villageBuildable === 'function' && villageBuildable().length > 0;
+    if (t === 'village' && k === 'habitats') return typeof villageBuildable === 'function' && villageBuildable().length > 0;
+    if (t === 'village' && k === 'nurserie') return typeof nsNurseDot === 'function' && nsNurseDot();
+    if (t === 'compagnons' && k === 'compedium') return typeof nsCompDot === 'function' && nsCompDot();
     if (t === 'compagnons' && k === 'reves') return revesBadge() > 0;
     if (t === 'compagnons' && typeof styleSubDot === 'function') return styleSubDot(k);
   } catch (e) {}
@@ -165,7 +174,8 @@ function subDot(t, k) {
 // quêtes, succès, chapitre du Grand Carnet et rêves à réaliser
 function revesBadge() {
   ensureDaily();
-  return S.daily.quests.filter(x => x.prog >= x.goal && !x.claimed).length + (typeof achReady === 'function' ? achReady().length : 0) + (typeof goalState === 'function' && goalState().complete ? 1 : 0) + (typeof dreamReady === 'function' ? Object.keys(CHARS).filter(k => dreamReady(k)).length : 0);
+  // (les succès à récupérer sont signalés par le point du menu, plus ici)
+  return S.daily.quests.filter(x => x.prog >= x.goal && !x.claimed).length + (typeof goalState === 'function' && goalState().complete ? 1 : 0) + (typeof dreamReady === 'function' ? hudTeam().filter(k => dreamReady(k)).length : 0);
 }
 function renderBoutiqueTab(box) {
   if (typeof renderBoutique === 'function') return renderBoutique(box);
@@ -180,7 +190,7 @@ function renderCompagnonsTab(box) {
 }
 function renderRevesTab(box) {
   if (typeof renderReves === 'function') return renderReves(box);
-  box.innerHTML = phead(S.sel, 'Les rêves', 'Les rêves de vos compagnons arrivent bientôt ici.') + `<p class="empty">Les rêves de Pistache, Mochi et Bulle seront affichés ici, avec les quêtes du jour et les succès.</p>`;
+  box.innerHTML = phead(S.sel, 'Les rêves', 'Les rêves de vos compagnons arrivent bientôt ici.') + `<p class="empty">Les rêves de vos compagnons seront affichés ici, avec les quêtes du jour et les succès.</p>`;
 }
 function renderVillageTab(box) {
   if (villView === 'maison') return renderHouse(box);
@@ -254,7 +264,7 @@ function renderVoyage(box) {
         return `<button class="sug" data-goplace="${pl.id}"><span class="sugk">${['Tout près', 'Un peu plus loin', 'Grande aventure'][i]}</span><span class="sname">${esc(pl.name)} <small>${esc(pl.country)} · ${d.toLocaleString('fr-FR')} km</small></span><span class="tags">${pl.tags.map(tg => `<i style="--tc:${TAGC[tg]}">${TAGL[tg]}</i>`).join('')}</span></button>`;
       }).join('') + `</div>`;
       if (S.secrets.length) html += `<h3>Lieux secrets découverts</h3><div class="sugs">` + S.secrets.map(key => { const s = SECRETS.find(x => x.key === key); return `<button class="sug secret" data-gosecret="${key}"><span class="sugk">Lieu secret</span><span class="sname">${esc(s.name)} <small>${esc(s.country)}</small></span><span class="hint">Trésors légendaires garantis à l’arrivée.</span></button>`; }).join('') + `</div>`;
-      html += `<div class="talents"><h3>Talents de ${ch.name} · niveau ${p.lvl}</h3>${TALENTS[k].map(([l, n, d]) => `<div class="tal ${p.lvl >= l ? 'on' : ''}"><b>${n}</b><span>${p.lvl >= l ? d : `Débloqué au niveau ${l}`}</span></div>`).join('')}</div>`;
+      html += `<div class="talents"><h3>Talents de ${ch.name} · niveau ${p.lvl}</h3>${talentsOf(k).map(([l, n, d]) => `<div class="tal ${p.lvl >= l ? 'on' : ''}"><b>${n}</b><span>${p.lvl >= l ? d : `Débloqué au niveau ${l}`}</span></div>`).join('')}</div>`;
       box.innerHTML = html; return;
     }
     const d = plan.dest, dist = kmBetween(h, d);
@@ -342,7 +352,7 @@ function renderBag(box) {
   }).join('') + `</div><p class="small">Touchez un objet pour voir sa fiche et à quoi il sert. Le prix affiché est celui du comptoir, immédiat. Au marché, vous vendrez plus cher, mais il faut attendre un acheteur.</p>`;
   box.innerHTML = html;
 }
-const sellPrice = it => Math.round(value(it) * (S.sel === 'mochi' && hasTalent('mochi', 0) ? 0.75 : 0.6));
+const sellPrice = it => Math.round(value(it) * (hasEff(S.sel, 'nego') ? 0.75 : 0.6));
 
 // ---- Atelier
 function ingCount(key) { const subs = ING[key][0]; return S.inv.filter(i => subs.includes(i.sub) && (i.cat === 'm' || i.cat === 'n')).length; }
@@ -372,7 +382,7 @@ function renderAtelier(box) {
     const ok = canCraft(r);
     return `<div class="rec ${ok ? 'ok' : ''}" style="--rc:${RARC[out.rarity]}"><div class="ico big">${itemIcon(out)}</div><div class="rx"><b>${esc(out.name)}</b><span class="rr">${RARITY[out.rarity]}${out.cat === 'v' ? ' · ' + SLOT_LABEL[out.sub] : ''}</span><ul>${r.ing.map(([key, n]) => { const have = ingCount(key); return `<li class="${have >= n ? 'have' : ''}">${ING[key][1]} <b>${Math.min(have, n)}/${n}</b></li>`; }).join('')}${r.coins ? `<li class="${S.coins >= r.coins ? 'have' : ''}">${coins(r.coins)}</li>` : ''}</ul></div><button data-craft="${r.id}" ${ok ? '' : 'disabled'}>Fabriquer</button></div>`;
   }).join('') + `</div>`;
-  if (craftFilter === 'Cuisine') html += `<p class="small">Les plats cuisinés sont des plats adorés : Pistache raffole de la tarte et de la confiture, Mochi de la salade d’agrumes, Bulle de la soupe de la mer. Un plat adoré donne beaucoup d’expérience.</p>`;
+  if (craftFilter === 'Cuisine') html += `<p class="small">Chaque espèce a ses plats adorés : ${esc(CHARS[k].name)} adore ${esc(CHARS[k].love || 'les bonnes choses')}. Un plat adoré donne beaucoup d’expérience.</p>`;
   box.innerHTML = html;
 }
 
@@ -445,7 +455,7 @@ function houseSVG() {
       else s += `<g data-slot="${sl.id}" class="hs empty"><ellipse cx="${sl.x + sl.w / 2}" cy="${sl.y + sl.h / 2}" rx="${sl.w / 2}" ry="${sl.h / 2}" fill="#fff" fill-opacity=".25" stroke="${L}" stroke-width="1.5" stroke-dasharray="6 5"/></g>`;
     }
   }
-  const home = Object.keys(CHARS).filter(k => !S.trips[k]);
+  const home = hudTeam().filter(k => !S.trips[k]);
   home.forEach((k, i) => {
     const w = 104, x = 320 - (home.length * 70) / 2 + i * 70 - 18;
     s += `<g class="hc" data-hc="${k}">${drawChar(k, S.outfits[k], night ? 'dodo' : 'content', 'h' + k).replace('<svg ', `<svg x="${x}" y="${352 - w * 1.06}" width="${w}" height="${w * 1.1}" `)}</g>`;
@@ -536,12 +546,13 @@ document.addEventListener('click', ev => {
   const hs = ev.target.closest('[data-slot]');
   if (hs && hs.closest('.house')) { houseSel = hs.dataset.slot; renderPanel(); return; }
   const hc = ev.target.closest('[data-hc]');
-  if (hc) { const k = hc.dataset.hc; reactionPopup(k, 'amour', pick(CHARS[k].lines.pet)); return; }
+  if (hc) { const k = hc.dataset.hc; if (CHARS[k]) reactionPopup(k, 'amour', pick(CHARS[k].lines.pet)); return; }
   const el = ev.target.closest('button'); if (!el || el.disabled) return;
   const d = el.dataset;
   if (el.closest('.fiche')) { $('modal').hidden = true; if (d.fclose) return; } // une action dans la fiche ferme la fiche
   if (d.fiche) return openFiche(d.fiche);
-  if (d.sel) return selectComp(d.sel);
+  if (d.sel) { if (d.sel === S.sel && tab === 'carte' && typeof openCompagnons === 'function') return openCompagnons('garde'); return selectComp(d.sel); } // toucher le compagnon déjà choisi ouvre sa garde-robe
+  if (d.refuge) { if (typeof openCompagnons === 'function') openCompagnons('refuge'); return; }
   if (d.nav) { if (d.nav === 'carte') closeSheet(); else openSheet(d.nav, true); return; }
   if (d.sub && el.closest('.subtabs') && SUBTABS[tab]) { /* la boutique gère ses propres sous-onglets */ setSub(tab, d.sub); houseSel = null; renderPanel(); $('panelBody').scrollTop = 0; return; }
   if (d.open) { openSheet(d.open); return; }
@@ -552,7 +563,7 @@ document.addEventListener('click', ev => {
   if (el.id === 'z3d') { window.toggle3D && window.toggle3D(); return; }
   if (el.id === 'zHome') { const h = homeObj(); zoomTo(h.lon, h.lat, homeZoom()); return; }
   if (el.id === 'zWorld') { zoomTo(10, 30, 1.2); return; }
-  if (el.id === 'gear') { $('settings').hidden = !$('settings').hidden; return; }
+  if (el.id === 'gear') { if (typeof renderMenu === 'function') { if (tab === 'menu') closeSheet(); else openSheet('menu'); } else $('settings').hidden = !$('settings').hidden; return; }
   if (d.goplace) { const p = PLACES[+d.goplace]; choosePlace(p); zoomTo(p.lon, p.lat, Math.max(zoomT.k, 3)); return; }
   if (d.gosecret) { const s = SECRETS.find(x => x.key === d.gosecret); chooseSecret(d.gosecret); zoomTo(s.lon, s.lat, Math.max(zoomT.k, 3)); return; }
   if (el.id === 'clearDest') { plan.dest = null; renderPanel(); drawMarks(); return; }

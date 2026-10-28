@@ -134,6 +134,63 @@ const DREAMS = [
       { t: 'item', name: 'Collier de frangipanier', n: 1, src: 'Bali', txt: 'Rapporter le Collier de frangipanier', short: 'Collier' },
       { t: 'item', ing: 'coquillage', n: 3, src: 'Bali', txt: 'Rapporter 3 coquillages', short: 'Coquillages' }],
     reward: { coins: 800, item: ['Couronne de corail', 'v', 'tete', 4, 'couronne', '#f08a7a'] } },
+  // ---------- v13 : rêves simples des nouvelles espèces (« who » = espèce ; aucun ne débloque de bâtiment) ----------
+  { id: 'r_neige', who: 'renard', wish: 'voir tomber la première neige', quote: 'Je rêve de flocons qui tombent tout doucement, et de faire des traces de pattes partout dans la neige fraîche.',
+    steps: [{ t: 'visit', tag: 'neige', n: 1, txt: 'Visiter un lieu enneigé', short: 'Neige' },
+      { t: 'item', sub: 'flocon', n: 1, src: 'neige', txt: 'Rapporter un flocon', short: 'Flocon' }],
+    reward: { coins: 90, item: ['Bonnet de givre', 'v', 'tete', 2, 'bonnet', '#cfe8f7'] } },
+  { id: 'r_aurore', who: 'renard', wish: 'contempler une aurore boréale', quote: 'Il paraît que le ciel du Grand Nord danse en vert et en violet. Je rêve de le regarder toute la nuit, la queue autour du museau.',
+    steps: [{ t: 'place', name: 'Rovaniemi', txt: 'Voyager jusqu’à Rovaniemi', short: 'Rovaniemi' },
+      { t: 'item', ing: 'lumiere', n: 1, src: 'Rovaniemi', txt: 'Rapporter une lumière', short: 'Lumière' }],
+    reward: { coins: 300, item: ['Cape aurore', 'v', 'dos', 3, 'cape', '#9fe0d0'] } },
+  { id: 'f_dune', who: 'fennec', wish: 'dormir au sommet d’une dune', quote: 'Je rêve d’une dune toute chaude, d’un ciel plein d’étoiles, et de mes grandes oreilles qui écoutent le vent.',
+    steps: [{ t: 'visit', tag: 'desert', n: 1, txt: 'Visiter un désert', short: 'Désert' },
+      { t: 'item', ing: 'sable', n: 2, src: 'desert', txt: 'Rapporter 2 sables', short: 'Sable' }],
+    reward: { coins: 90, item: ['Chèche des dunes', 'v', 'cou', 2, 'foulard', '#e8cfa0'] } },
+  { id: 'f_the', who: 'fennec', wish: 'boire un thé dans un café animé', quote: 'Je rêve d’un petit verre de thé bien sucré, et d’écouter toutes les conversations du café. Discrètement.',
+    steps: [{ t: 'visit', cat: 'cafe', n: 2, txt: 'Visiter 2 cafés', short: 'Cafés' },
+      { t: 'item', sub: 'boisson', n: 1, src: 'cafe', txt: 'Rapporter une boisson', short: 'Boisson' }],
+    reward: { coins: 160, item: ['Lanterne des sables', 'd', 'lanterne', 2, null, '#e3a94a'] } },
+  { id: 't_festin', who: 'tanuki', wish: 'organiser un grand festin', quote: 'Je rêve d’une table qui déborde : des brioches, des gâteaux, et tous mes amis autour. Je goûterai tout. Deux fois.',
+    steps: [{ t: 'visit', cat: 'restaurant', n: 2, txt: 'Visiter 2 restaurants', short: 'Restaurants' },
+      { t: 'item', ing: 'sucre', n: 2, src: 'boulangerie', txt: 'Rapporter 2 douceurs sucrées', short: 'Douceurs' }],
+    reward: { coins: 100, item: ['Bonnet de cuisinier', 'v', 'tete', 2, 'bonnet', '#fff6e2'] } },
+  { id: 't_kyoto', who: 'tanuki', wish: 'se promener dans les ruelles de Kyoto', quote: 'Je rêve des petites lanternes de Kyoto, le soir, quand les ruelles sentent le thé et les gâteaux de riz.',
+    steps: [{ t: 'place', name: 'Kyoto', txt: 'Voyager jusqu’à Kyoto', short: 'Kyoto' },
+      { t: 'item', name: 'Haori de Kyoto', n: 1, src: 'Kyoto', txt: 'Rapporter le Haori de Kyoto', short: 'Haori' }],
+    reward: { coins: 400, item: ['Lanterne de Kyoto', 'd', 'lanterne', 3, null, '#e5584f'] } },
+  { id: 'pa_hamac', who: 'paresseux', wish: 'faire la sieste dans un hamac', quote: 'Je rêve d’un hamac entre deux arbres… et de ne plus bouger. Pendant très, très longtemps.',
+    steps: [{ t: 'visit', cat: 'parc', n: 2, txt: 'Visiter 2 parcs', short: 'Parcs' },
+      { t: 'item', ing: 'feuille', n: 2, src: 'parc', txt: 'Rapporter 2 feuilles ou fleurs', short: 'Feuilles' }],
+    reward: { coins: 90, item: ['Coussin de feuilles', 'd', 'tapis', 2, null, '#8fbf6a'] } },
+  { id: 'pa_ile', who: 'paresseux', wish: 'écouter la pluie sur une île tropicale', quote: 'Je rêve d’une forêt tropicale où il pleut doucement, et de fermer les yeux en écoutant chaque goutte.',
+    steps: [{ t: 'visit', tag: 'ile', n: 1, txt: 'Visiter une île', short: 'Île' },
+      { t: 'item', ing: 'fruit', n: 2, src: 'marche', txt: 'Rapporter 2 fruits', short: 'Fruits' }],
+    reward: { coins: 200, item: ['Collier d’orchidées', 'v', 'cou', 3, 'foulard', '#e8c0e6'] } },
+  { id: 'l_marche', who: 'lemur', wish: 'goûter tous les fruits du marché', quote: 'Je rêve d’un étal plein de fruits de toutes les couleurs. Je sauterai de caisse en caisse pour tout goûter !',
+    steps: [{ t: 'visit', cat: 'marche', n: 2, txt: 'Visiter 2 marchés', short: 'Marchés' },
+      { t: 'item', ing: 'fruit', n: 2, src: 'marche', txt: 'Rapporter 2 fruits', short: 'Fruits' }],
+    reward: { coins: 100, item: ['Bandeau rayé', 'v', 'tete', 2, 'bonnet', '#f4f1ea'] } },
+  { id: 'l_baobabs', who: 'lemur', wish: 'grimper en haut d’un baobab', quote: 'Les baobabs touchent le ciel. Je rêve de grimper tout en haut et de regarder le soleil se coucher sur Madagascar.',
+    steps: [{ t: 'place', name: 'Allée des baobabs', txt: 'Voyager jusqu’à l’Allée des baobabs', short: 'Baobabs' },
+      { t: 'item', ing: 'graine', n: 1, src: 'Allée des baobabs', txt: 'Rapporter une graine', short: 'Graine' }],
+    reward: { coins: 400, item: ['Cape de la savane', 'v', 'dos', 3, 'cape', '#e3a94a'] } },
+  { id: 'ph_plage', who: 'phoque', wish: 'faire la planche à la plage', quote: 'Je rêve de flotter sur le dos, le ventre au soleil, pendant que les vagues me bercent. Plouf.',
+    steps: [{ t: 'visit', cat: 'plage', n: 2, txt: 'Visiter 2 plages', short: 'Plages' },
+      { t: 'item', ing: 'coquillage', n: 2, src: 'plage', txt: 'Rapporter 2 coquillages', short: 'Coquillages' }],
+    reward: { coins: 90, item: ['Bouée à rayures', 'v', 'cou', 2, 'foulard', '#e5584f'] } },
+  { id: 'ph_islande', who: 'phoque', wish: 'nager dans les eaux d’Islande', quote: 'Je rêve d’une eau glacée et transparente, avec des geysers qui fument au loin. Brrr… et miam, du poisson !',
+    steps: [{ t: 'place', name: 'Reykjavik', txt: 'Voyager jusqu’à Reykjavik', short: 'Reykjavik' },
+      { t: 'item', ing: 'mer', n: 2, src: 'mer', txt: 'Rapporter 2 produits de la mer', short: 'La mer' }],
+    reward: { coins: 380, item: ['Pull islandais douillet', 'v', 'haut', 3, 'pull', '#e9e2d0'] } },
+  { id: 'q_piquenique', who: 'quokka', wish: 'faire un pique-nique au soleil', quote: 'Je rêve d’une nappe à carreaux dans l’herbe, de pommes croquantes… et de sourire à tout le monde.',
+    steps: [{ t: 'visit', cat: ['parc', 'jardin'], n: 2, txt: 'Visiter 2 parcs ou jardins', short: 'Parcs' },
+      { t: 'item', ing: 'pomme', n: 2, src: 'marche', txt: 'Rapporter 2 pommes', short: 'Pommes' }],
+    reward: { coins: 90, item: ['Panier de pique-nique', 'v', 'dos', 2, 'sac', '#c99a5a'] } },
+  { id: 'q_sydney', who: 'quokka', wish: 'voir l’océan depuis Sydney', quote: 'Mes cousins vivent tout près de Sydney. Je rêve de leur rendre visite et de faire des selfies avec tout le monde !',
+    steps: [{ t: 'place', name: 'Sydney', txt: 'Voyager jusqu’à Sydney', short: 'Sydney' },
+      { t: 'item', name: 'Chapeau de surf', n: 1, src: 'Sydney', txt: 'Rapporter le Chapeau de surf', short: 'Chapeau' }],
+    reward: { coins: 400, item: ['Planche de surf miniature', 'd', 'statue', 3, null, '#58c2b0'] } },
 ];
 const TAG_POIS = { mer: ['plage', 'port', 'phare'], lac: ['etang', 'riviere'], montagne: ['sentier', 'belvedere'], foret: ['foret', 'parc', 'camping'], campagne: ['campagne', 'ferme', 'jardin'], ile: ['plage'] };
 const DREAM_SUBS = { farine: 'Farine', glace: 'Glace' }; // sous-types utilisés en plus des ingrédients de l'atelier
@@ -144,7 +201,14 @@ const DREAM_THANKS = {
   bulle: ['Bloup bloup ! Tu es la meilleure personne du monde !', 'Je fais des bulles de joie ! Regarde, regarde !'],
 };
 const DREAM_TINT = { pistache: '#ffe3cf', mochi: '#efe4cf', bulle: '#ffe1ec' };
-const dreamsOf = k => DREAMS.filter(d => d.who === k);
+// v13 : les rêves sont attachés à l'ESPÈCE. dreamKey(k) : 'pistache' pour tout panda roux, 'mochi' pour un capybara, 'bulle' pour un axolotl,
+// sinon l'id de l'espèce (renard, fennec…). Chaque individu suit sa propre progression (S.dreams[id]).
+const DREAM_SP = { panda: 'pistache', capy: 'mochi', axo: 'bulle' };
+const dreamKey = k => { const sp = typeof spOf === 'function' ? spOf(k) : k; return DREAM_SP[sp] || sp; };
+const dreamTint = k => DREAM_TINT[dreamKey(k)] || (typeof spTint === 'function' ? spTint(k) : '#fff3dc');
+const dreamThanks = k => DREAM_THANKS[dreamKey(k)] || ['Merci ! C’était encore plus beau que dans mes rêves !', 'Mon cœur fait des bonds… Merci, merci !'];
+const dreamComps = () => typeof teamIds === 'function' ? teamIds() : Object.keys(S.comps || {});
+const dreamsOf = k => DREAMS.filter(d => d.who === dreamKey(k));
 const dreamById = id => DREAMS.find(d => d.id === id);
 const lcfirst = s => s.charAt(0).toLowerCase() + s.slice(1);
 const ucfirst = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -152,13 +216,13 @@ const ucfirst = s => s.charAt(0).toUpperCase() + s.slice(1);
 // ---------- état (anciennes sauvegardes comprises) ----------
 function ensureDreams() {
   if (!S.dreams || typeof S.dreams !== 'object') S.dreams = {};
-  for (const k of Object.keys(CHARS)) {
+  for (const k of Object.keys(S.comps || {})) {
     const D = S.dreams[k] = Object.assign({ cur: null, done: [], prog: {}, at: {} }, S.dreams[k] || {});
     if (!Array.isArray(D.done)) D.done = [];
     if (!D.prog || typeof D.prog !== 'object') D.prog = {};
     if (!D.at || typeof D.at !== 'object') D.at = {};
     const cur = dreamById(D.cur);
-    if (!cur || cur.who !== k || D.done.includes(D.cur)) {
+    if (!cur || cur.who !== dreamKey(k) || D.done.includes(D.cur)) {
       const nx = dreamsOf(k).find(d => !D.done.includes(d.id));
       if ((nx ? nx.id : null) !== D.cur) D.prog = {};
       D.cur = nx ? nx.id : null;
@@ -167,16 +231,22 @@ function ensureDreams() {
   return S.dreams;
 }
 ensureDreams();
-const curDream = k => { ensureDreams(); return dreamById(S.dreams[k].cur) || null; };
+const curDream = k => { ensureDreams(); return S.dreams[k] ? dreamById(S.dreams[k].cur) || null : null; };
 const nextDreamAfter = d => { const l = dreamsOf(d.who), i = l.indexOf(d); return l[i + 1] || null; };
 const stepGoal = st => st.n || 1;
 const stepProg = (k, i) => { const d = curDream(k), st = d && d.steps[i]; return st ? Math.min(stepGoal(st), S.dreams[k].prog[i] || 0) : 0; };
 const stepDone = (k, i) => { const d = curDream(k); return !!d && stepProg(k, i) >= stepGoal(d.steps[i]); };
 const dreamReady = k => { const d = curDream(k); return !!d && d.steps.every((_, i) => stepDone(k, i)); };
 const nextStepIdx = k => { const d = curDream(k); return d ? d.steps.findIndex((_, i) => !stepDone(k, i)) : -1; };
-function dreamUnlocks() { ensureDreams(); const out = []; for (const k of Object.keys(CHARS)) for (const id of S.dreams[k].done) { const d = dreamById(id); if (d && d.reward.build) out.push(d.reward.build); } return out; }
+function dreamUnlocks() { ensureDreams(); const out = []; for (const k of Object.keys(S.dreams)) for (const id of (S.dreams[k].done || [])) { const d = dreamById(id); if (d && d.reward.build) out.push(d.reward.build); } return out; }
 // pour le village : quel rêve débloque ce bâtiment ? (lu par villageLockText)
-function dreamForBuilding(id) { const d = DREAMS.find(x => x.reward.build === id); return d ? { who: d.who, title: ucfirst(d.wish) } : null; }
+function dreamForBuilding(id) {
+  const d = DREAMS.find(x => x.reward.build === id); if (!d) return null;
+  // le nom d'un compagnon de la bonne espèce s'il y en a un, sinon le nom de l'espèce (« un panda roux »)
+  const own = Object.keys(S.comps || {}).find(k => dreamKey(k) === d.who);
+  const sp = typeof spOf === 'function' ? spOf(d.who) : d.who;
+  return { who: own || null, whoName: own ? CHARS[own].name : (typeof spArticle === 'function' ? spArticle(sp) : d.who), title: ucfirst(d.wish) };
+}
 function dreamBuildName(id) {
   try { if (typeof VILLAGE_BUILDINGS !== 'undefined' && Array.isArray(VILLAGE_BUILDINGS)) { const b = VILLAGE_BUILDINGS.find(x => x.id === id); if (b) return b.name; } } catch (e) {}
   return ucfirst(DREAM_BUILD_NAMES[id] || id);
@@ -235,7 +305,7 @@ GAME.on('trip:return', ({ who, trip, dest, items }) => {
 GAME.on('craft', ({ id }) => {
   if (!S.dreams) return;
   const all = [];
-  for (const k of Object.keys(CHARS)) all.push(...dreamAdvance(k, st => st.t === 'craft' && st.id === id ? 1 : 0));
+  for (const k of dreamComps()) all.push(...dreamAdvance(k, st => st.t === 'craft' && st.id === id ? 1 : 0));
   if (!all.length) return;
   save(); _dreamFlash = { k: all[0].k, idx: all.map(g => g.i), t: Date.now() };
   renderGoal(); if (revesShown()) renderPanel();
@@ -397,10 +467,11 @@ function claimDream(k) {
   const D = S.dreams[k], r = d.reward, p = S.prog[k];
   gainCoins(r.coins);
   const it = makeItem(r.item, 0, `Rêve de ${CHARS[k].name}`, [], { fixed: r.item[3], special: true });
+  { const nm = CHARS[k].name; it.name = it.name.replace(/ (?:de |d’)(?:Pistache|Mochi|Bulle)$/, ` ${/^[aeiouyéèêh]/i.test(nm) ? 'd’' : 'de '}${nm}`); } // « Bonnet marin de Bulle » devient « … de Perle »
   S.inv.push(it); S.dex[it.name] = true;
   // un niveau de plus, offert par le rêve
   p.lvl++; p.xp = Math.min(p.xp, needXP(p.lvl) - 1);
-  const talent = TALENTS[k].find(x => x[0] === p.lvl);
+  const talent = talentsOf(k).find(x => x[0] === p.lvl);
   D.done.push(d.id); D.at[d.id] = Date.now(); D.prog = {};
   const nx = nextDreamAfter(d); D.cur = nx ? nx.id : null;
   S.stats.dreams = (S.stats.dreams || 0) + 1;
@@ -410,7 +481,7 @@ function claimDream(k) {
   const card = typeof haulCard === 'function' ? haulCard(it, 0, false) : itemChip(it);
   const hearts = Array.from({ length: 9 }, (_, i) => `<i style="--x:${(i * 11 + 4) % 96}%;--d:${(i * 0.37).toFixed(2)}s;--s:${0.7 + (i % 3) * 0.25}"></i>`).join('');
   showModal(`<div class="dcel"><div class="dcel-sky" aria-hidden="true">${hearts}</div><div class="dcel-art">${drawChar(k, S.outfits[k], 'amour', 'dcel')}</div>
-    <span class="dcel-k">Rêve réalisé !</span><h2>${CHARS[k].name} a pu ${esc(d.wish)}</h2><p class="dcel-q">« ${esc(pick(DREAM_THANKS[k]))} »</p>
+    <span class="dcel-k">Rêve réalisé !</span><h2>${CHARS[k].name} a pu ${esc(d.wish)}</h2><p class="dcel-q">« ${esc(pick(dreamThanks(k)))} »</p>
     <div class="dcel-rw"><span class="dcel-chip gold">${COIN}<b>+${r.coins}</b> pièces</span><span class="dcel-chip lvl"><b>Niveau ${p.lvl}</b>${talent ? ` · talent ${esc(talent[1])}` : ''}</span>${r.build ? `<span class="dcel-chip bld"><svg viewBox="0 0 30 30" aria-hidden="true"><path d="M5 25 V13 L15 5 L25 13 V25Z" fill="#fff3e2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="12" y="16" width="6" height="9" fill="#d9604f" stroke="currentColor" stroke-width="1.6"/></svg>Nouveau au village : <b>${esc(dreamBuildName(r.build))}</b></span>` : ''}</div>
     <div class="haul one">${card}</div>
     ${nx ? `<p class="dcel-next">Nouveau rêve : <b>${CHARS[k].name} rêve de ${esc(nx.wish)}</b></p>` : `<p class="dcel-next"><b>Tous les rêves de ${CHARS[k].name} sont réalisés !</b></p>`}
@@ -447,10 +518,10 @@ function renderDreamCard(box) {
   const k = S.sel, ch = CHARS[k], d = curDream(k), list = dreamsOf(k), D = S.dreams[k];
   box.className = 'goal dream' + (d && dreamReady(k) ? ' ready' : '');
   box.title = '';
-  box.style.setProperty('--tint', DREAM_TINT[k] || '#fff3dc');
+  box.style.setProperty('--tint', dreamTint(k));
   const [col, l1, l2] = goLabel(k);
   if (!d) {
-    box.innerHTML = `<div class="dtop"><button class="dface" data-dream-open="1" aria-label="Voir les rêves"><img src="${portraitURI(k, 'amour')}" alt=""></button><div class="dbub" data-dream-open="1"><span class="dk">Tous les rêves de ${ch.name} sont réalisés</span><b>${ch.name} est comblé${k === 'mochi' ? '' : 'e'} de bonheur !</b></div><button class="btn cream dgo" data-dream-open="1"><b>Voir</b><small>Souvenirs</small></button></div>`;
+    box.innerHTML = `<div class="dtop"><button class="dface" data-dream-open="1" aria-label="Voir les rêves"><img src="${portraitURI(k, 'amour')}" alt=""></button><div class="dbub" data-dream-open="1"><span class="dk">Tous les rêves de ${ch.name} sont réalisés</span><b>${ch.name} est comblé${typeof compE === 'function' ? compE(k) : 'e'} de bonheur !</b></div><button class="btn cream dgo" data-dream-open="1"><b>Voir</b><small>Souvenirs</small></button></div>`;
     return;
   }
   const n = list.indexOf(d) + 1;
@@ -465,7 +536,7 @@ function renderDreamCard(box) {
 function dreamCompHTML(k) {
   const ch = CHARS[k], d = curDream(k), list = dreamsOf(k), D = S.dreams[k], p = S.prog[k];
   const doneN = D.done.length, nx = d ? nextDreamAfter(d) : null;
-  let h = `<article class="rvc ${S.sel === k ? 'sel' : ''} ${d && dreamReady(k) ? 'ready' : ''}" style="--tint:${DREAM_TINT[k]}"><header><img src="${portraitURI(k, d && dreamReady(k) ? 'amour' : 'content')}" alt=""><div><b>${ch.name}</b><span>Niveau ${p.lvl} · ${doneN}/${list.length} rêves réalisés</span><span class="rvbar"><i style="width:${(doneN / list.length * 100).toFixed(0)}%"></i></span></div></header>`;
+  let h = `<article class="rvc ${S.sel === k ? 'sel' : ''} ${d && dreamReady(k) ? 'ready' : ''}" style="--tint:${dreamTint(k)}"><header><img src="${portraitURI(k, d && dreamReady(k) ? 'amour' : 'content')}" alt=""><div><b>${ch.name}</b><span>Niveau ${p.lvl} · ${doneN}/${list.length} rêves réalisés</span><span class="rvbar"><i style="width:${(doneN / list.length * 100).toFixed(0)}%"></i></span></div></header>`;
   if (!d) return h + `<p class="rvq">Tous les rêves de ${ch.name} sont réalisés. Merci pour tout !</p></article>`;
   const [col, l1, l2] = goLabel(k);
   h += `<div class="rvbub"><span class="dk">Rêve ${list.indexOf(d) + 1} · ${ch.name} rêve de…</span><b>${esc(ucfirst(d.wish))}</b><p>« ${esc(d.quote)} »</p></div>`;
@@ -476,15 +547,15 @@ function dreamCompHTML(k) {
 }
 function renderReves(box) {
   ensureDreams();
-  const ks = Object.keys(CHARS), total = DREAMS.length, done = ks.reduce((a, k) => a + S.dreams[k].done.length, 0);
-  let html = `<div class="rvhead"><div class="rvhi"><svg viewBox="0 0 30 30" aria-hidden="true">${DREAM_ICON}</svg></div><div><h2>Les rêves de la bande</h2><p>Réalisez les rêves de vos compagnons : chacun leur fait gagner un niveau et fait grandir le village.</p></div><span class="rvtot"><b>${done}</b>/${total}</span></div>`;
+  const ks = dreamComps().filter(k => S.dreams[k]), total = ks.reduce((a, k) => a + dreamsOf(k).length, 0), done = ks.reduce((a, k) => a + S.dreams[k].done.length, 0);
+  let html = `<div class="rvhead"><div class="rvhi"><svg viewBox="0 0 30 30" aria-hidden="true">${DREAM_ICON}</svg></div><div><h2>Les rêves de l’équipe</h2><p>Réalisez les rêves de vos compagnons : chacun leur fait gagner un niveau, et certains font grandir le village.</p></div><span class="rvtot"><b>${done}</b>/${total}</span></div>`;
   html += `<div class="rvcomps">${[S.sel, ...ks.filter(k => k !== S.sel)].map(dreamCompHTML).join('')}</div>`;
   // souvenirs
   const mem = [];
-  for (const k of ks) for (const id of S.dreams[k].done) { const d = dreamById(id); if (d) mem.push({ k, d, at: S.dreams[k].at[id] || 0 }); }
+  for (const k of Object.keys(S.dreams).filter(k => CHARS[k])) for (const id of S.dreams[k].done) { const d = dreamById(id); if (d) mem.push({ k, d, at: S.dreams[k].at[id] || 0 }); }
   mem.sort((a, b) => b.at - a.at);
   html += `<h3 class="rvh">Rêves réalisés</h3>`;
-  html += mem.length ? `<div class="rvmem">${mem.map(m => `<div class="rvm" style="--tint:${DREAM_TINT[m.k]}"><img src="${portraitURI(m.k, 'amour')}" alt=""><b>${esc(ucfirst(m.d.wish))}</b><span>${CHARS[m.k].name}${m.at ? ' · ' + new Date(m.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''}</span>${m.d.reward.build ? `<i>${esc(dreamBuildName(m.d.reward.build))}</i>` : ''}</div>`).join('')}</div>` : `<p class="rvempty">Aucun rêve réalisé pour l’instant. Le premier ne prend que quelques minutes : touchez « Partir » !</p>`;
+  html += mem.length ? `<div class="rvmem">${mem.map(m => `<div class="rvm" style="--tint:${dreamTint(m.k)}"><img src="${portraitURI(m.k, 'amour')}" alt=""><b>${esc(ucfirst(m.d.wish))}</b><span>${CHARS[m.k].name}${m.at ? ' · ' + new Date(m.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''}</span>${m.d.reward.build ? `<i>${esc(dreamBuildName(m.d.reward.build))}</i>` : ''}</div>`).join('')}</div>` : `<p class="rvempty">Aucun rêve réalisé pour l’instant. Le premier ne prend que quelques minutes : touchez « Partir » !</p>`;
   html += `<h3 class="rvh">Quêtes du jour et succès</h3><div class="rvquests" id="rvQuests"></div>`;
   html += `<h3 class="rvh">Le Grand Carnet</h3><div id="rvCarnet">${typeof carnetHTML === 'function' ? carnetHTML() : ''}</div>`;
   box.innerHTML = html;
@@ -503,7 +574,7 @@ if (typeof renderRevesTab !== 'function') { // 10_ui.js gère déjà l'onglet (r
 }
 
 // ---------- atelier : les recettes demandées par un rêve en cours sont signalées ----------
-function dreamCraftWants() { const out = {}; for (const k of Object.keys(CHARS)) { const d = curDream(k); if (d) d.steps.forEach((st, i) => { if (st.t === 'craft' && !stepDone(k, i)) (out[st.id] = out[st.id] || []).push(k); }); } return out; }
+function dreamCraftWants() { const out = {}; for (const k of dreamComps()) { const d = curDream(k); if (d) d.steps.forEach((st, i) => { if (st.t === 'craft' && !stepDone(k, i)) (out[st.id] = out[st.id] || []).push(k); }); } return out; }
 if (typeof renderAtelier === 'function') renderAtelier = (orig => function (box) {
   const r = orig.apply(this, arguments);
   try {
@@ -520,8 +591,8 @@ if (typeof renderAtelier === 'function') renderAtelier = (orig => function (box)
 GAME.addUses(it => {
   if (!it || !S.dreams) return [];
   const out = [];
-  for (const k of Object.keys(CHARS)) {
-    const D = S.dreams[k];
+  for (const k of dreamComps()) {
+    const D = S.dreams[k]; if (!D) continue;
     for (const d of dreamsOf(k).filter(x => !D.done.includes(x.id))) {
       const isCur = d.id === D.cur;
       let txt = null;

@@ -164,9 +164,9 @@ const SPECIALTY = {
 const SPEC_DEFAULT = ['Souvenir de {P}', 'm', 'medaille', 2, null, '#c9a35a'];
 Object.assign(TAGC, Object.fromEntries(Object.entries(POI_CATS).map(([k, v]) => [k, v[1]])));
 Object.assign(TAGL, Object.fromEntries(Object.entries(POI_CATS).map(([k, v]) => [k, v[0]])));
-Object.assign(FOOD_TASTE.pistache, { love: ['pomme', 'fruit', 'pain'] });
-Object.assign(FOOD_TASTE.mochi, { love: ['agrume', 'boisson'] });
-Object.assign(FOOD_TASTE.bulle, { love: ['mer', 'glace'] });
+Object.assign(FOOD_TASTE.panda, { love: ['pomme', 'fruit', 'pain'] });
+Object.assign(FOOD_TASTE.capy, { love: ['agrume', 'boisson'] });
+Object.assign(FOOD_TASTE.axo, { love: ['mer', 'glace'] });
 Object.assign(ING, { tissu: [['tissu', 'laine'], 'Tissu'], metal: [['metal', 'medaille'], 'Métal'], verre: [['verre', 'cristal'], 'Verre'], bois: [['bois'], 'Bois'], farine: [['farine'], 'Farine'] });
 RECIPES.push(
   { id: 'painmaison', kind: 'Cuisine', out: ['Pain de campagne maison', 'n', 'pain', 2, null, '#c98a4f'], ing: [['farine', 2]], coins: 0 },

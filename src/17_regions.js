@@ -340,7 +340,7 @@ function rgDreamNeeds(k, it) {
     if (typeof curDream !== 'function' || typeof itemMatches !== 'function') return false;
     const d = curDream(k); if (d && d.steps && d.steps.some(st => itemMatches(st, it))) return true;
     // ingrédient d'une recette demandée par un rêve en cours (n'importe quel compagnon) : on le garde aussi
-    for (const c of Object.keys(CHARS)) { const dc = curDream(c); if (dc && dc.steps && dc.steps.some((st, i) => st.t === 'craft' && !(typeof stepDone === 'function' && stepDone(c, i)) && (RECIPES.find(x => x.id === st.id) || { ing: [] }).ing.some(([key]) => ING[key] && ING[key][0].includes(it.sub)))) return true; }
+    for (const c of (typeof teamIds === 'function' ? teamIds() : Object.keys(S.comps || {}))) { const dc = curDream(c); if (dc && dc.steps && dc.steps.some((st, i) => st.t === 'craft' && !(typeof stepDone === 'function' && stepDone(c, i)) && (RECIPES.find(x => x.id === st.id) || { ing: [] }).ing.some(([key]) => ING[key] && ING[key][0].includes(it.sub)))) return true; }
     return false;
   } catch (e) { return false; }
 }

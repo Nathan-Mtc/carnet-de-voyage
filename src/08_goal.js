@@ -23,7 +23,7 @@ const CHAPTERS = [
   { key: 'quartier', name: 'Mon quartier', icon: 'house', steps: [
     { txt: 'Zoome sur ton quartier et récolte dans un lieu (boulangerie, parc, rue…)', done: () => (S.stats.poiTrips || 0) >= 1 || (S.stats.poiStarted || 0) >= 1, go: goHome },
     { txt: 'Habille un compagnon avec une trouvaille', done: () => (S.stats.worn || 0) >= 1, go: () => { bagFilter = 'v'; openSheet('sac'); } },
-    { txt: 'Vends un objet dont tu n’as pas besoin', done: () => (S.stats.sold || 0) >= 1, go: () => { bagFilter = 'all'; openSheet('sac'); toast('Le bouton avec une pièce, à droite de chaque objet, le vend tout de suite.'); } },
+    { txt: 'Vends un objet dont tu n’as pas besoin', done: () => (S.stats.sold || 0) >= 1, go: () => { bagFilter = 'all'; openSheet('sac'); toast('Touchez un objet pour ouvrir sa fiche : « Vente rapide » le vend tout de suite, « Vendre » le met au marché.'); } },
   ], reward: { coins: 100, item: ['Foulard du quartier', 'v', 'cou', 2, 'foulard', '#58c2b0'] } },
   { key: 'mains', name: 'Petites mains', icon: 'hammer', steps: [
     { txt: 'Récupère la récompense d’une quête du jour', done: () => (S.stats.qclaimed || 0) >= 1 || S.daily.quests.some(q => q.claimed), go: () => { questView = 'jour'; openSheet('quetes'); } },
@@ -37,7 +37,7 @@ const CHAPTERS = [
   ], reward: { coins: 200, item: ['Sac à dos d’aventurier', 'v', 'dos', 3, 'sac', '#a87a50'] } },
   { key: 'france', name: 'Le tour de France', icon: 'flag', count: () => foundIn('fr'), goal: 5, txt: n => `Trouve ${n} souvenirs uniques en France`, go: () => goToPlace(nextPlaceIn('fr')), reward: { coins: 300, item: ['Béret tricolore', 'v', 'tete', 4, 'beret', '#3b5aa8'] } },
   { key: 'amis', name: 'Les trois amis', icon: 'heart', steps: [
-    { txt: 'Fais voyager Pistache, Mochi et Bulle jusqu’au niveau 2', done: () => Object.values(S.prog).every(p => p.lvl >= 2), go: () => { const k = Object.keys(S.prog).find(x => S.prog[x].lvl < 2); if (k) selectComp(k); openSheet('voyage'); } },
+    { txt: 'Fais monter trois compagnons au niveau 2', done: () => Object.values(S.prog).filter(p => p.lvl >= 2).length >= 3, go: () => { const k = (typeof teamIds === 'function' ? teamIds() : Object.keys(S.prog)).find(x => S.prog[x] && S.prog[x].lvl < 2); if (k) selectComp(k); openSheet('voyage'); } },
     { txt: 'Récupère 5 succès', done: () => achCount() >= 5, go: () => { questView = 'succes'; openSheet('quetes'); } },
     { txt: 'Atteins 50 % d’une collection de lieu', done: () => anyTier(2), go: () => { questView = 'col'; openSheet('quetes'); } },
   ], reward: { coins: 300, item: ['Pull des trois amis', 'v', 'haut', 3, 'pull', '#f08aa6'] } },
@@ -81,6 +81,9 @@ const GOAL_ICON = {
 };
 function renderGoal() {
   const box = $('goal'); if (!box) return;
+  // v13 : écran principal épuré. Le grand bandeau du haut disparaît : la prochaine chose utile est dans la carte d'action en bas
+  // (renderActionCard, 20_collection.js), les rêves et le Grand Carnet dans Compagnons › Rêves.
+  box.hidden = true; box.innerHTML = ''; return;
   // Le but principal est désormais le rêve du compagnon sélectionné (14_reves.js). Les chapitres vivent dans l'onglet Rêves.
   if (typeof renderDreamCard === 'function') { try { renderDreamCard(box); return; } catch (e) { console.error(e); } }
   const g = goalState();
@@ -125,7 +128,9 @@ function claimChapter() {
 }
 function showModal(html) { const m = $('modal'); m.querySelector('.mbox').innerHTML = html; m.hidden = false; }
 function maybeIntro() {
-  if (S.seenIntro) return;
+  // v13 : une nouvelle partie commence par l'œuf mystère (20_collection.js) ; l'ancienne fenêtre de bienvenue n'est plus utilisée
+  if (typeof startFirstRun === 'function' && S.firstRun) return startFirstRun();
+  if (S.seenIntro || typeof startFirstRun === 'function') { if (!S.seenIntro) { S.seenIntro = true; save(); } return; }
   showModal(`<div class="mart">${drawChar('pistache', S.outfits.pistache, 'rire', 'intro')}</div><h2>Bienvenue dans le Carnet de voyage !</h2><p>Pistache, Mochi et Bulle tiennent une petite boutique et rêvent de voyages. <b>Trois gestes suffisent :</b></p><ol class="mlist"><li><b>Partir</b> : touchez « Partir » en haut (un rêve) ou « Partir chercher » (une commande).</li><li><b>Livrer à la boutique</b> : les clients paient en pièces et en réputation.</li><li><b>Habiller son compagnon</b> : vêtements, couleurs et concours de style.</li></ol><p>Le premier rêve de Pistache ne prend que deux petites balades !</p><button class="btn green big" data-closemodal="intro">C’est parti !</button>`);
 }
 document.addEventListener('click', ev => {
