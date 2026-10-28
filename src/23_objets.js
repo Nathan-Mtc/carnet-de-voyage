@@ -328,6 +328,7 @@ if (typeof haulCard === 'function') haulCard = (orig => function (it, i, isNew) 
     h = h.replace('class="hcard ', `class="hcard obh${isNew ? ' obnew' : ''}${inf.now ? ' obnow' : ''} `);
     if (isNew) h = h.replace(/(<span class="hico">)/, `<span class="obspark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>$1`);
     h = h.replace(/<\/div>$/, `${obLineHTML(inf, 'sm')}</div>`);
+    if (it.id) h = h.replace('class="hcard ', `data-fiche="${esc(it.id)}" role="button" tabindex="0" aria-label="Voir la fiche : ${esc(it.name)}" class="hcard `);
   } catch (e) { console.error('objets', e); }
   return h;
 })(haulCard);
@@ -663,3 +664,23 @@ window.__objets = {
     RG_RES: typeof RG_RES !== 'undefined' ? RG_RES : null, bqState: typeof bqState === 'function' ? bqState : null,
     curDream: typeof curDream === 'function' ? curDream : null, showHaul, collect }),
 };
+
+// ---- Butin : toucher un objet ouvre sa fiche, avec un bouton pour revenir au butin
+(function () {
+  let haulSave = null;
+  document.addEventListener('click', ev => {
+    const back = ev.target.closest('[data-hback]');
+    if (back && haulSave) { ev.stopPropagation(); ev.preventDefault(); const m = $('modal'); m.querySelector('.mbox').innerHTML = haulSave; m.hidden = false; haulSave = null; return; }
+    const card = ev.target.closest('.hcard[data-fiche]');
+    if (!card) { if (!ev.target.closest('.fiche')) haulSave = null; return; }
+    haulSave = $('modal').querySelector('.mbox').innerHTML;
+    ev.stopPropagation(); ev.preventDefault();
+    openFiche(card.dataset.fiche);
+    const f = $('modal').querySelector('.fiche');
+    if (f) f.insertAdjacentHTML('afterbegin', '<button class="btn sm obhback" data-hback="1">← Retour au butin</button>');
+  }, true);
+  document.addEventListener('keydown', ev => { if ((ev.key === 'Enter' || ev.key === ' ') && ev.target.matches && ev.target.matches('.hcard[data-fiche]')) { ev.preventDefault(); ev.target.click(); } });
+  const st = document.createElement('style');
+  st.textContent = '.hcard[data-fiche]{cursor:pointer}.hcard[data-fiche]:active{transform:scale(.97)}.obhback{align-self:flex-start;margin-bottom:6px}';
+  document.head.appendChild(st);
+})();
