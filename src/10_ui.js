@@ -283,7 +283,7 @@ function renderVoyage(box) {
   }
   const f = Math.min(1, t.elapsed / t.total);
   let html = phead(k, t.done ? `${ch.name} est rentré !` : `En route vers ${esc(t.dest.name)}`, `<span id="phase">${t.done ? `${t.bag.length} objets${t.coins ? ` et ${t.coins} pièces` : ''} dans son sac.` : f < 0.5 ? 'À l’aller' : 'Sur le chemin du retour'}</span>`, t.done ? 'rire' : 'content');
-  if (!t.done) html += `<div class="prog"><div class="bar"><i id="pbar" style="width:${(f * 100).toFixed(1)}%"></i><span class="mid"></span></div><div class="pinfo"><span id="ptime">Retour dans ${fmtDur((t.total - t.elapsed) / (fast ? 30 : 1))}</span><button class="btn cream sm" id="fastBtn" aria-pressed="${fast}">${fast ? 'Vitesse normale' : 'Avance rapide (test)'}</button></div></div>`;
+  if (!t.done) html += `<div class="prog"><div class="bar"><i id="pbar" style="width:${(f * 100).toFixed(1)}%"></i><span class="mid"></span></div><div class="pinfo"><span id="ptime">Retour dans ${fmtDur((t.total - t.elapsed) / (fast ? 30 : 1))}</span>${isTestMode() ? `<button class="btn cream sm" id="fastBtn" aria-pressed="${fast}">${fast ? 'Vitesse normale' : 'Avance rapide (test)'}</button>` : ''}</div></div>`;
   else html += `<button class="btn green big wide" id="collectBtn">Ouvrir son sac et tout ranger</button>`;
   html += `<div class="journal">` + t.journal.slice().reverse().map((j, i) => journalEntry(t, j, t.journal.length - 1 - i)).join('') + `</div>`;
   box.innerHTML = html;
@@ -533,7 +533,23 @@ function renderAlbum(box) {
 }
 
 function renderAll() { renderTop(); renderComps(); renderPanel(); drawMarks(); renderGoal(); }
-function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3200); }
+// outils de test (avance rapide…) : seulement avec #test dans l'adresse, jamais pour les joueurs
+function isTestMode() { try { return /(^#|[#&?])test\b/.test(location.hash + location.search); } catch (e) { return false; } }
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; toastPlace(t); requestAnimationFrame(() => toastPlace(t)); clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3200); }
+// v14 : la notification ne recouvre plus l'en-tête des panneaux (titre + bouton Fermer) :
+// panneau ouvert → juste sous son en-tête ; fenêtre ouverte → en bas de l'écran ; sinon sous le HUD (position d'origine)
+function toastPlace(t) {
+  try {
+    t.style.top = ''; t.style.bottom = ''; t.style.left = '';
+    const m = $('modal'), sh = $('sheet');
+    if (m && !m.hidden) { t.style.top = 'auto'; t.style.bottom = 'calc(14px + env(safe-area-inset-bottom,0px))'; return; }
+    if (sh && !sh.hidden) {
+      const hd = sh.querySelector('.sheethead'), r = (hd || sh).getBoundingClientRect(), sr = sh.getBoundingClientRect();
+      t.style.top = Math.round(r.bottom + 8) + 'px';
+      if (sr.left > 40) t.style.left = Math.round(sr.left + sr.width / 2) + 'px'; // ordinateur : panneau à droite
+    }
+  } catch (e) {}
+}
 function reactionPopup(k, mood, line, big) {
   const box = $('react');
   box.innerHTML = `<div class="rimg">${drawChar(k, S.outfits[k], mood, 'r' + Date.now())}</div><p>${esc(line)}</p>`;

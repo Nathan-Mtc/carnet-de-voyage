@@ -478,7 +478,7 @@ button[disabled]{opacity:.45;cursor:not-allowed}
 .tal{border-radius:12px}
 .tal.on{border:2px solid var(--ink)}
 .empty{border:2px dashed var(--line)}
-#toast{position:absolute;left:50%;top:calc(100px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:14px;font:700 15px var(--display);z-index:20;max-width:calc(100% - 32px);text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.25)}
+#toast{position:absolute;left:50%;top:calc(100px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--ink);color:#fff;padding:9px 16px;border-radius:14px;font:700 15px var(--display);z-index:46;max-width:min(420px,calc(100% - 32px));width:max-content;text-align:center;box-shadow:0 4px 0 rgba(0,0,0,.25);pointer-events:none}
 #react{pointer-events:none;position:absolute;left:max(16px,env(safe-area-inset-left,0px));bottom:calc(170px + env(safe-area-inset-bottom,0px));width:220px;background:var(--paper);border:3px solid var(--ink);border-radius:20px;padding:8px 10px 12px;z-index:20;text-align:center;box-shadow:0 5px 0 rgba(74,53,40,.4);animation:sheetIn .3s cubic-bezier(.2,1.4,.4,1)}
 #react .rimg svg{width:150px;height:auto}
 #react p{margin:0;font-family:var(--hand);font-size:22px;line-height:1.1}
@@ -1912,12 +1912,14 @@ const FOOD_TASTE = {
   paresseux: { love: ['fruit', 'legume'], hate: ['boisson'] }, lemur: { love: ['fruit', 'agrume'], hate: ['fromage'] }, phoque: { love: ['mer'], hate: ['legume'] },
   quokka: { love: ['legume', 'pomme'], hate: ['mer'] }, def: { love: ['fruit'], hate: [] },
 };
+// v14 : niveaux de SÉJOUR sur place (le trajet aller-retour, lui, dépend de la distance : voir tripRoundMs dans 09_logic_b.js).
+// `ms` = durée du séjour ; `ev` (événements) et `luck` (rareté) restent liés au niveau choisi. Clés inchangées (17_regions, 21_nurserie, quêtes…).
 const DURS = [
-  { key: 'eclair', label: 'Balade éclair', ms: 60e3, ev: 4, luck: 0, hint: '1 min, pour tester' },
-  { key: 'court', label: 'Petite escapade', ms: 10 * 60e3, ev: 6, luck: 0.5, hint: '10 min' },
-  { key: 'moyen', label: 'Voyage', ms: 60 * 60e3, ev: 8, luck: 1, hint: '1 h' },
-  { key: 'long', label: 'Grand voyage', ms: 4 * 3600e3, ev: 10, luck: 1.6, hint: '4 h' },
-  { key: 'expe', label: 'Expédition', ms: 12 * 3600e3, ev: 13, luck: 2.4, hint: '12 h' },
+  { key: 'eclair', label: 'Coup d’œil', ms: 0, ev: 4, luck: 0, hint: 'aller-retour, sans s’arrêter' },
+  { key: 'court', label: 'Balade', ms: 5 * 60e3, ev: 6, luck: 0.5, hint: '5 min sur place' },
+  { key: 'moyen', label: 'Exploration', ms: 30 * 60e3, ev: 8, luck: 1, hint: '30 min sur place' },
+  { key: 'long', label: 'Grande exploration', ms: 2 * 3600e3, ev: 10, luck: 1.6, hint: '2 h sur place' },
+  { key: 'expe', label: 'Expédition', ms: 6 * 3600e3, ev: 13, luck: 2.4, hint: '6 h sur place' },
 ];
 const PLAYERS = [['Lina', 'Tofu', 'mochi'], ['Sacha', 'Praline', 'pistache'], ['Noé', 'Gnocchi', 'bulle'], ['Jade', 'Mistral', 'pistache'], ['Yanis', 'Bigoudi', 'mochi'], ['Chloé', 'Pixel', 'bulle'], ['Maël', 'Biscuit', 'pistache'], ['Inès', 'Nuage', 'bulle'], ['Hugo', 'Caramel', 'mochi'], ['Léa', 'Paprika', 'pistache']];
 
@@ -2625,7 +2627,7 @@ async function buildMap() {
   map.touchZoomRotate.disableRotation && 0;
   map.keyboard.disableRotation && map.keyboard.disableRotation();
   map.on('error', e => { if (mapMode === 'tiles' && !mapReady) { /* tuiles inaccessibles : on garde la carte intégrée */ } });
-  map.on('load', () => { routeLayers(); mapReady = true; if (typeof liveOnMapLoad === 'function') { try { liveOnMapLoad(); } catch (e) { console.error(e); } } setTimeout(refreshPOIs, 50); const n = $('mapNote'); n.hidden = mapMode === 'tiles'; if (!n.hidden) setTimeout(() => n.classList.add('gone'), 9000); drawMarks(); });
+  map.on('load', () => { routeLayers(); mapReady = true; if (typeof liveOnMapLoad === 'function') { try { liveOnMapLoad(); } catch (e) { console.error(e); } } try { poiLayerInit(); } catch (e) { console.error(e); } setTimeout(() => refreshPOIs(true), 50); const n = $('mapNote'); n.hidden = mapMode === 'tiles'; if (!n.hidden) setTimeout(() => n.classList.add('gone'), 9000); drawMarks(); });
   map.on('move', positionOverlay);
   map.on('zoom', () => { lodOverlay(); });
   map.on('moveend', refreshPOIs);
@@ -2634,7 +2636,7 @@ async function buildMap() {
   map.on('pitchend', upd3D); map.on('rotateend', upd3D);
   window.toggle3D = () => { const tilted = map.getPitch() > 5; if (tilted) { autoTilt = false; map.easeTo({ pitch: 0, bearing: 0, duration: 600 }); } else { autoTilt = true; map.easeTo({ pitch: 55, zoom: Math.max(map.getZoom(), 15.2), duration: 900 }); } };
   let idleT = 0; map.on('idle', () => { if (mapMode === 'tiles' && Date.now() - idleT > 600) { idleT = Date.now(); refreshPOIs(); } });
-  map.on('click', e => { if (e.originalEvent && e.originalEvent.target.closest && e.originalEvent.target.closest('.ovm')) return; const tp = typedPlaceAt(e); if (tp) { choosePOI(tp); return; } pickPoint(e.lngLat.lng, e.lngLat.lat); });
+  map.on('click', e => { if (e.originalEvent && e.originalEvent.target.closest && e.originalEvent.target.closest('.ovm')) return; const hp = poiAtPoint(e.point); if (hp) { choosePOI(hp); return; } const tp = typedPlaceAt(e); if (tp) { choosePOI(tp); return; } pickPoint(e.lngLat.lng, e.lngLat.lat); });
   buildOverlay();
 }
 function zoomTo(lon, lat, k) { if (!map) return; map.flyTo({ center: [lon, lat], zoom: k ? Math.min(map.getMaxZoom(), kToZoom(k)) : map.getZoom(), speed: 1.4, curve: 1.3, essential: true }); }
@@ -2663,6 +2665,7 @@ function buildOverlay() {
   add('home', 'home', `<div class="homeb"><svg viewBox="0 0 60 60"><path d="M40 6 v12 h6 V10Z" fill="#c9604f" stroke="#5b4636" stroke-width="2.4"/><path d="M8 54 V28 L30 10 L52 28 V54Z" fill="#fff6e6" stroke="#5b4636" stroke-width="3" stroke-linejoin="round"/><path d="M4 30 L30 8 L56 30" fill="none" stroke="#d9604f" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><rect x="24" y="36" width="12" height="18" rx="2" fill="#c98a5a" stroke="#5b4636" stroke-width="2.4"/><rect x="12" y="32" width="9" height="9" fill="#bfe1f2" stroke="#5b4636" stroke-width="2"/><rect x="39" y="32" width="9" height="9" fill="#bfe1f2" stroke="#5b4636" stroke-width="2"/></svg></div><span class="pinl home">Chez vous</span>`, 0, 0, { home: 1 });
   add('drop', 'drop', `<svg viewBox="0 0 30 40"><path d="M15 39 C4 24 2 16 2 13 A13 13 0 0 1 28 13 C28 16 26 24 15 39Z" fill="#e0607e" stroke="#4a3528" stroke-width="2.4"/><circle cx="15" cy="13" r="5" fill="#fff"/></svg><span class="pinl"></span>`, 0, 0, {});
   // destination d'un voyage en cours (drapeau) et compagnon en route : créés à la demande pour chaque individu (compOverlay)
+  buildPoiFilter();
   drawMarks();
 }
 const FLAG_COL = { panda: '#e0884a', capy: '#c99a6a', axo: '#f08aa6', renard: '#9fc3e0', fennec: '#e3b06b', tanuki: '#a8826a', paresseux: '#b39a7a', lemur: '#9a9aa8', phoque: '#8fb0c8', quokka: '#c9a07a' };
@@ -2703,6 +2706,9 @@ function lodOverlay() {
   if (!map) return;
   const z = map.getZoom();
   $('ov').dataset.z = z < 4 ? 'far' : z < 6.5 ? 'mid' : z < 10.5 ? 'near' : z < (mapMode === 'tiles' ? 16 : 13.6) ? 'city' : 'street';
+  // le bouton « lieux affichés » n'apparaît que lorsque des lieux du quotidien sont à l'écran
+  const fb = $('zFilt'), show = z >= (mapMode === 'tiles' ? POI_MIN_Z() - 0.5 : 10.5);
+  if (fb && fb.hidden === show) { fb.hidden = !show; if (!show) poiFiltOpen(false); }
 }
 function suggestions() {
   seed(dayKey() * 3 + S.home.length * 97);
@@ -2741,6 +2747,7 @@ function drawMarks() {
     map.getSource('routes').setData({ type: 'FeatureCollection', features: feats });
   }
   lodOverlay(); positionOverlay();
+  if (typeof poiStateCheck === 'function') poiStateCheck();
 }
 function updateWalkers() {
   for (const k of ovComps()) { const o = ovEls['w' + k], t = S.trips[k]; if (o && t) { const pos = tripPos(t); o.lon = pos[0]; o.lat = pos[1]; walkerLabel(o.el, k, t); } }
@@ -2794,6 +2801,76 @@ function chooseSecret(key) {
   plan.dest = { id: null, secret: key, name: s.name, country: s.country, lat: s.lat, lon: s.lon, tags: s.tags, special: null };
   openSheet('voyage'); drawMarks();
 }
+
+// ================= FILTRE DES LIEUX (v14) : un petit bouton dans la colonne de la carte =================
+(function poiFiltCSS() {
+  const st = document.createElement('style'); st.id = 'poiFiltCSS';
+  st.textContent = `
+#zFilt{position:relative}
+#zFilt svg{width:24px;height:24px}
+#zFilt[aria-expanded="true"]{background:#ffe9a8}
+#zFilt i{position:absolute;right:-5px;top:-5px;width:13px;height:13px;border-radius:50%;background:var(--fc,#f2b52e);border:2px solid var(--ink);display:none}
+#zFilt.on i{display:block}
+#poiFilt{position:absolute;right:calc(100% + 10px);top:0;width:218px;background:var(--paper);border:2.5px solid var(--ink);border-radius:16px;box-shadow:0 4px 0 rgba(74,53,40,.4);padding:6px;display:flex;flex-direction:column;gap:2px;animation:pfin .16s ease-out}
+#poiFilt[hidden]{display:none}
+@keyframes pfin{from{opacity:0;transform:translateX(6px)}}
+#poiFilt h4{margin:2px 6px 4px;font:800 12px var(--display);color:var(--ink2);letter-spacing:.04em;text-transform:uppercase}
+#poiFilt button{display:flex;align-items:center;gap:9px;width:100%;border:0;background:none;border-radius:11px;padding:5px 6px;cursor:pointer;text-align:left;color:var(--ink);font-family:var(--body)}
+#poiFilt button:hover{background:rgba(242,193,78,.18)}
+#poiFilt button[aria-checked="true"]{background:#fff3c4;box-shadow:inset 0 0 0 2px var(--ink)}
+#poiFilt .pfi{width:28px;height:28px;flex:none;border-radius:50%;background:var(--pc);border:2px solid #fffaf0;box-shadow:0 0 0 1px rgba(74,53,40,.5),0 1.5px 2px rgba(74,53,40,.35);display:flex;align-items:center;justify-content:center}
+#poiFilt .pfi svg{width:16px;height:16px}
+#poiFilt .pft{display:flex;flex-direction:column;min-width:0}
+#poiFilt .pft b{font:800 14px/1.15 var(--display)}
+#poiFilt .pft small{font:600 11.5px/1.2 var(--body);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.poitip{pointer-events:none!important;margin:-11px 0 0 15px;white-space:nowrap;background:#fff8ea;border:2px solid #4a3528;border-radius:8px;padding:0 7px;font:700 12px/18px var(--display);color:#4a3528;box-shadow:0 2px 0 rgba(74,53,40,.3);z-index:1}
+@media (max-width:420px){#poiFilt{width:200px}}
+`;
+  document.head.appendChild(st);
+})();
+const POI_FILT_LOOK = {
+  utile: ['#f2b52e', '<path d="M12 2.5 L14.6 9 L21.5 9.5 L16.2 13.9 L17.9 20.8 L12 17 L6.1 20.8 L7.8 13.9 L2.5 9.5 L9.4 9Z" fill="#fff"/>'],
+  tout: ['#8a7464', '<circle cx="7" cy="7" r="2.6" fill="#fff"/><circle cx="17" cy="7" r="2.6" fill="#fff"/><circle cx="7" cy="17" r="2.6" fill="#fff"/><circle cx="17" cy="17" r="2.6" fill="#fff"/>'],
+  nourriture: [POI_CATS.restaurant[1], POI_GLYPH.fork],
+  nature: [POI_CATS.parc[1], POI_GLYPH.tree],
+  boutiques: [POI_CATS.boutique[1], POI_GLYPH.bag],
+  culture: [POI_CATS.musee[1], POI_GLYPH.museum],
+};
+function buildPoiFilter() {
+  const col = document.querySelector('.zoom'); if (!col || $('zFilt')) return;
+  const b = document.createElement('button'); b.className = 'icon-btn'; b.id = 'zFilt'; b.hidden = true;
+  b.setAttribute('aria-haspopup', 'true'); b.setAttribute('aria-expanded', 'false');
+  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L21.5 8 L12 13 L2.5 8Z" fill="#fff3e2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4.5 12.2 L2.5 13.3 L12 18.3 L21.5 13.3 L19.5 12.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="12" cy="8" r="1.8" fill="#e0607e"/></svg><i></i>';
+  col.insertBefore(b, col.firstChild);
+  const pop = document.createElement('div'); pop.id = 'poiFilt'; pop.hidden = true; pop.setAttribute('role', 'menu'); pop.setAttribute('aria-label', 'Lieux affichés');
+  col.appendChild(pop);
+  renderPoiFilter();
+}
+function renderPoiFilter() {
+  const b = $('zFilt'), pop = $('poiFilt'); if (!b || !pop) return;
+  const cur = poiFilter(), lab = (POI_FILTERS.find(f => f[0] === cur) || POI_FILTERS[0])[1];
+  b.setAttribute('aria-label', `Lieux affichés : ${lab}`); b.title = `Lieux affichés : ${lab}`;
+  b.classList.toggle('on', cur !== 'utile'); b.style.setProperty('--fc', (POI_FILT_LOOK[cur] || POI_FILT_LOOK.utile)[0]);
+  if (pop.hidden) return;
+  let useTxt = 'Commandes, rêves, événement du jour';
+  try { const u = [...poiUsefulNow(true).cats].map(c => POI_CATS[c][0]); if (u.length) useTxt = u.slice(0, 3).join(', ') + (u.length > 3 ? '…' : ''); } catch (e) {}
+  const sub = { utile: useTxt, tout: 'Tous les lieux, sans chevauchement' };
+  pop.innerHTML = '<h4>Lieux affichés</h4>' + POI_FILTERS.map(([id, label]) => { const [c, g] = POI_FILT_LOOK[id]; return `<button role="menuitemradio" aria-checked="${id === cur}" data-pf="${id}"><span class="pfi" style="--pc:${c}"><svg viewBox="0 0 24 24" aria-hidden="true">${g}</svg></span><span class="pft"><b>${esc(label)}</b>${sub[id] ? `<small>${esc(sub[id])}</small>` : ''}</span></button>`; }).join('');
+}
+function poiFiltOpen(on) {
+  const b = $('zFilt'), pop = $('poiFilt'); if (!b || !pop) return;
+  if (pop.hidden === !on) return;
+  pop.hidden = !on; b.setAttribute('aria-expanded', on ? 'true' : 'false');
+  if (on) renderPoiFilter();
+}
+document.addEventListener('click', ev => {
+  const t = ev.target;
+  if (t.closest && t.closest('#zFilt')) { poiFiltOpen($('poiFilt').hidden); return; }
+  const o = t.closest && t.closest('[data-pf]');
+  if (o) { setPoiFilter(o.dataset.pf); poiFiltOpen(false); return; }
+  if ($('poiFilt') && !$('poiFilt').hidden && !(t.closest && t.closest('#poiFilt'))) poiFiltOpen(false);
+});
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') poiFiltOpen(false); });
 
 // ================= LIEUX AU ZOOM =================
 const hashStr = s => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -3006,7 +3083,7 @@ function fallbackPOIs() {
         for (const p of cell.pois) if (p.imp < thr && !(p.cat === 'rue' && z < 13)) all.push(p);
       }
       all.sort((p, q) => p.imp - q.imp);
-      pois.push(...all.slice(0, window.innerWidth < 700 ? 90 : 170));
+      pois.push(...all.slice(0, 600)); // la sélection d'affichage (poiPick) ne garde qu'une vingtaine de lieux à l'écran
     }
   }
   const key = Math.round(b.getWest() / CELL) + ':' + Math.round(b.getSouth() / CELL) + ':' + Math.round(b.getEast() / CELL) + ':' + Math.round(b.getNorth() / CELL) + ':' + (z >= 14 ? 2 : z >= 12.2 ? 1 : 0);
@@ -3024,32 +3101,338 @@ function tilesPOIs() {
     const g = f.geometry.type === 'Point' ? f.geometry.coordinates : null; if (!g) continue;
     const id = cat + name + g[0].toFixed(4) + g[1].toFixed(4);
     if (seen.has(id)) continue; seen.add(id);
-    out.push({ id, cat, name, lon: g[0], lat: g[1] });
-    if (out.length > 160) break;
+    // rank OSM (plus petit = plus connu) : sert à départager les lieux d'une même priorité
+    out.push({ id, cat, name, lon: g[0], lat: g[1], imp: Math.min(1, (+p.rank || 40) / 100) });
+    if (out.length > 700) break; // la sélection plus bas n'en garde qu'une vingtaine à l'écran
   }
   return out;
 }
 function poiMarkerHTML(p) { const c = POI_CATS[p.cat]; return `<div class="poib" style="--pc:${c[1]}"><svg viewBox="0 0 24 24" aria-hidden="true">${POI_GLYPH[c[2]]}</svg></div><span class="poil">${esc(p.name)}</span>`; }
-function refreshPOIs() {
+
+// ================= AFFICHAGE DES LIEUX (v14) : lisible à tout zoom =================
+// Les lieux du quotidien sont dessinés par MapLibre dans une couche « symbol » (icônes rasterisées une fois) :
+// la carte gère elle-même les collisions pendant les animations, sans aucun recalcul HTML à chaque image.
+// Le CHOIX des lieux montrés (priorité, densité, diversité des catégories) est fait ici, au moveend seulement.
+// Priorité : 1 lieux utiles maintenant (commande, rêve, événement du jour : halo doré) ; 3 types encore jamais visités ;
+// 4 le reste ; 5 rues et routes. La destination et les compagnons en route restent des marqueurs HTML et
+// réservent leur place (aucune icône dessous), tout comme la maison, les lieux célèbres et les secrets.
+const POI_FILTERS = [
+  ['utile', 'Utiles maintenant', null],
+  ['tout', 'Tout', null],
+  ['nourriture', 'Nourriture', ['boulangerie', 'cafe', 'restaurant', 'marche', 'epicerie', 'poissonnerie', 'glacier', 'fromagerie', 'boucherie', 'chocolaterie', 'caviste']],
+  ['nature', 'Nature', ['parc', 'plage', 'port', 'foret', 'campagne', 'ferme', 'jardin', 'etang', 'riviere', 'sentier', 'belvedere', 'camping', 'zoo', 'phare']],
+  ['boutiques', 'Boutiques', ['fleuriste', 'librairie', 'mode', 'friperie', 'bricolage', 'jouets', 'boutique', 'puces', 'coiffeur', 'laverie', 'pharmacie']],
+  ['culture', 'Culture', ['musee', 'patrimoine', 'cinema', 'bibliotheque', 'mairie', 'gare', 'ecole', 'poste']],
+];
+const poiFilter = () => (S.mapFilter && POI_FILTERS.some(f => f[0] === S.mapFilter)) ? S.mapFilter : 'utile';
+function setPoiFilter(id) {
+  if (!POI_FILTERS.some(f => f[0] === id)) return;
+  S.mapFilter = id; save(); poiPrev = new Set(); poiSig = '';
+  refreshPOIs(true);
+  if (typeof renderPoiFilter === 'function') renderPoiFilter();
+}
+// --- lieux utiles maintenant : prochaine étape des rêves, commandes du comptoir, événement du jour
+let poiUsefulCache = { t: 0, v: null };
+function poiStepCats(st, add, depth = 0) {
+  if (!st || depth > 3) return;
+  if (st.t === 'item' && typeof srcStep === 'function') return poiStepCats(srcStep(st), add, depth + 1);
+  if (st.t === 'craft' && typeof bqStepFor === 'function') { const s2 = bqStepFor({ k: 'craft', id: st.id }); if (s2 && s2.t !== 'craft') poiStepCats(s2, add, depth + 1); return; }
+  if (st.cat) [].concat(st.cat).forEach(c => add(c));
+  else if (st.tag && typeof TAG_POIS === 'object') (TAG_POIS[st.tag] || []).forEach(c => add(c));
+}
+function poiUsefulNow(force) {
+  const now = Date.now();
+  if (!force && poiUsefulCache.v && now - poiUsefulCache.t < 1500) return poiUsefulCache.v;
+  const cats = new Set(), why = {};
+  const add = src => c => { if (!POI_CATS[c] || c === 'rue' || c === 'route') return; cats.add(c); if (!why[c]) why[c] = src; };
+  try {
+    const team = (typeof teamIds === 'function' ? teamIds() : Object.keys(S.comps || {})).filter(k => CHARS[k]);
+    if (typeof curDream === 'function' && typeof nextStepIdx === 'function') for (const k of team) {
+      const d = curDream(k), i = d ? nextStepIdx(k) : -1;
+      if (d && i >= 0) poiStepCats(d.steps[i], add('reve'));
+    }
+  } catch (e) {}
+  try {
+    if (S.shop && Array.isArray(S.shop.orders) && typeof bqAllocate === 'function' && typeof bqStepFor === 'function') for (const o of S.shop.orders) {
+      const al = bqAllocate(o), r = o.req.find((x, j) => al[j].have < x.n);
+      if (r) poiStepCats(bqStepFor(r), add('commande'));
+    }
+  } catch (e) {}
+  try { const ev = typeof todayEvent === 'function' ? todayEvent() : null; if (ev && ev.tags) ev.tags.forEach(add('evenement')); } catch (e) {}
+  return (poiUsefulCache = { t: now, v: { cats, why } }).v;
+}
+// type de lieu encore jamais visité : aucun objet de sa table de butin dans le carnet
+const poiNewCache = {};
+function poiNewCat(cat) {
+  const n = Object.keys(S.dex || {}).length, c = poiNewCache[cat];
+  if (c && c.n === n) return c.v;
+  const L = typeof LOOT === 'object' ? LOOT[cat] : null, v = !!(L && L.length && !L.some(d => S.dex[d[0]]));
+  poiNewCache[cat] = { n, v }; return v;
+}
+// la pastille « nouveau » n'a de sens qu'une fois quelques types visités (au tout début, tout serait « nouveau »)
+let poiSeenTypes = { n: -1, v: 0 };
+function poiTypesSeen() {
+  const n = Object.keys(S.dex || {}).length; if (poiSeenTypes.n === n) return poiSeenTypes.v;
+  let v = 0; for (const c of Object.keys(POI_CATS)) if (LOOT[c] && LOOT[c].some(d => S.dex[d[0]])) v++;
+  return (poiSeenTypes = { n, v }).v;
+}
+// --- icônes rasterisées (une fois par catégorie et variante ; une image par nom affiché)
+const POI_PR = Math.min(3, Math.max(2, Math.ceil(window.devicePixelRatio || 1)));
+const POI_FONT = '700 12.5px "Baloo 2", "Nunito", system-ui, sans-serif';
+const poiGlyphImg = {}; let poiGlyphsP = null, poiGlyphsOK = false;
+function loadPoiGlyphs() {
+  if (poiGlyphsP) return poiGlyphsP;
+  const jobs = Object.entries(POI_GLYPH).map(([k, g]) => new Promise(res => {
+    const im = new Image(); im.onload = () => { poiGlyphImg[k] = im; res(); }; im.onerror = () => res();
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">${g}</svg>`);
+  }));
+  poiGlyphsP = Promise.all(jobs).then(() => { poiGlyphsOK = true; });
+  return poiGlyphsP;
+}
+// demi-largeur de l'emplacement de l'icône dans l'image (le point du lieu est au centre de l'icône)
+const poiHW = v => v.includes('u') ? 20 : v.includes('s') ? 11 : 15;
+function poiDrawIcon(g, cx, cy, cat, v) {
+  const c = POI_CATS[cat] || POI_CATS.boutique, small = v.includes('s'), r = small ? 7 : 10.5, use = v.includes('u');
+  if (use) {
+    const gr = g.createRadialGradient(cx, cy, r + 2, cx, cy, r + 9);
+    gr.addColorStop(0, 'rgba(246,196,69,.9)'); gr.addColorStop(1, 'rgba(246,196,69,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r + 9, 0, 7); g.fill();
+  }
+  g.save(); g.shadowColor = 'rgba(74,53,40,.38)'; g.shadowBlur = 2.5; g.shadowOffsetY = 1.4;
+  g.fillStyle = '#fffaf0'; g.beginPath(); g.arc(cx, cy, r + 2, 0, 7); g.fill(); g.restore();
+  g.fillStyle = c[1]; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill();
+  g.strokeStyle = use ? '#c98f1e' : 'rgba(74,53,40,.5)'; g.lineWidth = use ? 1.6 : 1; g.beginPath(); g.arc(cx, cy, r + 2.4, 0, 7); g.stroke();
+  const gi = poiGlyphImg[c[2]]; if (gi) { const s = small ? 9.5 : 13; g.drawImage(gi, cx - s / 2, cy - s / 2, s, s); }
+  if (v.includes('w')) { // pastille « nouveau » : type de lieu encore jamais visité
+    const bx = cx + r * 0.8, by = cy - r * 0.8;
+    g.fillStyle = '#fffaf0'; g.beginPath(); g.arc(bx, by, 4, 0, 7); g.fill();
+    g.fillStyle = '#e0607e'; g.beginPath(); g.arc(bx, by, 2.7, 0, 7); g.fill();
+  }
+}
+let poiMeasureCtx = null; const poiTW = {};
+function poiTextW(t) {
+  if (poiTW[t] != null) return poiTW[t];
+  if (Object.keys(poiTW).length > 3000) for (const k in poiTW) delete poiTW[k];
+  if (!poiMeasureCtx) poiMeasureCtx = document.createElement('canvas').getContext('2d');
+  poiMeasureCtx.font = POI_FONT; return (poiTW[t] = Math.ceil(poiMeasureCtx.measureText(t).width));
+}
+const poiShort = n => n.length > 26 ? n.slice(0, 24).trim() + '…' : n;
+const poiLblImgs = new Map(); // nom d'image → dernier usage (pour faire le ménage)
+function poiMakeImage(key) {
+  if (!map || map.hasImage(key) || !poiGlyphsOK) return;
+  const [kind, v, cat, ...rest] = key.split('|'), name = rest.join('|');
+  const hw = poiHW(v), txt = kind === 'pl' ? poiShort(name) : '', tw = txt ? poiTextW(txt) + 8 : 0;
+  const W = hw * 2 + (txt ? tw + 1 : 0), H = hw * 2;
+  const cv = document.createElement('canvas'); cv.width = Math.ceil(W * POI_PR); cv.height = Math.ceil(H * POI_PR);
+  const g = cv.getContext('2d'); g.scale(POI_PR, POI_PR);
+  poiDrawIcon(g, hw, hw, cat, v);
+  if (txt) {
+    g.font = POI_FONT; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    const x = hw * 2 - (v.includes('u') ? 4 : 1);
+    g.lineWidth = 3.6; g.strokeStyle = 'rgba(255,248,234,.96)'; g.strokeText(txt, x, hw + 0.5);
+    g.fillStyle = v.includes('u') ? '#5a3a10' : '#4a3528'; g.fillText(txt, x, hw + 0.5);
+  }
+  try { map.addImage(key, g.getImageData(0, 0, cv.width, cv.height), { pixelRatio: POI_PR }); } catch (e) { return; }
+  if (kind === 'pl') poiLblImgs.set(key, Date.now());
+}
+function poiCleanImages(keep) {
+  if (poiLblImgs.size < 160) return;
+  const old = [...poiLblImgs.entries()].filter(([k]) => !keep.has(k)).sort((a, b) => a[1] - b[1]).slice(0, poiLblImgs.size - 100);
+  for (const [k] of old) { try { if (map.hasImage(k)) map.removeImage(k); } catch (e) {} poiLblImgs.delete(k); }
+}
+// --- couche MapLibre
+let poiLayerOK = false;
+function poiLayerInit() {
+  if (!map || poiLayerOK || map.getSource('pois')) return;
+  map.addSource('pois', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  map.addLayer({
+    id: 'poi-sym', type: 'symbol', source: 'pois',
+    layout: {
+      'icon-image': ['get', 'img'],
+      'icon-anchor': 'left',
+      'icon-offset': ['match', ['get', 'hw'], 20, ['literal', [-20, 0]], 11, ['literal', [-11, 0]], ['literal', [-15, 0]]],
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 11, 0.74, 14, 0.82, 15.5, 0.92, 16.5, 1],
+      'icon-allow-overlap': false, 'icon-ignore-placement': false, 'icon-padding': 1,
+      'symbol-sort-key': ['get', 'sk'], 'symbol-z-order': 'auto',
+      'icon-pitch-alignment': 'viewport', 'icon-rotation-alignment': 'viewport',
+    },
+    paint: { 'icon-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.85, 12, 1] },
+  });
+  // une icône manquante (après un ménage) est redessinée aussitôt
+  map.on('styleimagemissing', e => { if (e.id && (e.id.startsWith('pi|') || e.id.startsWith('pl|'))) poiMakeImage(e.id); });
+  map.on('mousemove', 'poi-sym', e => { map.getCanvas().style.cursor = 'pointer'; poiTip(e.features && e.features[0]); });
+  map.on('mouseleave', 'poi-sym', () => { map.getCanvas().style.cursor = ''; poiTip(null); });
+  map.on('movestart', () => poiTip(null));
+  poiLayerOK = true;
+  loadPoiGlyphs().then(() => refreshPOIs(true));
+  if (document.fonts && document.fonts.load) document.fonts.load(POI_FONT).then(() => { for (const k of poiLblImgs.keys()) { try { map.removeImage(k); } catch (e) {} } poiLblImgs.clear(); for (const k in poiTW) delete poiTW[k]; poiSig = ''; refreshPOIs(true); }).catch(() => {});
+}
+// survol à la souris : le nom en petite étiquette (au toucher, la fiche du lieu s'ouvre et le nom apparaît sur la destination)
+function poiTip(f) {
+  let el = $('poiTip');
+  if (!f || !f.properties || f.properties.lb) { if (el) el.hidden = true; return; }
+  const p = poiById[f.properties.id]; if (!p) { if (el) el.hidden = true; return; }
+  if (!el) { el = document.createElement('div'); el.id = 'poiTip'; el.className = 'ovm poitip'; $('ov').appendChild(el); }
+  const pt = map.project([p.lon, p.lat]);
+  el.textContent = p.name; el.hidden = false; el.style.display = '';
+  el.style.transform = `translate(${pt.x.toFixed(1)}px,${pt.y.toFixed(1)}px)`;
+}
+// lieu touché sur la carte (couche symbole) : le plus proche du doigt, avec une marge pour les petits écrans
+function poiAtPoint(pt) {
+  if (!map || !map.getLayer('poi-sym')) return null;
+  const R = 14; let fs = [];
+  try { fs = map.queryRenderedFeatures([[pt.x - R, pt.y - R], [pt.x + R, pt.y + R]], { layers: ['poi-sym'] }); } catch (e) { return null; }
+  let best = null, bd = 1e9;
+  for (const f of fs) { const p = poiById[f.properties.id]; if (!p) continue; const q = map.project([p.lon, p.lat]), d = Math.hypot(q.x - pt.x, q.y - pt.y); if (d < bd) { bd = d; best = p; } }
+  return best;
+}
+// --- place déjà prise à l'écran : boutons et cartes de l'interface, marqueurs HTML (maison, compagnons, destination…)
+function poiBlocked(W, H) {
+  const ct = map.getContainer().getBoundingClientRect(), rects = [];
+  const push = r => { if (r && r.width && r.height) rects.push([r.left - ct.left, r.top - ct.top, r.right - ct.left, r.bottom - ct.top]); };
+  for (const sel of ['#hudComps', '.hud .hright', '.zoom', '#tripCard', '#nav', '#liveBar', '#goal', '#poiFilt']) {
+    const el = document.querySelector(sel); if (!el || el.hidden) continue;
+    if (sel === '.zoom') { for (const b of el.children) if (!b.hidden && b.offsetParent) push(b.getBoundingClientRect()); continue; }
+    if (el.offsetParent === null && getComputedStyle(el).position !== 'fixed') continue;
+    push(el.getBoundingClientRect());
+  }
+  const ov = $('ov');
+  for (const el of ov.children) {
+    if (el.hidden || el.style.display === 'none' || el.classList.contains('poitip') || el.classList.contains('reveal')) continue;
+    if (el.classList.contains('ovc')) { push(el.getBoundingClientRect()); continue; }
+    if (!el.classList.contains('ovm') || el.classList.contains('poi')) continue;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const c of el.children) { const r = c.getBoundingClientRect(); if (!r.width || getComputedStyle(c).display === 'none') continue; x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); }
+    if (x1 > x0) rects.push([x0 - ct.left - 4, y0 - ct.top - 4, x1 - ct.left + 4, y1 - ct.top + 4]);
+  }
+  return rects;
+}
+const poiKey = p => p.name + '@' + (+p.lon).toFixed(5) + ',' + (+p.lat).toFixed(5);
+function poiDestKeys() {
+  const ks = new Set();
+  try { if (plan.dest && plan.dest.poi) ks.add(poiKey(plan.dest)); } catch (e) {}
+  for (const t of Object.values(S.trips || {})) if (t && t.dest && t.dest.poi && !t.done) ks.add(poiKey(t.dest));
+  return ks;
+}
+// --- sélection : priorité, diversité des catégories, densité par zone, pas de chevauchement
+let poiPrev = new Set();
+function poiPick(cands, z) {
+  const ct = map.getContainer(), W = ct.clientWidth, H = ct.clientHeight;
+  const tiles = mapMode === 'tiles', lblZ = tiles ? 16 : 14.8, allZ = tiles ? 17 : 15.4;
+  const f = poiFilter(), only = (POI_FILTERS.find(x => x[0] === f) || [])[2];
+  const U = poiUsefulNow(), dk = poiDestKeys();
+  const size = z < 11 ? 0.74 : z < 14 ? 0.74 + (z - 11) * 0.027 : z < 15.5 ? 0.82 + (z - 14) * 0.067 : z < 16.5 ? 0.92 + (z - 15.5) * 0.08 : 1;
+  const items = [];
+  for (const p of cands) {
+    if (!p.cat || !POI_CATS[p.cat]) continue;
+    if (only && !only.includes(p.cat)) continue;
+    if (dk.size && dk.has(poiKey(p))) continue; // la destination a déjà son marqueur
+    const pt = map.project([p.lon, p.lat]);
+    if (pt.x < 8 || pt.y < 8 || pt.x > W - 8 || pt.y > H - 8) continue;
+    const minor = p.cat === 'rue' || p.cat === 'route', useful = !minor && U.cats.has(p.cat), fresh = !useful && !minor && poiNewCat(p.cat);
+    const tier = useful ? 1 : fresh ? 3 : minor ? 5 : 4;
+    items.push({ p, x: pt.x, y: pt.y, tier, h: (p.imp != null ? p.imp * 0.6 : 0) + (hashStr(p.id) / 4294967296) * 0.4, prev: poiPrev.has(p.id) ? 0 : 1 });
+  }
+  // diversité : dans chaque catégorie, rang du lieu (le 1er restaurant passe avant le 2e café, etc.)
+  const byCat = {};
+  for (const it of items) (byCat[it.p.cat] = byCat[it.p.cat] || []).push(it);
+  for (const a of Object.values(byCat)) { a.sort((u, v) => u.prev - v.prev || u.h - v.h); a.forEach((it, i) => { it.rr = Math.min(i, 6); }); }
+  items.sort((a, b) => a.tier - b.tier || a.prev - b.prev || a.rr - b.rr || a.h - b.h);
+  const area = Math.max(1, (W * H) / (390 * 640));
+  const base = z < 13 ? 12 : z < 14 ? 15 : z < 15 ? 18 : z < 16 ? 22 : z < 17 ? 28 : 34;
+  const budget = Math.round(base * Math.pow(area, 0.6) * (f === 'tout' ? 1.6 : only ? 1.25 : 1));
+  const usefulMax = Math.ceil(budget * 0.4), badge = poiTypesSeen() >= 4;
+  const ZONE = 130, more = (f === 'tout' || only) ? 1 : 0;
+  const capOf = t => t === 1 ? (z >= lblZ ? 3 : z >= lblZ - 1 ? 2 : 1) : t === 5 ? 1 : (z >= lblZ ? 2 : 1) + more;
+  const sp = z < 15 ? 5 : 3;
+  // grille d'occupation (cases de 40 px) pour tester les chevauchements rapidement
+  const G = 40, grid = new Map();
+  const cells = (r, fn) => { for (let gx = Math.floor(r[0] / G); gx <= Math.floor(r[2] / G); gx++) for (let gy = Math.floor(r[1] / G); gy <= Math.floor(r[3] / G); gy++) if (fn(gx + ':' + gy) === false) return false; return true; };
+  const hit = r => !cells(r, k => { const L = grid.get(k); if (!L) return true; for (const q of L) if (r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]) return false; return true; });
+  const put = r => cells(r, k => { const L = grid.get(k); if (L) L.push(r); else grid.set(k, [r]); });
+  for (const r of poiBlocked(W, H)) put(r);
+  const zc = {}, out = []; let n = 0, nu = 0;
+  for (const it of items) {
+    if (it.tier === 1 ? nu >= usefulMax : n >= budget) { if (it.tier > 1) break; continue; }
+    const zk = Math.floor(it.x / ZONE) + ',' + Math.floor(it.y / ZONE) + ':' + it.p.cat;
+    if ((zc[zk] || 0) >= capOf(it.tier)) continue;
+    const v = (it.tier === 1 ? 'u' : '') + (it.tier === 3 && badge ? 'w' : '') + (it.tier === 5 ? 's' : '') || 'n';
+    const r = (it.tier === 1 ? 15 : it.tier === 5 ? 9.5 : 13) * size + sp;
+    const ri = [it.x - r, it.y - r, it.x + r, it.y + r];
+    if (hit(ri)) continue;
+    let lb = (z >= lblZ && it.tier <= 3) || z >= allZ, rl = null;
+    if (lb) {
+      const tw = (poiTextW(poiShort(it.p.name)) + 8) * size;
+      rl = [it.x + r - sp - 2, it.y - 9 * size - 1, it.x + r - sp + tw + 2, it.y + 9 * size + 1];
+      if (rl[2] > W - 4 || hit(rl)) { lb = false; rl = null; }
+    }
+    put(ri); if (rl) put(rl);
+    zc[zk] = (zc[zk] || 0) + 1; n++; if (it.tier === 1) nu++;
+    out.push({ p: it.p, v, lb, tier: it.tier, sk: it.tier * 100 + it.rr * 10 + Math.floor(it.h * 9) });
+  }
+  return out;
+}
+// --- mise à jour (au moveend, au chargement des tuiles, quand l'état du jeu change), avec un petit throttle
+let poiById = {}, poiSig = '', poiLast = 0, poiTimer = 0, poiStats = { cands: 0, shown: 0, labels: 0, ms: 0 };
+const POI_HIDDEN = { hidden: true, remove() {} }; // place-holder : les lieux restent visibles des autres modules via ovEls
+function refreshPOIs(force) {
   if (!map || !mapReady) return;
+  const now = performance.now();
+  if (force !== true && now - poiLast < 150) { clearTimeout(poiTimer); poiTimer = setTimeout(() => refreshPOIs(true), 170); return; }
+  clearTimeout(poiTimer); poiLast = now;
   const z = map.getZoom();
   const want = mapMode === 'tiles' ? (z >= POI_MIN_Z() ? tilesPOIs() : []) : (z >= 10 ? fallbackPOIs() : []);
   if (mapMode === 'local' && z < 10 && townKey && map.getSource('town')) { townKey = ''; map.getSource('town').setData({ type: 'FeatureCollection', features: [] }); }
+  // noms de villages (mode secours) : petites étiquettes HTML, peu nombreuses
   const keep = new Set(want.map(p => p.id));
   for (const id of Object.keys(poiShown)) if (!keep.has(id)) { poiShown[id].remove(); delete poiShown[id]; delete ovEls['q' + id]; }
   const ov = $('ov');
   for (const p of want) {
-    if (poiShown[p.id]) continue;
-    const el = document.createElement('div');
-    if (p.label) { el.className = 'ovc vil'; el.textContent = p.name; } else { el.className = 'ovm poi' + (p.cat === 'rue' || p.cat === 'route' ? ' small' : ''); el.innerHTML = poiMarkerHTML(p); el.dataset.poi = p.id; }
+    if (!p.label || poiShown[p.id]) continue;
+    const el = document.createElement('div'); el.className = 'ovc vil'; el.textContent = p.name;
     ov.insertBefore(el, ov.firstChild);
     poiShown[p.id] = el; ovEls['q' + p.id] = { el, lon: p.lon, lat: p.lat, poi: p };
   }
+  // tous les lieux candidats restent connus (fiche, « Partir » des rêves et des commandes via shownPOIs), même non dessinés
+  const cands = want.filter(p => !p.label && p.cat);
+  const ids = new Set(cands.map(p => p.id));
+  for (const k of Object.keys(ovEls)) if (k[0] === 'q' && ovEls[k].el === POI_HIDDEN && !ids.has(k.slice(1))) delete ovEls[k];
+  poiById = {};
+  for (const p of cands) { poiById[p.id] = p; if (!ovEls['q' + p.id]) ovEls['q' + p.id] = { el: POI_HIDDEN, lon: p.lon, lat: p.lat, poi: p }; }
   positionOverlay();
+  if (!poiLayerOK || !map.getSource('pois')) return;
+  if (!poiGlyphsOK) { loadPoiGlyphs().then(() => refreshPOIs(true)); return; }
+  const sel = poiPick(cands, z);
+  const feats = [], used = new Set();
+  for (const s of sel) {
+    const key = (s.lb ? 'pl|' : 'pi|') + s.v + '|' + s.p.cat + (s.lb ? '|' + poiShort(s.p.name) : '');
+    poiMakeImage(key); used.add(key); if (s.lb) poiLblImgs.set(key, Date.now());
+    feats.push({ type: 'Feature', properties: { id: s.p.id, img: key, hw: poiHW(s.v), sk: s.sk, lb: s.lb ? 1 : 0 }, geometry: { type: 'Point', coordinates: [s.p.lon, s.p.lat] } });
+  }
+  poiPrev = new Set(sel.map(s => s.p.id));
+  const sig = feats.map(f => f.properties.img + f.properties.id).join(';');
+  poiStats = { cands: cands.length, shown: sel.length, labels: sel.filter(s => s.lb).length, useful: sel.filter(s => s.tier === 1).length, ms: +(performance.now() - now).toFixed(2), filter: poiFilter() };
+  if (sig === poiSig) return; // rien n'a changé : pas de nouveau rendu (sinon « idle » relancerait sans fin)
+  poiSig = sig;
+  map.getSource('pois').setData({ type: 'FeatureCollection', features: feats });
+  poiCleanImages(used);
 }
+// l'état du jeu a changé (destination, commande, rêve, filtre) : on réévalue les priorités, sans excès
+let poiDestK = '', poiUseK = '', poiStateT = 0;
+function poiStateCheck() {
+  if (!map || !mapReady) return;
+  const d = [...poiDestKeys()].join(';'); let ch = d !== poiDestK; poiDestK = d;
+  if (Date.now() - poiStateT > 1500) {
+    poiStateT = Date.now();
+    const u = [...poiUsefulNow(true).cats].sort().join(',') + '/' + Object.keys(S.dex || {}).length;
+    if (u !== poiUseK) { ch = ch || poiUseK !== ''; poiUseK = u; }
+  }
+  if (ch) { poiSig = ''; refreshPOIs(); }
+}
+window.__carte = { stats: () => Object.assign({}, poiStats), setMode: m => { mapMode = m; }, refresh: () => refreshPOIs(true), setPoiFilter, poiUsefulNow, shown: () => (map && map.getSource('pois') ? map.querySourceFeatures('pois').length : 0), poiAtPoint, rendered: () => map.queryRenderedFeatures({ layers: ['poi-sym'] }).length, get S() { return S; }, get plan() { return plan; } };
 function poiDest(p) {
   const c = POI_CATS[p.cat];
-  const spec = (SPECIALTY[p.cat] || SPEC_DEFAULT).slice(); spec[0] = spec[0].replace('{P}', p.name);
+  const spec = (SPECIALTY[p.cat] || SPEC_DEFAULT).slice(); spec[0] = spec[0].replace('{P}', p.name).replace(/\bde (Le|Les|Au|Aux) /, (m, a) => ({ Le: 'du ', Les: 'des ', Au: 'd’Au ', Aux: 'd’Aux ' })[a]);
   return { id: null, poi: true, cat: p.cat, name: p.name, country: c[0], city: p.city || nearestCityName(p.lon, p.lat), lat: p.lat, lon: p.lon, tags: [p.cat, c[3]], special: spec };
 }
 function choosePOI(p) { if (S.trips[S.sel]) { openSheet('voyage'); toast(`${CHARS[S.sel].name} est déjà en voyage. Choisissez un autre compagnon en haut.`); return; } plan.dest = poiDest(p); if (kmBetween(homeObj(), plan.dest) < 40) plan.dur = 'eclair'; openSheet('voyage'); drawMarks(); }
@@ -3229,8 +3612,36 @@ document.addEventListener('click', ev => {
 });
 
 // ================= VOYAGE =================
+// v14 : durée = TRAJET aller-retour (selon la distance) + SÉJOUR sur place (niveau DURS choisi).
+// Trajet aller-retour en minutes : 0,8 + 0,9 × km^0,655 (courbe douce : 2 min dans le quartier, ~10 h aux antipodes).
+// kmBetween arrondit au km : pour les lieux du quartier (300 m…), on prend la distance exacte
+const kmExact = (a, b) => d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]) * 6371;
+function tripRoundMs(km) {
+  const min = Math.max(1, 0.8 + 0.9 * Math.pow(Math.max(0, +km || 0), 0.655)); // au moins 1 min
+  const ms = min * 60e3;
+  if (min < 10) return Math.round(ms / 5e3) * 5e3;        // à 5 s près
+  if (min < 60) return Math.round(min) * 60e3;            // à la minute
+  return Math.round(min / 5) * 5 * 60e3;                  // à 5 min près
+}
+// durée totale prévue pour une destination et un niveau de séjour
+function tripPlanMs(km, durKey) { const d = DURS.find(x => x.key === durKey) || DURS[0]; return tripRoundMs(km) + d.ms; }
+// fractions du voyage : fin de l'aller (fa) et fin du séjour (fb). Anciens voyages (sans t.out) : aller-retour symétrique.
+function tripPhases(t) {
+  if (!t || !(t.out > 0) || !(t.total > 0)) return { fa: 0.5, fb: 0.5 };
+  const fa = Math.min(0.5, t.out / t.total), fb = Math.min(1 - fa, (t.out + (t.stay || 0)) / t.total);
+  return { fa, fb: Math.max(fa, fb) };
+}
+// avancement géographique (0 maison → 1 destination) pour une fraction f du voyage
+function tripGeoK(t, f) {
+  const { fa, fb } = tripPhases(t);
+  if (f <= fa) return fa > 0 ? f / fa : 1;
+  if (f <= fb) return 1;
+  return fb < 1 ? Math.max(0, (1 - f) / (1 - fb)) : 0;
+}
+// 'aller' | 'sejour' | 'retour'
+function tripPhase(t) { const f = Math.min(1, t.elapsed / t.total), { fa, fb } = tripPhases(t); return f < fa ? 'aller' : f < fb ? 'sejour' : 'retour'; }
 function tripPos(t) {
-  const f = Math.min(1, t.elapsed / t.total), k = f <= 0.5 ? f / 0.5 : (1 - f) / 0.5;
+  const f = Math.min(1, t.elapsed / t.total), k = tripGeoK(t, f);
   return d3.geoInterpolate([t.from.lon, t.from.lat], [t.dest.lon, t.dest.lat])(k);
 }
 function nearestPlace(lon, lat, maxKm) { let best = null, bd = maxKm; for (const p of PLACES) { const d = kmBetween({ lat, lon }, p); if (d < bd) { bd = d; best = p; } } return best; }
@@ -3246,10 +3657,11 @@ function weightedType(k) {
 function startTrip() {
   const d = DURS.find(x => x.key === plan.dur), from = homeObj(), dest = plan.dest, k = S.sel;
   const dist = kmBetween(from, dest), n = d.ev;
+  const out = Math.round(tripRoundMs(kmExact(from, dest)) / 2), stay = d.ms || 0, total = 2 * out + stay, fa = out / total; // l'arrivée a lieu à la fin de l'aller
   const events = [];
   for (let i = 0; i < n; i++) events.push({ at: 0.05 + (0.9 * (i + 0.5)) / n, type: null });
-  let closest = 0; events.forEach((e, i) => { if (Math.abs(e.at - 0.5) < Math.abs(events[closest].at - 0.5)) closest = i; });
-  events[closest].at = 0.5; events[closest].type = 'arrivee';
+  let closest = 0; events.forEach((e, i) => { if (Math.abs(e.at - fa) < Math.abs(events[closest].at - fa)) closest = i; });
+  events[closest].at = fa; events[closest].type = 'arrivee';
   const must = ['choix', 'trouvaille', 'rencontre', 'marchand', 'aide', 'animal'];
   let mi = 0;
   events.forEach((e, i) => { if (!e.type) e.type = (n <= 4 ? ['choix', 'animal', 'trouvaille', 'aide'][mi++ % 4] : (mi < must.length ? must[mi++] : weightedType(k))); });
@@ -3260,9 +3672,9 @@ function startTrip() {
   if (hasEff(k, 'flair')) events.push({ at: 0.97, type: 'trouvaille' });
   if (hasEff(k, 'oiseau')) events.push({ at: 0.93, type: 'pepin' });
   events.sort((a, b) => a.at - b.at);
-  S.trips[k] = { id: uidGen(), comp: k, from, dest, dur: d.key, luck: d.luck + lvlLuck(k), total: d.ms, elapsed: 0, last: Date.now(), dist, events, journal: [], bag: [], photos: [], coins: 0, xp: 0, done: false, startedAt: Date.now() };
+  S.trips[k] = { id: uidGen(), comp: k, from, dest, dur: d.key, luck: d.luck + lvlLuck(k), total, out, stay, elapsed: 0, last: Date.now(), dist, events, journal: [], bag: [], photos: [], coins: 0, xp: 0, done: false, startedAt: Date.now() };
   const dk = dayKey(); if (S.firstTripDay !== dk) { S.firstTripDay = dk; S.trips[k].dayBonus = true; }
-  S.trips[k].journal.push({ t: Date.now(), kind: 'depart', text: `${CHARS[k].name} boucle son sac et part pour ${dest.name}. ${dist.toLocaleString('fr-FR')} km l’attendent.` });
+  S.trips[k].journal.push({ t: Date.now(), kind: 'depart', text: `${CHARS[k].name} boucle son sac et part pour ${dest.name}. ${dist < 2 ? 'C’est tout près d’ici !' : `${dist.toLocaleString('fr-FR')} km l’attendent.`}` });
   plan.dest = null; save(); renderAll();
 }
 function rollRarity(base, luck) { let r = base; while (r < 4 && Math.random() < 0.08 * (1 + luck * 0.6) * Math.pow(0.5, r - base)) r++; return r; }
@@ -3303,7 +3715,8 @@ function lootFor(tags, luck, place, n = 1, comp = null) {
 function tasteOf(comp, item) { const t = FOOD_TASTE[typeof spOf === 'function' ? spOf(comp) : comp] || FOOD_TASTE.def; if (t.love.includes(item.sub)) return 'love'; if (t.hate.includes(item.sub)) return 'hate'; return 'like'; }
 function eventPlace(t, e) {
   if (e.type === 'arrivee' || t.dest.poi) return { ...t.dest };
-  const k = e.at <= 0.5 ? e.at / 0.5 : (1 - e.at) / 0.5;
+  const k = tripGeoK(t, e.at);
+  if (k >= 1) return { ...t.dest }; // pendant le séjour : sur place
   const [lon, lat] = d3.geoInterpolate([t.from.lon, t.from.lat], [t.dest.lon, t.dest.lat])(k);
   const near = nearestPlace(lon, lat, Math.max(120, t.dist * 0.12));
   if (near && near.name !== t.from.name) return near;
@@ -3322,7 +3735,11 @@ const CHOICES = {
   desert: { q: n => `Une tempête de sable approche à l’horizon.`, a: ['Continuer coûte que coûte', 'S’abriter sous une tente', 'Suivre une caravane'], third: 'items' },
   campagne: { q: n => `Un orage gronde au-dessus des champs.`, a: ['Courir sous la pluie', 'S’abriter dans une grange', 'Aider à la récolte'], third: 'food' },
   agrumes: { q: n => `Un verger de citronniers borde le chemin.`, a: ['Grimper dans un arbre', 'Demander au fermier', 'Faire de la limonade'], third: 'coins' },
+  // v14 : lieux du quotidien en ville (boulangerie, café, fleuriste, gare…) : un choix de quartier, pas de « grand marché »
+  quartier: { q: n => `Juste à côté, une petite porte de service est restée entrouverte.`, a: ['Jeter un œil derrière la porte', 'Attendre sagement son tour', 'Donner un coup de main aux gens du coin'], third: 'coins' },
 };
+// le choix d'un événement : les lieux du quotidien « en ville » ont le leur ; les autres (parc, plage, musée…) gardent celui de leur paysage
+function choiceTag(place, tags) { return place && place.poi && tags[1] === 'ville' ? 'quartier' : (tags.find(tg => CHOICES[tg]) || 'campagne'); }
 // sans réponse du joueur, chaque espèce décide selon son caractère (voir SP_INFO.temper : 0 audace, 1 prudence, 2 la troisième voie, 'eau')
 function compTemper(comp) { try { return typeof spTemper === 'function' ? spTemper(comp) : 2; } catch (e) { return 2; } }
 function autoChoice(comp, c) {
@@ -3406,8 +3823,8 @@ function fireEvent(t, e) {
       J({ kind: 'repas', text: { love: `${n} goûte ${it.name.toLowerCase()} et pousse un cri de joie. Il en garde pour toi !`, like: `${n} goûte ${it.name.toLowerCase()}. Pas mal du tout ! Il en rapporte.`, hate: `${n} goûte ${it.name.toLowerCase()} et fait une grimace. Il le garde pour un ami.` }[taste], items: [it] });
       break;
     }
-    case 'rencontre': { const pl = pick(PLAYERS); J({ kind: 'rencontre', text: `${n} croise ${pl[1]}, le compagnon de ${pl[0]}, qui voyage aussi par ici.`, other: pl, pending: true }); break; }
-    case 'choix': { const ctag = tags.find(tg => CHOICES[tg]) || 'campagne'; J({ kind: 'choix', text: CHOICES[ctag].q(n), ctag, pending: true }); break; }
+    case 'rencontre': { const pl = pick(PLAYERS); J({ kind: 'rencontre', text: `${n} croise ${pl[1]}, le compagnon ${/^[AEIOUYÉÈ]/.test(pl[0]) ? 'd’' : 'de '}${pl[0]}, qui voyage aussi par ici.`, other: pl, pending: true }); break; }
+    case 'choix': { const ctag = choiceTag(place, tags); J({ kind: 'choix', text: CHOICES[ctag].q(n), ctag, pending: true }); break; }
     case 'marchand': {
       const offers = lootFor(tags, t.luck + 1, pName, 2).map(it => { it.rarity = Math.max(it.rarity, 1); return { item: it, price: Math.round(value(it) * (hasEff(k, 'nego') ? 0.7 : 1)) }; });
       J({ kind: 'marchand', text: `Un marchand ambulant déballe ses trésors devant ${n}.`, offers, pending: true });
@@ -3954,7 +4371,7 @@ function renderVoyage(box) {
   }
   const f = Math.min(1, t.elapsed / t.total);
   let html = phead(k, t.done ? `${ch.name} est rentré !` : `En route vers ${esc(t.dest.name)}`, `<span id="phase">${t.done ? `${t.bag.length} objets${t.coins ? ` et ${t.coins} pièces` : ''} dans son sac.` : f < 0.5 ? 'À l’aller' : 'Sur le chemin du retour'}</span>`, t.done ? 'rire' : 'content');
-  if (!t.done) html += `<div class="prog"><div class="bar"><i id="pbar" style="width:${(f * 100).toFixed(1)}%"></i><span class="mid"></span></div><div class="pinfo"><span id="ptime">Retour dans ${fmtDur((t.total - t.elapsed) / (fast ? 30 : 1))}</span><button class="btn cream sm" id="fastBtn" aria-pressed="${fast}">${fast ? 'Vitesse normale' : 'Avance rapide (test)'}</button></div></div>`;
+  if (!t.done) html += `<div class="prog"><div class="bar"><i id="pbar" style="width:${(f * 100).toFixed(1)}%"></i><span class="mid"></span></div><div class="pinfo"><span id="ptime">Retour dans ${fmtDur((t.total - t.elapsed) / (fast ? 30 : 1))}</span>${isTestMode() ? `<button class="btn cream sm" id="fastBtn" aria-pressed="${fast}">${fast ? 'Vitesse normale' : 'Avance rapide (test)'}</button>` : ''}</div></div>`;
   else html += `<button class="btn green big wide" id="collectBtn">Ouvrir son sac et tout ranger</button>`;
   html += `<div class="journal">` + t.journal.slice().reverse().map((j, i) => journalEntry(t, j, t.journal.length - 1 - i)).join('') + `</div>`;
   box.innerHTML = html;
@@ -4204,7 +4621,23 @@ function renderAlbum(box) {
 }
 
 function renderAll() { renderTop(); renderComps(); renderPanel(); drawMarks(); renderGoal(); }
-function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3200); }
+// outils de test (avance rapide…) : seulement avec #test dans l'adresse, jamais pour les joueurs
+function isTestMode() { try { return /(^#|[#&?])test\b/.test(location.hash + location.search); } catch (e) { return false; } }
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; toastPlace(t); requestAnimationFrame(() => toastPlace(t)); clearTimeout(toast.h); toast.h = setTimeout(() => t.hidden = true, 3200); }
+// v14 : la notification ne recouvre plus l'en-tête des panneaux (titre + bouton Fermer) :
+// panneau ouvert → juste sous son en-tête ; fenêtre ouverte → en bas de l'écran ; sinon sous le HUD (position d'origine)
+function toastPlace(t) {
+  try {
+    t.style.top = ''; t.style.bottom = ''; t.style.left = '';
+    const m = $('modal'), sh = $('sheet');
+    if (m && !m.hidden) { t.style.top = 'auto'; t.style.bottom = 'calc(14px + env(safe-area-inset-bottom,0px))'; return; }
+    if (sh && !sh.hidden) {
+      const hd = sh.querySelector('.sheethead'), r = (hd || sh).getBoundingClientRect(), sr = sh.getBoundingClientRect();
+      t.style.top = Math.round(r.bottom + 8) + 'px';
+      if (sr.left > 40) t.style.left = Math.round(sr.left + sr.width / 2) + 'px'; // ordinateur : panneau à droite
+    }
+  } catch (e) {}
+}
 function reactionPopup(k, mood, line, big) {
   const box = $('react');
   box.innerHTML = `<div class="rimg">${drawChar(k, S.outfits[k], mood, 'r' + Date.now())}</div><p>${esc(line)}</p>`;
@@ -4766,7 +5199,7 @@ body.jeu-test #fastBtn{display:inline-flex}
 @media (prefers-reduced-motion:reduce){.hcard,.hcard.r3,.hcard.r4{animation:none;opacity:1;transform:none}.hcard.r3::before,.hcard.r4::before,.hcard::after{animation:none}}
 `;
   const st = document.createElement('style'); st.id = 'jeuCSS'; st.textContent = css; document.head.appendChild(st);
-  try { if (/test/.test(location.hash + location.search)) document.body.classList.add('jeu-test'); } catch (e) {}
+  try { if (typeof isTestMode === 'function' ? isTestMode() : /#test/.test(location.hash)) document.body.classList.add('jeu-test'); } catch (e) {}
 })();
 
 // ---------- Durées : la balade éclair n'est plus présentée comme un « test »
@@ -5063,19 +5496,15 @@ function showHaul(h) {
 // ================= BARRE DU JEU (écran principal) =================
 function renderJeuBar() {
   // v13 : plus de barre sur la carte (événement, série, trophée) : tout est rangé dans le menu, signalé par un simple point
-  if (typeof renderMenuDot === 'function') { renderMenuDot(); eventMapCSS(); return; }
+  if (typeof renderMenuDot === 'function') { renderMenuDot(); return; }
   let bar = $('jeuBar');
   if (!bar) { bar = document.createElement('div'); bar.id = 'jeuBar'; const g = $('goal'); g.parentNode.insertBefore(bar, g.nextSibling); }
   const ev = todayEvent(), ready = achReady().length, L = S.login;
   bar.innerHTML = `<button class="evchip" data-jeu="event" aria-label="Événement du jour : ${esc(ev.name)}"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><span class="evt"><b>${esc(ev.name)}</b><small>${esc(ev.short)}</small></span></button><button class="jbtn" data-jeu="login" aria-label="Cadeaux quotidiens, série de ${L.streak || 0} jours">${FLAME}<span class="jn">${L.streak || 0}</span></button><button class="jbtn" data-jeu="ach" aria-label="Succès${ready ? `, ${ready} à récupérer` : ''}">${TROPHY()}${ready ? `<span class="jb">${ready}</span>` : ''}</button>`;
-  layoutJeuBar(); eventMapCSS();
+  layoutJeuBar();
 }
-// les lieux concernés par l'événement du jour brillent sur la carte
-function eventMapCSS() {
-  const ev = todayEvent(); let st = $('jeuEvCSS'); if (!st) { st = document.createElement('style'); st.id = 'jeuEvCSS'; document.head.appendChild(st); }
-  const cols = (ev.tags || []).filter(t => POI_CATS[t]).map(t => POI_CATS[t][1]);
-  st.textContent = cols.map(c => `.poi .poib[style*="--pc:${c}"]`).join(',') + (cols.length ? `{box-shadow:0 0 0 3px #f6c445,0 0 12px 4px rgba(246,196,69,.8);animation:pulse .9s ease-in-out infinite alternate}` : '');
-}
+// (v14) l'ancien halo CSS des épingles HTML de l'événement du jour est retiré : les lieux sont dessinés par la couche
+// MapLibre `poi-sym` (07_poi.js), qui met elle-même en avant les lieux « utiles maintenant » (événement du jour compris).
 function layoutJeuBar() {
   const bar = $('jeuBar'), g = $('goal'); if (!bar || !g) return;
   if (innerWidth <= 900) { const r = g.getBoundingClientRect(); bar.style.top = (r.height ? r.bottom + 10 : 110) + 'px'; }
@@ -7407,7 +7836,7 @@ const BQ_SHOPS = [
     crafts: ['painmaison', 'tarte', 'confiture', 'bs_brioche', 'bs_tarte_citron', 'croque', 'sandrando', 'bonhommechoc'],
     bsubs: ['pain', 'farine', 'sucre', 'pomme'], mult: 1.35, cheap: { subs: ['farine', 'sucre'], f: 0.75 },
     perks: ['Commandes de pain et de gâteaux : +35 % de pièces', 'Farine et sucre 25 % moins chers au magasin'],
-    lines: ['Deux croissants et une baguette bien cuite, s’il vous plaît !', 'C’est pour un goûter d’anniversaire : il faut que ça sente bon le beurre !', 'Votre pain est le meilleur du quartier, tout le monde le dit.'] },
+    lines: ['Ça sent bon jusque dans la rue ! Vous avez ce qu’il me faut ?', 'C’est pour un goûter d’anniversaire : il faut que ça sente bon le beurre !', 'Votre pain est le meilleur du quartier, tout le monde le dit.'] },
   { id: 'cafe', name: 'Café-salon de thé', short: 'Salon de thé', em: 'tasse', aw: '#8a5a3a', aw2: '#f6e7d2', wall: '#f3e6d6', wall2: '#e8d3bb', front: '#e9d6bf', door: '#6b4a32',
     phrase: 'Des fauteuils moelleux, du thé fumant et des petits gâteaux.',
     stars: [['Chocolat chaud à la chantilly', 'n', 'boisson', 2, null, '#8a5a3a'], ['Macaron de Paris', 'n', 'sucre', 1, null, '#f39ab0'], ['Thé au jasmin', 'n', 'boisson', 1, null, '#c9d48a']],
@@ -7415,7 +7844,7 @@ const BQ_SHOPS = [
     crafts: ['chantilly', 'salade', 'bonhommechoc', 'confiture', 'tarte'],
     bsubs: ['boisson', 'sucre'], mult: 1.3, fast: 0.7,
     perks: ['Boissons et douceurs : +30 % de pièces', 'Les clients arrivent plus souvent (30 % d’attente en moins)'],
-    lines: ['Un thé bien chaud et quelque chose de sucré, je vous prie.', 'Je reçois mes amies cet après-midi : il me faut de quoi faire un goûter chic.', 'Votre salon est si douillet… je pourrais y rester des heures.'] },
+    lines: ['Une petite pause douceur, voilà ce qu’il me faut.', 'Je reçois mes amies cet après-midi : il me faut de quoi faire un goûter chic.', 'Votre salon est si douillet… je pourrais y rester des heures.'] },
   { id: 'restaurant', name: 'Restaurant', short: 'Restaurant', em: 'cloche', aw: '#d9604f', aw2: '#fff4ea', wall: '#f8e4d8', wall2: '#f0cfbd', front: '#f3dccb', door: '#8a3a2f',
     phrase: 'Une petite table chaleureuse où chaque plat raconte un voyage.',
     stars: [['Fondue des copains', 'n', 'fromage', 3, null, '#f2c14e'], ['Soupe du potager', 'n', 'legume', 2, null, '#8fbf5a'], ['Croque-monsieur doré', 'n', 'pain', 2, null, '#e3b06b']],
@@ -7423,7 +7852,7 @@ const BQ_SHOPS = [
     crafts: ['soupe', 'soupepotager', 'fondue', 'plateau', 'croque', 'sandrando'],
     bsubs: ['plat', 'legume', 'fromage', 'mer'], mult: 1.35, slot: 1,
     perks: ['Plats cuisinés, fromages et légumes : +35 % de pièces', 'Une commande de plus à la fois au comptoir'],
-    lines: ['Une table pour quatre, et le plat du jour pour tout le monde !', 'J’ai une faim de loup… enfin, de blaireau.', 'Le chef peut-il me préparer quelque chose de réconfortant ?'] },
+    lines: ['On est quatre à table ce soir, et tout le monde a faim !', 'J’ai une faim de loup… enfin, de blaireau.', 'Le chef peut-il me préparer quelque chose de réconfortant ?'] },
   { id: 'fleuriste', name: 'Fleuriste', short: 'Fleuriste', em: 'fleur', aw: '#e07a9a', aw2: '#fff0f4', wall: '#fbe8ee', wall2: '#f4d2dc', front: '#e9f2df', door: '#5f9a6a',
     phrase: 'Des bouquets de toutes les couleurs, cueillis aux quatre coins du monde.',
     stars: [['Bouquet du voyageur', 'd', 'plante', 2, null, '#f39ab0'], ['Vase de fleurs fraîches', 'd', 'plante', 2, null, '#f39ab0'], ['Couronne du jardin', 'v', 'tete', 3, 'fleurs', '#f6c2cf']],
@@ -7455,7 +7884,7 @@ const BQ_SHOPS = [
     crafts: ['coupeg', 'salade', 'confiture'],
     bsubs: ['glace', 'agrume'], mult: 1.35, tip: 10,
     perks: ['Glaces et agrumes : +35 % de pièces', 'Pourboire : +10 pièces à chaque commande'],
-    lines: ['Trois boules ! Non, quatre ! Avec un parapluie en papier !', 'Il fait si chaud… j’ai besoin de fraîcheur, vite !', 'C’est pour fêter la fin de l’école, toute la classe arrive !'] },
+    lines: ['Vite, vite, avant que ça fonde !', 'Il fait si chaud… j’ai besoin de fraîcheur, vite !', 'C’est pour fêter la fin de l’école, toute la classe arrive !'] },
   { id: 'librairie', name: 'Librairie-papeterie', short: 'Librairie', em: 'livre', aw: '#6f64b0', aw2: '#f4f0ff', wall: '#eeeaf8', wall2: '#ddd6ef', front: '#efe7d8', door: '#4a4378',
     phrase: 'Des livres, des cartes anciennes et du papier qui sent bon.',
     stars: [['Mappemonde de voyageur', 'd', 'mappemonde', 2, null, '#c9a97a'], ['Nœud papillon en origami', 'v', 'cou', 1, 'noeud', '#f2d48f'], ['Plan de Paris ancien', 'm', 'papier', 1, null, '#efe2c4']],
@@ -7790,7 +8219,9 @@ function bqNewOrder(forceEasy) {
   const rep = Math.round(Math.min(90, (12 + val / 5 + L * 2 + req.length * 3 + (req.some(r => r.wonder) ? 15 : 0)) * (T && T.rep ? T.rep : 1)));
   // la phrase du client : celle du commerce, la sienne, ou une demande d'adoption
   const cr = req.find(r => r.k === 'comp');
-  const line = cr ? `Je rêve d’adopter ${typeof spArticle === 'function' ? spArticle(cr.sp) : 'un compagnon'}. Son panier est déjà prêt !` : T && Math.random() < 0.55 ? pick(T.lines) : pick(c.lines);
+  // (deux clients au comptoir ne disent jamais la même phrase)
+  const usedL = new Set(s.orders.map(x => x.line)), fresh = l => { const f = (l || []).filter(x => !usedL.has(x)); return f.length ? pick(f) : null; };
+  const line = cr ? `Je rêve d’adopter ${typeof spArticle === 'function' ? spArticle(cr.sp) : 'un compagnon'}. Son panier est déjà prêt !` : (T && Math.random() < 0.55 && fresh(T.lines)) || fresh(c.lines) || pick(c.lines);
   const o = { id: uidGen(), client: c.id, line, req, coins: coinsR, rep, at: now, deadline, seq: ++s.seq, shop: T ? T.id : null, spec: spec ? 1 : 0 };
   // parfois une récompense en plus : une recette du magasin pas encore connue, ou un objet rare
   if (!forceEasy && Math.random() < 0.22 * (T && T.recx ? T.recx : 1)) {
@@ -7811,7 +8242,13 @@ function bqTickOrders() {
   const gone = s.orders.filter(o => o.deadline && now > o.deadline);
   if (gone.length) { gone.forEach(o => { const cs = s.clients[o.client] || (s.clients[o.client] = {}); cs.away = now + 2 * 3600e3; toast(`${BQC(o.client).name} n’a pas pu attendre plus longtemps, mais reviendra plus tard.`); }); s.orders = s.orders.filter(o => !gone.includes(o)); changed = true; }
   // premières commandes : tout de suite
-  if (!s.orders.length && !s.served && !s.started) { s.started = now; for (let i = 0; i < 2; i++) { const o = bqNewOrder(true); if (o) s.orders.push(o); } s.next = now + bqInterval(0); changed = true; }
+  if (!s.orders.length && !s.served && !s.started) {
+    s.started = now;
+    // deux premiers clients, deux demandes différentes
+    const sig = o => JSON.stringify(o.req.map(r => [r.k, r.key || r.name || r.rid || r.sp || '']));
+    for (let i = 0; i < 2; i++) { let o = null; for (let t = 0; t < 5; t++) { o = bqNewOrder(true); if (!o || !s.orders.some(x => sig(x) === sig(o))) break; } if (o) s.orders.push(o); }
+    s.next = now + bqInterval(0); changed = true;
+  }
   if (!s.next) s.next = now + bqInterval(s.served);
   let guard = 0;
   while (s.orders.length < slots && now >= s.next && guard++ < 6) {
@@ -8285,7 +8722,7 @@ function bqShopSVG(L, mini) {
   const s0 = bqState(), night = isNight(), ink = '#5b4636', sw = `stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"`;
   L = L == null ? s0.lvl : L;
   const W = 360, H = 210;
-  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="bq-shop" role="img" aria-label="La boutique, niveau ${esc(bqLv(L).name)}">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="bq-shop" preserveAspectRatio="xMidYMid slice" role="img" aria-label="La boutique, niveau ${esc(bqLv(L).name)}">`;
   // le décor suit le commerce ouvert (couleurs du mur, auvent, enseigne, produits sur les étagères, emblème du comptoir)
   const TT = bqType(), pid = 'bqwp' + L + (TT ? TT.id : '') + (mini ? 'm' : '');
   const wA = TT ? TT.wall : L >= 1 ? '#f8e6cc' : '#f3e2c8', wB = TT ? TT.wall2 : '#f6dcc0';
@@ -8389,12 +8826,17 @@ function bqOrderCard(o) {
 function renderComptoir(box) {
   const s = bqState(); bqTickOrders();
   const lv = bqLv(s.lvl), now = Date.now();
-  let h = bqShopsBar() + `<div class="bq-hero">${bqShopSVG()}</div>` + bqRepHTML();
+  // v14 : sur téléphone, les commandes passent avant la réputation et les avantages (la 1re commande se voit sans défiler)
+  const phone = typeof matchMedia === 'function' && matchMedia('(max-width:520px)').matches;
+  let bar = bqShopsBar(), perks = '';
+  if (phone) { const m = bar.match(/<div class="bq-perkl">[\s\S]*?<\/div>/); if (m) { perks = m[0]; bar = bar.replace(m[0], ''); } }
+  let h = bar + `<div class="bq-hero">${bqShopSVG()}</div>` + (phone ? '' : bqRepHTML());
   const ready = shopReady();
-  h += `<div class="bq-intro"><b>${s.orders.length ? (ready ? `${ready} commande${ready > 1 ? 's' : ''} prête${ready > 1 ? 's' : ''} à livrer !` : `${s.orders.length} client${s.orders.length > 1 ? 's' : ''} attend${s.orders.length > 1 ? 'ent' : ''} au comptoir`) : 'Le comptoir est calme…'}</b><span>Réunissez ce qu’ils demandent en voyage ou à l’atelier, puis livrez : pièces et réputation garanties.</span></div>`;
+  h += `<div class="bq-intro${phone ? ' bq-intro-s' : ''}"><b>${s.orders.length ? (ready ? `${ready} commande${ready > 1 ? 's' : ''} prête${ready > 1 ? 's' : ''} à livrer !` : `${s.orders.length} client${s.orders.length > 1 ? 's' : ''} attend${s.orders.length > 1 ? 'ent' : ''} au comptoir`) : 'Le comptoir est calme…'}</b><span>Réunissez ce qu’ils demandent en voyage ou à l’atelier, puis livrez : pièces et réputation garanties.</span></div>`;
   h += `<div class="bq-orders">` + s.orders.slice().sort((a, b) => bqReady(b) - bqReady(a) || a.seq - b.seq).map(bqOrderCard).join('');
   for (let i = s.orders.length; i < bqSlots(); i++) h += `<div class="bq-slot"><svg viewBox="0 0 30 30" aria-hidden="true">${BQ_ICONS.comptoir}</svg><span>${i === s.orders.length ? `Prochain client dans <b data-bqcd="${s.next}">${fmtDur(s.next - now)}</b>` : 'Place libre au comptoir'}</span></div>`;
   h += `</div>`;
+  if (phone) h += bqRepHTML() + perks;
   const served = Object.entries(s.clients).filter(([, v]) => v.served).length;
   h += `<p class="small bq-foot">${s.served} commande${s.served > 1 ? 's' : ''} livrée${s.served > 1 ? 's' : ''} · ${served}/${BQ_CLIENTS.length} clients déjà servis · ${coins(s.earned)} gagnées au comptoir. ${lv.reach}.</p>`;
   box.innerHTML = h;
@@ -8491,12 +8933,14 @@ function bqCheckReady(where) {
   bqReadyIds = new Set(now.map(o => o.id));
   if (!nw.length) return;
   const names = nw.map(o => BQC(o.client).name).join(' et ');
-  const html = `<div class="bq-haul"><img src="${clientURI(BQC(nw[0].client), 'joie')}" alt=""><span><b>Commande prête !</b><small>${esc(names)} ${nw.length > 1 ? 'peuvent' : 'peut'} être servi${nw.length > 1 ? 's' : ''} à la boutique.</small></span><button class="btn green sm" data-bopen="comptoir">Livrer</button></div>`;
+  const sw = bqSwapNote && nw.find(o => o.client === bqSwapNote.client) ? bqSwapNote : null; bqSwapNote = null;
+  const html = `<div class="bq-haul"><img src="${clientURI(BQC(nw[0].client), 'joie')}" alt=""><span><b>Commande prête !</b><small>${sw ? `${esc(BQC(sw.client).name)} a changé d’avis : « ${esc(sw.name)} » lui suffit. ` : ''}${esc(names)} ${nw.length > 1 ? 'peuvent' : 'peut'} être servi${nw.length > 1 ? 's' : ''} à la boutique.</small></span><button class="btn green sm" data-bopen="comptoir">Livrer</button></div>`;
   const m = $('modal'), btn = where === 'haul' && m && !m.hidden ? m.querySelector('.mbox > button:last-child') : null;
   if (btn) btn.insertAdjacentHTML('beforebegin', html);
   else toast(`Commande prête : ${names} attend${nw.length > 1 ? 'ent' : ''} à la boutique !`);
   if (typeof renderNav === 'function') renderNav();
 }
+let bqSwapNote = null;
 if (typeof GAME !== 'undefined') {
   // tout début de partie : tant qu'aucun client n'a été servi, la première commande demande un objet ordinaire que le voyageur vient de rapporter
   // (le joueur comprend dès le 1er retour que ses trouvailles servent à ses clients)
@@ -8507,8 +8951,11 @@ if (typeof GAME !== 'undefined') {
       if (!got.length) return;
       const fits = it => T && (T.keys || []).some(k => ING[k] && ING[k][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'));
       const it = got.find(fits) || got.find(x => T && (T.itemCats || []).includes(x.cat)) || got[0];
-      const o = s.orders[0];
+      const o = s.orders[0]; if (o.tuto || (typeof tutoActive === 'function' && tutoActive())) return; // le tutoriel garde sa commande, stable
       o.req = [{ k: 'item', name: it.name, def: [it.name, it.cat, it.sub, 0, it.look || null, it.color || null], n: 1, src: { place: it.from || '' } }];
+      // plus de changement en silence : le client le dit (sa phrase change) et la fenêtre du retour l’annonce (bqCheckReady)
+      o.line = `Oh, vous rapportez « ${it.name} » ? J’ai changé d’avis : c’est exactement ce qu’il me faut !`; o.changed = 1;
+      bqSwapNote = { client: o.client, name: it.name }; try { bqReadyIds.delete(o.id); } catch (er) {} // annoncée comme prête au retour
       save();
     } catch (er) { console.error('boutique', er); }
   });
@@ -8648,6 +9095,7 @@ setInterval(bqTick, 4000);
 .bq-haul small{font-size:12.5px;color:var(--ink2)}
 .bq-new{font-style:normal;font:800 10.5px var(--display);background:#ffe1ec;color:#b8456a;border-radius:6px;padding:1px 5px;vertical-align:2px}
 .bq-recmore{display:block;width:100%;margin-top:10px;background:#fff6dc;border:2px dashed #e0b84a;border-radius:14px;padding:10px;font:700 14px var(--display);color:#7a5a12;cursor:pointer}
+@media (max-width:520px){.bq-hero{height:104px}.bq-hero svg.bq-shop{width:100%;height:100%}.bq-intro-s{margin:10px 2px 6px}.bq-intro-s>span{display:none}.bq-orders+.bq-rep{margin-top:14px}}
 @media (max-width:420px){.bq-face{width:58px;height:58px}.bq-ohx p{font-size:15.5px}.bq-grid{grid-template-columns:repeat(2,1fr)}}
 @media (prefers-reduced-motion:reduce){.bq-order.ready,.bq-deliver{animation:none}}
 /* commerces (phase B) */
@@ -9677,7 +10125,7 @@ let hatchCtx = null; // { egg, crack, first, id }
 function hatchEggScreen(egg, first) {
   hatchCtx = { egg, crack: 0, first: !!first, id: null };
   const intro = first
-    ? `<span class="hkick">Nouvelle partie</span><h2>Bienvenue dans le Carnet de voyage !</h2><p class="hlead">Explore le vrai monde pour trouver, élever et échanger des compagnons uniques. Tout commence avec cet œuf mystère : touche-le pour le faire éclore !</p>`
+    ? `<span class="hkick">Nouvelle partie</span><h2>Bienvenue dans le Carnet de voyage !</h2><p class="hlead">Explore le vrai monde pour trouver, élever et échanger des compagnons uniques. Tout commence avec cet œuf mystère : touchez-le pour le faire éclore !</p>`
     : `<span class="hkick">${esc(COMP_FROM[egg.from && egg.from.how] || 'Un œuf')}${egg.from && egg.from.place ? ' · ' + esc(egg.from.place) : ''}</span><h2>Un œuf va éclore !</h2><p class="hlead">Qui se cache dedans ? Touchez l’œuf pour l’aider à sortir.</p>`;
   showModal(`<div class="hatchbox">${intro}<button class="eggbtn" data-egg-tap="1" aria-label="Toucher l’œuf (encore 3 fois)"><span class="eggwrap">${eggArt(egg, 0, 'egm')}</span></button><div class="eggdots" aria-hidden="true"><i></i><i></i><i></i></div><p class="egghint">Touchez l’œuf 3 fois</p></div>`);
   document.body.classList.toggle('firstrun', !!first);
@@ -9760,7 +10208,8 @@ function firstRunNext() {
   $('modal').hidden = true; document.body.classList.remove('firstrun');
   renderAll();
   const k = teamIds()[0];
-  if (k) setTimeout(() => toast(`${compName(k)} a hâte de partir : touchez « Partir » !`), 500);
+  // (le tutoriel guidé, 24_tuto.js, prend le relais : pas de consigne concurrente)
+  if (k && !(typeof tutoActive === 'function' && tutoActive())) setTimeout(() => toast(`${compName(k)} a hâte de partir : touchez « Partir » !`), 500);
 }
 
 // ---------- carte d'action (écran principal) : la prochaine chose utile, un seul bouton ----------
@@ -12242,6 +12691,9 @@ button.obrow:active{transform:translateY(2px);box-shadow:none}
 .obff{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;width:100%}
 /* retour de voyage */
 .hcard.obh .obu{align-self:stretch}
+/* petites cartes du butin : la ligne « → … » tient en entier (pas d'icône, 3 lignes, coupure entre les mots) */
+.hcard.obh .obu.sm{padding:3px 4px;margin-left:-1px;margin-right:-1px}.hcard.obh .obu.sm .obic{display:none}
+.hcard.obh .obu>span{-webkit-line-clamp:3;overflow-wrap:break-word;word-break:normal;hyphens:auto;line-height:1.18}
 .hcard.r2.obh{box-shadow:0 3px 0 var(--rc),0 0 0 3px rgba(79,136,207,.18)}
 .hcard.obnew{box-shadow:0 3px 0 var(--rc),0 0 0 3px rgba(240,138,166,.35)}
 .obspark{position:absolute;inset:0;pointer-events:none;z-index:3}
@@ -12310,6 +12762,1419 @@ window.__objets = {
   st.textContent = '.hcard[data-fiche]{cursor:pointer}.hcard[data-fiche]:active{transform:scale(.97)}.obhback{align-self:flex-start;margin-bottom:6px}';
   document.head.appendChild(st);
 })();
+
+// ================= TUTORIEL GUIDÉ (v14) =================
+// « Le joueur doit savoir exactement quoi faire à chaque instant. »
+// Après le premier lancement (œuf, nom, commerce : 20_collection.js et 18_boutique.js), le compagnon de départ guide
+// le joueur pas à pas : un projecteur éclaire UN élément, une main le montre, une bulle (1 à 2 phrases) explique.
+// Chaque étape attend que le joueur fasse l'action ; elle se déduit de l'état du jeu, donc un joueur qui prend un autre
+// chemin (carte d'action, sac, menu…) est suivi, et un rechargement reprend à la bonne étape.
+// Le jeu « cale » ce qu'il faut pour que chaque étape soit réalisable : la première commande demande un objet du lieu
+// du quartier visité, le premier voyage contient forcément un choix (et patiente pendant qu'on répond), le premier retour
+// rapporte forcément l'objet demandé, un vêtement et un œuf à éclosion très courte.
+// État sauvegardé : S.tuto = { on, done, i (étape), f (drapeaux), k (compagnon guide), o (commande), trip, egg, cloth, replay }.
+// Menu : « Revoir le tutoriel ». « Passer le tutoriel » : petit lien dans la bulle, avec confirmation intégrée.
+
+// ---------------- état ----------------
+(function tuInit() {
+  try {
+    if (!S.tuto || typeof S.tuto !== 'object') {
+      // nouvelle partie (l'œuf mystère attend) : le tutoriel suivra ; ancienne sauvegarde : rien, mais « Revoir » au menu
+      S.tuto = S.firstRun ? { on: 1, i: 0, f: {} } : { done: 1 };
+    }
+    if (!S.tuto.f || typeof S.tuto.f !== 'object') S.tuto.f = {};
+    if (typeof S.tuto.i !== 'number') S.tuto.i = 0;
+  } catch (e) { console.error('tuto', e); }
+})();
+const tuOn = () => !!(S.tuto && S.tuto.on && !S.firstRun);
+function tutoActive() { return tuOn(); }
+const tuK = () => (S.tuto && S.tuto.k && S.comps[S.tuto.k] ? S.tuto.k : (teamIds()[0] || S.sel));
+const tuName = () => (CHARS[tuK()] ? CHARS[tuK()].name : '');
+const tuE = () => (typeof compE === 'function' ? compE(tuK()) : '');
+const tuOrder = () => { try { return bqState().orders.find(o => o.id === S.tuto.o) || null; } catch (e) { return null; } };
+const tuTrip = () => { const t = S.trips[tuK()]; return t && S.tuto.trip && t.id === S.tuto.trip ? t : null; };
+const tuChoice = t => t ? t.journal.find(j => j.kind === 'choix') : null;
+const tuReduce = () => (typeof reduceMotion === 'function' && reduceMotion());
+const $q = s => document.querySelector(s);
+const tuVis = el => { if (!el) return null; const r = el.getBoundingClientRect(); if (!r.width || !r.height) return null; const cs = getComputedStyle(el); return cs.visibility === 'hidden' || cs.display === 'none' ? null : el; };
+const tuSel = (...ss) => { for (const s of ss) { const e = tuVis($q(s)); if (e) return e; } return null; };
+const tuModal = () => { const m = $('modal'); return m && !m.hidden ? m.querySelector('.mbox') : null; };
+
+// ---------------- mise en place : la commande du tutoriel ----------------
+// un objet commun d'un lieu du quartier, que le commerce vend vraiment (cohérent dès la lecture : il ne changera plus)
+function tuPickReq() {
+  const T = bqType();
+  const cats = ((T && T.cats) || ['boulangerie', 'cafe', 'marche', 'parc']).filter(c => typeof bqPoiOK === 'function' ? bqPoiOK(c) : LOOT[c]);
+  const subs = new Set(T ? [].concat(...(T.keys || []).map(k => ING[k] ? ING[k][0] : []), T.bsubs || []) : []);
+  let best = null;
+  for (const cat of cats.length ? cats : ['boulangerie']) {
+    const defs = (LOOT[cat] || []).filter(d => d[3] === 0 && d[1] !== 't' && d[1] !== 'v');
+    if (!defs.length) continue;
+    const fit = defs.filter(d => subs.has(d[2]) || (T && (T.itemCats || []).includes(d[1])));
+    let near = 0;
+    try { const p = typeof nearestPOI === 'function' ? nearestPOI(x => x.cat === cat, true) : null; if (p && kmBetween(homeObj(), p) < 2) near = 1; } catch (e) {}
+    const score = (fit.length ? 2 : 0) + near * 3 + (cat === cats[0] ? 0.5 : 0);
+    if (!best || score > best.score) best = { cat, def: (fit.length ? fit : defs)[0], score };
+  }
+  if (!best) return null;
+  const d = best.def;
+  return { k: 'item', name: d[0], def: [d[0], d[1], d[2], 0, d[4] || null, d[5] || null], n: 1, src: { cat: best.cat } };
+}
+function tuSetup() {
+  const T = S.tuto;
+  // le guide : un compagnon de l'équipe qui ne voyage pas
+  const free = teamIds().filter(k => !S.trips[k]);
+  if (!free.length) { T.on = 0; T.done = 1; save(); toast('Toute l’équipe est en voyage : relancez le tutoriel au retour d’un compagnon.'); return false; }
+  T.k = free.includes(S.sel) ? S.sel : free[0];
+  if (S.sel !== T.k) { S.sel = T.k; plan.dest = null; }
+  const s = bqState(); bqTickOrders();
+  let o = T.replay ? null : s.orders[0];
+  if (!o) { try { o = bqNewOrder(true); if (o) s.orders.push(o); } catch (e) { o = null; } }
+  if (!o) o = s.orders[0];
+  const req = tuPickReq();
+  if (o && req) {
+    o.req = [req]; o.tuto = 1; o.deadline = 0; delete o.bonus;
+    o.coins = Math.max(o.coins || 0, 40); o.rep = Math.max(o.rep || 0, 15);
+    // la phrase du client parle de ce qu'il demande
+    o.line = `Bonjour ! Il me faudrait « ${req.name} », s’il vous plaît.`;
+    s.orders = [o, ...s.orders.filter(x => x !== o)];
+    T.o = o.id;
+  }
+  T.started = 1; T.i = 0; T.f = {}; T.t0 = Date.now();
+  save();
+  return true;
+}
+
+// ---------------- les étapes ----------------
+// num : numéro affiché (sur 10 ; 1 et 2 sont l'œuf et le commerce du premier lancement)
+// done() : l'étape est faite (on passe à la suivante) · go() : { el, txt, dim, ok } à éclairer maintenant
+// tuNav(tab, sub) : le bouton à toucher pour aller à un écran (ou null si on y est déjà)
+function tuNav(t, sub, allowModal) {
+  if (!allowModal && tuModal()) { const b = tuSel('#modal [data-fclose]', '#modal [data-closemodal]', '#modal .stgb [data-stg="no"]'); if (b) return { el: b, txt: 'Ferme d’abord cette fenêtre.' }; }
+  if (tab !== t) return { el: tuSel(`#nav [data-nav="${t}"]`), txt: null };
+  if (sub) {
+    const cur = getSub(t);
+    if (cur !== sub) return { el: t === 'boutique' ? tuSel(`[data-bsub="${sub}"]`) : tuSel(`#panelBody .subtabs [data-sub="${sub}"]`), txt: null };
+  }
+  return null;
+}
+const tuReqTxt = () => { const o = tuOrder(); if (!o) return { who: 'Le client', what: 'sa commande', where: '' }; const c = BQC(o.client), r = o.req[0]; return { who: c ? c.name : 'Le client', what: bqReqLabel(r).toLowerCase(), where: bqReqWhere(r).toLowerCase(), c }; };
+const tuDur = () => { const d = DURS.find(x => x.key === 'eclair') || DURS[0]; return d.label; };
+const TU_STEPS = [
+  { id: 'client', num: 3,
+    done: () => tuStepPast('commande') || (tab === 'boutique' && getSub('boutique') === 'comptoir'),
+    go: () => {
+      const n = tuNav('boutique', 'comptoir'), R = tuReqTxt();
+      if (n) return { ...n, txt: n.txt || (tab === 'boutique' ? 'Les clients attendent au Comptoir.' : `Ton premier client est arrivé à la boutique ! Touche « Boutique ».`) };
+      return null;
+    } },
+  { id: 'commande', num: 3,
+    done: () => tuStepPast('dur') || !!(plan.dest && tab === 'voyage') || !!tuTrip() || !tuOrder(),
+    go: () => {
+      const R = tuReqTxt();
+      const n = tuNav('boutique', 'comptoir'); if (n) return { ...n, txt: n.txt || `${R.who} t’attend au Comptoir de la boutique.` };
+      const o = tuOrder(); if (!o) return null;
+      const card = tuVis($q(`.bq-order[data-oid="${o.id}"]`));
+      return { el: card, hand: card && card.querySelector('[data-bgo]'), txt: `${R.who} voudrait : <b>${esc(R.what)}</b>. La commande dit où le trouver : ${esc(R.where)}. Touche « Partir chercher » !`, scroll: card };
+    } },
+  { id: 'dur', num: 4,
+    done: () => !!S.tuto.f.dur || !!tuTrip(),
+    go: () => {
+      if (tab !== 'voyage' || !plan.dest) return tuBackToOrder();
+      const b = tuSel('#panelBody [data-dur="eclair"]');
+      return { el: b, txt: `Direction <b>${esc(plan.dest.name)}</b>, tout près d’ici ! Pour ce premier voyage, un petit tour : choisis « ${esc(tuDur())} ».`, scroll: b };
+    } },
+  { id: 'go', num: 4,
+    done: () => !!tuTrip() || !!S.tuto.f.collected,
+    go: () => {
+      if (tab !== 'voyage' || !plan.dest) return tuBackToOrder();
+      const b = tuSel('#goBtn');
+      return { el: b, txt: `Parfait ! Touche « ${esc((b && b.textContent.trim()) || 'Partir !')} » et c’est parti !` };
+    } },
+  { id: 'route', num: 5, dim: false,
+    done: () => { const t = tuTrip(); return !!S.tuto.f.collected || !t || !!tuChoice(t) || t.done; },
+    go: () => {
+      const n = tuNav('carte'); if (n) return { ...n, txt: n.txt || 'Reviens sur la carte pour me suivre.' };
+      return { el: tuSel('#tripCard'), txt: `Je suis en route ! En chemin, je ramasse des objets… et parfois, je te demande ton avis. Regarde bien !` };
+    } },
+  { id: 'choix', num: 5,
+    done: () => { const t = tuTrip(), j = tuChoice(t); return !!S.tuto.f.collected || !t || !j || j.resolved; },
+    go: () => {
+      const t = tuTrip(), j = tuChoice(t);
+      if (tab === 'voyage' && S.sel === tuK()) {
+        const i = t.journal.indexOf(j), opts = tuVis($q(`#panelBody [data-choice="${i}"]`));
+        if (opts) { const je = opts.closest('.je'); return { el: je || opts.closest('.opts') || opts, hand: opts, txt: 'Lis la question, puis choisis. Audace : gros trésor ou petite chute. Prudence : sûr mais modeste.', scroll: je }; }
+      }
+      const n = tuNav('carte'); if (n) return { ...n, txt: n.txt || 'Reviens sur la carte : j’ai besoin de toi !' };
+      return { el: tuSel('#tripCard [data-act="choose"]', '#tripCard'), txt: `${esc(j.text)} J’hésite… Aide-moi à choisir !` };
+    } },
+  { id: 'retour', num: 6,
+    done: () => !!S.tuto.f.collected,
+    go: () => {
+      const t = S.trips[tuK()];
+      if (!t) return null;
+      if (!t.done) { const n = tuNav('carte'); if (n) return { ...n, txt: n.txt || 'Reviens sur la carte : je rentre bientôt !' }; const left = Math.max(0, (t.total - t.elapsed) / (typeof fast !== 'undefined' && fast ? 30 : 1)); return { el: tuSel('#tripCard'), dim: false, txt: `Merci ! Je finis mon tour et je rentre avec mon sac plein. Retour dans ${left < 60e3 ? 'moins d’une minute' : 'environ ' + Math.max(1, Math.round(left / 60e3)) + ' min'}…` }; }
+      const n = tuNav('carte'); if (n) return { ...n, txt: n.txt || 'Je suis rentré' + tuE() + ' ! Reviens sur la carte.' };
+      return { el: tuSel('#tripCard [data-act="collect"]', '[data-live="collect"]', '#tripCard'), txt: `Je suis rentré${tuE()} ! Ouvre mon sac pour voir ce que j’ai rapporté.` };
+    } },
+  { id: 'sert', num: 6, ok: 'Compris !',
+    done: () => !!S.tuto.f.sert || !!S.tuto.f.delivered,
+    go: () => {
+      const R = tuReqTxt(), M = tuModal();
+      let line = null;
+      if (M && M.querySelector('.haul')) {
+        const cards = [...M.querySelectorAll('.haul .hcard')];
+        const c = cards.find(x => { const b = x.querySelector('b'); return b && b.textContent.trim() === (tuOrder() ? tuOrder().req[0].name : ''); }) || cards.find(x => x.querySelector('.obu.now'));
+        line = c && (c.querySelector('.obu') || c);
+        if (line) return { el: c, hand: line, txt: `Chaque objet dit à quoi il sert : regarde la ligne « → … ». Celui-ci, ${esc(R.who)} l’attend !`, scroll: c };
+      }
+      const n = tuNav('sac', 'sac'); if (n) return { ...n, txt: n.txt || 'Ouvre le sac : chaque objet y dit à quoi il sert.' };
+      const o = tuOrder(), it = o && S.inv.find(x => bqMatch(o.req[0], x));
+      const card = it ? tuVis($q(`#panelBody .obc[data-fiche="${it.id}"]`)) : tuVis($q('#panelBody .obc.now'));
+      line = card && (card.querySelector('.obu') || card);
+      return { el: card, hand: line, txt: `Chaque objet dit à quoi il sert : la petite ligne « → … ». Celui-ci, ${esc(R.who)} l’attend !`, scroll: card };
+    } },
+  { id: 'livrer', num: 7,
+    done: () => !!S.tuto.f.delivered || !tuOrder(),
+    go: () => {
+      const R = tuReqTxt(), o = tuOrder(), txt = `Livre la commande à ${esc(R.who)} : tu gagnes des pièces et de la réputation !`;
+      // filet de sécurité : la commande du tutoriel doit être livrable (objet vendu, porté ou utilisé entre-temps)
+      if (o && !bqReady(o) && !tuModal()) { tuTopUp(o); if (tab === 'boutique') renderPanel(); }
+      const M = tuModal();
+      if (M && M.querySelector('.haul')) { const b = tuSel('#modal .bq-haul [data-bopen]', '#modal .obsum [data-obgo="order"]'); if (b) return { el: b, txt }; }
+      if (tab === 'boutique' && getSub('boutique') === 'comptoir' && !M) { const b = tuSel(`[data-bdeliver="${o.id}"]`); if (b) return { el: b, txt, scroll: b.closest('.bq-order') }; const c = tuVis($q(`.bq-order[data-oid="${o.id}"]`)); if (c) return { el: c, hand: c.querySelector('[data-bdeliver],[data-bgo]'), txt, scroll: c }; }
+      if (tab === 'carte' && !M) { const b = tuSel(`#tripCard [data-act="deliver"][data-id="${o.id}"]`); if (b) return { el: b, txt }; }
+      const n = tuNav('boutique', 'comptoir'); return n ? { ...n, txt: n.txt || txt } : null;
+    } },
+  { id: 'oeuf', num: 8,
+    done: () => { const e = S.tuto.egg; return !e || (!(S.eggs || []).some(x => x.id === e) && !tuModal()); },
+    go: () => {
+      const M = tuModal(), pre = S.tuto.f.paid ? `Bravo, ${esc(S.tuto.f.paid)} ! ` : '';
+      if (M && M.querySelector('[data-egg-tap]')) return { el: tuSel('#modal [data-egg-tap]'), txt: 'Touche l’œuf pour l’aider à sortir !', below: 1 };
+      if (M && M.querySelector('[data-name-ok]')) return { el: tuSel('#modal [data-name-ok]'), txt: 'Un nouveau compagnon ! Donne-lui un nom, puis valide.', below: 1 };
+      const e = (S.eggs || []).find(x => x.id === S.tuto.egg); if (!e) return null;
+      const where = e.inc ? 'Il est au chaud dans la couveuse du village.' : 'Il attend à la nurserie du village.';
+      const n = tuNav('village', 'nurserie'); if (n) return { ...n, txt: n.txt || `${pre}Pendant le voyage, j’ai aussi trouvé un œuf ! ${where}` };
+      const b = tuVis($q(`#panelBody [data-ns-hatch="${e.id}"]`));
+      if (b) return { el: b, txt: 'Il est prêt ! Fais-le éclore.', scroll: b };
+      const card = $q(`#panelBody [data-ns-left="${e.id}"]`); const c = tuVis(card && card.closest('.nsegg'));
+      return { el: c, dim: false, txt: `${where} Les œufs trouvés en voyage éclosent ici. Celui-ci est presque prêt…`, scroll: c };
+    } },
+  { id: 'habiller', num: 9,
+    done: () => { const id = S.tuto.cloth; if (id && typeof styleWornBy === 'function' && styleWornBy(id)) return true; return !id || !S.inv.some(x => x.id === id); },
+    go: () => {
+      const k = tuK(), it = S.inv.find(x => x.id === S.tuto.cloth); if (!it) return null;
+      const txt0 = `J’ai aussi rapporté un vêtement : « ${esc(it.name)} ». Habille-moi !`;
+      const n = tuNav('compagnons', 'garde'); if (n) return { ...n, txt: n.txt || txt0 };
+      if (S.sel !== k) return { el: tuSel(`#panelBody [data-stc="${k}"]`), txt: `Choisis-moi d’abord : c’est moi, ${esc(tuName())} !` };
+      try { if (stSlot !== it.sub) return { el: tuSel(`#panelBody [data-wslot="${it.sub}"]`), txt: `Il se porte ici : « ${esc(SLOT_LABEL[it.sub] || '')} ».` }; } catch (e) {}
+      const b = tuSel(`#panelBody [data-wput="${it.id}"]`);
+      return { el: b, txt: `Touche « ${esc(it.name)} » pour me le mettre !`, scroll: b };
+    } },
+  { id: 'compedium', num: 10,
+    done: () => tab === 'compagnons' && compView === 'compedium',
+    go: () => {
+      if (tuModal()) { const b = tuSel('#modal [data-closemodal]', '#modal [data-fclose]'); if (b) return { el: b, txt: 'Ferme d’abord cette fenêtre.' }; }
+      if (tab !== 'compagnons') return { el: tuSel('#nav [data-nav="compagnons"]'), txt: 'Il me va bien, non ? Une dernière chose à te montrer…' };
+      return { el: tuSel('#panelBody .subtabs [data-sub="compedium"]'), txt: 'Il me va bien, non ? Dernière chose : touche « Compédium ».' };
+    } },
+  { id: 'fin', num: 10, ok: 'À moi de jouer !',
+    done: () => !!S.tuto.f.fin,
+    go: () => ({ el: tuSel('#panelBody .cpstats'), dim: false, txt: `Le Compédium montre les 10 espèces du monde, leurs couleurs et leurs hybrides. <b>Tu sais tout !</b> Ton but : trouver, élever et échanger des compagnons uniques.` }) },
+];
+const TU_IDX = Object.fromEntries(TU_STEPS.map((s, i) => [s.id, i]));
+const tuStepPast = id => (S.tuto.i || 0) > TU_IDX[id];
+// hors du bon écran pendant le départ : on revient à la commande
+function tuBackToOrder() {
+  if (S.trips[tuK()]) return null;
+  const n = tuNav('boutique', 'comptoir'); if (n) return { ...n, txt: n.txt || 'Retourne voir la commande au Comptoir.' };
+  const o = tuOrder(); const b = o && tuSel(`[data-bgo="${o.id}"]`);
+  return { el: b, txt: 'Touche « Partir chercher » pour préparer le voyage.', scroll: b && b.closest('.bq-order') };
+}
+
+function tuTopUp(o) {
+  try {
+    const al = bqAllocate(o);
+    o.req.forEach((rq, j) => {
+      for (let n = al[j] ? al[j].have : 0; n < rq.n; n++) {
+        let def = rq.def;
+        if (!def && rq.k === 'ing') def = Object.values(LOOT).flat().find(d => (d[1] === 'm' || d[1] === 'n') && ING[rq.key] && ING[rq.key][0].includes(d[2]) && d[3] === 0);
+        if (def) { const it = makeItem(def, 0, (plan.dest && plan.dest.name) || S.home, [], { fixed: 0 }); S.inv.push(it); S.dex[it.name] = true; }
+      }
+    });
+    save();
+  } catch (e) { console.error('tuto', e); }
+}
+// ---------------- moteur ----------------
+let tuCur = null, tuLastEl = null, tuSkipAsk = false, tuWaitDest = 0;
+function tuTick() {
+  try {
+    const T = S.tuto;
+    if (!tuOn()) { tuHide(); return; }
+    if (!T.started && !tuSetup()) { tuHide(); return; }
+    // avancer tant que les étapes sont faites
+    let guard = 0;
+    while (T.i < TU_STEPS.length && guard++ < 20 && TU_STEPS[T.i].done()) { T.i++; tuSkipAsk = false; save(); }
+    if (T.i >= TU_STEPS.length) return tuFinish();
+    const st = TU_STEPS[T.i];
+    // la destination : un lieu du quartier (moins de 2 km), sinon la boutique du quartier la plus proche, créée pour l'occasion
+    if ((st.id === 'commande' || st.id === 'dur') && tab === 'voyage') tuCheckDest();
+    let g = null;
+    try { g = st.go(); } catch (e) { console.error('tuto', st.id, e); }
+    tuShow(st, g || { el: null, txt: null });
+  } catch (e) { console.error('tuto', e); }
+}
+function tuCheckDest() {
+  const d = plan.dest; if (!d || S.trips[tuK()]) return;
+  if (d.poi && kmExact(homeObj(), d) <= 1.5) { if (plan.dur !== 'eclair' && !S.tuto.f.dur) { plan.dur = 'eclair'; renderPanel(); } return; }
+  tuFallbackDest();
+}
+// « Partir chercher » sur la commande du tutoriel : la destination est choisie ICI, sans dépendre des icônes dessinées
+// par la couche de la carte (mode tiles : les lieux OSM n'existent que dans la vue, et seulement à partir du zoom 13-14).
+// Lieu connu du quartier à moins de 1,5 km (trajet d'environ 1 à 2 min), sinon « <Catégorie> du quartier », créé à 500 m.
+function tuGoDest() {
+  const o = tuOrder(), cat = (o && o.req[0].src && o.req[0].src.cat) || 'boulangerie';
+  if (S.sel !== tuK()) { S.sel = tuK(); }
+  let p = null;
+  try { p = typeof nearestPOI === 'function' ? nearestPOI(x => x.cat === cat, true) : null; if (p && kmExact(homeObj(), p) > 1.5) p = null; } catch (e) { p = null; }
+  if (p && typeof poiDest === 'function') {
+    plan.dest = poiDest(p); plan.dur = 'eclair';
+    openSheet('voyage');
+    try { drawMarks(); } catch (e) {}
+  } else tuFallbackDest();
+  // la carte montre la maison ET la destination (le joueur suivra le trajet au retour sur la carte)
+  try { const d = plan.dest, h = homeObj(); if (d && map) map.fitBounds([[Math.min(d.lon, h.lon), Math.min(d.lat, h.lat)], [Math.max(d.lon, h.lon), Math.max(d.lat, h.lat)]], { padding: { top: 130, bottom: 230, left: 60, right: 90 }, maxZoom: 16, duration: 900 }); } catch (e) {}
+}
+if (typeof bqGo === 'function') bqGo = (orig => function (id) {
+  try { if (tuOn() && S.tuto.started && S.tuto.o === id && S.tuto.i <= TU_IDX.go && !S.trips[tuK()]) return tuGoDest(); } catch (e) { console.error('tuto', e); }
+  return orig.apply(this, arguments);
+})(bqGo);
+function tuFallbackDest() {
+  const o = tuOrder(), cat = o && o.req[0].src && o.req[0].src.cat || 'boulangerie';
+  if (typeof poiDest !== 'function' || !POI_CATS[cat]) return;
+  const h = homeObj();
+  plan.dest = poiDest({ cat, name: `${POI_CATS[cat][0]} du quartier`, lon: h.lon + 0.0045, lat: h.lat + 0.0028, city: S.home });
+  plan.dur = 'eclair';
+  if (tab !== 'voyage') openSheet('voyage'); else renderPanel();
+  try { drawMarks(); } catch (e) {}
+}
+function tuFinish() {
+  S.tuto = { done: 1, at: Date.now() };
+  save(); tuHide(); renderAll();
+  toast('Bon voyage ! Le tutoriel se revoit depuis le menu (le carnet, en haut à droite).');
+}
+function tuSkip() {
+  S.tuto = { done: 1, skipped: 1 };
+  save(); tuHide(); renderAll();
+  toast('Tutoriel passé. Vous pourrez le revoir depuis le menu.');
+}
+function tuReplay() {
+  S.tuto = { on: 1, i: 0, f: {}, replay: 1 };
+  save();
+  closeSheet();
+  tuTick();
+}
+
+// ---------------- affichage : projecteur, main, bulle ----------------
+let tuEl = null;
+function tuBuild() {
+  if (tuEl) return tuEl;
+  tuEl = document.createElement('div'); tuEl.id = 'tuto'; tuEl.setAttribute('aria-live', 'polite');
+  tuEl.innerHTML = `<div class="tu-hole" aria-hidden="true"></div><div class="tu-hand" aria-hidden="true"><svg viewBox="0 0 48 56"><path d="M17 30 V9 a4.5 4.5 0 0 1 9 0 V24 l1-6 a4.2 4.2 0 0 1 8 1.4 V26 l.6-3 a4 4 0 0 1 7.6 1.6 V36 c0 10 -6 16 -15 16 h-3 c-6 0 -10 -3 -13 -8 l-7 -11 a4 4 0 0 1 6.4 -4.8Z" fill="#fff8ea" stroke="#4a3528" stroke-width="3" stroke-linejoin="round"/><path d="M26 25 V32 M34.6 26 V33" stroke="#4a3528" stroke-width="2.2" stroke-linecap="round"/><circle cx="21.5" cy="9.5" r="2.2" fill="#f4b7c4"/></svg></div><div class="tu-bub" role="dialog" aria-label="Tutoriel"><i class="tu-tail" aria-hidden="true"></i><img class="tu-face" alt=""><div class="tu-tx"><b class="tu-who"></b><p class="tu-say"></p><div class="tu-ft"><span class="tu-pg"></span><button class="tu-skip" data-tu="skip">Passer le tutoriel</button><button class="btn green sm tu-ok" data-tu="ok"></button></div></div></div>`;
+  (document.querySelector('.game') || document.body).appendChild(tuEl);
+  return tuEl;
+}
+function tuHide() { if (tuEl) tuEl.hidden = true; document.body.classList.remove('tu-on'); tuCur = null; tuLastEl = null; }
+let tuSig = '';
+function tuShow(st, g) {
+  const el = tuBuild();
+  el.hidden = false; document.body.classList.add('tu-on');
+  const k = tuK(), bub = el.querySelector('.tu-bub');
+  const dim = g.dim !== undefined ? g.dim : st.dim !== undefined ? st.dim : true;
+  // le texte
+  let say = g.txt || '…', ok = st.ok || '', foot = '';
+  if (tuSkipAsk) { say = 'Passer le tutoriel ? Tu pourras le revoir quand tu veux depuis le menu (le carnet, en haut à droite).'; ok = ''; }
+  const sig = [st.id, say, ok, tuSkipAsk, k].join('|');
+  if (sig !== tuSig) {
+    tuSig = sig;
+    el.querySelector('.tu-face').src = portraitURI(k, st.id === 'fin' ? 'amour' : st.id === 'choix' ? 'curieux' : 'rire');
+    el.querySelector('.tu-who').textContent = CHARS[k] ? CHARS[k].name : '';
+    el.querySelector('.tu-say').innerHTML = say;
+    const ft = el.querySelector('.tu-ft');
+    ft.innerHTML = tuSkipAsk
+      ? `<button class="btn cream sm" data-tu="stay">Continuer</button><button class="btn gold sm" data-tu="skipok">Passer</button>`
+      : `<span class="tu-pg" aria-label="Étape ${st.num} sur 10">${Array.from({ length: 10 }, (_, i) => `<i class="${i < st.num - 1 ? 'on' : i === st.num - 1 ? 'cur' : ''}"></i>`).join('')}</span>${ok ? `<button class="btn green sm tu-ok" data-tu="ok">${ok}</button>` : `<button class="tu-skip" data-tu="skip">Passer le tutoriel</button>`}`;
+    if (ok && !tuSkipAsk) ft.insertAdjacentHTML('beforeend', '');
+    bub.classList.remove('pop'); void bub.offsetWidth; if (!tuReduce()) bub.classList.add('pop');
+  }
+  el.classList.toggle('nodim', !dim || !g.el);
+  el.classList.toggle('center', !g.el);
+  tuCur = { st, g };
+  // amener l'élément sous les yeux (une fois par élément)
+  const sc = g.scroll || g.el;
+  if (g.el && g.el !== tuLastEl) {
+    tuLastEl = g.el;
+    if (sc && sc.scrollIntoView) { const r = sc.getBoundingClientRect(); let pb = sc.parentElement; while (pb && pb !== document.body && !(pb.scrollHeight > pb.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(pb).overflowY))) pb = pb.parentElement; if (!pb || pb === document.body) pb = sc.closest('#panelBody, .mbox'); const box = pb ? pb.getBoundingClientRect() : { top: 0, bottom: innerHeight }; if (r.top < box.top + 8 || r.bottom > box.bottom - 8) sc.scrollIntoView({ block: 'center', behavior: tuReduce() ? 'auto' : 'smooth' }); }
+  }
+  tuPlace();
+}
+// position : le trou autour de l'élément, la main dessus, la bulle au-dessus ou au-dessous (là où il y a la place)
+function tuPlace() {
+  if (!tuEl || tuEl.hidden || !tuCur) return;
+  const { g } = tuCur, hole = tuEl.querySelector('.tu-hole'), hand = tuEl.querySelector('.tu-hand'), bub = tuEl.querySelector('.tu-bub'), tail = tuEl.querySelector('.tu-tail');
+  const gr = tuEl.getBoundingClientRect(), W = gr.width, H = gr.height, M = 10;
+  const el = g.el && document.contains(g.el) ? g.el : null;
+  const bw = Math.min(360, W - 2 * M); bub.style.width = bw + 'px';
+  const bh = bub.offsetHeight;
+  if (!el) {
+    hole.style.display = 'none'; hand.style.display = 'none'; tail.style.display = 'none';
+    bub.style.left = (W - bw) / 2 + 'px'; bub.style.top = Math.max(M, (H - bh) / 2) + 'px';
+    return;
+  }
+  const r0 = el.getBoundingClientRect(), p = 6;
+  const r = { left: r0.left - gr.left - p, top: r0.top - gr.top - p, width: r0.width + 2 * p, height: r0.height + 2 * p };
+  r.right = r.left + r.width; r.bottom = r.top + r.height;
+  hole.style.display = ''; tail.style.display = '';
+  Object.assign(hole.style, { left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+  // la main : sur l'élément à toucher (ou au centre de l'élément éclairé)
+  const he = g.hand && document.contains(g.hand) ? g.hand.getBoundingClientRect() : r0;
+  const wait = g.dim === false || (tuCur.st.dim === false && g.dim === undefined);
+  hand.style.display = wait || tuSkipAsk ? 'none' : '';
+  hand.style.left = Math.min(W - 46, he.left - gr.left + he.width / 2 - 6) + 'px';
+  hand.style.top = Math.min(H - 52, he.top - gr.top + he.height / 2 + 2) + 'px';
+  // la bulle
+  const above = r.top - M, below = H - r.bottom - M;
+  let top, up;
+  if (g.below || st_prefBelow(r, H)) { up = !(below >= bh + 14) && above > below; }
+  else up = above >= bh + 14 || above > below;
+  if (up) top = Math.max(M, r.top - bh - 14); else top = Math.min(H - bh - M, r.bottom + 14);
+  // jamais sur l'élément : si la place manque des deux côtés, la bulle se pose au bord le plus éloigné
+  if (!up && top < r.bottom + 4 && above > below) { top = M; up = true; }
+  const cx = r.left + r.width / 2;
+  const left = Math.max(M, Math.min(W - bw - M, cx - bw / 2));
+  bub.style.left = left + 'px'; bub.style.top = top + 'px';
+  bub.classList.toggle('up', up);
+  tail.style.left = Math.max(18, Math.min(bw - 18, cx - left)) + 'px';
+  const overlap = up ? top + bh > r.top : top < r.bottom;
+  tail.style.display = overlap ? 'none' : '';
+}
+// les éléments du haut (HUD) : la bulle passe dessous ; ceux du bas : dessus
+const st_prefBelow = (r, H) => r.top + r.height / 2 < H * 0.4;
+function tuLoop() { try { tuPlace(); } catch (e) {} requestAnimationFrame(tuLoop); }
+
+// ---------------- calages : chaque étape doit être réalisable ----------------
+// 1. le premier voyage contient un choix, tôt, et pas de rencontre ni de marchand qui brouilleraient le message
+startTrip = (orig => function () {
+  const k = S.sel, before = S.trips[k];
+  const r = orig.apply(this, arguments);
+  try {
+    const t = S.trips[k];
+    if (tuOn() && t && t !== before && !S.tuto.trip && S.tuto.i >= TU_IDX.commande && S.tuto.i <= TU_IDX.go) {
+      S.tuto.trip = t.id; S.tuto.k = k; t.tuto = 1;
+      if (Array.isArray(t.events)) {
+        t.events = t.events.filter(e => e.type !== 'sauvage');
+        const rest = t.events.filter(e => e.type !== 'arrivee' && e.type !== 'pepin');
+        rest.forEach(e => { if (['rencontre', 'marchand', 'aide', 'choix', 'tresor'].includes(e.type)) e.type = 'trouvaille'; });
+        const first = rest.slice().sort((a, b) => a.at - b.at)[0];
+        if (first) first.type = 'choix';
+        else t.events.push({ at: 0.2, type: 'choix' });
+        t.events.sort((a, b) => a.at - b.at);
+      }
+      save();
+    }
+  } catch (e) { console.error('tuto', e); }
+  return r;
+})(startTrip);
+// 2. un choix attend la réponse du joueur : pendant le tutoriel, le voyage patiente
+tick = (orig => function () {
+  let t = null;
+  try { if (tuOn()) { t = tuTrip(); const j = tuChoice(t); if (!(t && !t.done && j && j.pending && !j.resolved)) t = null; } } catch (e) { t = null; }
+  if (t) t.done = true;
+  try { return orig.apply(this, arguments); } finally { if (t) { t.done = false; t.last = Date.now(); } }
+})(tick);
+// un choix en attente ne se décide plus tout seul à l'événement suivant (quelques secondes plus tard), mais au retour :
+// le joueur qui touche « Choisir » trouve bien le choix (sans réponse, le compagnon décide toujours seul au retour)
+autoResolve = (orig => function (t) { if (t && !t.done && t.elapsed < t.total) return; return orig.apply(this, arguments); })(autoResolve);
+// 3. le premier retour rapporte l'objet de la commande, un vêtement et un œuf qui éclot très vite
+let tuFastEgg = false;
+if (typeof nsHatchMs === 'function') nsHatchMs = (orig => function () { return tuFastEgg ? 20e3 : orig.apply(this, arguments); })(nsHatchMs);
+collect = (orig => function () {
+  const k = S.sel, t = S.trips[k];
+  const mine = !!(t && tuOn() && S.tuto.trip && t.id === S.tuto.trip);
+  const eggs0 = new Set((S.eggs || []).map(e => e.id));
+  if (mine) {
+    try {
+      const place = t.dest.name, tags = t.dest.tags || ['campagne'];
+      const o = tuOrder();
+      if (o) o.req.forEach(rq => {
+        const have = S.inv.concat(t.bag).filter(x => bqMatch(rq, x)).length;
+        for (let n = have; n < rq.n; n++) {
+          let def = rq.def;
+          if (!def && rq.k === 'ing') def = Object.values(LOOT).flat().find(d => (d[1] === 'm' || d[1] === 'n') && ING[rq.key] && ING[rq.key][0].includes(d[2]) && d[3] === 0);
+          if (def) t.bag.push(makeItem(def, 0, place, tags, { fixed: 0 }));
+        }
+      });
+      let v = t.bag.find(x => x.cat === 'v');
+      if (!v) {
+        // un vêtement du lieu, sinon de la ville (jamais un bonnet de montagne rapporté de la boulangerie)
+        let def = null;
+        for (const tg of [...tags, 'ville', 'rue', 'mode', 'friperie', 'campagne']) { const pool = (LOOT[tg] || []).filter(d => d[1] === 'v' && d[3] === 0 && d[4]); if (pool.length) { def = pick(pool); break; } }
+        if (def) { v = makeItem(def, 0, place, tags, { fixed: 0 }); t.bag.push(v); }
+      }
+      if (v) S.tuto.cloth = v.id;
+    } catch (e) { console.error('tuto', e); }
+    tuFastEgg = true;
+  }
+  let r;
+  try { r = orig.apply(this, arguments); } finally { tuFastEgg = false; }
+  if (mine && !S.trips[k]) {
+    try {
+      S.tuto.f.collected = 1;
+      let egg = (S.eggs || []).find(e => !eggs0.has(e.id));
+      if (!egg && typeof nsAddEgg === 'function') {
+        // l'œuf du tutoriel (le premier œuf est déjà garanti par la nurserie ; ici pour « Revoir le tutoriel »)
+        const sp = typeof nsPickSp === 'function' ? nsPickSp(t.dest) : 'panda';
+        egg = nsAddEgg({ sp, genes: defaultGenes(sp), rarity: 0, from: { how: 'oeuf', place: t.dest.name }, ms: 20e3 });
+        const M = tuModal(); if (M && M.querySelector('.haul') && typeof nsEggFoundHTML === 'function') { const b = M.querySelector('button[data-closemodal]'); if (b) b.insertAdjacentHTML('beforebegin', nsEggFoundHTML(egg)); }
+      }
+      if (egg) { S.tuto.egg = egg.id; if (egg.ready - Date.now() > 20e3) { egg.ready = Date.now() + 15e3; egg.ms = 20e3; } }
+      save();
+    } catch (e) { console.error('tuto', e); }
+  }
+  return r;
+})(collect);
+// la carte d'action parle de la commande du tutoriel (et pas du rêve) tant qu'on prépare le premier départ
+nextAction = (orig => function () {
+  const a = orig.apply(this, arguments);
+  try {
+    if (tuOn() && S.tuto.started && S.tuto.i <= TU_IDX.go && a && (a.kind === 'dream' || a.kind === 'order' || a.kind === 'idle')) {
+      const o = tuOrder(), k = tuK();
+      if (o && !S.trips[k]) return { kind: 'order', k, o, r: o.req[0] };
+    }
+  } catch (e) {}
+  return a;
+})(nextAction);
+// panneau de voyage : pour le premier départ, seule la durée la plus courte est proposée
+renderVoyage = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try {
+    if (tuOn() && S.tuto.i <= TU_IDX.go && !S.trips[S.sel] && box) {
+      box.querySelectorAll('.dur[data-dur]').forEach(b => { if (b.dataset.dur !== 'eclair') { b.disabled = true; b.classList.add('tu-off'); b.title = 'Après le tutoriel'; } });
+    }
+  } catch (e) {}
+  return r;
+})(renderVoyage);
+// pendant la préparation du premier départ, la bulle guide seule : pas de consigne concurrente en haut de l'écran
+toast = (orig => function (msg) {
+  try { if (tuOn() && S.tuto.started && S.tuto.i <= TU_IDX.go && !/Toute l’équipe|déjà en voyage/.test(String(msg))) return; } catch (e) {}
+  return orig.apply(this, arguments);
+})(toast);
+// menu : « Revoir le tutoriel »
+if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try {
+    box.insertAdjacentHTML('beforeend', `<section class="msec"><header><h3>Aide</h3></header><div class="mrow"><span class="mri tu-mri" aria-hidden="true"><img src="${portraitURI(teamIds()[0] || S.sel, 'rire')}" alt=""></span><div><b>Revoir le tutoriel</b><span>${esc(CHARS[teamIds()[0]] ? CHARS[teamIds()[0]].name : 'Votre compagnon')} vous remontre la boucle du jeu, pas à pas.</span></div><button class="btn cream sm" data-tu="replay"${tuOn() ? ' disabled' : ''}>${tuOn() ? 'En cours' : 'Revoir'}</button></div></section>`);
+  } catch (e) { console.error('tuto', e); }
+  return r;
+})(renderMenu);
+// la commande livrée : on retient le gain pour féliciter le joueur
+GAME.on('order:done', ({ order }) => {
+  try { if (tuOn() && order && order.id === S.tuto.o) { S.tuto.f.delivered = 1; S.tuto.f.paid = `+${order.coins} pièces et +${order.rep} de réputation`; save(); } } catch (e) {}
+});
+// la durée : le joueur l'a choisie lui-même
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('button'); if (!b || b.disabled) return;
+  if (tuOn() && b.dataset.dur === 'eclair' && S.tuto.i === TU_IDX.dur) { S.tuto.f.dur = 1; save(); }
+  const d = b.dataset.tu; if (!d) return;
+  if (d === 'skip') { tuSkipAsk = true; tuSig = ''; tuTick(); return; }
+  if (d === 'stay') { tuSkipAsk = false; tuSig = ''; tuTick(); return; }
+  if (d === 'skipok') { tuSkipAsk = false; return tuSkip(); }
+  if (d === 'replay') return tuReplay();
+  if (d === 'ok' && tuCur) {
+    const id = tuCur.st.id;
+    if (id === 'sert') S.tuto.f.sert = 1;
+    if (id === 'fin') S.tuto.f.fin = 1;
+    save(); tuTick();
+  }
+}, true);
+// l'œuf du tutoriel devient prêt : la nurserie affichée se met à jour toute seule
+let tuEggReady = false;
+setInterval(() => {
+  tuTick();
+  try {
+    const e = S.tuto && S.tuto.egg && (S.eggs || []).find(x => x.id === S.tuto.egg), rd = !!(e && e.ready <= Date.now());
+    if (rd && !tuEggReady && tab === 'village' && villView === 'nurserie' && !tuModal()) renderPanel();
+    tuEggReady = rd;
+  } catch (e) {}
+}, 250);
+requestAnimationFrame(tuLoop);
+addEventListener('resize', () => { tuLastEl = null; });
+
+// ---------------- styles ----------------
+(function tuCSS() {
+  const st = document.createElement('style'); st.id = 'tutoCSS';
+  st.textContent = `
+#tuto{position:absolute;inset:0;z-index:45;pointer-events:none}
+#tuto[hidden]{display:none}
+body.tu-on #toast{z-index:47}
+/* pendant le tutoriel : ni voyageurs simulés ni filtre de carte (rien ne s'ouvre par-dessus le projecteur) */
+body.tu-on #vyLay,body.tu-on #vyCard,body.tu-on #zFilt,body.tu-on #poiFilt{display:none!important}
+.tu-hole{position:absolute;border-radius:16px;box-shadow:0 0 0 3px #fff6c9,0 0 0 6px rgba(246,196,69,.9),0 0 0 200vmax rgba(52,34,22,.42);transition:left .25s,top .25s,width .25s,height .25s}
+.tu-hole::after{content:"";position:absolute;inset:-6px;border-radius:20px;border:3px solid #f6c445;animation:tuRing 1.3s ease-out infinite}
+#tuto.nodim .tu-hole{box-shadow:0 0 0 3px #fff6c9,0 0 0 6px rgba(246,196,69,.9)}
+#tuto.center{background:rgba(52,34,22,.42)}
+@keyframes tuRing{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.12)}}
+.tu-hand{position:absolute;width:40px;height:46px;filter:drop-shadow(0 3px 0 rgba(74,53,40,.35));animation:tuTap 1s ease-in-out infinite;transform-origin:30% 10%}
+.tu-hand svg{width:100%;height:100%;display:block}
+@keyframes tuTap{0%,100%{transform:translate(0,0)}50%{transform:translate(-3px,-7px)}}
+.tu-bub{position:absolute;box-sizing:border-box;pointer-events:auto;display:flex;gap:9px;align-items:flex-start;background:var(--paper,#fff8ea);border:3px solid var(--ink,#4a3528);border-radius:20px;padding:9px 11px 9px 9px;box-shadow:0 5px 0 rgba(74,53,40,.45);color:var(--ink,#4a3528);text-align:left;transition:left .25s,top .25s}
+.tu-bub.pop{animation:tuPop .35s cubic-bezier(.2,1.5,.4,1)}
+@keyframes tuPop{0%{transform:scale(.85);opacity:0}100%{transform:none;opacity:1}}
+.tu-tail{position:absolute;left:30px;top:-10px;width:16px;height:16px;margin-left:-8px;background:var(--paper,#fff8ea);border-left:3px solid var(--ink,#4a3528);border-top:3px solid var(--ink,#4a3528);transform:rotate(45deg);border-radius:3px 0 0 0}
+.tu-bub.up .tu-tail{top:auto;bottom:-10px;transform:rotate(225deg)}
+.tu-face{flex:none;width:52px;height:56px;border-radius:14px;border:2.5px solid var(--ink,#4a3528);background:#fff3c4;object-fit:cover;object-position:top}
+.tu-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.tu-who{font:800 13px/1.1 var(--display);color:var(--rust,#c9604f);letter-spacing:.02em}
+.tu-say{margin:0;font:600 14.5px/1.38 var(--body);text-wrap:pretty}
+.tu-say b{font-weight:800}
+.tu-ft{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px}
+.tu-pg{display:flex;gap:3px;flex:1}
+.tu-pg i{width:7px;height:7px;border-radius:50%;background:#efe2c8;border:1.5px solid #c9b391}
+.tu-pg i.on{background:var(--green,#5fbf7f);border-color:#3a8f5a}
+.tu-pg i.cur{background:var(--gold,#f6c445);border-color:var(--ink,#4a3528);transform:scale(1.25)}
+.tu-skip{background:none;border:0;padding:2px 0;font:700 12px var(--display);color:var(--muted,#9a8574);text-decoration:underline;cursor:pointer}
+.tu-ft .btn{padding:6px 12px 4px;font-size:14px}
+.dur.tu-off{opacity:.42;filter:grayscale(.6)}
+.tu-mri{overflow:hidden;background:#fff3c4}.tu-mri img{width:36px;height:40px;object-fit:cover;object-position:top}
+@media (max-width:420px){.tu-say{font-size:14px}.tu-face{width:44px;height:48px}}
+@media (prefers-reduced-motion:reduce){.tu-hand,.tu-hole::after,.tu-bub.pop{animation:none!important}.tu-hole,.tu-bub{transition:none}}
+`;
+  document.head.appendChild(st);
+})();
+window.__tuto = { S: () => S.tuto, cur: () => tuCur && { id: tuCur.st.id, wait: tuCur.g.dim === false || (tuCur.st.dim === false && tuCur.g.dim === undefined), txt: tuEl && tuEl.querySelector('.tu-say').textContent }, target: () => tuCur && (tuCur.g.hand || tuCur.g.el), step: () => (TU_STEPS[S.tuto && S.tuto.i] || {}).id, tick: tuTick, replay: tuReplay, skip: tuSkip };
+
+// ================= TRAJET + SÉJOUR (v14) =================
+// Retour du joueur : « si on s'éloigne, je veux un temps proportionnel ».
+// Durée d'un voyage = trajet aller-retour (selon la distance, tripRoundMs dans 09_logic_b.js) + séjour sur place (niveau DURS).
+// Ce module ne fait que l'affichage : panneau de voyage (renderVoyage enveloppée), encart « Ce que tu peux trouver »
+// (liveFindHTML enveloppée) et libellés de phase (Aller / Sur place / Retour) des barres de progression.
+
+// « 2 h », « 2 h 30 », « 45 min », « 1 min 30 », « 40 s »
+function trjLen(ms) {
+  ms = Math.max(0, ms || 0);
+  const s = Math.round(ms / 1000);
+  if (s < 60) return `${s} s`;
+  if (s < 600) { const m = Math.floor(s / 60), r = Math.round((s % 60) / 5) * 5; return r ? `${m} min ${String(r).padStart(2, '0')}` : `${m} min`; }
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min`;
+  const h = Math.floor(m / 60), mm = m % 60;
+  return mm ? `${h} h ${String(mm).padStart(2, '0')}` : `${h} h`;
+}
+// « vers 19 h 40 », « demain vers 8 h 05 »
+function trjClock(ts) {
+  const d = new Date(ts), now = new Date();
+  const day = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 864e5);
+  const hm = `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}`;
+  return day <= 0 ? `vers ${hm}` : day === 1 ? `demain vers ${hm}` : `dans ${day} jours, vers ${hm}`;
+}
+function trjDur(key) { return DURS.find(x => x.key === key) || DURS[0]; }
+function trjPlanInfo(dest, key) {
+  const km = kmExact(homeObj(), dest), road = tripRoundMs(km), dd = trjDur(key), total = road + dd.ms;
+  return { km, road, stay: dd.ms, total, dd, back: Date.now() + total };
+}
+const TRJ_ICO = {
+  road: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 12.5 C5 12.5 4 3.5 8 3.5 S11 12.5 14 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2.2 2.4"/><circle cx="2" cy="12.5" r="1.6" fill="currentColor"/><circle cx="14" cy="12.5" r="1.6" fill="currentColor"/></svg>',
+  stay: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.8 C5.2 1.8 3.4 4 3.4 6.4 C3.4 9.6 8 14.2 8 14.2 S12.6 9.6 12.6 6.4 C12.6 4 10.8 1.8 8 1.8Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="8" cy="6.4" r="1.8" fill="currentColor"/></svg>',
+  home: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 8 L8 3 L13.5 8 M4.2 6.8 V13 H11.8 V6.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+function trjLineHTML(parts) {
+  return `<div class="trjline">${parts.map(([ic, k, v]) => `<span class="trjp"><i>${TRJ_ICO[ic]}</i><span>${k}<b>${v}</b></span></span>`).join('')}</div>`;
+}
+(function trjStyle() {
+  if (document.getElementById('trjStyle')) return;
+  const st = document.createElement('style'); st.id = 'trjStyle';
+  st.textContent = `.trjline{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:8px 0 4px;padding:8px 12px;background:#fff8ec;border:1px solid var(--line,#e7dccb);border-radius:12px;font-size:13px;color:var(--muted,#7b6a5c)}
+.trjp{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}.trjp i{display:inline-flex;width:16px;height:16px;color:var(--teal,#3f9c95)}.trjp i svg{width:16px;height:16px}
+.trjp b{color:var(--ink,#4a3528);font-weight:700;margin-left:4px}
+.dur .durtot{font-size:12px;color:var(--ink,#4a3528);font-weight:600}
+.bar .mid2{position:absolute;top:0;bottom:0;width:2px;background:#fff}
+.bar .stayzone{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,.45) 0 4px,transparent 4px 8px);pointer-events:none}`;
+  document.head.appendChild(st);
+})();
+
+// ---------------- panneau de voyage ----------------
+if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try { trjDecorate(box); } catch (e) { console.error(e); }
+  return r;
+})(renderVoyage);
+function trjDecorate(box) {
+  if (!box) return;
+  const t = S.trips[S.sel];
+  if (!t && plan.dest) {
+    const info = trjPlanInfo(plan.dest, plan.dur);
+    const anchor = box.querySelector('.dhead, .poihead');
+    if (anchor && !box.querySelector('.trjline')) anchor.insertAdjacentHTML('afterend', trjLineHTML([
+      ['road', 'Trajet aller-retour :', trjLen(info.road)],
+      ['stay', 'Séjour :', info.stay ? trjLen(info.stay) : 'aucun'],
+      ['home', 'Retour ', trjClock(info.back)],
+    ]));
+    box.querySelectorAll('.durs').forEach(g => {
+      const h = g.previousElementSibling; if (h && h.tagName === 'H3') h.textContent = 'Temps passé sur place';
+      g.querySelectorAll('.dur[data-dur]').forEach(b => {
+        const dd = trjDur(b.dataset.dur), tot = info.road + dd.ms;
+        b.innerHTML = `<b>${esc(dd.label)}</b><span>${dd.ms ? `+ ${trjLen(dd.ms)} sur place` : 'Sans s’arrêter'}</span><span class="durtot">Total ${trjLen(tot)}</span><em>${'★'.repeat(Math.round(dd.luck) + 1)}</em>`;
+        b.title = `${dd.ev} étapes · trajet ${trjLen(info.road)} + séjour ${dd.ms ? trjLen(dd.ms) : '0 min'}`;
+      });
+    });
+    const gs = box.querySelector('.gobar > div > span');
+    if (gs) gs.textContent = `${info.dd.ev} étapes · ${trjLen(info.total)} au total`;
+    return;
+  }
+  if (t && !t.done && t.out > 0) {
+    const prog = box.querySelector('.prog');
+    if (prog && !box.querySelector('.trjline')) prog.insertAdjacentHTML('afterend', trjLineHTML([
+      ['road', 'Trajet aller-retour :', trjLen(2 * t.out)],
+      ['stay', 'Séjour :', t.stay ? trjLen(t.stay) : 'aucun'],
+      ['home', 'Retour ', trjClock(Date.now() + (t.total - t.elapsed) / (typeof fast !== 'undefined' && fast ? 30 : 1))],
+    ]));
+    trjFixBars();
+  }
+}
+
+// ---------------- « Ce que tu peux trouver là-bas » (16_live.js) : durée totale ----------------
+if (typeof liveFindHTML === 'function') liveFindHTML = (orig => function (d) {
+  let h = orig.apply(this, arguments);
+  try {
+    const info = trjPlanInfo(d, plan.dur), clock = typeof LIVE_CLOCK !== 'undefined' ? LIVE_CLOCK : '';
+    h = h.replace(/<span class="cfdur"[^>]*>[\s\S]*?<\/svg>[^<]*<\/span>/, `<span class="cfdur" title="Trajet aller-retour ${trjLen(info.road)} + séjour ${info.stay ? trjLen(info.stay) : '0 min'}">${clock}${trjLen(info.total)} · ${info.dd.ev} étapes</span>`);
+  } catch (e) { console.error(e); }
+  return h;
+})(liveFindHTML);
+
+// ---------------- barres de progression : Aller / Sur place / Retour ----------------
+// 10_ui.js et 20_collection.js écrivent « Aller » avant 50 % et « Retour » après : avec un séjour, ce n'est plus vrai.
+// On corrige le texte juste après leur mise à jour (MutationObserver : avant l'affichage, sans clignotement).
+const TRJ_SHORT = { aller: 'Aller', sejour: 'Sur place', retour: 'Retour' };
+function trjTripOf(el) {
+  const host = el.closest('[data-k]');
+  const k = host && host.dataset.k && S.trips[host.dataset.k] ? host.dataset.k : S.sel;
+  return S.trips[k] ? S.trips[k] : null;
+}
+function trjSetText(el, txt) { if (el && el.textContent !== txt) el.textContent = txt; }
+function trjMarks(bar, t) {
+  if (!bar) return;
+  const { fa, fb } = tripPhases(t);
+  const mid = bar.querySelector('.mid'); if (mid && mid.style.left !== (fa * 100).toFixed(2) + '%') mid.style.left = (fa * 100).toFixed(2) + '%';
+  let z = bar.querySelector('.stayzone');
+  if (fb - fa > 0.005) {
+    if (!z) { z = document.createElement('span'); z.className = 'stayzone'; bar.appendChild(z); const m2 = document.createElement('span'); m2.className = 'mid2'; bar.appendChild(m2); }
+    const L = (fa * 100).toFixed(2) + '%', W = ((fb - fa) * 100).toFixed(2) + '%';
+    if (z.style.left !== L) { z.style.left = L; z.style.width = W; const m2 = bar.querySelector('.mid2'); if (m2) m2.style.left = (fb * 100).toFixed(2) + '%'; }
+  }
+}
+let trjBusy = false;
+function trjFixBars() {
+  if (trjBusy || typeof S === 'undefined' || !S.trips) return;
+  trjBusy = true;
+  try {
+    const ph = document.getElementById('phase'), ts = S.trips[S.sel];
+    if (ph && ts && !ts.done && ts.out > 0) {
+      const p = tripPhase(ts);
+      trjSetText(ph, p === 'aller' ? 'À l’aller' : p === 'sejour' ? `Sur place à ${ts.dest.name}` : 'Sur le chemin du retour');
+      const pb = document.getElementById('pbar'); if (pb) trjMarks(pb.parentElement, ts);
+    }
+    document.querySelectorAll('[id="ptime2"]').forEach(el => {
+      const t = trjTripOf(el); if (!t || t.done || !(t.out > 0)) return;
+      const m = /^(Aller|Retour|Sur place) · (.*)$/.exec(el.textContent); if (!m) return;
+      trjSetText(el, `${TRJ_SHORT[tripPhase(t)]} · ${m[2]}`);
+      const pb = el.parentElement && el.parentElement.querySelector('#pbar2');
+      if (pb && pb.parentElement.classList.contains('bar')) trjMarks(pb.parentElement, t);
+    });
+  } catch (e) { console.error(e); }
+  trjBusy = false;
+}
+try {
+  const trjObs = new MutationObserver(() => trjFixBars());
+  const startObs = () => { trjObs.observe(document.body, { childList: true, subtree: true, characterData: true }); trjFixBars(); };
+  if (document.body) startObs(); else addEventListener('DOMContentLoaded', startObs);
+} catch (e) { console.error(e); }
+
+// pour les tests et le tutoriel
+window.__trajet = { tripRoundMs, tripPlanMs, tripPhases, tripPhase, tripPos, trjLen, trjPlanInfo, homeObj, kmBetween, DURS, PLACES,
+  get S() { return S; }, get plan() { return plan; }, startTrip: () => startTrip(), tick: dt => tick(dt),
+  openSheet: (...a) => openSheet(...a), renderPanel: () => renderPanel(), closeSheet: () => (typeof closeSheet === 'function' ? closeSheet() : null) };
+
+// ================= VOYAGEURS DU MONDE (simulés) — v14 =================
+// Demande du joueur : « voir en temps réel des joueurs qui envoient leur familier en expédition ».
+// Pas encore de serveur : une population SIMULÉE, toujours présentée comme telle (badge « simulé » dans la fiche et dans le fil).
+// - Déterministe selon l'heure : la même population et les mêmes voyages pour un même instant (sauf le petit groupe de voisins,
+//   calculé autour de la maison du joueur). Pseudos et régions : ceux des vendeurs du marché simulé (MK_PEOPLE, MK_SUF de 22_marche.js).
+// - Mêmes règles de durée que le joueur : trajet aller-retour selon la distance (tripRoundMs) + séjour (DURS). Position : tripPos.
+// - Carte : petits portraits HTML peu nombreux (#vyLay, SOUS la surcouche #ov du joueur), qui évitent les zones réservées (poiBlocked)
+//   et les lieux affichés (couche poi-sym), + pointillé très léger vers leur destination (couche MapLibre 'vy-line', sous les routes).
+//   Mise à jour une fois par seconde, uniquement pour les voyageurs visibles ; au déplacement de la carte, simple reprojection.
+// - Fiche non bloquante (#vyCard) avec « Saluer » : un cœur, et une petite chance de recevoir un cadeau à son retour.
+// - Fil du monde : section du menu (renderMenu enveloppée), actualisée en temps réel. AUCUNE fenêtre spontanée.
+// Exposé : vyActive(now), vyFeed(n), vyOpenCard(id), vyCloseCard(), vySetHidden(bool), vyGoTo(id), window.__voyageurs.
+// Enveloppé : renderMenu (20_collection.js).
+// État : S.vy = { hide: false, hi: { idVoyage: { at, end, gift, pl, comp, dest, tags, done } } }.
+
+// ---------- hasard déterministe ----------
+const vyHash = s => { s = String(s); let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+function vyRng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const vyPick = (r, a) => a[Math.floor(r() * a.length)];
+function vyWPick(r, list, wf) {
+  const ws = list.map(wf), tot = ws.reduce((a, b) => a + b, 0);
+  let x = r() * tot;
+  for (let i = 0; i < list.length; i++) { x -= ws[i]; if (x <= 0) return list[i]; }
+  return list[list.length - 1];
+}
+// distance rapide (équirectangulaire) pour les tris ; la vraie (kmExact) pour la durée
+const vyKmFast = (a, b) => { const k = Math.cos((a.lat + b.lat) * Math.PI / 360), dx = (a.lon - b.lon) * k, dy = a.lat - b.lat; return Math.sqrt(dx * dx + dy * dy) * 111.2; };
+const vyKm = (a, b) => (typeof kmExact === 'function' ? kmExact(a, b) : d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]) * 6371);
+
+// ---------- français : « à Kyoto », « au Havre », « d’Annecy » ----------
+function vyTo(n) {
+  if (/^Le /.test(n)) return 'au ' + n.slice(3);
+  if (/^Les /.test(n)) return 'aux ' + n.slice(4);
+  if (/^Lac /.test(n)) return 'au l' + n.slice(1);
+  return 'à ' + n;
+}
+function vyDe(n) {
+  if (/^Le /.test(n)) return 'du ' + n.slice(3);
+  if (/^Les /.test(n)) return 'des ' + n.slice(4);
+  if (/^Lac /.test(n)) return 'du l' + n.slice(1);
+  return /^[aeiouyâàéèêëîïôûAEIOUYÂÀÉÈÊÎÏÔÛ]/.test(n) ? 'd’' + n : 'de ' + n;
+}
+// lieux génériques du quotidien : [catégorie (butin), nom, « vers … », « à … », « de … »]
+const VY_SPOTS = [
+  ['parc', 'le parc', 'au parc', 'du parc'], ['boulangerie', 'la boulangerie', 'à la boulangerie', 'de la boulangerie'],
+  ['marche', 'le marché', 'au marché', 'du marché'], ['bibliotheque', 'la bibliothèque', 'à la bibliothèque', 'de la bibliothèque'],
+  ['cafe', 'le café du coin', 'au café du coin', 'du café du coin'], ['fleuriste', 'le fleuriste', 'chez le fleuriste', 'de chez le fleuriste'],
+  ['jardin', 'le jardin public', 'au jardin public', 'du jardin public'], ['librairie', 'la librairie', 'à la librairie', 'de la librairie'],
+  ['musee', 'le musée', 'au musée', 'du musée'], ['glacier', 'le glacier', 'chez le glacier', 'de chez le glacier'],
+  ['fromagerie', 'la fromagerie', 'à la fromagerie', 'de la fromagerie'], ['etang', 'l’étang', 'à l’étang', 'de l’étang'],
+  ['chocolaterie', 'la chocolaterie', 'à la chocolaterie', 'de la chocolaterie'], ['piscine', 'la piscine', 'à la piscine', 'de la piscine'],
+];
+const vyDestTo = d => d.to || vyTo(d.name);
+const vyDestDe = d => d.de || vyDe(d.name);
+
+// ---------- villes (GEO) ----------
+let VY_CITIES = null;
+function vyCities() {
+  if (!VY_CITIES) VY_CITIES = (typeof GEO !== 'undefined' && GEO.p ? GEO.p : []).filter(c => c[3] <= 8).map(([name, lon, lat, r]) => ({ name, lon, lat, r }));
+  return VY_CITIES;
+}
+const VY_REGC = {};
+function vyRegCities(reg) {
+  if (VY_REGC[reg]) return VY_REGC[reg];
+  const R = RG[reg], a = { lon: R.anchor[0], lat: R.anchor[1] }, rad = R.g === 0 ? 240 : R.g === 1 ? 750 : 1500, maxR = R.g <= 1 ? 7 : 6;
+  const list = vyCities().filter(c => c.r <= maxR && vyKmFast(a, c) < rad);
+  return (VY_REGC[reg] = list);
+}
+function vyHomeIn(reg, r) {
+  const R = RG[reg], list = vyRegCities(reg);
+  for (let t = 0; t < 7 && list.length; t++) {
+    const c = vyWPick(r, list, c => 1 / Math.pow(1 + c.r, 1.4));
+    let ok = true;
+    try { if (typeof regionAt === 'function') ok = regionAt(c.lon, c.lat).id === reg; } catch (e) {}
+    if (ok) return { name: c.name, lon: c.lon, lat: c.lat };
+  }
+  return { name: R.anchor[2], lon: R.anchor[0], lat: R.anchor[1] };
+}
+// un point à d km d'un autre (cap aléatoire)
+function vyOffset(o, r, d0, d1) {
+  const a = r() * Math.PI * 2, d = d0 + (d1 - d0) * Math.sqrt(r());
+  return { lon: o.lon + Math.cos(a) * d / (111.2 * Math.max(0.2, Math.cos(o.lat * Math.PI / 180))), lat: o.lat + Math.sin(a) * d / 111.2 };
+}
+
+// ---------- la population ----------
+const VY_WORLD = 260, VY_NEAR = 28;
+const VY_STYLE = {
+  // P : longueur d'un créneau (un voyage au plus par créneau), go : chance de partir pendant ce créneau
+  local: { P: [45, 110], go: 0.35, durs: [['eclair', 3], ['court', 5], ['moyen', 2]] },
+  voisin: { P: [60, 140], go: 0.85, durs: [['court', 3], ['moyen', 5], ['long', 1]] },
+  region: { P: [150, 300], go: 0.72, durs: [['court', 3], ['moyen', 4], ['long', 2]] },
+  monde: { P: [540, 960], go: 0.62, durs: [['moyen', 3], ['long', 4], ['expe', 2]] },
+};
+let VY = null;
+function vySpecies(r, reg) {
+  const ids = typeof SP_IDS !== 'undefined' ? SP_IDS : Object.keys(SPECIES);
+  const tags = (RG[reg] && RG[reg].anchor[3]) || [];
+  const hab = sp => (typeof SP_INFO !== 'undefined' && SP_INFO[sp] && SP_INFO[sp].hab) || [];
+  const local = ids.filter(sp => hab(sp).some(t => tags.includes(t)));
+  if (local.length && r() < 0.45) return vyPick(r, local);
+  return vyWPick(r, ids, sp => ['panda', 'capy', 'axo'].includes(sp) ? 2 : 1);
+}
+function vyGenes(sp, r) {
+  // randomGenes tire au hasard : on lui prête notre hasard déterministe le temps de l'appel
+  const M = Math.random; let g = null;
+  Math.random = r;
+  try { g = typeof randomGenes === 'function' ? randomGenes(sp, 0.7) : null; } catch (e) { g = null; } finally { Math.random = M; }
+  return g || (SPECIES[sp] ? { ...SPECIES[sp].defGenes } : null);
+}
+function vyDests(home, style, r, close) {
+  const out = [];
+  if (style === 'local' || style === 'voisin') {
+    const spots = VY_SPOTS.slice();
+    for (let i = 0; i < 5; i++) {
+      const s = spots.splice(Math.floor(r() * spots.length), 1)[0], p = style === 'voisin' ? vyOffset(home, r, close ? 0.25 : 0.4, close ? 1.1 : 2.6) : vyOffset(home, r, 0.5, 4.5);
+      out.push({ name: s[1], to: s[2], de: s[3], tags: [s[0]], lon: p.lon, lat: p.lat, spot: 1 });
+    }
+    const near = vyCities().filter(c => { const d = vyKmFast(home, c); return d > 4 && d < 28 && c.name !== home.name; });
+    if (near.length) { const c = vyPick(r, near); out.push({ name: c.name, tags: ['ville'], lon: c.lon, lat: c.lat }); }
+  } else {
+    const [k0, k1] = style === 'region' ? [35, 650] : [900, 16000];
+    const pl = (typeof PLACES !== 'undefined' ? PLACES : []).filter(p => { const d = vyKmFast(home, p); return d > k0 && d < k1; });
+    const ci = vyCities().filter(c => c.r <= (style === 'region' ? 6 : 3) && c.name !== home.name && (d => d > k0 && d < k1)(vyKmFast(home, c)));
+    for (let i = 0; i < 6; i++) {
+      if (pl.length && (r() < 0.45 || !ci.length)) { const p = vyPick(r, pl); if (!out.some(d => d.name === p.name)) out.push({ name: p.name, tags: (p.tags || ['ville']).slice(), lon: p.lon, lat: p.lat }); }
+      else if (ci.length) { const c = vyPick(r, ci); if (!out.some(d => d.name === c.name)) out.push({ name: c.name, tags: ['ville'], lon: c.lon, lat: c.lat }); }
+    }
+  }
+  for (const d of out) d.km = vyKm(home, d);
+  return out;
+}
+function vyMkPlayer(i, name, reg, home, style, r, near) {
+  const sp = vySpecies(r, reg), genes = vyGenes(sp, r);
+  const names = (typeof SP_INFO !== 'undefined' && SP_INFO[sp] && SP_INFO[sp].names) || ['Petit'];
+  const St = VY_STYLE[style], P = (St.P[0] + (St.P[1] - St.P[0]) * r()) * 60e3;
+  return { i, name, reg, home, style, near, sp, genes, comp: vyPick(r, names), fem: r() < 0.5, P, off: r() * P, go: St.go, seed: vyHash(name + i), dests: vyDests(home, style, r, near && vyKmFast(home, homeObj()) < 1.2) };
+}
+function vyBuild() {
+  const key = (S && S.home) || '';
+  if (VY && VY.key === key) return VY;
+  const t0 = performance.now();
+  const people = (typeof MK_PEOPLE !== 'undefined' ? MK_PEOPLE : [['Lina', 'ara']]).filter(([, rg]) => typeof RG !== 'undefined' && RG[rg]);
+  const sufs = (typeof MK_SUF !== 'undefined' ? MK_SUF : ['']).concat(['_mochi', '.étoile', '_rêve', '23', '.pomme', '_nuage', 'Kawa', '.miel', '_balade', '88', '.thé', '_pistache']);
+  const used = new Set(), players = [];
+  const uname = (r, n) => { for (let k = 0; k < 24; k++) { const s = n + vyPick(r, sufs); if (!used.has(s)) { used.add(s); return s; } } const s = n + (100 + Math.floor(r() * 900)); used.add(s); return s; };
+  // le monde : plus de voyageurs en France, puis en Europe
+  const wt = p => [3.6, 1.7, 0.75, 0.75, 0.8][RG[p[1]].g] || 0.8;
+  for (let i = 0; i < VY_WORLD; i++) {
+    const r = vyRng(vyHash('vy-monde:' + i));
+    const x = r(), style = x < 0.24 ? 'local' : x < 0.6 ? 'region' : 'monde';
+    // les grands voyageurs viennent de partout : leurs trajets se répartissent sur tout le globe
+    const [n, reg] = vyWPick(r, people, style === 'monde' ? (p => (RG[p[1]].g === 0 ? 1.3 : 1)) : wt);
+    players.push(vyMkPlayer(i, uname(r, n), reg, vyHomeIn(reg, r), style, r, false));
+  }
+  // quelques voisins, autour de la maison du joueur (ses lieux du quotidien)
+  const h = homeObj();
+  let hreg = 'idf'; try { if (typeof regionAt === 'function') hreg = regionAt(h.lon, h.lat).id; } catch (e) {}
+  const loc = people.filter(p => p[1] === hreg), fr = people.filter(p => RG[p[1]].g === 0);
+  for (let j = 0; j < VY_NEAR; j++) {
+    const r = vyRng(vyHash('vy-voisin:' + key + ':' + j));
+    const [n] = loc.length && r() < 0.4 ? vyPick(r, loc) : vyPick(r, fr.length ? fr : people);
+    const p = j < 9 ? vyOffset(h, r, 0.15, 1) : vyOffset(h, r, 0.4, 2.6); // les plus proches : dans le quartier
+    players.push(vyMkPlayer(VY_WORLD + j, uname(r, n), hreg, { name: h.name, lon: p.lon, lat: p.lat }, 'voisin', r, true));
+  }
+  VY = { key, players, ms: +(performance.now() - t0).toFixed(1) };
+  VY_TC.clear();
+  return VY;
+}
+
+// ---------- les voyages : un au plus par créneau, mêmes durées que le joueur ----------
+const VY_TC = new Map();
+const VY_ORDER = ['eclair', 'court', 'moyen', 'long', 'expe'];
+function vyDurMs(key) { const d = (typeof DURS !== 'undefined' ? DURS : []).find(x => x.key === key); return d ? d.ms : 0; }
+function vyTrip(p, k) {
+  const id = p.i + ':' + k;
+  if (VY_TC.has(id)) return VY_TC.get(id);
+  const r = vyRng(vyHash(id + '|' + p.seed + '|' + VY.key));
+  let t = null;
+  if (r() < p.go && p.dests.length) {
+    const d = vyPick(r, p.dests), road = typeof tripRoundMs === 'function' ? tripRoundMs(d.km) : 120e3, out = Math.round(road / 2);
+    let di = VY_ORDER.indexOf(vyWPick(r, VY_STYLE[p.style].durs, x => x[1])[0]);
+    while (di > 0 && 2 * out + vyDurMs(VY_ORDER[di]) > p.P * 0.94) di--;
+    const stay = vyDurMs(VY_ORDER[di]), total = 2 * out + stay;
+    if (total <= p.P * 0.94) {
+      const start = k * p.P - p.off + r() * (p.P - total), x = r();
+      // ce qu'il rapporte (pour le fil) : rien de spécial, un objet rare / épique / légendaire, ou un œuf
+      const find = x < 0.5 ? 0 : x < 0.72 ? 2 : x < 0.83 ? 3 : x < 0.85 ? 4 : x < 0.91 ? 'oeuf' : 1;
+      t = { id, p, from: p.home, dest: d, km: d.km, out, stay, total, dur: VY_ORDER[di], start, end: start + total, find, elapsed: 0 };
+    }
+  }
+  if (VY_TC.size > 5000) VY_TC.clear();
+  VY_TC.set(id, t);
+  return t;
+}
+const vySlot = (p, now) => Math.floor((now + p.off) / p.P);
+function vyActive(now = Date.now()) {
+  if (!vyReady()) return [];
+  const out = [];
+  for (const p of vyBuild().players) {
+    const t = vyTrip(p, vySlot(p, now));
+    if (t && now >= t.start && now < t.end) { t.elapsed = now - t.start; out.push(t); }
+  }
+  return out;
+}
+function vyById(id) {
+  if (!id || !vyReady()) return null;
+  const [i, k] = String(id).split(':').map(Number), p = vyBuild().players[i];
+  return p ? vyTrip(p, k) : null;
+}
+function vyPhase(t) {
+  if (typeof tripPhase === 'function') return tripPhase(t);
+  const f = t.elapsed / t.total; return f < t.out / t.total ? 'aller' : f < (t.out + t.stay) / t.total ? 'sejour' : 'retour';
+}
+function vyPos(t, now = Date.now()) {
+  t.elapsed = Math.max(0, Math.min(t.total, now - t.start));
+  if (typeof tripPos === 'function') return tripPos(t);
+  return [t.dest.lon, t.dest.lat];
+}
+function vyReady() { return typeof S !== 'undefined' && S && typeof RG !== 'undefined' && typeof homeObj === 'function' && typeof SPECIES !== 'undefined'; }
+
+// ---------- le fil du monde ----------
+const vyE = t => (t.p.fem ? 'e' : '');
+const vyOf = n => (/^[aeiouyhâàéèêëîïôûAEIOUYHÂÀÉÈÊÎÏÔÛ]/.test(n) ? 'd’' : 'de ') + n; // « de Lina », « d’Elio », « d’Hugo »
+function vyFeed(n = 8, now = Date.now()) {
+  if (!vyReady()) return [];
+  const H = 2 * 3600e3, ev = [];
+  for (const p of vyBuild().players) {
+    const k = vySlot(p, now);
+    // les petites sorties du quotidien à l'autre bout du monde : une sur quatre seulement (le fil reste varié)
+    if (p.style === 'local' && vyHash(p.name) % 4) continue;
+    for (const kk of [k - 2, k - 1, k]) {
+      const t = vyTrip(p, kk); if (!t) continue;
+      if (t.start <= now && t.start > now - H) ev.push({ at: t.start, kind: 'go', t });
+      const arr = t.start + t.out;
+      if (t.stay >= 30 * 60e3 && t.km > 30 && arr <= now && arr > now - H) ev.push({ at: arr, kind: 'arr', t });
+      if (t.end <= now && t.end > now - H) ev.push({ at: t.end, kind: 'back', t });
+    }
+  }
+  ev.sort((a, b) => b.at - a.at);
+  return ev.slice(0, n);
+}
+function vyFeedText(e) {
+  const t = e.t, p = t.p, P = `<b>${esc(p.name)}</b>`, C = esc(p.comp), D = esc(vyDestTo(t.dest)), F = esc(vyDestDe(t.dest));
+  if (e.kind === 'go') return t.dest.spot ? `${P} a emmené ${C} ${D}` : `${P} a envoyé ${C} ${D}`;
+  if (e.kind === 'arr') return `${C}, le familier ${/^d’/.test(vyOf(p.name)) ? 'd’' : 'de '}${P}, est arrivé${vyE(t)} ${D}`;
+  const f = t.find;
+  const what = f === 'oeuf' ? ' avec un œuf mystère !' : f >= 2 ? ` avec un objet ${RARITY[f].toLowerCase()} !` : f === 1 ? ' avec plein de souvenirs.' : '.';
+  return `${P} est de retour ${F}${what}`;
+}
+function vyAgo(ms) {
+  const m = Math.floor(ms / 60e3);
+  if (m < 1) return 'à l’instant';
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.floor(m / 60); return `il y a ${h} h${m % 60 >= 10 ? ' ' + String(m % 60).padStart(2, '0') : ''}`;
+}
+
+// ---------- portraits ----------
+const VY_PORT = new Map();
+const vyLook = p => ({ sp: p.sp, genes: p.genes, hybrid: null });
+function vyPortrait(p) {
+  let u = VY_PORT.get(p.i);
+  if (!u) {
+    let svg = '';
+    try { svg = drawChar(vyLook(p), {}, 'content', 'vy' + p.i); } catch (e) { svg = ''; }
+    // recadré sur la tête : petit portrait rond lisible
+    svg = svg.replace('viewBox="0 0 320 350"', 'viewBox="48 16 224 224" width="96" height="96"');
+    u = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    if (VY_PORT.size > 120) VY_PORT.clear();
+    VY_PORT.set(p.i, u);
+  }
+  return u;
+}
+const VY_COL = { panda: '#e0884a', capy: '#c99a6a', axo: '#f08aa6', renard: '#8fb6d8', fennec: '#e3b06b', tanuki: '#a8826a', paresseux: '#b39a7a', lemur: '#9a9aa8', phoque: '#8fb0c8', quokka: '#c9a07a' };
+
+// ---------- état sauvegardé ----------
+function vyState() {
+  if (!S.vy || typeof S.vy !== 'object') S.vy = { hide: false, hi: {} };
+  if (typeof S.vy.hide !== 'boolean') S.vy.hide = false;
+  if (!S.vy.hi || typeof S.vy.hi !== 'object') S.vy.hi = {};
+  return S.vy;
+}
+function vySetHidden(b) { vyState().hide = !!b; save(); vyUpdate(true); if (b) vyCloseCard(); }
+
+// ---------- styles ----------
+(function vyCSS() {
+  if (document.getElementById('vyCSS')) return;
+  const st = document.createElement('style'); st.id = 'vyCSS';
+  st.textContent = `
+#vyLay{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}
+body.firstrun #vyLay,body.firstrun #vyCard{display:none!important}
+.vy{position:absolute;left:0;top:0;will-change:transform;pointer-events:auto;cursor:pointer;opacity:0;transition:opacity .6s ease}
+.vy.in{opacity:1}
+.vy::before{content:"";position:absolute;left:-19px;top:-19px;width:38px;height:38px;border-radius:50%}
+.vy .vyb{position:absolute;left:-12px;top:-12px;width:24px;height:24px;border-radius:50%;background:#fffaf0;border:2px solid var(--vc,#c9a07a);box-shadow:0 0 0 1.5px rgba(255,250,240,.9),0 2px 3px rgba(74,53,40,.28);overflow:hidden;display:block;transition:transform .2s}
+.vy .vyb img{display:block;width:100%;height:100%}
+.vy.go .vyb{animation:vybob 1.1s ease-in-out infinite alternate}
+.vy.sej .vyb::after{content:"";position:absolute;right:1px;top:1px;width:5px;height:5px;border-radius:50%;background:#f6c445;box-shadow:0 0 0 1px #fffaf0}
+.vy:hover .vyb{transform:scale(1.15)}
+.vy.sel{z-index:3}
+.vy.sel .vyb{transform:scale(1.3);border-color:var(--ink);animation:none}
+#vyLay[data-z="far"] .vy .vyb{left:-10px;top:-10px;width:20px;height:20px;border-width:1.8px}
+@keyframes vybob{from{transform:translateY(0)}to{transform:translateY(-2px)}}
+.vyheart{position:absolute;left:0;top:0;width:22px;height:22px;margin:-11px 0 0 -11px;pointer-events:none;animation:vyheart 1.3s ease-out forwards;z-index:4}
+.vyheart svg{width:100%;height:100%}
+@keyframes vyheart{0%{opacity:0;transform:var(--p) translateY(0) scale(.4)}20%{opacity:1;transform:var(--p) translateY(-10px) scale(1.15)}100%{opacity:0;transform:var(--p) translateY(-46px) scale(.9)}}
+#vyCard{position:absolute;left:50%;transform:translateX(-50%);width:min(400px,calc(100% - 24px));z-index:5;display:grid;grid-template-columns:62px 1fr;gap:4px 11px;align-items:center;background:var(--paper);border:2.5px solid var(--ink);border-radius:18px;box-shadow:0 4px 0 rgba(74,53,40,.4);padding:9px 12px 8px 9px;font-family:var(--body);color:var(--ink);animation:vyin .28s cubic-bezier(.2,1.4,.4,1)}
+@keyframes vyin{from{opacity:0;transform:translateX(-50%) translateY(10px)}}
+#vyCard .vyp{grid-row:span 2;width:62px;height:62px;border-radius:50%;background:radial-gradient(circle at 50% 60%,var(--vt,#ffe9d6) 0 60%,#fff6e8 61%);border:2px solid var(--vc,#c9a07a);overflow:hidden}
+#vyCard .vyp svg{width:100%;height:100%;display:block}
+#vyCard .vyh{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;padding-right:22px;min-width:0}
+#vyCard .vyh b{font:800 17px/1.1 var(--display)}
+#vyCard .vyh .vyo{font:700 14px var(--display);color:var(--ink2)}
+#vyCard .vyg{display:block;font-size:12.5px;color:var(--muted);line-height:1.25}
+#vyCard .vyw{grid-column:1/-1;font-size:13.5px;line-height:1.3;margin-top:2px}
+#vyCard .vyw b{font-weight:700}
+#vyCard .vybar{grid-column:1/-1;height:6px;border-radius:99px;background:#efe2c8;overflow:hidden;position:relative}
+#vyCard .vybar i{position:absolute;left:0;top:0;bottom:0;background:var(--vc,#c9a07a);border-radius:99px;transition:width 1s linear}
+#vyCard .vyf{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:3px}
+#vyCard .vysim{display:inline-flex;align-items:center;gap:5px;font:700 11px var(--display);color:var(--muted);letter-spacing:.02em}
+#vyCard .vysim i{font-style:normal;background:#efe6d6;border:1px solid var(--line);color:var(--ink2);border-radius:99px;padding:0 6px;text-transform:uppercase;font-size:10px;letter-spacing:.06em}
+.vyhi{display:inline-flex;align-items:center;gap:6px;border:2.5px solid var(--ink);border-radius:999px;background:var(--pink);color:#fff;font:800 14px var(--display);padding:4px 13px 3px 10px;box-shadow:0 3px 0 rgba(74,53,40,.4);cursor:pointer;text-shadow:0 1.5px 0 var(--pinkD)}
+.vyhi svg{width:16px;height:16px}
+.vyhi:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(74,53,40,.4)}
+.vyhi[disabled]{background:#fff;color:var(--pinkD);text-shadow:none;cursor:default;box-shadow:0 2px 0 rgba(74,53,40,.25)}
+#vyCard .vyx{position:absolute;right:6px;top:6px;width:28px;height:28px;border:0;background:none;color:var(--ink2);cursor:pointer;border-radius:50%;display:flex;align-items:center;justify-content:center}
+#vyCard .vyx:hover{background:#f3e6cf}
+#vyCard .vyx svg{width:16px;height:16px}
+.msec.vysec .vybadge,.vybadge{font:800 10px var(--display);text-transform:uppercase;letter-spacing:.07em;background:#efe6d6;color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:1px 7px 0;margin-left:6px;vertical-align:2px}
+.vynow{font-size:13px;color:var(--ink2);margin:0 0 6px;line-height:1.35}
+.vynow b{color:var(--ink)}
+.vyfeed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.vyfeed li{display:flex;align-items:center;gap:9px;padding:5px 6px;border-radius:12px;font-size:13.5px;line-height:1.3;color:var(--ink)}
+.vyfeed li.go{cursor:pointer}
+.vyfeed li.go:hover{background:#fbf0dc}
+.vyfeed li.fresh{animation:vyfresh 1.2s ease}
+@keyframes vyfresh{from{background:#fff1c9}}
+.vyfeed .vyfp{flex:none;width:30px;height:30px;border-radius:50%;border:1.8px solid var(--vc,#c9a07a);background:#fffaf0;overflow:hidden}
+.vyfeed .vyfp img{width:100%;height:100%;display:block}
+.vyfeed .vyft{flex:1;min-width:0}
+.vyfeed .vyft small{display:block;font-size:11.5px;color:var(--muted)}
+.vynote{font-size:11.5px;color:var(--muted);margin:6px 2px 0;line-height:1.35}
+.vysw{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:99px;background:#e6d8bf;border:2px solid var(--ink);position:relative;cursor:pointer;transition:background .2s}
+.vysw::after{content:"";position:absolute;left:2px;top:2px;width:20px;height:20px;border-radius:50%;background:#fff;border:2px solid var(--ink);box-sizing:border-box;transition:transform .2s}
+.vysw:checked{background:var(--green)}
+.vysw:checked::after{transform:translateX(18px)}
+@media (prefers-reduced-motion:reduce){.vy.go .vyb,.vyheart,#vyCard{animation:none}}
+`;
+  document.head.appendChild(st);
+})();
+
+// ---------- la couche sur la carte ----------
+let vyLay = null, vyInit = false, vyEls = new Map(), vySel = null, vyLineSig = '', vyLast = 0, vyStats = { active: 0, near: 0, cand: 0, shown: 0, ms: 0, mode: '' };
+const VY_HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21 C5 15.5 2.5 12.5 2.5 8.6 C2.5 5.6 4.8 3.5 7.5 3.5 C9.4 3.5 11 4.6 12 6.2 C13 4.6 14.6 3.5 16.5 3.5 C19.2 3.5 21.5 5.6 21.5 8.6 C21.5 12.5 19 15.5 12 21Z" fill="currentColor" stroke="#4a3528" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+function vyMapOK() { return typeof map !== 'undefined' && map && typeof mapReady !== 'undefined' && mapReady; }
+function vySetup() {
+  if (vyInit || !vyMapOK()) return;
+  const ov = $('ov'); if (!ov || !ov.parentNode) return;
+  vyInit = true;
+  vyLay = document.createElement('div'); vyLay.id = 'vyLay'; vyLay.setAttribute('aria-label', 'Voyageurs simulés');
+  ov.parentNode.insertBefore(vyLay, ov); // sous la surcouche du joueur : ses marqueurs restent toujours devant
+  vyLay.addEventListener('click', ev => {
+    const m = ev.target.closest('.vy'); if (!m) return;
+    ev.stopPropagation();
+    if (vySel === m.dataset.vy) vyCloseCard(); else vyOpenCard(m.dataset.vy);
+  });
+  try {
+    map.addSource('vy', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+    map.addLayer({
+      id: 'vy-line', type: 'line', source: 'vy', layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#7a5a44', 'line-opacity': ['case', ['==', ['get', 's'], 1], 0.6, 0.26], 'line-width': ['case', ['==', ['get', 's'], 1], 2, 1.3], 'line-dasharray': [1.2, 2.8] },
+    }, map.getLayer('route-shadow') ? 'route-shadow' : undefined);
+  } catch (e) { console.error(e); }
+  map.on('move', vyPlace);
+  map.on('moveend', () => vyUpdate(true));
+  map.on('dragstart', () => vyCloseCard());
+  map.on('click', () => vyCloseCard());
+  vyUpdate(true);
+}
+// règles d'affichage selon le zoom : distance minimale du voyage et nombre maximal de portraits
+function vyMode(z) {
+  if (z < 3.6) return { id: 'monde', minKm: 700, n: 9 };
+  if (z < 6.6) return { id: 'pays', minKm: 60, n: 10 };
+  if (z < 10) return { id: 'region', minKm: 3, n: 7 };
+  if (z < 14) return { id: 'ville', minKm: 0, n: 3 };
+  return { id: 'quartier', minKm: 0, n: 2 };
+}
+// zones déjà prises : interface, marqueurs du joueur (poiBlocked), lieux affichés (poi-sym), fiche ouverte
+function vyReserved(W, H) {
+  let rects = [];
+  try { if (typeof poiBlocked === 'function') rects = poiBlocked(W, H).slice(); } catch (e) { rects = []; }
+  const ct = map.getContainer().getBoundingClientRect();
+  for (const id of ['vyCard', 'liveBar', 'toast']) { const el = $(id); if (el && !el.hidden && el.offsetParent !== null) { const r = el.getBoundingClientRect(); if (r.width) rects.push([r.left - ct.left - 4, r.top - ct.top - 4, r.right - ct.left + 4, r.bottom - ct.top + 4]); } }
+  try {
+    if (map.getLayer('poi-sym')) for (const f of map.queryRenderedFeatures({ layers: ['poi-sym'] })) {
+      const q = map.project(f.geometry.coordinates), hw = +f.properties.hw || 15;
+      rects.push([q.x - hw - 2, q.y - hw - 2, q.x + hw + 2 + (+f.properties.lb ? 120 : 0), q.y + hw + 2]);
+    }
+  } catch (e) {}
+  return rects;
+}
+function vyUpdate(force) {
+  if (!vyInit) return;
+  const now = Date.now();
+  if (force !== true && now - vyLast < 600) return;
+  vyLast = now;
+  const t0 = performance.now();
+  const off = vyState().hide || document.body.classList.contains('firstrun');
+  if (off) { for (const el of vyEls.values()) el.remove(); vyEls.clear(); vySetLines([]); vyStats.shown = 0; return; }
+  const ct = map.getContainer(), W = ct.clientWidth, H = ct.clientHeight, z = map.getZoom(), M = vyMode(z);
+  vyLay.dataset.z = M.id === 'monde' ? 'far' : '';
+  const act = vyActive(now), area = Math.max(0.7, (W * H) / (390 * 700));
+  const budget = Math.max(1, Math.round(M.n * Math.min(2, Math.pow(area, 0.5))));
+  const h = homeObj();
+  // candidats : à l'écran, assez longs pour ce zoom
+  const cands = [];
+  for (const t of act) {
+    const near = t.p.near;
+    if (t.km < M.minKm && !(t.p.style === 'voisin' && M.id !== 'monde' && M.id !== 'pays' && near)) continue;
+    if (M.id === 'monde' && t.p.style !== 'monde') continue;
+    const pos = vyPos(t, now), q = map.project(pos);
+    if (q.x < 16 || q.y < 16 || q.x > W - 16 || q.y > H - 16) continue;
+    // stabilité : ceux déjà affichés d'abord, puis les voisins du joueur, puis un ordre fixe
+    const pri = (vyEls.has(t.id) ? 0 : 1) * 10 + (t.id === vySel ? -20 : 0) + (near ? 0 : 1) * (M.id === 'ville' || M.id === 'quartier' ? 4 : 0) + (vyHash(t.id) % 1000) / 1000;
+    cands.push({ t, pos, x: q.x, y: q.y, pri });
+  }
+  cands.sort((a, b) => a.pri - b.pri);
+  // place libre : grille simple de rectangles
+  const res = vyReserved(W, H), mine = [];
+  const hit = r => res.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]) || mine.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]);
+  const R = M.id === 'monde' ? 11 : 14, gap = M.id === 'monde' ? 12 : 18;
+  const keep = []; let rej = 0;
+  for (const c of cands) {
+    if (keep.length >= budget && c.t.id !== vySel) continue;
+    const r = [c.x - R, c.y - R, c.x + R, c.y + R];
+    if (hit(r) && c.t.id !== vySel) { rej++; continue; }
+    mine.push([c.x - R - gap, c.y - R - gap, c.x + R + gap, c.y + R + gap]);
+    keep.push(c);
+  }
+  // DOM : on garde, on crée, on retire
+  const ids = new Set(keep.map(c => c.t.id));
+  for (const [id, el] of vyEls) if (!ids.has(id)) { el.remove(); vyEls.delete(id); }
+  for (const c of keep) {
+    let el = vyEls.get(c.t.id);
+    const ph = vyPhase(c.t);
+    if (!el) {
+      el = document.createElement('div'); el.className = 'vy'; el.dataset.vy = c.t.id;
+      el.style.setProperty('--vc', VY_COL[c.t.p.sp] || '#c9a07a');
+      el.setAttribute('role', 'button'); el.setAttribute('aria-label', `${c.t.p.comp}, le familier ${vyOf(c.t.p.name)} (voyageur simulé)`);
+      el.innerHTML = `<i class="vyb"><img alt="" src="${vyPortrait(c.t.p)}"></i>`;
+      vyLay.appendChild(el); vyEls.set(c.t.id, el);
+      requestAnimationFrame(() => el.classList.add('in'));
+    }
+    el._pos = c.pos;
+    el.classList.toggle('go', ph !== 'sejour'); el.classList.toggle('sej', ph === 'sejour'); el.classList.toggle('sel', c.t.id === vySel);
+    el.style.transform = `translate(${c.x.toFixed(1)}px,${c.y.toFixed(1)}px)`;
+  }
+  vySetLines(keep, h);
+  vyStats = { active: act.length, near: act.filter(t => t.p.near).length, cand: cands.length, shown: keep.length, ms: +(performance.now() - t0).toFixed(2), mode: M.id, budget, rej, res: res.length };
+  if (vySel) vyCardRefresh();
+}
+// au déplacement de la carte : simple reprojection des portraits affichés
+function vyPlace() {
+  if (!vyEls.size) return;
+  for (const el of vyEls.values()) {
+    if (!el._pos) continue;
+    const q = map.project(el._pos);
+    el.style.transform = `translate(${q.x.toFixed(1)}px,${q.y.toFixed(1)}px)`;
+  }
+  const c = $('vyCard'); void c;
+}
+// pointillé très léger : de la position actuelle vers la destination (ou vers la maison au retour)
+function vySetLines(keep, h) {
+  if (!map.getSource('vy')) return;
+  const feats = [];
+  for (const c of keep) {
+    const t = c.t, ph = vyPhase(t); if (ph === 'sejour') continue;
+    const to = ph === 'aller' ? t.dest : t.from;
+    const n = t.km > 300 ? 28 : t.km > 40 ? 8 : 2, it = d3.geoInterpolate(c.pos, [to.lon, to.lat]);
+    const coords = []; for (let i = 0; i <= n; i++) coords.push(it(i / n));
+    feats.push({ type: 'Feature', properties: { s: t.id === vySel ? 1 : 0 }, geometry: { type: 'LineString', coordinates: coords } });
+  }
+  const sig = keep.map(c => c.t.id + (c.t.id === vySel ? '*' : '') + vyPhase(c.t)).join(';') + '|' + Math.floor(Date.now() / 3000);
+  if (sig === vyLineSig) return;
+  vyLineSig = sig;
+  map.getSource('vy').setData({ type: 'FeatureCollection', features: feats });
+}
+
+// ---------- la fiche d'un voyageur (non bloquante) ----------
+function vyWhere(t) {
+  const ph = vyPhase(t), home = t.from.name;
+  const clock = typeof trjClock === 'function' ? trjClock(t.end) : '';
+  const back = clock ? ` · retour ${clock}` : '';
+  if (ph === 'aller') return `part ${esc(vyDe(home))} vers <b>${esc(t.dest.name)}</b>${back}`;
+  if (ph === 'sejour') return t.dest.spot ? `se promène <b>${esc(vyDestTo(t.dest))}</b>${back}` : `explore <b>${esc(t.dest.name)}</b>${back}`;
+  return `rentre ${esc(vyDestDe(t.dest))} vers <b>${esc(home)}</b>${back}`;
+}
+function vyCardHTML(t) {
+  const p = t.p, hi = vyState().hi[t.id];
+  const gl = typeof geneLabel === 'function' ? geneLabel(p.genes, p.sp) : '';
+  const sp = typeof spName === 'function' ? spName(p.sp) : (SPECIES[p.sp] || {}).name || '';
+  let svg = '';
+  try { svg = drawChar(vyLook(p), {}, 'content', 'vyc' + p.i).replace('viewBox="0 0 320 350"', 'viewBox="30 0 260 260"'); } catch (e) {}
+  const tint = (typeof SP_INFO !== 'undefined' && SP_INFO[p.sp] && SP_INFO[p.sp].tint) || '#ffe9d6';
+  return `<button class="vyx" data-vy-close aria-label="Fermer la fiche"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></button>
+<div class="vyp" style="--vt:${tint}">${svg}</div>
+<div class="vyh"><b>${esc(p.comp)}</b><span class="vyo">${esc(vyOf(p.name))}</span></div>
+<span class="vyg">${esc(sp)}${gl ? ' ' + esc(gl) : ''}</span>
+<p class="vyw" id="vyWhere">${vyWhere(t)}</p>
+<div class="vybar"><i id="vyBar" style="width:${(Math.min(1, t.elapsed / t.total) * 100).toFixed(1)}%"></i></div>
+<div class="vyf"><span class="vysim"><i>Simulé</i>voyageurs simulés par le jeu</span>${hi ? `<button class="vyhi" disabled>${VY_HEART} Salué${p.fem ? 'e' : ''}</button>` : `<button class="vyhi" data-vy-hi="${t.id}">${VY_HEART} Saluer</button>`}</div>`;
+}
+function vyCardPlace(el) {
+  // juste au-dessus de la carte d'action / du fil du voyage / de la barre du bas
+  const ct = map.getContainer().getBoundingClientRect();
+  let top = ct.bottom;
+  for (const id of ['liveBar', 'tripCard', 'nav']) { const e = $(id); if (!e || e.hidden || e.offsetParent === null) continue; const r = e.getBoundingClientRect(); if (r.height && r.top < top && r.top > ct.top + ct.height * 0.4) top = r.top; }
+  el.style.bottom = Math.round(ct.bottom - top + 10) + 'px';
+}
+function vyOpenCard(id) {
+  const t = vyById(id); if (!t) return;
+  t.elapsed = Math.max(0, Math.min(t.total, Date.now() - t.start));
+  if (Date.now() >= t.end) { if (typeof toast === 'function') toast(`${t.p.comp} est déjà rentré${vyE(t)} chez ${t.p.name}.`); return; }
+  vySel = id;
+  let el = $('vyCard');
+  if (!el) { el = document.createElement('div'); el.id = 'vyCard'; el.setAttribute('role', 'region'); el.setAttribute('aria-live', 'polite'); $('ov').parentNode.appendChild(el); }
+  el.style.setProperty('--vc', VY_COL[t.p.sp] || '#c9a07a');
+  el.setAttribute('aria-label', `Fiche de ${t.p.comp}, voyageur simulé`);
+  el.innerHTML = vyCardHTML(t); el.hidden = false; el.dataset.id = id;
+  vyCardPlace(el);
+  for (const [k, e] of vyEls) e.classList.toggle('sel', k === id);
+  vyLineSig = ''; vyUpdate(true);
+}
+function vyCloseCard() {
+  const el = $('vyCard'); if (el) { el.hidden = true; el.innerHTML = ''; }
+  if (!vySel) return;
+  vySel = null;
+  for (const e of vyEls.values()) e.classList.remove('sel');
+  vyLineSig = ''; if (vyInit) vyUpdate(true);
+}
+function vyCardRefresh() {
+  const el = $('vyCard'); if (!el || el.hidden || !vySel) return;
+  const t = vyById(vySel); if (!t || Date.now() >= t.end) { vyCloseCard(); return; }
+  t.elapsed = Date.now() - t.start;
+  const w = $('vyWhere'), b = $('vyBar'), h = vyWhere(t);
+  if (w && w.innerHTML !== h) w.innerHTML = h;
+  if (b) b.style.width = (Math.min(1, t.elapsed / t.total) * 100).toFixed(1) + '%';
+  vyCardPlace(el);
+}
+// « Saluer » : un cœur qui s'envole, et une petite chance de cadeau au retour
+function vySayHi(id) {
+  const t = vyById(id); if (!t) return;
+  const st = vyState(); if (st.hi[id]) return;
+  const gift = Math.random() < 0.3;
+  st.hi[id] = { at: Date.now(), end: t.end, gift, pl: t.p.name, comp: t.p.comp, fem: t.p.fem, dest: t.dest.name, de: vyDestDe(t.dest), tags: (t.dest.tags || ['ville']).slice(), done: 0 };
+  save();
+  const el = vyEls.get(id);
+  if (el && el._pos) for (let i = 0; i < 3; i++) {
+    const q = map.project(el._pos), hz = document.createElement('div');
+    hz.className = 'vyheart'; hz.style.color = ['#f08aa6', '#e0607e', '#f6a6bd'][i];
+    hz.style.setProperty('--p', `translate(${(q.x + (i - 1) * 9).toFixed(1)}px,${(q.y - 14).toFixed(1)}px)`);
+    hz.style.animationDelay = (i * 0.16) + 's';
+    hz.innerHTML = VY_HEART; vyLay.appendChild(hz); setTimeout(() => hz.remove(), 1700 + i * 160);
+  }
+  if (typeof toast === 'function') toast(`Vous saluez ${t.p.comp} ! ${t.p.fem ? 'Elle' : 'Il'} agite la patte.`);
+  const c = $('vyCard'); if (c && !c.hidden && vySel === id) { c.innerHTML = vyCardHTML(t); vyCardPlace(c); }
+}
+// au retour d'un voyageur salué : parfois un petit cadeau (objet du lieu visité, ou quelques pièces)
+function vyGifts() {
+  const st = vyState(), now = Date.now(); let ch = false;
+  for (const [id, h] of Object.entries(st.hi)) {
+    if (now - h.at > 3 * 864e5) { delete st.hi[id]; ch = true; continue; }
+    if (h.done || now < h.end) continue;
+    h.done = 1; ch = true;
+    if (!h.gift) continue;
+    try {
+      if (Math.random() < 0.65 && typeof lootFor === 'function') {
+        const it = lootFor(h.tags && h.tags.length ? h.tags : ['ville'], 1.2, h.dest, 1)[0];
+        if (it) {
+          it.from = `Cadeau de ${h.pl} (simulé)`;
+          S.inv.push(it); S.dex[it.name] = true;
+          if (typeof toast === 'function') toast(`${h.comp} est rentré${h.fem ? 'e' : ''} ${h.de} et vous offre « ${it.name} » ! (voyageur simulé)`);
+        }
+      } else {
+        const n = 15 + Math.floor(Math.random() * 30);
+        if (typeof gainCoins === 'function') gainCoins(n);
+        if (typeof toast === 'function') toast(`${h.comp} est rentré${h.fem ? 'e' : ''} ${h.de} et vous envoie ${n} pièces ! (voyageur simulé)`);
+      }
+    } catch (e) { console.error(e); }
+  }
+  if (ch) { save(); try { if (typeof renderTop === 'function') renderTop(); } catch (e) {} }
+}
+// depuis le fil : aller voir un voyageur sur la carte
+function vyGoTo(id) {
+  const t = vyById(id); if (!t || Date.now() >= t.end) return;
+  if (vyState().hide) vySetHidden(false);
+  if (typeof closeSheet === 'function' && tab !== 'carte') closeSheet();
+  const pos = vyPos(t), z = t.km > 2000 ? 2.6 : t.km > 400 ? 4.8 : t.km > 40 ? 7.5 : 12.5;
+  vySel = id;
+  map.flyTo({ center: pos, zoom: z, speed: 1.5, essential: true });
+  map.once('moveend', () => vyOpenCard(id));
+}
+
+// ---------- le fil du monde, dans le menu ----------
+function vyFeedHTML() {
+  const now = Date.now();
+  return vyFeed(8, now).map(e => {
+    const live = now < e.t.end && e.kind !== 'back';
+    return `<li class="${live ? 'go' : ''}" ${live ? `data-vy-go="${e.t.id}" role="button" tabindex="0" title="Voir sur la carte"` : ''} data-k="${e.t.id}|${e.kind}" style="--vc:${VY_COL[e.t.p.sp] || '#c9a07a'}"><span class="vyfp"><img alt="" src="${vyPortrait(e.t.p)}"></span><span class="vyft">${vyFeedText(e)}<small>${vyAgo(now - e.at)}${live ? ' · voir sur la carte' : ''}</small></span></li>`;
+  }).join('');
+}
+function vyNowText() {
+  const act = vyActive(), near = act.filter(t => t.p.near || vyKmFast(homeObj(), t.from) < 30).length;
+  return `En ce moment, <b>${act.length} familiers</b> sont en voyage dans le monde${near ? `, dont <b>${near}</b> près de chez vous` : ''}.`;
+}
+function vyMenu(box) {
+  if (!box || !vyReady()) return;
+  const secs = box.querySelectorAll('.msec'), last = secs[secs.length - 1];
+  const sec = document.createElement('section'); sec.className = 'msec vysec';
+  sec.innerHTML = `<header><h3>Voyageurs du monde<span class="vybadge">simulé</span></h3></header><p class="vynow" id="vyNow">${vyNowText()}</p><ul class="vyfeed" id="vyFeed">${vyFeedHTML()}</ul><p class="vynote">Ces voyageurs et leurs familiers sont simulés par le jeu : ce ne sont pas de vrais joueurs.</p>`;
+  if (last) box.insertBefore(sec, last); else box.appendChild(sec);
+  const set = last && last.querySelector('header h3') && /glages/.test(last.querySelector('header h3').textContent) ? last : sec;
+  set.insertAdjacentHTML('beforeend', `<div class="mrow set"><label for="vyShow"><b>Voyageurs sur la carte</b><span>Les petits portraits des familiers simulés en voyage.</span></label><input type="checkbox" id="vyShow" class="vysw" ${vyState().hide ? '' : 'checked'}></div>`);
+}
+if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try { vyMenu(box); } catch (e) { console.error(e); }
+  return r;
+})(renderMenu);
+let vyFeedSig = '';
+function vyFeedLive() {
+  const ul = $('vyFeed'); if (!ul) { vyFeedSig = ''; return; }
+  const now = Date.now(), f = vyFeed(8, now), sig = f.map(e => e.t.id + e.kind).join(';') + '|' + Math.floor(now / 30e3);
+  if (sig === vyFeedSig) return;
+  const old = new Set([...ul.children].map(li => li.dataset.k));
+  vyFeedSig = sig; ul.innerHTML = vyFeedHTML();
+  if (old.size) for (const li of ul.children) if (!old.has(li.dataset.k)) li.classList.add('fresh');
+  const n = $('vyNow'); if (n) { const h = vyNowText(); if (n.innerHTML !== h) n.innerHTML = h; }
+}
+
+// ---------- interactions ----------
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-vy-hi],[data-vy-close],[data-vy-go]'); if (!b) return;
+  if (b.dataset.vyHi) { ev.stopPropagation(); return vySayHi(b.dataset.vyHi); }
+  if (b.hasAttribute('data-vy-close')) { ev.stopPropagation(); return vyCloseCard(); }
+  if (b.dataset.vyGo) return vyGoTo(b.dataset.vyGo);
+});
+document.addEventListener('keydown', ev => { if ((ev.key === 'Enter' || ev.key === ' ') && ev.target && ev.target.dataset && ev.target.dataset.vyGo) { ev.preventDefault(); vyGoTo(ev.target.dataset.vyGo); } });
+document.addEventListener('change', ev => { if (ev.target && ev.target.id === 'vyShow') vySetHidden(!ev.target.checked); });
+
+// ---------- la boucle : une fois par seconde, rien quand l'onglet est caché ----------
+let vyN = 0;
+setInterval(() => {
+  if (document.hidden) return;
+  try {
+    if (!vyReady()) return;
+    vyState();
+    if (!vyInit) vySetup();
+    if (vyInit) vyUpdate();
+    if (typeof tab !== 'undefined' && tab === 'menu') vyFeedLive();
+    if (++vyN % 5 === 0) vyGifts();
+    const c = $('vyCard'); if (c && !c.hidden && typeof tab !== 'undefined' && tab !== 'carte') vyCloseCard();
+  } catch (e) { console.error(e); }
+}, 1000);
+
+// pour les tests
+window.__voyageurs = {
+  build: () => vyBuild(), active: n => vyActive(n), feed: (n, t) => vyFeed(n, t), feedText: e => vyFeedText(e), open: vyOpenCard, close: vyCloseCard, hi: vySayHi, goTo: vyGoTo,
+  setHidden: vySetHidden, update: () => vyUpdate(true), gifts: vyGifts, byId: vyById,
+  stats: () => Object.assign({}, vyStats), shown: () => [...vyEls.keys()], get sel() { return vySel; },
+};
 
 })();
 </script>

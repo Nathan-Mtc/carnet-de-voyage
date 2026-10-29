@@ -283,7 +283,7 @@ let hatchCtx = null; // { egg, crack, first, id }
 function hatchEggScreen(egg, first) {
   hatchCtx = { egg, crack: 0, first: !!first, id: null };
   const intro = first
-    ? `<span class="hkick">Nouvelle partie</span><h2>Bienvenue dans le Carnet de voyage !</h2><p class="hlead">Explore le vrai monde pour trouver, élever et échanger des compagnons uniques. Tout commence avec cet œuf mystère : touche-le pour le faire éclore !</p>`
+    ? `<span class="hkick">Nouvelle partie</span><h2>Bienvenue dans le Carnet de voyage !</h2><p class="hlead">Explore le vrai monde pour trouver, élever et échanger des compagnons uniques. Tout commence avec cet œuf mystère : touchez-le pour le faire éclore !</p>`
     : `<span class="hkick">${esc(COMP_FROM[egg.from && egg.from.how] || 'Un œuf')}${egg.from && egg.from.place ? ' · ' + esc(egg.from.place) : ''}</span><h2>Un œuf va éclore !</h2><p class="hlead">Qui se cache dedans ? Touchez l’œuf pour l’aider à sortir.</p>`;
   showModal(`<div class="hatchbox">${intro}<button class="eggbtn" data-egg-tap="1" aria-label="Toucher l’œuf (encore 3 fois)"><span class="eggwrap">${eggArt(egg, 0, 'egm')}</span></button><div class="eggdots" aria-hidden="true"><i></i><i></i><i></i></div><p class="egghint">Touchez l’œuf 3 fois</p></div>`);
   document.body.classList.toggle('firstrun', !!first);
@@ -366,7 +366,8 @@ function firstRunNext() {
   $('modal').hidden = true; document.body.classList.remove('firstrun');
   renderAll();
   const k = teamIds()[0];
-  if (k) setTimeout(() => toast(`${compName(k)} a hâte de partir : touchez « Partir » !`), 500);
+  // (le tutoriel guidé, 24_tuto.js, prend le relais : pas de consigne concurrente)
+  if (k && !(typeof tutoActive === 'function' && tutoActive())) setTimeout(() => toast(`${compName(k)} a hâte de partir : touchez « Partir » !`), 500);
 }
 
 // ---------- carte d'action (écran principal) : la prochaine chose utile, un seul bouton ----------

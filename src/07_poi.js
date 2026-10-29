@@ -209,7 +209,7 @@ function fallbackPOIs() {
         for (const p of cell.pois) if (p.imp < thr && !(p.cat === 'rue' && z < 13)) all.push(p);
       }
       all.sort((p, q) => p.imp - q.imp);
-      pois.push(...all.slice(0, window.innerWidth < 700 ? 90 : 170));
+      pois.push(...all.slice(0, 600)); // la sélection d'affichage (poiPick) ne garde qu'une vingtaine de lieux à l'écran
     }
   }
   const key = Math.round(b.getWest() / CELL) + ':' + Math.round(b.getSouth() / CELL) + ':' + Math.round(b.getEast() / CELL) + ':' + Math.round(b.getNorth() / CELL) + ':' + (z >= 14 ? 2 : z >= 12.2 ? 1 : 0);
@@ -227,32 +227,338 @@ function tilesPOIs() {
     const g = f.geometry.type === 'Point' ? f.geometry.coordinates : null; if (!g) continue;
     const id = cat + name + g[0].toFixed(4) + g[1].toFixed(4);
     if (seen.has(id)) continue; seen.add(id);
-    out.push({ id, cat, name, lon: g[0], lat: g[1] });
-    if (out.length > 160) break;
+    // rank OSM (plus petit = plus connu) : sert à départager les lieux d'une même priorité
+    out.push({ id, cat, name, lon: g[0], lat: g[1], imp: Math.min(1, (+p.rank || 40) / 100) });
+    if (out.length > 700) break; // la sélection plus bas n'en garde qu'une vingtaine à l'écran
   }
   return out;
 }
 function poiMarkerHTML(p) { const c = POI_CATS[p.cat]; return `<div class="poib" style="--pc:${c[1]}"><svg viewBox="0 0 24 24" aria-hidden="true">${POI_GLYPH[c[2]]}</svg></div><span class="poil">${esc(p.name)}</span>`; }
-function refreshPOIs() {
+
+// ================= AFFICHAGE DES LIEUX (v14) : lisible à tout zoom =================
+// Les lieux du quotidien sont dessinés par MapLibre dans une couche « symbol » (icônes rasterisées une fois) :
+// la carte gère elle-même les collisions pendant les animations, sans aucun recalcul HTML à chaque image.
+// Le CHOIX des lieux montrés (priorité, densité, diversité des catégories) est fait ici, au moveend seulement.
+// Priorité : 1 lieux utiles maintenant (commande, rêve, événement du jour : halo doré) ; 3 types encore jamais visités ;
+// 4 le reste ; 5 rues et routes. La destination et les compagnons en route restent des marqueurs HTML et
+// réservent leur place (aucune icône dessous), tout comme la maison, les lieux célèbres et les secrets.
+const POI_FILTERS = [
+  ['utile', 'Utiles maintenant', null],
+  ['tout', 'Tout', null],
+  ['nourriture', 'Nourriture', ['boulangerie', 'cafe', 'restaurant', 'marche', 'epicerie', 'poissonnerie', 'glacier', 'fromagerie', 'boucherie', 'chocolaterie', 'caviste']],
+  ['nature', 'Nature', ['parc', 'plage', 'port', 'foret', 'campagne', 'ferme', 'jardin', 'etang', 'riviere', 'sentier', 'belvedere', 'camping', 'zoo', 'phare']],
+  ['boutiques', 'Boutiques', ['fleuriste', 'librairie', 'mode', 'friperie', 'bricolage', 'jouets', 'boutique', 'puces', 'coiffeur', 'laverie', 'pharmacie']],
+  ['culture', 'Culture', ['musee', 'patrimoine', 'cinema', 'bibliotheque', 'mairie', 'gare', 'ecole', 'poste']],
+];
+const poiFilter = () => (S.mapFilter && POI_FILTERS.some(f => f[0] === S.mapFilter)) ? S.mapFilter : 'utile';
+function setPoiFilter(id) {
+  if (!POI_FILTERS.some(f => f[0] === id)) return;
+  S.mapFilter = id; save(); poiPrev = new Set(); poiSig = '';
+  refreshPOIs(true);
+  if (typeof renderPoiFilter === 'function') renderPoiFilter();
+}
+// --- lieux utiles maintenant : prochaine étape des rêves, commandes du comptoir, événement du jour
+let poiUsefulCache = { t: 0, v: null };
+function poiStepCats(st, add, depth = 0) {
+  if (!st || depth > 3) return;
+  if (st.t === 'item' && typeof srcStep === 'function') return poiStepCats(srcStep(st), add, depth + 1);
+  if (st.t === 'craft' && typeof bqStepFor === 'function') { const s2 = bqStepFor({ k: 'craft', id: st.id }); if (s2 && s2.t !== 'craft') poiStepCats(s2, add, depth + 1); return; }
+  if (st.cat) [].concat(st.cat).forEach(c => add(c));
+  else if (st.tag && typeof TAG_POIS === 'object') (TAG_POIS[st.tag] || []).forEach(c => add(c));
+}
+function poiUsefulNow(force) {
+  const now = Date.now();
+  if (!force && poiUsefulCache.v && now - poiUsefulCache.t < 1500) return poiUsefulCache.v;
+  const cats = new Set(), why = {};
+  const add = src => c => { if (!POI_CATS[c] || c === 'rue' || c === 'route') return; cats.add(c); if (!why[c]) why[c] = src; };
+  try {
+    const team = (typeof teamIds === 'function' ? teamIds() : Object.keys(S.comps || {})).filter(k => CHARS[k]);
+    if (typeof curDream === 'function' && typeof nextStepIdx === 'function') for (const k of team) {
+      const d = curDream(k), i = d ? nextStepIdx(k) : -1;
+      if (d && i >= 0) poiStepCats(d.steps[i], add('reve'));
+    }
+  } catch (e) {}
+  try {
+    if (S.shop && Array.isArray(S.shop.orders) && typeof bqAllocate === 'function' && typeof bqStepFor === 'function') for (const o of S.shop.orders) {
+      const al = bqAllocate(o), r = o.req.find((x, j) => al[j].have < x.n);
+      if (r) poiStepCats(bqStepFor(r), add('commande'));
+    }
+  } catch (e) {}
+  try { const ev = typeof todayEvent === 'function' ? todayEvent() : null; if (ev && ev.tags) ev.tags.forEach(add('evenement')); } catch (e) {}
+  return (poiUsefulCache = { t: now, v: { cats, why } }).v;
+}
+// type de lieu encore jamais visité : aucun objet de sa table de butin dans le carnet
+const poiNewCache = {};
+function poiNewCat(cat) {
+  const n = Object.keys(S.dex || {}).length, c = poiNewCache[cat];
+  if (c && c.n === n) return c.v;
+  const L = typeof LOOT === 'object' ? LOOT[cat] : null, v = !!(L && L.length && !L.some(d => S.dex[d[0]]));
+  poiNewCache[cat] = { n, v }; return v;
+}
+// la pastille « nouveau » n'a de sens qu'une fois quelques types visités (au tout début, tout serait « nouveau »)
+let poiSeenTypes = { n: -1, v: 0 };
+function poiTypesSeen() {
+  const n = Object.keys(S.dex || {}).length; if (poiSeenTypes.n === n) return poiSeenTypes.v;
+  let v = 0; for (const c of Object.keys(POI_CATS)) if (LOOT[c] && LOOT[c].some(d => S.dex[d[0]])) v++;
+  return (poiSeenTypes = { n, v }).v;
+}
+// --- icônes rasterisées (une fois par catégorie et variante ; une image par nom affiché)
+const POI_PR = Math.min(3, Math.max(2, Math.ceil(window.devicePixelRatio || 1)));
+const POI_FONT = '700 12.5px "Baloo 2", "Nunito", system-ui, sans-serif';
+const poiGlyphImg = {}; let poiGlyphsP = null, poiGlyphsOK = false;
+function loadPoiGlyphs() {
+  if (poiGlyphsP) return poiGlyphsP;
+  const jobs = Object.entries(POI_GLYPH).map(([k, g]) => new Promise(res => {
+    const im = new Image(); im.onload = () => { poiGlyphImg[k] = im; res(); }; im.onerror = () => res();
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">${g}</svg>`);
+  }));
+  poiGlyphsP = Promise.all(jobs).then(() => { poiGlyphsOK = true; });
+  return poiGlyphsP;
+}
+// demi-largeur de l'emplacement de l'icône dans l'image (le point du lieu est au centre de l'icône)
+const poiHW = v => v.includes('u') ? 20 : v.includes('s') ? 11 : 15;
+function poiDrawIcon(g, cx, cy, cat, v) {
+  const c = POI_CATS[cat] || POI_CATS.boutique, small = v.includes('s'), r = small ? 7 : 10.5, use = v.includes('u');
+  if (use) {
+    const gr = g.createRadialGradient(cx, cy, r + 2, cx, cy, r + 9);
+    gr.addColorStop(0, 'rgba(246,196,69,.9)'); gr.addColorStop(1, 'rgba(246,196,69,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r + 9, 0, 7); g.fill();
+  }
+  g.save(); g.shadowColor = 'rgba(74,53,40,.38)'; g.shadowBlur = 2.5; g.shadowOffsetY = 1.4;
+  g.fillStyle = '#fffaf0'; g.beginPath(); g.arc(cx, cy, r + 2, 0, 7); g.fill(); g.restore();
+  g.fillStyle = c[1]; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill();
+  g.strokeStyle = use ? '#c98f1e' : 'rgba(74,53,40,.5)'; g.lineWidth = use ? 1.6 : 1; g.beginPath(); g.arc(cx, cy, r + 2.4, 0, 7); g.stroke();
+  const gi = poiGlyphImg[c[2]]; if (gi) { const s = small ? 9.5 : 13; g.drawImage(gi, cx - s / 2, cy - s / 2, s, s); }
+  if (v.includes('w')) { // pastille « nouveau » : type de lieu encore jamais visité
+    const bx = cx + r * 0.8, by = cy - r * 0.8;
+    g.fillStyle = '#fffaf0'; g.beginPath(); g.arc(bx, by, 4, 0, 7); g.fill();
+    g.fillStyle = '#e0607e'; g.beginPath(); g.arc(bx, by, 2.7, 0, 7); g.fill();
+  }
+}
+let poiMeasureCtx = null; const poiTW = {};
+function poiTextW(t) {
+  if (poiTW[t] != null) return poiTW[t];
+  if (Object.keys(poiTW).length > 3000) for (const k in poiTW) delete poiTW[k];
+  if (!poiMeasureCtx) poiMeasureCtx = document.createElement('canvas').getContext('2d');
+  poiMeasureCtx.font = POI_FONT; return (poiTW[t] = Math.ceil(poiMeasureCtx.measureText(t).width));
+}
+const poiShort = n => n.length > 26 ? n.slice(0, 24).trim() + '…' : n;
+const poiLblImgs = new Map(); // nom d'image → dernier usage (pour faire le ménage)
+function poiMakeImage(key) {
+  if (!map || map.hasImage(key) || !poiGlyphsOK) return;
+  const [kind, v, cat, ...rest] = key.split('|'), name = rest.join('|');
+  const hw = poiHW(v), txt = kind === 'pl' ? poiShort(name) : '', tw = txt ? poiTextW(txt) + 8 : 0;
+  const W = hw * 2 + (txt ? tw + 1 : 0), H = hw * 2;
+  const cv = document.createElement('canvas'); cv.width = Math.ceil(W * POI_PR); cv.height = Math.ceil(H * POI_PR);
+  const g = cv.getContext('2d'); g.scale(POI_PR, POI_PR);
+  poiDrawIcon(g, hw, hw, cat, v);
+  if (txt) {
+    g.font = POI_FONT; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    const x = hw * 2 - (v.includes('u') ? 4 : 1);
+    g.lineWidth = 3.6; g.strokeStyle = 'rgba(255,248,234,.96)'; g.strokeText(txt, x, hw + 0.5);
+    g.fillStyle = v.includes('u') ? '#5a3a10' : '#4a3528'; g.fillText(txt, x, hw + 0.5);
+  }
+  try { map.addImage(key, g.getImageData(0, 0, cv.width, cv.height), { pixelRatio: POI_PR }); } catch (e) { return; }
+  if (kind === 'pl') poiLblImgs.set(key, Date.now());
+}
+function poiCleanImages(keep) {
+  if (poiLblImgs.size < 160) return;
+  const old = [...poiLblImgs.entries()].filter(([k]) => !keep.has(k)).sort((a, b) => a[1] - b[1]).slice(0, poiLblImgs.size - 100);
+  for (const [k] of old) { try { if (map.hasImage(k)) map.removeImage(k); } catch (e) {} poiLblImgs.delete(k); }
+}
+// --- couche MapLibre
+let poiLayerOK = false;
+function poiLayerInit() {
+  if (!map || poiLayerOK || map.getSource('pois')) return;
+  map.addSource('pois', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+  map.addLayer({
+    id: 'poi-sym', type: 'symbol', source: 'pois',
+    layout: {
+      'icon-image': ['get', 'img'],
+      'icon-anchor': 'left',
+      'icon-offset': ['match', ['get', 'hw'], 20, ['literal', [-20, 0]], 11, ['literal', [-11, 0]], ['literal', [-15, 0]]],
+      'icon-size': ['interpolate', ['linear'], ['zoom'], 11, 0.74, 14, 0.82, 15.5, 0.92, 16.5, 1],
+      'icon-allow-overlap': false, 'icon-ignore-placement': false, 'icon-padding': 1,
+      'symbol-sort-key': ['get', 'sk'], 'symbol-z-order': 'auto',
+      'icon-pitch-alignment': 'viewport', 'icon-rotation-alignment': 'viewport',
+    },
+    paint: { 'icon-opacity': ['interpolate', ['linear'], ['zoom'], 10, 0.85, 12, 1] },
+  });
+  // une icône manquante (après un ménage) est redessinée aussitôt
+  map.on('styleimagemissing', e => { if (e.id && (e.id.startsWith('pi|') || e.id.startsWith('pl|'))) poiMakeImage(e.id); });
+  map.on('mousemove', 'poi-sym', e => { map.getCanvas().style.cursor = 'pointer'; poiTip(e.features && e.features[0]); });
+  map.on('mouseleave', 'poi-sym', () => { map.getCanvas().style.cursor = ''; poiTip(null); });
+  map.on('movestart', () => poiTip(null));
+  poiLayerOK = true;
+  loadPoiGlyphs().then(() => refreshPOIs(true));
+  if (document.fonts && document.fonts.load) document.fonts.load(POI_FONT).then(() => { for (const k of poiLblImgs.keys()) { try { map.removeImage(k); } catch (e) {} } poiLblImgs.clear(); for (const k in poiTW) delete poiTW[k]; poiSig = ''; refreshPOIs(true); }).catch(() => {});
+}
+// survol à la souris : le nom en petite étiquette (au toucher, la fiche du lieu s'ouvre et le nom apparaît sur la destination)
+function poiTip(f) {
+  let el = $('poiTip');
+  if (!f || !f.properties || f.properties.lb) { if (el) el.hidden = true; return; }
+  const p = poiById[f.properties.id]; if (!p) { if (el) el.hidden = true; return; }
+  if (!el) { el = document.createElement('div'); el.id = 'poiTip'; el.className = 'ovm poitip'; $('ov').appendChild(el); }
+  const pt = map.project([p.lon, p.lat]);
+  el.textContent = p.name; el.hidden = false; el.style.display = '';
+  el.style.transform = `translate(${pt.x.toFixed(1)}px,${pt.y.toFixed(1)}px)`;
+}
+// lieu touché sur la carte (couche symbole) : le plus proche du doigt, avec une marge pour les petits écrans
+function poiAtPoint(pt) {
+  if (!map || !map.getLayer('poi-sym')) return null;
+  const R = 14; let fs = [];
+  try { fs = map.queryRenderedFeatures([[pt.x - R, pt.y - R], [pt.x + R, pt.y + R]], { layers: ['poi-sym'] }); } catch (e) { return null; }
+  let best = null, bd = 1e9;
+  for (const f of fs) { const p = poiById[f.properties.id]; if (!p) continue; const q = map.project([p.lon, p.lat]), d = Math.hypot(q.x - pt.x, q.y - pt.y); if (d < bd) { bd = d; best = p; } }
+  return best;
+}
+// --- place déjà prise à l'écran : boutons et cartes de l'interface, marqueurs HTML (maison, compagnons, destination…)
+function poiBlocked(W, H) {
+  const ct = map.getContainer().getBoundingClientRect(), rects = [];
+  const push = r => { if (r && r.width && r.height) rects.push([r.left - ct.left, r.top - ct.top, r.right - ct.left, r.bottom - ct.top]); };
+  for (const sel of ['#hudComps', '.hud .hright', '.zoom', '#tripCard', '#nav', '#liveBar', '#goal', '#poiFilt']) {
+    const el = document.querySelector(sel); if (!el || el.hidden) continue;
+    if (sel === '.zoom') { for (const b of el.children) if (!b.hidden && b.offsetParent) push(b.getBoundingClientRect()); continue; }
+    if (el.offsetParent === null && getComputedStyle(el).position !== 'fixed') continue;
+    push(el.getBoundingClientRect());
+  }
+  const ov = $('ov');
+  for (const el of ov.children) {
+    if (el.hidden || el.style.display === 'none' || el.classList.contains('poitip') || el.classList.contains('reveal')) continue;
+    if (el.classList.contains('ovc')) { push(el.getBoundingClientRect()); continue; }
+    if (!el.classList.contains('ovm') || el.classList.contains('poi')) continue;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const c of el.children) { const r = c.getBoundingClientRect(); if (!r.width || getComputedStyle(c).display === 'none') continue; x0 = Math.min(x0, r.left); y0 = Math.min(y0, r.top); x1 = Math.max(x1, r.right); y1 = Math.max(y1, r.bottom); }
+    if (x1 > x0) rects.push([x0 - ct.left - 4, y0 - ct.top - 4, x1 - ct.left + 4, y1 - ct.top + 4]);
+  }
+  return rects;
+}
+const poiKey = p => p.name + '@' + (+p.lon).toFixed(5) + ',' + (+p.lat).toFixed(5);
+function poiDestKeys() {
+  const ks = new Set();
+  try { if (plan.dest && plan.dest.poi) ks.add(poiKey(plan.dest)); } catch (e) {}
+  for (const t of Object.values(S.trips || {})) if (t && t.dest && t.dest.poi && !t.done) ks.add(poiKey(t.dest));
+  return ks;
+}
+// --- sélection : priorité, diversité des catégories, densité par zone, pas de chevauchement
+let poiPrev = new Set();
+function poiPick(cands, z) {
+  const ct = map.getContainer(), W = ct.clientWidth, H = ct.clientHeight;
+  const tiles = mapMode === 'tiles', lblZ = tiles ? 16 : 14.8, allZ = tiles ? 17 : 15.4;
+  const f = poiFilter(), only = (POI_FILTERS.find(x => x[0] === f) || [])[2];
+  const U = poiUsefulNow(), dk = poiDestKeys();
+  const size = z < 11 ? 0.74 : z < 14 ? 0.74 + (z - 11) * 0.027 : z < 15.5 ? 0.82 + (z - 14) * 0.067 : z < 16.5 ? 0.92 + (z - 15.5) * 0.08 : 1;
+  const items = [];
+  for (const p of cands) {
+    if (!p.cat || !POI_CATS[p.cat]) continue;
+    if (only && !only.includes(p.cat)) continue;
+    if (dk.size && dk.has(poiKey(p))) continue; // la destination a déjà son marqueur
+    const pt = map.project([p.lon, p.lat]);
+    if (pt.x < 8 || pt.y < 8 || pt.x > W - 8 || pt.y > H - 8) continue;
+    const minor = p.cat === 'rue' || p.cat === 'route', useful = !minor && U.cats.has(p.cat), fresh = !useful && !minor && poiNewCat(p.cat);
+    const tier = useful ? 1 : fresh ? 3 : minor ? 5 : 4;
+    items.push({ p, x: pt.x, y: pt.y, tier, h: (p.imp != null ? p.imp * 0.6 : 0) + (hashStr(p.id) / 4294967296) * 0.4, prev: poiPrev.has(p.id) ? 0 : 1 });
+  }
+  // diversité : dans chaque catégorie, rang du lieu (le 1er restaurant passe avant le 2e café, etc.)
+  const byCat = {};
+  for (const it of items) (byCat[it.p.cat] = byCat[it.p.cat] || []).push(it);
+  for (const a of Object.values(byCat)) { a.sort((u, v) => u.prev - v.prev || u.h - v.h); a.forEach((it, i) => { it.rr = Math.min(i, 6); }); }
+  items.sort((a, b) => a.tier - b.tier || a.prev - b.prev || a.rr - b.rr || a.h - b.h);
+  const area = Math.max(1, (W * H) / (390 * 640));
+  const base = z < 13 ? 12 : z < 14 ? 15 : z < 15 ? 18 : z < 16 ? 22 : z < 17 ? 28 : 34;
+  const budget = Math.round(base * Math.pow(area, 0.6) * (f === 'tout' ? 1.6 : only ? 1.25 : 1));
+  const usefulMax = Math.ceil(budget * 0.4), badge = poiTypesSeen() >= 4;
+  const ZONE = 130, more = (f === 'tout' || only) ? 1 : 0;
+  const capOf = t => t === 1 ? (z >= lblZ ? 3 : z >= lblZ - 1 ? 2 : 1) : t === 5 ? 1 : (z >= lblZ ? 2 : 1) + more;
+  const sp = z < 15 ? 5 : 3;
+  // grille d'occupation (cases de 40 px) pour tester les chevauchements rapidement
+  const G = 40, grid = new Map();
+  const cells = (r, fn) => { for (let gx = Math.floor(r[0] / G); gx <= Math.floor(r[2] / G); gx++) for (let gy = Math.floor(r[1] / G); gy <= Math.floor(r[3] / G); gy++) if (fn(gx + ':' + gy) === false) return false; return true; };
+  const hit = r => !cells(r, k => { const L = grid.get(k); if (!L) return true; for (const q of L) if (r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1]) return false; return true; });
+  const put = r => cells(r, k => { const L = grid.get(k); if (L) L.push(r); else grid.set(k, [r]); });
+  for (const r of poiBlocked(W, H)) put(r);
+  const zc = {}, out = []; let n = 0, nu = 0;
+  for (const it of items) {
+    if (it.tier === 1 ? nu >= usefulMax : n >= budget) { if (it.tier > 1) break; continue; }
+    const zk = Math.floor(it.x / ZONE) + ',' + Math.floor(it.y / ZONE) + ':' + it.p.cat;
+    if ((zc[zk] || 0) >= capOf(it.tier)) continue;
+    const v = (it.tier === 1 ? 'u' : '') + (it.tier === 3 && badge ? 'w' : '') + (it.tier === 5 ? 's' : '') || 'n';
+    const r = (it.tier === 1 ? 15 : it.tier === 5 ? 9.5 : 13) * size + sp;
+    const ri = [it.x - r, it.y - r, it.x + r, it.y + r];
+    if (hit(ri)) continue;
+    let lb = (z >= lblZ && it.tier <= 3) || z >= allZ, rl = null;
+    if (lb) {
+      const tw = (poiTextW(poiShort(it.p.name)) + 8) * size;
+      rl = [it.x + r - sp - 2, it.y - 9 * size - 1, it.x + r - sp + tw + 2, it.y + 9 * size + 1];
+      if (rl[2] > W - 4 || hit(rl)) { lb = false; rl = null; }
+    }
+    put(ri); if (rl) put(rl);
+    zc[zk] = (zc[zk] || 0) + 1; n++; if (it.tier === 1) nu++;
+    out.push({ p: it.p, v, lb, tier: it.tier, sk: it.tier * 100 + it.rr * 10 + Math.floor(it.h * 9) });
+  }
+  return out;
+}
+// --- mise à jour (au moveend, au chargement des tuiles, quand l'état du jeu change), avec un petit throttle
+let poiById = {}, poiSig = '', poiLast = 0, poiTimer = 0, poiStats = { cands: 0, shown: 0, labels: 0, ms: 0 };
+const POI_HIDDEN = { hidden: true, remove() {} }; // place-holder : les lieux restent visibles des autres modules via ovEls
+function refreshPOIs(force) {
   if (!map || !mapReady) return;
+  const now = performance.now();
+  if (force !== true && now - poiLast < 150) { clearTimeout(poiTimer); poiTimer = setTimeout(() => refreshPOIs(true), 170); return; }
+  clearTimeout(poiTimer); poiLast = now;
   const z = map.getZoom();
   const want = mapMode === 'tiles' ? (z >= POI_MIN_Z() ? tilesPOIs() : []) : (z >= 10 ? fallbackPOIs() : []);
   if (mapMode === 'local' && z < 10 && townKey && map.getSource('town')) { townKey = ''; map.getSource('town').setData({ type: 'FeatureCollection', features: [] }); }
+  // noms de villages (mode secours) : petites étiquettes HTML, peu nombreuses
   const keep = new Set(want.map(p => p.id));
   for (const id of Object.keys(poiShown)) if (!keep.has(id)) { poiShown[id].remove(); delete poiShown[id]; delete ovEls['q' + id]; }
   const ov = $('ov');
   for (const p of want) {
-    if (poiShown[p.id]) continue;
-    const el = document.createElement('div');
-    if (p.label) { el.className = 'ovc vil'; el.textContent = p.name; } else { el.className = 'ovm poi' + (p.cat === 'rue' || p.cat === 'route' ? ' small' : ''); el.innerHTML = poiMarkerHTML(p); el.dataset.poi = p.id; }
+    if (!p.label || poiShown[p.id]) continue;
+    const el = document.createElement('div'); el.className = 'ovc vil'; el.textContent = p.name;
     ov.insertBefore(el, ov.firstChild);
     poiShown[p.id] = el; ovEls['q' + p.id] = { el, lon: p.lon, lat: p.lat, poi: p };
   }
+  // tous les lieux candidats restent connus (fiche, « Partir » des rêves et des commandes via shownPOIs), même non dessinés
+  const cands = want.filter(p => !p.label && p.cat);
+  const ids = new Set(cands.map(p => p.id));
+  for (const k of Object.keys(ovEls)) if (k[0] === 'q' && ovEls[k].el === POI_HIDDEN && !ids.has(k.slice(1))) delete ovEls[k];
+  poiById = {};
+  for (const p of cands) { poiById[p.id] = p; if (!ovEls['q' + p.id]) ovEls['q' + p.id] = { el: POI_HIDDEN, lon: p.lon, lat: p.lat, poi: p }; }
   positionOverlay();
+  if (!poiLayerOK || !map.getSource('pois')) return;
+  if (!poiGlyphsOK) { loadPoiGlyphs().then(() => refreshPOIs(true)); return; }
+  const sel = poiPick(cands, z);
+  const feats = [], used = new Set();
+  for (const s of sel) {
+    const key = (s.lb ? 'pl|' : 'pi|') + s.v + '|' + s.p.cat + (s.lb ? '|' + poiShort(s.p.name) : '');
+    poiMakeImage(key); used.add(key); if (s.lb) poiLblImgs.set(key, Date.now());
+    feats.push({ type: 'Feature', properties: { id: s.p.id, img: key, hw: poiHW(s.v), sk: s.sk, lb: s.lb ? 1 : 0 }, geometry: { type: 'Point', coordinates: [s.p.lon, s.p.lat] } });
+  }
+  poiPrev = new Set(sel.map(s => s.p.id));
+  const sig = feats.map(f => f.properties.img + f.properties.id).join(';');
+  poiStats = { cands: cands.length, shown: sel.length, labels: sel.filter(s => s.lb).length, useful: sel.filter(s => s.tier === 1).length, ms: +(performance.now() - now).toFixed(2), filter: poiFilter() };
+  if (sig === poiSig) return; // rien n'a changé : pas de nouveau rendu (sinon « idle » relancerait sans fin)
+  poiSig = sig;
+  map.getSource('pois').setData({ type: 'FeatureCollection', features: feats });
+  poiCleanImages(used);
 }
+// l'état du jeu a changé (destination, commande, rêve, filtre) : on réévalue les priorités, sans excès
+let poiDestK = '', poiUseK = '', poiStateT = 0;
+function poiStateCheck() {
+  if (!map || !mapReady) return;
+  const d = [...poiDestKeys()].join(';'); let ch = d !== poiDestK; poiDestK = d;
+  if (Date.now() - poiStateT > 1500) {
+    poiStateT = Date.now();
+    const u = [...poiUsefulNow(true).cats].sort().join(',') + '/' + Object.keys(S.dex || {}).length;
+    if (u !== poiUseK) { ch = ch || poiUseK !== ''; poiUseK = u; }
+  }
+  if (ch) { poiSig = ''; refreshPOIs(); }
+}
+window.__carte = { stats: () => Object.assign({}, poiStats), setMode: m => { mapMode = m; }, refresh: () => refreshPOIs(true), setPoiFilter, poiUsefulNow, shown: () => (map && map.getSource('pois') ? map.querySourceFeatures('pois').length : 0), poiAtPoint, rendered: () => map.queryRenderedFeatures({ layers: ['poi-sym'] }).length, get S() { return S; }, get plan() { return plan; } };
 function poiDest(p) {
   const c = POI_CATS[p.cat];
-  const spec = (SPECIALTY[p.cat] || SPEC_DEFAULT).slice(); spec[0] = spec[0].replace('{P}', p.name);
+  const spec = (SPECIALTY[p.cat] || SPEC_DEFAULT).slice(); spec[0] = spec[0].replace('{P}', p.name).replace(/\bde (Le|Les|Au|Aux) /, (m, a) => ({ Le: 'du ', Les: 'des ', Au: 'd’Au ', Aux: 'd’Aux ' })[a]);
   return { id: null, poi: true, cat: p.cat, name: p.name, country: c[0], city: p.city || nearestCityName(p.lon, p.lat), lat: p.lat, lon: p.lon, tags: [p.cat, c[3]], special: spec };
 }
 function choosePOI(p) { if (S.trips[S.sel]) { openSheet('voyage'); toast(`${CHARS[S.sel].name} est déjà en voyage. Choisissez un autre compagnon en haut.`); return; } plan.dest = poiDest(p); if (kmBetween(homeObj(), plan.dest) < 40) plan.dur = 'eclair'; openSheet('voyage'); drawMarks(); }

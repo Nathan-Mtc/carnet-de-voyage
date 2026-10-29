@@ -616,6 +616,9 @@ button.obrow:active{transform:translateY(2px);box-shadow:none}
 .obff{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;width:100%}
 /* retour de voyage */
 .hcard.obh .obu{align-self:stretch}
+/* petites cartes du butin : la ligne « → … » tient en entier (pas d'icône, 3 lignes, coupure entre les mots) */
+.hcard.obh .obu.sm{padding:3px 4px;margin-left:-1px;margin-right:-1px}.hcard.obh .obu.sm .obic{display:none}
+.hcard.obh .obu>span{-webkit-line-clamp:3;overflow-wrap:break-word;word-break:normal;hyphens:auto;line-height:1.18}
 .hcard.r2.obh{box-shadow:0 3px 0 var(--rc),0 0 0 3px rgba(79,136,207,.18)}
 .hcard.obnew{box-shadow:0 3px 0 var(--rc),0 0 0 3px rgba(240,138,166,.35)}
 .obspark{position:absolute;inset:0;pointer-events:none;z-index:3}

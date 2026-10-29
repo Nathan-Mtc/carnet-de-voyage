@@ -112,12 +112,14 @@ const FOOD_TASTE = {
   paresseux: { love: ['fruit', 'legume'], hate: ['boisson'] }, lemur: { love: ['fruit', 'agrume'], hate: ['fromage'] }, phoque: { love: ['mer'], hate: ['legume'] },
   quokka: { love: ['legume', 'pomme'], hate: ['mer'] }, def: { love: ['fruit'], hate: [] },
 };
+// v14 : niveaux de SÉJOUR sur place (le trajet aller-retour, lui, dépend de la distance : voir tripRoundMs dans 09_logic_b.js).
+// `ms` = durée du séjour ; `ev` (événements) et `luck` (rareté) restent liés au niveau choisi. Clés inchangées (17_regions, 21_nurserie, quêtes…).
 const DURS = [
-  { key: 'eclair', label: 'Balade éclair', ms: 60e3, ev: 4, luck: 0, hint: '1 min, pour tester' },
-  { key: 'court', label: 'Petite escapade', ms: 10 * 60e3, ev: 6, luck: 0.5, hint: '10 min' },
-  { key: 'moyen', label: 'Voyage', ms: 60 * 60e3, ev: 8, luck: 1, hint: '1 h' },
-  { key: 'long', label: 'Grand voyage', ms: 4 * 3600e3, ev: 10, luck: 1.6, hint: '4 h' },
-  { key: 'expe', label: 'Expédition', ms: 12 * 3600e3, ev: 13, luck: 2.4, hint: '12 h' },
+  { key: 'eclair', label: 'Coup d’œil', ms: 0, ev: 4, luck: 0, hint: 'aller-retour, sans s’arrêter' },
+  { key: 'court', label: 'Balade', ms: 5 * 60e3, ev: 6, luck: 0.5, hint: '5 min sur place' },
+  { key: 'moyen', label: 'Exploration', ms: 30 * 60e3, ev: 8, luck: 1, hint: '30 min sur place' },
+  { key: 'long', label: 'Grande exploration', ms: 2 * 3600e3, ev: 10, luck: 1.6, hint: '2 h sur place' },
+  { key: 'expe', label: 'Expédition', ms: 6 * 3600e3, ev: 13, luck: 2.4, hint: '6 h sur place' },
 ];
 const PLAYERS = [['Lina', 'Tofu', 'mochi'], ['Sacha', 'Praline', 'pistache'], ['Noé', 'Gnocchi', 'bulle'], ['Jade', 'Mistral', 'pistache'], ['Yanis', 'Bigoudi', 'mochi'], ['Chloé', 'Pixel', 'bulle'], ['Maël', 'Biscuit', 'pistache'], ['Inès', 'Nuage', 'bulle'], ['Hugo', 'Caramel', 'mochi'], ['Léa', 'Paprika', 'pistache']];
 

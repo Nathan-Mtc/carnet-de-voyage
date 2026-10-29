@@ -155,7 +155,7 @@ async function buildMap() {
   map.touchZoomRotate.disableRotation && 0;
   map.keyboard.disableRotation && map.keyboard.disableRotation();
   map.on('error', e => { if (mapMode === 'tiles' && !mapReady) { /* tuiles inaccessibles : on garde la carte intégrée */ } });
-  map.on('load', () => { routeLayers(); mapReady = true; if (typeof liveOnMapLoad === 'function') { try { liveOnMapLoad(); } catch (e) { console.error(e); } } setTimeout(refreshPOIs, 50); const n = $('mapNote'); n.hidden = mapMode === 'tiles'; if (!n.hidden) setTimeout(() => n.classList.add('gone'), 9000); drawMarks(); });
+  map.on('load', () => { routeLayers(); mapReady = true; if (typeof liveOnMapLoad === 'function') { try { liveOnMapLoad(); } catch (e) { console.error(e); } } try { poiLayerInit(); } catch (e) { console.error(e); } setTimeout(() => refreshPOIs(true), 50); const n = $('mapNote'); n.hidden = mapMode === 'tiles'; if (!n.hidden) setTimeout(() => n.classList.add('gone'), 9000); drawMarks(); });
   map.on('move', positionOverlay);
   map.on('zoom', () => { lodOverlay(); });
   map.on('moveend', refreshPOIs);
@@ -164,7 +164,7 @@ async function buildMap() {
   map.on('pitchend', upd3D); map.on('rotateend', upd3D);
   window.toggle3D = () => { const tilted = map.getPitch() > 5; if (tilted) { autoTilt = false; map.easeTo({ pitch: 0, bearing: 0, duration: 600 }); } else { autoTilt = true; map.easeTo({ pitch: 55, zoom: Math.max(map.getZoom(), 15.2), duration: 900 }); } };
   let idleT = 0; map.on('idle', () => { if (mapMode === 'tiles' && Date.now() - idleT > 600) { idleT = Date.now(); refreshPOIs(); } });
-  map.on('click', e => { if (e.originalEvent && e.originalEvent.target.closest && e.originalEvent.target.closest('.ovm')) return; const tp = typedPlaceAt(e); if (tp) { choosePOI(tp); return; } pickPoint(e.lngLat.lng, e.lngLat.lat); });
+  map.on('click', e => { if (e.originalEvent && e.originalEvent.target.closest && e.originalEvent.target.closest('.ovm')) return; const hp = poiAtPoint(e.point); if (hp) { choosePOI(hp); return; } const tp = typedPlaceAt(e); if (tp) { choosePOI(tp); return; } pickPoint(e.lngLat.lng, e.lngLat.lat); });
   buildOverlay();
 }
 function zoomTo(lon, lat, k) { if (!map) return; map.flyTo({ center: [lon, lat], zoom: k ? Math.min(map.getMaxZoom(), kToZoom(k)) : map.getZoom(), speed: 1.4, curve: 1.3, essential: true }); }
@@ -193,6 +193,7 @@ function buildOverlay() {
   add('home', 'home', `<div class="homeb"><svg viewBox="0 0 60 60"><path d="M40 6 v12 h6 V10Z" fill="#c9604f" stroke="#5b4636" stroke-width="2.4"/><path d="M8 54 V28 L30 10 L52 28 V54Z" fill="#fff6e6" stroke="#5b4636" stroke-width="3" stroke-linejoin="round"/><path d="M4 30 L30 8 L56 30" fill="none" stroke="#d9604f" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><rect x="24" y="36" width="12" height="18" rx="2" fill="#c98a5a" stroke="#5b4636" stroke-width="2.4"/><rect x="12" y="32" width="9" height="9" fill="#bfe1f2" stroke="#5b4636" stroke-width="2"/><rect x="39" y="32" width="9" height="9" fill="#bfe1f2" stroke="#5b4636" stroke-width="2"/></svg></div><span class="pinl home">Chez vous</span>`, 0, 0, { home: 1 });
   add('drop', 'drop', `<svg viewBox="0 0 30 40"><path d="M15 39 C4 24 2 16 2 13 A13 13 0 0 1 28 13 C28 16 26 24 15 39Z" fill="#e0607e" stroke="#4a3528" stroke-width="2.4"/><circle cx="15" cy="13" r="5" fill="#fff"/></svg><span class="pinl"></span>`, 0, 0, {});
   // destination d'un voyage en cours (drapeau) et compagnon en route : créés à la demande pour chaque individu (compOverlay)
+  buildPoiFilter();
   drawMarks();
 }
 const FLAG_COL = { panda: '#e0884a', capy: '#c99a6a', axo: '#f08aa6', renard: '#9fc3e0', fennec: '#e3b06b', tanuki: '#a8826a', paresseux: '#b39a7a', lemur: '#9a9aa8', phoque: '#8fb0c8', quokka: '#c9a07a' };
@@ -233,6 +234,9 @@ function lodOverlay() {
   if (!map) return;
   const z = map.getZoom();
   $('ov').dataset.z = z < 4 ? 'far' : z < 6.5 ? 'mid' : z < 10.5 ? 'near' : z < (mapMode === 'tiles' ? 16 : 13.6) ? 'city' : 'street';
+  // le bouton « lieux affichés » n'apparaît que lorsque des lieux du quotidien sont à l'écran
+  const fb = $('zFilt'), show = z >= (mapMode === 'tiles' ? POI_MIN_Z() - 0.5 : 10.5);
+  if (fb && fb.hidden === show) { fb.hidden = !show; if (!show) poiFiltOpen(false); }
 }
 function suggestions() {
   seed(dayKey() * 3 + S.home.length * 97);
@@ -271,6 +275,7 @@ function drawMarks() {
     map.getSource('routes').setData({ type: 'FeatureCollection', features: feats });
   }
   lodOverlay(); positionOverlay();
+  if (typeof poiStateCheck === 'function') poiStateCheck();
 }
 function updateWalkers() {
   for (const k of ovComps()) { const o = ovEls['w' + k], t = S.trips[k]; if (o && t) { const pos = tripPos(t); o.lon = pos[0]; o.lat = pos[1]; walkerLabel(o.el, k, t); } }
@@ -324,3 +329,73 @@ function chooseSecret(key) {
   plan.dest = { id: null, secret: key, name: s.name, country: s.country, lat: s.lat, lon: s.lon, tags: s.tags, special: null };
   openSheet('voyage'); drawMarks();
 }
+
+// ================= FILTRE DES LIEUX (v14) : un petit bouton dans la colonne de la carte =================
+(function poiFiltCSS() {
+  const st = document.createElement('style'); st.id = 'poiFiltCSS';
+  st.textContent = `
+#zFilt{position:relative}
+#zFilt svg{width:24px;height:24px}
+#zFilt[aria-expanded="true"]{background:#ffe9a8}
+#zFilt i{position:absolute;right:-5px;top:-5px;width:13px;height:13px;border-radius:50%;background:var(--fc,#f2b52e);border:2px solid var(--ink);display:none}
+#zFilt.on i{display:block}
+#poiFilt{position:absolute;right:calc(100% + 10px);top:0;width:218px;background:var(--paper);border:2.5px solid var(--ink);border-radius:16px;box-shadow:0 4px 0 rgba(74,53,40,.4);padding:6px;display:flex;flex-direction:column;gap:2px;animation:pfin .16s ease-out}
+#poiFilt[hidden]{display:none}
+@keyframes pfin{from{opacity:0;transform:translateX(6px)}}
+#poiFilt h4{margin:2px 6px 4px;font:800 12px var(--display);color:var(--ink2);letter-spacing:.04em;text-transform:uppercase}
+#poiFilt button{display:flex;align-items:center;gap:9px;width:100%;border:0;background:none;border-radius:11px;padding:5px 6px;cursor:pointer;text-align:left;color:var(--ink);font-family:var(--body)}
+#poiFilt button:hover{background:rgba(242,193,78,.18)}
+#poiFilt button[aria-checked="true"]{background:#fff3c4;box-shadow:inset 0 0 0 2px var(--ink)}
+#poiFilt .pfi{width:28px;height:28px;flex:none;border-radius:50%;background:var(--pc);border:2px solid #fffaf0;box-shadow:0 0 0 1px rgba(74,53,40,.5),0 1.5px 2px rgba(74,53,40,.35);display:flex;align-items:center;justify-content:center}
+#poiFilt .pfi svg{width:16px;height:16px}
+#poiFilt .pft{display:flex;flex-direction:column;min-width:0}
+#poiFilt .pft b{font:800 14px/1.15 var(--display)}
+#poiFilt .pft small{font:600 11.5px/1.2 var(--body);color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+.poitip{pointer-events:none!important;margin:-11px 0 0 15px;white-space:nowrap;background:#fff8ea;border:2px solid #4a3528;border-radius:8px;padding:0 7px;font:700 12px/18px var(--display);color:#4a3528;box-shadow:0 2px 0 rgba(74,53,40,.3);z-index:1}
+@media (max-width:420px){#poiFilt{width:200px}}
+`;
+  document.head.appendChild(st);
+})();
+const POI_FILT_LOOK = {
+  utile: ['#f2b52e', '<path d="M12 2.5 L14.6 9 L21.5 9.5 L16.2 13.9 L17.9 20.8 L12 17 L6.1 20.8 L7.8 13.9 L2.5 9.5 L9.4 9Z" fill="#fff"/>'],
+  tout: ['#8a7464', '<circle cx="7" cy="7" r="2.6" fill="#fff"/><circle cx="17" cy="7" r="2.6" fill="#fff"/><circle cx="7" cy="17" r="2.6" fill="#fff"/><circle cx="17" cy="17" r="2.6" fill="#fff"/>'],
+  nourriture: [POI_CATS.restaurant[1], POI_GLYPH.fork],
+  nature: [POI_CATS.parc[1], POI_GLYPH.tree],
+  boutiques: [POI_CATS.boutique[1], POI_GLYPH.bag],
+  culture: [POI_CATS.musee[1], POI_GLYPH.museum],
+};
+function buildPoiFilter() {
+  const col = document.querySelector('.zoom'); if (!col || $('zFilt')) return;
+  const b = document.createElement('button'); b.className = 'icon-btn'; b.id = 'zFilt'; b.hidden = true;
+  b.setAttribute('aria-haspopup', 'true'); b.setAttribute('aria-expanded', 'false');
+  b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 L21.5 8 L12 13 L2.5 8Z" fill="#fff3e2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4.5 12.2 L2.5 13.3 L12 18.3 L21.5 13.3 L19.5 12.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="12" cy="8" r="1.8" fill="#e0607e"/></svg><i></i>';
+  col.insertBefore(b, col.firstChild);
+  const pop = document.createElement('div'); pop.id = 'poiFilt'; pop.hidden = true; pop.setAttribute('role', 'menu'); pop.setAttribute('aria-label', 'Lieux affichés');
+  col.appendChild(pop);
+  renderPoiFilter();
+}
+function renderPoiFilter() {
+  const b = $('zFilt'), pop = $('poiFilt'); if (!b || !pop) return;
+  const cur = poiFilter(), lab = (POI_FILTERS.find(f => f[0] === cur) || POI_FILTERS[0])[1];
+  b.setAttribute('aria-label', `Lieux affichés : ${lab}`); b.title = `Lieux affichés : ${lab}`;
+  b.classList.toggle('on', cur !== 'utile'); b.style.setProperty('--fc', (POI_FILT_LOOK[cur] || POI_FILT_LOOK.utile)[0]);
+  if (pop.hidden) return;
+  let useTxt = 'Commandes, rêves, événement du jour';
+  try { const u = [...poiUsefulNow(true).cats].map(c => POI_CATS[c][0]); if (u.length) useTxt = u.slice(0, 3).join(', ') + (u.length > 3 ? '…' : ''); } catch (e) {}
+  const sub = { utile: useTxt, tout: 'Tous les lieux, sans chevauchement' };
+  pop.innerHTML = '<h4>Lieux affichés</h4>' + POI_FILTERS.map(([id, label]) => { const [c, g] = POI_FILT_LOOK[id]; return `<button role="menuitemradio" aria-checked="${id === cur}" data-pf="${id}"><span class="pfi" style="--pc:${c}"><svg viewBox="0 0 24 24" aria-hidden="true">${g}</svg></span><span class="pft"><b>${esc(label)}</b>${sub[id] ? `<small>${esc(sub[id])}</small>` : ''}</span></button>`; }).join('');
+}
+function poiFiltOpen(on) {
+  const b = $('zFilt'), pop = $('poiFilt'); if (!b || !pop) return;
+  if (pop.hidden === !on) return;
+  pop.hidden = !on; b.setAttribute('aria-expanded', on ? 'true' : 'false');
+  if (on) renderPoiFilter();
+}
+document.addEventListener('click', ev => {
+  const t = ev.target;
+  if (t.closest && t.closest('#zFilt')) { poiFiltOpen($('poiFilt').hidden); return; }
+  const o = t.closest && t.closest('[data-pf]');
+  if (o) { setPoiFilter(o.dataset.pf); poiFiltOpen(false); return; }
+  if ($('poiFilt') && !$('poiFilt').hidden && !(t.closest && t.closest('#poiFilt'))) poiFiltOpen(false);
+});
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') poiFiltOpen(false); });

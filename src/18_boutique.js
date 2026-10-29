@@ -79,7 +79,7 @@ const BQ_SHOPS = [
     crafts: ['painmaison', 'tarte', 'confiture', 'bs_brioche', 'bs_tarte_citron', 'croque', 'sandrando', 'bonhommechoc'],
     bsubs: ['pain', 'farine', 'sucre', 'pomme'], mult: 1.35, cheap: { subs: ['farine', 'sucre'], f: 0.75 },
     perks: ['Commandes de pain et de gâteaux : +35 % de pièces', 'Farine et sucre 25 % moins chers au magasin'],
-    lines: ['Deux croissants et une baguette bien cuite, s’il vous plaît !', 'C’est pour un goûter d’anniversaire : il faut que ça sente bon le beurre !', 'Votre pain est le meilleur du quartier, tout le monde le dit.'] },
+    lines: ['Ça sent bon jusque dans la rue ! Vous avez ce qu’il me faut ?', 'C’est pour un goûter d’anniversaire : il faut que ça sente bon le beurre !', 'Votre pain est le meilleur du quartier, tout le monde le dit.'] },
   { id: 'cafe', name: 'Café-salon de thé', short: 'Salon de thé', em: 'tasse', aw: '#8a5a3a', aw2: '#f6e7d2', wall: '#f3e6d6', wall2: '#e8d3bb', front: '#e9d6bf', door: '#6b4a32',
     phrase: 'Des fauteuils moelleux, du thé fumant et des petits gâteaux.',
     stars: [['Chocolat chaud à la chantilly', 'n', 'boisson', 2, null, '#8a5a3a'], ['Macaron de Paris', 'n', 'sucre', 1, null, '#f39ab0'], ['Thé au jasmin', 'n', 'boisson', 1, null, '#c9d48a']],
@@ -87,7 +87,7 @@ const BQ_SHOPS = [
     crafts: ['chantilly', 'salade', 'bonhommechoc', 'confiture', 'tarte'],
     bsubs: ['boisson', 'sucre'], mult: 1.3, fast: 0.7,
     perks: ['Boissons et douceurs : +30 % de pièces', 'Les clients arrivent plus souvent (30 % d’attente en moins)'],
-    lines: ['Un thé bien chaud et quelque chose de sucré, je vous prie.', 'Je reçois mes amies cet après-midi : il me faut de quoi faire un goûter chic.', 'Votre salon est si douillet… je pourrais y rester des heures.'] },
+    lines: ['Une petite pause douceur, voilà ce qu’il me faut.', 'Je reçois mes amies cet après-midi : il me faut de quoi faire un goûter chic.', 'Votre salon est si douillet… je pourrais y rester des heures.'] },
   { id: 'restaurant', name: 'Restaurant', short: 'Restaurant', em: 'cloche', aw: '#d9604f', aw2: '#fff4ea', wall: '#f8e4d8', wall2: '#f0cfbd', front: '#f3dccb', door: '#8a3a2f',
     phrase: 'Une petite table chaleureuse où chaque plat raconte un voyage.',
     stars: [['Fondue des copains', 'n', 'fromage', 3, null, '#f2c14e'], ['Soupe du potager', 'n', 'legume', 2, null, '#8fbf5a'], ['Croque-monsieur doré', 'n', 'pain', 2, null, '#e3b06b']],
@@ -95,7 +95,7 @@ const BQ_SHOPS = [
     crafts: ['soupe', 'soupepotager', 'fondue', 'plateau', 'croque', 'sandrando'],
     bsubs: ['plat', 'legume', 'fromage', 'mer'], mult: 1.35, slot: 1,
     perks: ['Plats cuisinés, fromages et légumes : +35 % de pièces', 'Une commande de plus à la fois au comptoir'],
-    lines: ['Une table pour quatre, et le plat du jour pour tout le monde !', 'J’ai une faim de loup… enfin, de blaireau.', 'Le chef peut-il me préparer quelque chose de réconfortant ?'] },
+    lines: ['On est quatre à table ce soir, et tout le monde a faim !', 'J’ai une faim de loup… enfin, de blaireau.', 'Le chef peut-il me préparer quelque chose de réconfortant ?'] },
   { id: 'fleuriste', name: 'Fleuriste', short: 'Fleuriste', em: 'fleur', aw: '#e07a9a', aw2: '#fff0f4', wall: '#fbe8ee', wall2: '#f4d2dc', front: '#e9f2df', door: '#5f9a6a',
     phrase: 'Des bouquets de toutes les couleurs, cueillis aux quatre coins du monde.',
     stars: [['Bouquet du voyageur', 'd', 'plante', 2, null, '#f39ab0'], ['Vase de fleurs fraîches', 'd', 'plante', 2, null, '#f39ab0'], ['Couronne du jardin', 'v', 'tete', 3, 'fleurs', '#f6c2cf']],
@@ -127,7 +127,7 @@ const BQ_SHOPS = [
     crafts: ['coupeg', 'salade', 'confiture'],
     bsubs: ['glace', 'agrume'], mult: 1.35, tip: 10,
     perks: ['Glaces et agrumes : +35 % de pièces', 'Pourboire : +10 pièces à chaque commande'],
-    lines: ['Trois boules ! Non, quatre ! Avec un parapluie en papier !', 'Il fait si chaud… j’ai besoin de fraîcheur, vite !', 'C’est pour fêter la fin de l’école, toute la classe arrive !'] },
+    lines: ['Vite, vite, avant que ça fonde !', 'Il fait si chaud… j’ai besoin de fraîcheur, vite !', 'C’est pour fêter la fin de l’école, toute la classe arrive !'] },
   { id: 'librairie', name: 'Librairie-papeterie', short: 'Librairie', em: 'livre', aw: '#6f64b0', aw2: '#f4f0ff', wall: '#eeeaf8', wall2: '#ddd6ef', front: '#efe7d8', door: '#4a4378',
     phrase: 'Des livres, des cartes anciennes et du papier qui sent bon.',
     stars: [['Mappemonde de voyageur', 'd', 'mappemonde', 2, null, '#c9a97a'], ['Nœud papillon en origami', 'v', 'cou', 1, 'noeud', '#f2d48f'], ['Plan de Paris ancien', 'm', 'papier', 1, null, '#efe2c4']],
@@ -462,7 +462,9 @@ function bqNewOrder(forceEasy) {
   const rep = Math.round(Math.min(90, (12 + val / 5 + L * 2 + req.length * 3 + (req.some(r => r.wonder) ? 15 : 0)) * (T && T.rep ? T.rep : 1)));
   // la phrase du client : celle du commerce, la sienne, ou une demande d'adoption
   const cr = req.find(r => r.k === 'comp');
-  const line = cr ? `Je rêve d’adopter ${typeof spArticle === 'function' ? spArticle(cr.sp) : 'un compagnon'}. Son panier est déjà prêt !` : T && Math.random() < 0.55 ? pick(T.lines) : pick(c.lines);
+  // (deux clients au comptoir ne disent jamais la même phrase)
+  const usedL = new Set(s.orders.map(x => x.line)), fresh = l => { const f = (l || []).filter(x => !usedL.has(x)); return f.length ? pick(f) : null; };
+  const line = cr ? `Je rêve d’adopter ${typeof spArticle === 'function' ? spArticle(cr.sp) : 'un compagnon'}. Son panier est déjà prêt !` : (T && Math.random() < 0.55 && fresh(T.lines)) || fresh(c.lines) || pick(c.lines);
   const o = { id: uidGen(), client: c.id, line, req, coins: coinsR, rep, at: now, deadline, seq: ++s.seq, shop: T ? T.id : null, spec: spec ? 1 : 0 };
   // parfois une récompense en plus : une recette du magasin pas encore connue, ou un objet rare
   if (!forceEasy && Math.random() < 0.22 * (T && T.recx ? T.recx : 1)) {
@@ -483,7 +485,13 @@ function bqTickOrders() {
   const gone = s.orders.filter(o => o.deadline && now > o.deadline);
   if (gone.length) { gone.forEach(o => { const cs = s.clients[o.client] || (s.clients[o.client] = {}); cs.away = now + 2 * 3600e3; toast(`${BQC(o.client).name} n’a pas pu attendre plus longtemps, mais reviendra plus tard.`); }); s.orders = s.orders.filter(o => !gone.includes(o)); changed = true; }
   // premières commandes : tout de suite
-  if (!s.orders.length && !s.served && !s.started) { s.started = now; for (let i = 0; i < 2; i++) { const o = bqNewOrder(true); if (o) s.orders.push(o); } s.next = now + bqInterval(0); changed = true; }
+  if (!s.orders.length && !s.served && !s.started) {
+    s.started = now;
+    // deux premiers clients, deux demandes différentes
+    const sig = o => JSON.stringify(o.req.map(r => [r.k, r.key || r.name || r.rid || r.sp || '']));
+    for (let i = 0; i < 2; i++) { let o = null; for (let t = 0; t < 5; t++) { o = bqNewOrder(true); if (!o || !s.orders.some(x => sig(x) === sig(o))) break; } if (o) s.orders.push(o); }
+    s.next = now + bqInterval(0); changed = true;
+  }
   if (!s.next) s.next = now + bqInterval(s.served);
   let guard = 0;
   while (s.orders.length < slots && now >= s.next && guard++ < 6) {
@@ -957,7 +965,7 @@ function bqShopSVG(L, mini) {
   const s0 = bqState(), night = isNight(), ink = '#5b4636', sw = `stroke="${ink}" stroke-width="2.4" stroke-linejoin="round"`;
   L = L == null ? s0.lvl : L;
   const W = 360, H = 210;
-  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="bq-shop" role="img" aria-label="La boutique, niveau ${esc(bqLv(L).name)}">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" class="bq-shop" preserveAspectRatio="xMidYMid slice" role="img" aria-label="La boutique, niveau ${esc(bqLv(L).name)}">`;
   // le décor suit le commerce ouvert (couleurs du mur, auvent, enseigne, produits sur les étagères, emblème du comptoir)
   const TT = bqType(), pid = 'bqwp' + L + (TT ? TT.id : '') + (mini ? 'm' : '');
   const wA = TT ? TT.wall : L >= 1 ? '#f8e6cc' : '#f3e2c8', wB = TT ? TT.wall2 : '#f6dcc0';
@@ -1061,12 +1069,17 @@ function bqOrderCard(o) {
 function renderComptoir(box) {
   const s = bqState(); bqTickOrders();
   const lv = bqLv(s.lvl), now = Date.now();
-  let h = bqShopsBar() + `<div class="bq-hero">${bqShopSVG()}</div>` + bqRepHTML();
+  // v14 : sur téléphone, les commandes passent avant la réputation et les avantages (la 1re commande se voit sans défiler)
+  const phone = typeof matchMedia === 'function' && matchMedia('(max-width:520px)').matches;
+  let bar = bqShopsBar(), perks = '';
+  if (phone) { const m = bar.match(/<div class="bq-perkl">[\s\S]*?<\/div>/); if (m) { perks = m[0]; bar = bar.replace(m[0], ''); } }
+  let h = bar + `<div class="bq-hero">${bqShopSVG()}</div>` + (phone ? '' : bqRepHTML());
   const ready = shopReady();
-  h += `<div class="bq-intro"><b>${s.orders.length ? (ready ? `${ready} commande${ready > 1 ? 's' : ''} prête${ready > 1 ? 's' : ''} à livrer !` : `${s.orders.length} client${s.orders.length > 1 ? 's' : ''} attend${s.orders.length > 1 ? 'ent' : ''} au comptoir`) : 'Le comptoir est calme…'}</b><span>Réunissez ce qu’ils demandent en voyage ou à l’atelier, puis livrez : pièces et réputation garanties.</span></div>`;
+  h += `<div class="bq-intro${phone ? ' bq-intro-s' : ''}"><b>${s.orders.length ? (ready ? `${ready} commande${ready > 1 ? 's' : ''} prête${ready > 1 ? 's' : ''} à livrer !` : `${s.orders.length} client${s.orders.length > 1 ? 's' : ''} attend${s.orders.length > 1 ? 'ent' : ''} au comptoir`) : 'Le comptoir est calme…'}</b><span>Réunissez ce qu’ils demandent en voyage ou à l’atelier, puis livrez : pièces et réputation garanties.</span></div>`;
   h += `<div class="bq-orders">` + s.orders.slice().sort((a, b) => bqReady(b) - bqReady(a) || a.seq - b.seq).map(bqOrderCard).join('');
   for (let i = s.orders.length; i < bqSlots(); i++) h += `<div class="bq-slot"><svg viewBox="0 0 30 30" aria-hidden="true">${BQ_ICONS.comptoir}</svg><span>${i === s.orders.length ? `Prochain client dans <b data-bqcd="${s.next}">${fmtDur(s.next - now)}</b>` : 'Place libre au comptoir'}</span></div>`;
   h += `</div>`;
+  if (phone) h += bqRepHTML() + perks;
   const served = Object.entries(s.clients).filter(([, v]) => v.served).length;
   h += `<p class="small bq-foot">${s.served} commande${s.served > 1 ? 's' : ''} livrée${s.served > 1 ? 's' : ''} · ${served}/${BQ_CLIENTS.length} clients déjà servis · ${coins(s.earned)} gagnées au comptoir. ${lv.reach}.</p>`;
   box.innerHTML = h;
@@ -1163,12 +1176,14 @@ function bqCheckReady(where) {
   bqReadyIds = new Set(now.map(o => o.id));
   if (!nw.length) return;
   const names = nw.map(o => BQC(o.client).name).join(' et ');
-  const html = `<div class="bq-haul"><img src="${clientURI(BQC(nw[0].client), 'joie')}" alt=""><span><b>Commande prête !</b><small>${esc(names)} ${nw.length > 1 ? 'peuvent' : 'peut'} être servi${nw.length > 1 ? 's' : ''} à la boutique.</small></span><button class="btn green sm" data-bopen="comptoir">Livrer</button></div>`;
+  const sw = bqSwapNote && nw.find(o => o.client === bqSwapNote.client) ? bqSwapNote : null; bqSwapNote = null;
+  const html = `<div class="bq-haul"><img src="${clientURI(BQC(nw[0].client), 'joie')}" alt=""><span><b>Commande prête !</b><small>${sw ? `${esc(BQC(sw.client).name)} a changé d’avis : « ${esc(sw.name)} » lui suffit. ` : ''}${esc(names)} ${nw.length > 1 ? 'peuvent' : 'peut'} être servi${nw.length > 1 ? 's' : ''} à la boutique.</small></span><button class="btn green sm" data-bopen="comptoir">Livrer</button></div>`;
   const m = $('modal'), btn = where === 'haul' && m && !m.hidden ? m.querySelector('.mbox > button:last-child') : null;
   if (btn) btn.insertAdjacentHTML('beforebegin', html);
   else toast(`Commande prête : ${names} attend${nw.length > 1 ? 'ent' : ''} à la boutique !`);
   if (typeof renderNav === 'function') renderNav();
 }
+let bqSwapNote = null;
 if (typeof GAME !== 'undefined') {
   // tout début de partie : tant qu'aucun client n'a été servi, la première commande demande un objet ordinaire que le voyageur vient de rapporter
   // (le joueur comprend dès le 1er retour que ses trouvailles servent à ses clients)
@@ -1179,8 +1194,11 @@ if (typeof GAME !== 'undefined') {
       if (!got.length) return;
       const fits = it => T && (T.keys || []).some(k => ING[k] && ING[k][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'));
       const it = got.find(fits) || got.find(x => T && (T.itemCats || []).includes(x.cat)) || got[0];
-      const o = s.orders[0];
+      const o = s.orders[0]; if (o.tuto || (typeof tutoActive === 'function' && tutoActive())) return; // le tutoriel garde sa commande, stable
       o.req = [{ k: 'item', name: it.name, def: [it.name, it.cat, it.sub, 0, it.look || null, it.color || null], n: 1, src: { place: it.from || '' } }];
+      // plus de changement en silence : le client le dit (sa phrase change) et la fenêtre du retour l’annonce (bqCheckReady)
+      o.line = `Oh, vous rapportez « ${it.name} » ? J’ai changé d’avis : c’est exactement ce qu’il me faut !`; o.changed = 1;
+      bqSwapNote = { client: o.client, name: it.name }; try { bqReadyIds.delete(o.id); } catch (er) {} // annoncée comme prête au retour
       save();
     } catch (er) { console.error('boutique', er); }
   });
@@ -1320,6 +1338,7 @@ setInterval(bqTick, 4000);
 .bq-haul small{font-size:12.5px;color:var(--ink2)}
 .bq-new{font-style:normal;font:800 10.5px var(--display);background:#ffe1ec;color:#b8456a;border-radius:6px;padding:1px 5px;vertical-align:2px}
 .bq-recmore{display:block;width:100%;margin-top:10px;background:#fff6dc;border:2px dashed #e0b84a;border-radius:14px;padding:10px;font:700 14px var(--display);color:#7a5a12;cursor:pointer}
+@media (max-width:520px){.bq-hero{height:104px}.bq-hero svg.bq-shop{width:100%;height:100%}.bq-intro-s{margin:10px 2px 6px}.bq-intro-s>span{display:none}.bq-orders+.bq-rep{margin-top:14px}}
 @media (max-width:420px){.bq-face{width:58px;height:58px}.bq-ohx p{font-size:15.5px}.bq-grid{grid-template-columns:repeat(2,1fr)}}
 @media (prefers-reduced-motion:reduce){.bq-order.ready,.bq-deliver{animation:none}}
 /* commerces (phase B) */

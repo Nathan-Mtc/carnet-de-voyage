@@ -142,7 +142,7 @@ body.jeu-test #fastBtn{display:inline-flex}
 @media (prefers-reduced-motion:reduce){.hcard,.hcard.r3,.hcard.r4{animation:none;opacity:1;transform:none}.hcard.r3::before,.hcard.r4::before,.hcard::after{animation:none}}
 `;
   const st = document.createElement('style'); st.id = 'jeuCSS'; st.textContent = css; document.head.appendChild(st);
-  try { if (/test/.test(location.hash + location.search)) document.body.classList.add('jeu-test'); } catch (e) {}
+  try { if (typeof isTestMode === 'function' ? isTestMode() : /#test/.test(location.hash)) document.body.classList.add('jeu-test'); } catch (e) {}
 })();
 
 // ---------- Durées : la balade éclair n'est plus présentée comme un « test »
@@ -439,19 +439,15 @@ function showHaul(h) {
 // ================= BARRE DU JEU (écran principal) =================
 function renderJeuBar() {
   // v13 : plus de barre sur la carte (événement, série, trophée) : tout est rangé dans le menu, signalé par un simple point
-  if (typeof renderMenuDot === 'function') { renderMenuDot(); eventMapCSS(); return; }
+  if (typeof renderMenuDot === 'function') { renderMenuDot(); return; }
   let bar = $('jeuBar');
   if (!bar) { bar = document.createElement('div'); bar.id = 'jeuBar'; const g = $('goal'); g.parentNode.insertBefore(bar, g.nextSibling); }
   const ev = todayEvent(), ready = achReady().length, L = S.login;
   bar.innerHTML = `<button class="evchip" data-jeu="event" aria-label="Événement du jour : ${esc(ev.name)}"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><span class="evt"><b>${esc(ev.name)}</b><small>${esc(ev.short)}</small></span></button><button class="jbtn" data-jeu="login" aria-label="Cadeaux quotidiens, série de ${L.streak || 0} jours">${FLAME}<span class="jn">${L.streak || 0}</span></button><button class="jbtn" data-jeu="ach" aria-label="Succès${ready ? `, ${ready} à récupérer` : ''}">${TROPHY()}${ready ? `<span class="jb">${ready}</span>` : ''}</button>`;
-  layoutJeuBar(); eventMapCSS();
+  layoutJeuBar();
 }
-// les lieux concernés par l'événement du jour brillent sur la carte
-function eventMapCSS() {
-  const ev = todayEvent(); let st = $('jeuEvCSS'); if (!st) { st = document.createElement('style'); st.id = 'jeuEvCSS'; document.head.appendChild(st); }
-  const cols = (ev.tags || []).filter(t => POI_CATS[t]).map(t => POI_CATS[t][1]);
-  st.textContent = cols.map(c => `.poi .poib[style*="--pc:${c}"]`).join(',') + (cols.length ? `{box-shadow:0 0 0 3px #f6c445,0 0 12px 4px rgba(246,196,69,.8);animation:pulse .9s ease-in-out infinite alternate}` : '');
-}
+// (v14) l'ancien halo CSS des épingles HTML de l'événement du jour est retiré : les lieux sont dessinés par la couche
+// MapLibre `poi-sym` (07_poi.js), qui met elle-même en avant les lieux « utiles maintenant » (événement du jour compris).
 function layoutJeuBar() {
   const bar = $('jeuBar'), g = $('goal'); if (!bar || !g) return;
   if (innerWidth <= 900) { const r = g.getBoundingClientRect(); bar.style.top = (r.height ? r.bottom + 10 : 110) + 'px'; }

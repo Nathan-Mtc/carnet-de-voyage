@@ -1,6 +1,34 @@
 // ================= VOYAGE =================
+// v14 : durée = TRAJET aller-retour (selon la distance) + SÉJOUR sur place (niveau DURS choisi).
+// Trajet aller-retour en minutes : 0,8 + 0,9 × km^0,655 (courbe douce : 2 min dans le quartier, ~10 h aux antipodes).
+// kmBetween arrondit au km : pour les lieux du quartier (300 m…), on prend la distance exacte
+const kmExact = (a, b) => d3.geoDistance([a.lon, a.lat], [b.lon, b.lat]) * 6371;
+function tripRoundMs(km) {
+  const min = Math.max(1, 0.8 + 0.9 * Math.pow(Math.max(0, +km || 0), 0.655)); // au moins 1 min
+  const ms = min * 60e3;
+  if (min < 10) return Math.round(ms / 5e3) * 5e3;        // à 5 s près
+  if (min < 60) return Math.round(min) * 60e3;            // à la minute
+  return Math.round(min / 5) * 5 * 60e3;                  // à 5 min près
+}
+// durée totale prévue pour une destination et un niveau de séjour
+function tripPlanMs(km, durKey) { const d = DURS.find(x => x.key === durKey) || DURS[0]; return tripRoundMs(km) + d.ms; }
+// fractions du voyage : fin de l'aller (fa) et fin du séjour (fb). Anciens voyages (sans t.out) : aller-retour symétrique.
+function tripPhases(t) {
+  if (!t || !(t.out > 0) || !(t.total > 0)) return { fa: 0.5, fb: 0.5 };
+  const fa = Math.min(0.5, t.out / t.total), fb = Math.min(1 - fa, (t.out + (t.stay || 0)) / t.total);
+  return { fa, fb: Math.max(fa, fb) };
+}
+// avancement géographique (0 maison → 1 destination) pour une fraction f du voyage
+function tripGeoK(t, f) {
+  const { fa, fb } = tripPhases(t);
+  if (f <= fa) return fa > 0 ? f / fa : 1;
+  if (f <= fb) return 1;
+  return fb < 1 ? Math.max(0, (1 - f) / (1 - fb)) : 0;
+}
+// 'aller' | 'sejour' | 'retour'
+function tripPhase(t) { const f = Math.min(1, t.elapsed / t.total), { fa, fb } = tripPhases(t); return f < fa ? 'aller' : f < fb ? 'sejour' : 'retour'; }
 function tripPos(t) {
-  const f = Math.min(1, t.elapsed / t.total), k = f <= 0.5 ? f / 0.5 : (1 - f) / 0.5;
+  const f = Math.min(1, t.elapsed / t.total), k = tripGeoK(t, f);
   return d3.geoInterpolate([t.from.lon, t.from.lat], [t.dest.lon, t.dest.lat])(k);
 }
 function nearestPlace(lon, lat, maxKm) { let best = null, bd = maxKm; for (const p of PLACES) { const d = kmBetween({ lat, lon }, p); if (d < bd) { bd = d; best = p; } } return best; }
@@ -16,10 +44,11 @@ function weightedType(k) {
 function startTrip() {
   const d = DURS.find(x => x.key === plan.dur), from = homeObj(), dest = plan.dest, k = S.sel;
   const dist = kmBetween(from, dest), n = d.ev;
+  const out = Math.round(tripRoundMs(kmExact(from, dest)) / 2), stay = d.ms || 0, total = 2 * out + stay, fa = out / total; // l'arrivée a lieu à la fin de l'aller
   const events = [];
   for (let i = 0; i < n; i++) events.push({ at: 0.05 + (0.9 * (i + 0.5)) / n, type: null });
-  let closest = 0; events.forEach((e, i) => { if (Math.abs(e.at - 0.5) < Math.abs(events[closest].at - 0.5)) closest = i; });
-  events[closest].at = 0.5; events[closest].type = 'arrivee';
+  let closest = 0; events.forEach((e, i) => { if (Math.abs(e.at - fa) < Math.abs(events[closest].at - fa)) closest = i; });
+  events[closest].at = fa; events[closest].type = 'arrivee';
   const must = ['choix', 'trouvaille', 'rencontre', 'marchand', 'aide', 'animal'];
   let mi = 0;
   events.forEach((e, i) => { if (!e.type) e.type = (n <= 4 ? ['choix', 'animal', 'trouvaille', 'aide'][mi++ % 4] : (mi < must.length ? must[mi++] : weightedType(k))); });
@@ -30,9 +59,9 @@ function startTrip() {
   if (hasEff(k, 'flair')) events.push({ at: 0.97, type: 'trouvaille' });
   if (hasEff(k, 'oiseau')) events.push({ at: 0.93, type: 'pepin' });
   events.sort((a, b) => a.at - b.at);
-  S.trips[k] = { id: uidGen(), comp: k, from, dest, dur: d.key, luck: d.luck + lvlLuck(k), total: d.ms, elapsed: 0, last: Date.now(), dist, events, journal: [], bag: [], photos: [], coins: 0, xp: 0, done: false, startedAt: Date.now() };
+  S.trips[k] = { id: uidGen(), comp: k, from, dest, dur: d.key, luck: d.luck + lvlLuck(k), total, out, stay, elapsed: 0, last: Date.now(), dist, events, journal: [], bag: [], photos: [], coins: 0, xp: 0, done: false, startedAt: Date.now() };
   const dk = dayKey(); if (S.firstTripDay !== dk) { S.firstTripDay = dk; S.trips[k].dayBonus = true; }
-  S.trips[k].journal.push({ t: Date.now(), kind: 'depart', text: `${CHARS[k].name} boucle son sac et part pour ${dest.name}. ${dist.toLocaleString('fr-FR')} km l’attendent.` });
+  S.trips[k].journal.push({ t: Date.now(), kind: 'depart', text: `${CHARS[k].name} boucle son sac et part pour ${dest.name}. ${dist < 2 ? 'C’est tout près d’ici !' : `${dist.toLocaleString('fr-FR')} km l’attendent.`}` });
   plan.dest = null; save(); renderAll();
 }
 function rollRarity(base, luck) { let r = base; while (r < 4 && Math.random() < 0.08 * (1 + luck * 0.6) * Math.pow(0.5, r - base)) r++; return r; }
@@ -73,7 +102,8 @@ function lootFor(tags, luck, place, n = 1, comp = null) {
 function tasteOf(comp, item) { const t = FOOD_TASTE[typeof spOf === 'function' ? spOf(comp) : comp] || FOOD_TASTE.def; if (t.love.includes(item.sub)) return 'love'; if (t.hate.includes(item.sub)) return 'hate'; return 'like'; }
 function eventPlace(t, e) {
   if (e.type === 'arrivee' || t.dest.poi) return { ...t.dest };
-  const k = e.at <= 0.5 ? e.at / 0.5 : (1 - e.at) / 0.5;
+  const k = tripGeoK(t, e.at);
+  if (k >= 1) return { ...t.dest }; // pendant le séjour : sur place
   const [lon, lat] = d3.geoInterpolate([t.from.lon, t.from.lat], [t.dest.lon, t.dest.lat])(k);
   const near = nearestPlace(lon, lat, Math.max(120, t.dist * 0.12));
   if (near && near.name !== t.from.name) return near;
@@ -92,7 +122,11 @@ const CHOICES = {
   desert: { q: n => `Une tempête de sable approche à l’horizon.`, a: ['Continuer coûte que coûte', 'S’abriter sous une tente', 'Suivre une caravane'], third: 'items' },
   campagne: { q: n => `Un orage gronde au-dessus des champs.`, a: ['Courir sous la pluie', 'S’abriter dans une grange', 'Aider à la récolte'], third: 'food' },
   agrumes: { q: n => `Un verger de citronniers borde le chemin.`, a: ['Grimper dans un arbre', 'Demander au fermier', 'Faire de la limonade'], third: 'coins' },
+  // v14 : lieux du quotidien en ville (boulangerie, café, fleuriste, gare…) : un choix de quartier, pas de « grand marché »
+  quartier: { q: n => `Juste à côté, une petite porte de service est restée entrouverte.`, a: ['Jeter un œil derrière la porte', 'Attendre sagement son tour', 'Donner un coup de main aux gens du coin'], third: 'coins' },
 };
+// le choix d'un événement : les lieux du quotidien « en ville » ont le leur ; les autres (parc, plage, musée…) gardent celui de leur paysage
+function choiceTag(place, tags) { return place && place.poi && tags[1] === 'ville' ? 'quartier' : (tags.find(tg => CHOICES[tg]) || 'campagne'); }
 // sans réponse du joueur, chaque espèce décide selon son caractère (voir SP_INFO.temper : 0 audace, 1 prudence, 2 la troisième voie, 'eau')
 function compTemper(comp) { try { return typeof spTemper === 'function' ? spTemper(comp) : 2; } catch (e) { return 2; } }
 function autoChoice(comp, c) {
@@ -176,8 +210,8 @@ function fireEvent(t, e) {
       J({ kind: 'repas', text: { love: `${n} goûte ${it.name.toLowerCase()} et pousse un cri de joie. Il en garde pour toi !`, like: `${n} goûte ${it.name.toLowerCase()}. Pas mal du tout ! Il en rapporte.`, hate: `${n} goûte ${it.name.toLowerCase()} et fait une grimace. Il le garde pour un ami.` }[taste], items: [it] });
       break;
     }
-    case 'rencontre': { const pl = pick(PLAYERS); J({ kind: 'rencontre', text: `${n} croise ${pl[1]}, le compagnon de ${pl[0]}, qui voyage aussi par ici.`, other: pl, pending: true }); break; }
-    case 'choix': { const ctag = tags.find(tg => CHOICES[tg]) || 'campagne'; J({ kind: 'choix', text: CHOICES[ctag].q(n), ctag, pending: true }); break; }
+    case 'rencontre': { const pl = pick(PLAYERS); J({ kind: 'rencontre', text: `${n} croise ${pl[1]}, le compagnon ${/^[AEIOUYÉÈ]/.test(pl[0]) ? 'd’' : 'de '}${pl[0]}, qui voyage aussi par ici.`, other: pl, pending: true }); break; }
+    case 'choix': { const ctag = choiceTag(place, tags); J({ kind: 'choix', text: CHOICES[ctag].q(n), ctag, pending: true }); break; }
     case 'marchand': {
       const offers = lootFor(tags, t.luck + 1, pName, 2).map(it => { it.rarity = Math.max(it.rarity, 1); return { item: it, price: Math.round(value(it) * (hasEff(k, 'nego') ? 0.7 : 1)) }; });
       J({ kind: 'marchand', text: `Un marchand ambulant déballe ses trésors devant ${n}.`, offers, pending: true });
