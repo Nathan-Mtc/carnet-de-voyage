@@ -374,7 +374,7 @@ function cpDexFiche(sp, N) {
   let art;
   if (seen) { try { art = drawChar(nsLook(sp, pal ? cpPalGenes(sp, pal) : null, null), NO_OUTFIT, own ? 'rire' : 'curieux', 'cpdx'); } catch (e) { art = `<img src="${nsPortrait(sp, null, null, 'content')}" alt="">`; } }
   else art = `<img class="sil" src="${nsPortrait(sp, null, null, 'content')}" alt="">`;
-  let h = `<article class="cpf ${seen ? '' : 'unk'}" id="cpFiche" style="--tint:${typeof spTint === 'function' ? spTint(sp) : '#fff3dc'}"><button class="cpfx" data-cpdex="" aria-label="Fermer">×</button>`;
+  let h = `<article class="cpf ${seen ? '' : 'unk'}" id="cpFiche" style="--tint:${typeof spTint === 'function' ? spTint(sp) : '#fff3dc'}"><button class="cpfclose" data-cpdex="" aria-label="Fermer">×</button>`;
   h += `<div class="cpfart"><span class="cpfn">${cpNum(i + 1)}</span><div class="cpfa">${art}</div></div>`;
   h += `<div class="cpfb"><h3>${seen ? esc(spName(sp)) : '? ? ?'}</h3>`;
   h += `<div class="cpfst">${H ? `<span class="cpft">${typeof nsHabIco === 'function' ? nsHabIco(hab) : ''}${esc(H.name)}</span>` : ''}<span class="cpfm"><small>Taille</small>${seen ? esc(D[0]) : '?'}</span><span class="cpfm"><small>Poids</small>${seen ? esc(D[1]) : '?'}</span></div>`;
@@ -543,7 +543,7 @@ document.addEventListener('click', ev => {
 .cpgo{position:absolute;right:4px;top:3px}.cpgo svg{width:16px;height:16px}
 .cpgp{display:flex;gap:2px;flex-wrap:wrap;justify-content:center}.cpgp i{width:6px;height:6px;border-radius:50%;background:#d8ccb8}.cpgp i.on{background:#e9473f}
 .cpf{position:relative;display:grid;grid-template-columns:130px 1fr;gap:8px 10px;background:linear-gradient(180deg,var(--tint),#fff 60%);border:2.5px solid var(--ink);border-radius:20px;padding:10px;animation:dgpop .35s ease both}
-.cpfx{position:absolute;right:6px;top:4px;width:30px;height:30px;border:none;background:none;font:800 22px var(--display);color:var(--ink2);cursor:pointer}
+.cpfclose{position:absolute;right:6px;top:4px;width:30px;height:30px;border:none;background:none;font:800 22px var(--display);color:var(--ink2);cursor:pointer}
 .cpfart{position:relative;grid-row:span 1}
 .cpfn{font:800 12px var(--display);color:#c9302c}
 .cpfa{width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,#fff 0 55%,rgba(255,255,255,0) 72%);display:flex;align-items:center;justify-content:center}

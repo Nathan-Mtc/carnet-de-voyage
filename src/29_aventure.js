@@ -666,7 +666,7 @@ function avOpen(k) {
   avK = k; avSig = ''; avStageKey = ''; avPick = { src: null, id: null, how: null }; avLastLen = t.journal.length; avPlay = null; avLogOpen = false;
   let v = $('avView');
   if (!v) { v = document.createElement('div'); v.id = 'avView'; v.className = 'avv'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-modal', 'true'); document.body.appendChild(v); }
-  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"><div class="avreal" aria-hidden="true"></div><div class="avscene"></div></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-log="1" aria-pressed="false">Journal</button><button class="btn cream sm" data-av-replay="cur">Revoir l’aventure</button><button class="btn green sm" data-av-close="1">Carte</button></footer></div>`;
+  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"><div class="avreal" aria-hidden="true"></div><div class="avscene"></div></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-log="1" aria-pressed="false">Journal</button><button class="btn green sm" data-av-close="1">Carte</button></footer></div>`;
   v.hidden = false; document.body.classList.add('avopen');
   avPhLast = null;
   avRender(true);
@@ -749,6 +749,7 @@ function avRender(force) {
 // la carte reste invisible et le décor illustré s'affiche ; sans tuiles au bout de 12 s, elle est détruite.
 let avRM = null;
 function avRealWanted(t) {
+  return false; // vue 3D réelle retirée (retour du joueur : n'apporte rien)
   if (!t || avTuto(t) || typeof maplibregl === 'undefined' || typeof tilesStyle !== 'function') return false;
   return AV_FORCE.real === true || (typeof mapMode !== 'undefined' && mapMode === 'tiles');
 }
@@ -1068,7 +1069,7 @@ function avRecapHTML(h) {
   const k = h.comp || t.comp, n = CHARS[k] ? CHARS[k].name : '', P = avPanels(t).slice(1, -1), fol = t.journal.filter(j => j.kind === 'sauvage' && j.tamed && S.comps[j.tamed]);
   if (!P.length && !t.avHurt) return '';
   let s = `<div class="avrecap"><h3>Les moments forts</h3>`;
-  if (P.length) s += `<div class="avrstrip">${P.slice(0, 4).map(p => `<span class="avrth" title="${esc(avTxt(p.line || '', k))}">${axSVG(p.act, axCtx(k, p.biome || 'campagne', 'jour', 'clair', p.wild ? { wild: p.wild } : null), { thumb: true })}</span>`).join('')}</div><button class="btn green sm" data-av-replay="last">Revoir l’aventure</button>`;
+  if (P.length) s += `<div class="avrstrip">${P.slice(0, 4).map(p => `<span class="avrth" title="${esc(avTxt(p.line || '', k))}">${axSVG(p.act, axCtx(k, p.biome || 'campagne', 'jour', 'clair', p.wild ? { wild: p.wild } : null), { thumb: true })}</span>`).join('')}</div>`;
   s += fol.map(j => `<p class="avfollow"><img src="${portraitURI(j.tamed, 'amour')}" alt="">${esc(CHARS[j.tamed].name)} a suivi ${esc(n)} jusqu’au refuge !</p>`).join('');
   if (t.avHurt) s += `<p class="avhurt"><img src="${portraitURI(k, 'dodo')}" alt="">${esc(avTxt('{n} est rentré{e} un peu fatigué{e} : un câlin et au lit !', k))}</p>`;
   return s + `</div>`;

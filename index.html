@@ -17988,7 +17988,7 @@ function avOpen(k) {
   avK = k; avSig = ''; avStageKey = ''; avPick = { src: null, id: null, how: null }; avLastLen = t.journal.length; avPlay = null; avLogOpen = false;
   let v = $('avView');
   if (!v) { v = document.createElement('div'); v.id = 'avView'; v.className = 'avv'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-modal', 'true'); document.body.appendChild(v); }
-  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"><div class="avreal" aria-hidden="true"></div><div class="avscene"></div></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-log="1" aria-pressed="false">Journal</button><button class="btn cream sm" data-av-replay="cur">Revoir l’aventure</button><button class="btn green sm" data-av-close="1">Carte</button></footer></div>`;
+  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"><div class="avreal" aria-hidden="true"></div><div class="avscene"></div></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-log="1" aria-pressed="false">Journal</button><button class="btn green sm" data-av-close="1">Carte</button></footer></div>`;
   v.hidden = false; document.body.classList.add('avopen');
   avPhLast = null;
   avRender(true);
@@ -18071,6 +18071,7 @@ function avRender(force) {
 // la carte reste invisible et le décor illustré s'affiche ; sans tuiles au bout de 12 s, elle est détruite.
 let avRM = null;
 function avRealWanted(t) {
+  return false; // vue 3D réelle retirée (retour du joueur : n'apporte rien)
   if (!t || avTuto(t) || typeof maplibregl === 'undefined' || typeof tilesStyle !== 'function') return false;
   return AV_FORCE.real === true || (typeof mapMode !== 'undefined' && mapMode === 'tiles');
 }
@@ -18390,7 +18391,7 @@ function avRecapHTML(h) {
   const k = h.comp || t.comp, n = CHARS[k] ? CHARS[k].name : '', P = avPanels(t).slice(1, -1), fol = t.journal.filter(j => j.kind === 'sauvage' && j.tamed && S.comps[j.tamed]);
   if (!P.length && !t.avHurt) return '';
   let s = `<div class="avrecap"><h3>Les moments forts</h3>`;
-  if (P.length) s += `<div class="avrstrip">${P.slice(0, 4).map(p => `<span class="avrth" title="${esc(avTxt(p.line || '', k))}">${axSVG(p.act, axCtx(k, p.biome || 'campagne', 'jour', 'clair', p.wild ? { wild: p.wild } : null), { thumb: true })}</span>`).join('')}</div><button class="btn green sm" data-av-replay="last">Revoir l’aventure</button>`;
+  if (P.length) s += `<div class="avrstrip">${P.slice(0, 4).map(p => `<span class="avrth" title="${esc(avTxt(p.line || '', k))}">${axSVG(p.act, axCtx(k, p.biome || 'campagne', 'jour', 'clair', p.wild ? { wild: p.wild } : null), { thumb: true })}</span>`).join('')}</div>`;
   s += fol.map(j => `<p class="avfollow"><img src="${portraitURI(j.tamed, 'amour')}" alt="">${esc(CHARS[j.tamed].name)} a suivi ${esc(n)} jusqu’au refuge !</p>`).join('');
   if (t.avHurt) s += `<p class="avhurt"><img src="${portraitURI(k, 'dodo')}" alt="">${esc(avTxt('{n} est rentré{e} un peu fatigué{e} : un câlin et au lit !', k))}</p>`;
   return s + `</div>`;
@@ -20409,7 +20410,7 @@ function cpDexFiche(sp, N) {
   let art;
   if (seen) { try { art = drawChar(nsLook(sp, pal ? cpPalGenes(sp, pal) : null, null), NO_OUTFIT, own ? 'rire' : 'curieux', 'cpdx'); } catch (e) { art = `<img src="${nsPortrait(sp, null, null, 'content')}" alt="">`; } }
   else art = `<img class="sil" src="${nsPortrait(sp, null, null, 'content')}" alt="">`;
-  let h = `<article class="cpf ${seen ? '' : 'unk'}" id="cpFiche" style="--tint:${typeof spTint === 'function' ? spTint(sp) : '#fff3dc'}"><button class="cpfx" data-cpdex="" aria-label="Fermer">×</button>`;
+  let h = `<article class="cpf ${seen ? '' : 'unk'}" id="cpFiche" style="--tint:${typeof spTint === 'function' ? spTint(sp) : '#fff3dc'}"><button class="cpfclose" data-cpdex="" aria-label="Fermer">×</button>`;
   h += `<div class="cpfart"><span class="cpfn">${cpNum(i + 1)}</span><div class="cpfa">${art}</div></div>`;
   h += `<div class="cpfb"><h3>${seen ? esc(spName(sp)) : '? ? ?'}</h3>`;
   h += `<div class="cpfst">${H ? `<span class="cpft">${typeof nsHabIco === 'function' ? nsHabIco(hab) : ''}${esc(H.name)}</span>` : ''}<span class="cpfm"><small>Taille</small>${seen ? esc(D[0]) : '?'}</span><span class="cpfm"><small>Poids</small>${seen ? esc(D[1]) : '?'}</span></div>`;
@@ -20578,7 +20579,7 @@ document.addEventListener('click', ev => {
 .cpgo{position:absolute;right:4px;top:3px}.cpgo svg{width:16px;height:16px}
 .cpgp{display:flex;gap:2px;flex-wrap:wrap;justify-content:center}.cpgp i{width:6px;height:6px;border-radius:50%;background:#d8ccb8}.cpgp i.on{background:#e9473f}
 .cpf{position:relative;display:grid;grid-template-columns:130px 1fr;gap:8px 10px;background:linear-gradient(180deg,var(--tint),#fff 60%);border:2.5px solid var(--ink);border-radius:20px;padding:10px;animation:dgpop .35s ease both}
-.cpfx{position:absolute;right:6px;top:4px;width:30px;height:30px;border:none;background:none;font:800 22px var(--display);color:var(--ink2);cursor:pointer}
+.cpfclose{position:absolute;right:6px;top:4px;width:30px;height:30px;border:none;background:none;font:800 22px var(--display);color:var(--ink2);cursor:pointer}
 .cpfart{position:relative;grid-row:span 1}
 .cpfn{font:800 12px var(--display);color:#c9302c}
 .cpfa{width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,#fff 0 55%,rgba(255,255,255,0) 72%);display:flex;align-items:center;justify-content:center}
