@@ -59,7 +59,7 @@ const bqWho = c => `${c.name} ${c.label}`;
 const BQ_LEVELS = [
   { name: 'Échoppe', rep: 0, slots: 3, rich: 1, stock: 6, title: 'Petite échoppe de quartier', reach: 'Des clients du quartier' },
   { name: 'Boutique', rep: 50, slots: 3, rich: 1.15, stock: 7, title: 'Adresse que l’on recommande', reach: 'Des clients de toute la région', perks: ['+15 % de pièces par commande', 'Rayon décoration et recettes au magasin', 'Auvent rayé et enseigne peinte', 'Clients de toute la région'] },
-  { name: 'Maison réputée', rep: 160, slots: 4, rich: 1.3, stock: 8, title: 'Maison qui compte en France', reach: 'Des clients de toute la France', perks: ['4 commandes à la fois', '+30 % de pièces par commande', 'Nouveaux vêtements et matériaux', 'Plantes, vitrine et seconde étagère', 'Clients de toute la France'] },
+  { name: 'Maison réputée', rep: 160, slots: 4, rich: 1.3, stock: 8, title: 'Maison qui compte en France', reach: 'Des clients de toute la France', perks: ['4 commandes à la fois', '+30 % de pièces par commande', 'Nouveaux vêtements et matériaux', 'Plantes et seconde étagère', 'Clients de toute la France'] },
   { name: 'Grand comptoir', rep: 360, slots: 4, rich: 1.5, stock: 9, title: 'Renommée dans toute l’Europe', reach: 'Des clients de toute l’Europe', perks: ['+50 % de pièces par commande', 'Articles rares au magasin', 'Lanternes et tapis dans la boutique', 'Clients de toute l’Europe'] },
   { name: 'Comptoir du monde', rep: 700, slots: 4, rich: 1.75, stock: 10, title: 'Célèbre aux quatre coins du monde', reach: 'Des clients du monde entier', perks: ['+75 % de pièces par commande', 'Commandes de Merveilles et de souvenirs', 'Guirlande et mappemonde géante', 'Clients du monde entier'] },
   { name: 'Légende du voyage', rep: 1200, slots: 4, rich: 2, stock: 10, title: 'Légende des voyageurs', reach: 'Les clients les plus exigeants', perks: ['Pièces doublées par commande', 'Articles légendaires au magasin', 'Enseigne dorée qui scintille'] },
@@ -92,7 +92,7 @@ const BQ_SHOPS = [
     phrase: 'Une petite table chaleureuse où chaque plat raconte un voyage.',
     stars: [['Fondue des copains', 'n', 'fromage', 3, null, '#f2c14e'], ['Soupe du potager', 'n', 'legume', 2, null, '#8fbf5a'], ['Croque-monsieur doré', 'n', 'pain', 2, null, '#e3b06b']],
     keys: ['plat', 'legume', 'fromage', 'pain', 'mer'], cats: ['restaurant', 'boucherie', 'fromagerie', 'marche', 'poissonnerie'], itemCats: ['n'],
-    crafts: ['soupe', 'soupepotager', 'fondue', 'plateau', 'croque', 'sandrando'],
+    crafts: ['soupe', 'soupepotager', 'fondue', 'plateau', 'croque', 'sandrando'], anyFood: 1,
     bsubs: ['plat', 'legume', 'fromage', 'mer'], mult: 1.35, slot: 1,
     perks: ['Plats cuisinés, fromages et légumes : +35 % de pièces', 'Une commande de plus à la fois au comptoir'],
     lines: ['On est quatre à table ce soir, et tout le monde a faim !', 'J’ai une faim de loup… enfin, de blaireau.', 'Le chef peut-il me préparer quelque chose de réconfortant ?'] },
@@ -116,7 +116,7 @@ const BQ_SHOPS = [
     phrase: 'Œufs, friandises et accessoires pour compagnons heureux.',
     stars: [{ egg: null }, ['Sachet de graines', 'm', 'graine', 0, null, '#a9784f'], ['Panier douillet', 'd', 'tapis', 1, null, '#f3aec1']],
     keys: ['graine', 'fruit', 'mer', 'legume'], cats: ['jardin', 'marche', 'poissonnerie', 'zoo'], itemCats: ['m', 'n'],
-    crafts: ['mobile', 'plante', 'collier'], pets: 1,
+    crafts: ['tapis', 'patchwork', 'plante'], pets: 1,
     bkinds: ['egg', 'comp', 'bait'], mult: 1.3, eggs: 1,
     perks: ['Œufs plus fréquents et 20 % moins chers au magasin', 'Clients qui cherchent des œufs et des compagnons : +30 %'],
     lines: ['Mon petit a besoin de friandises, il fait la grève de la sieste.', 'On m’a dit que vous connaissiez tous les compagnons du monde !', 'Je prépare un grand panier douillet… il ne manque plus qu’un locataire.'] },
@@ -140,7 +140,7 @@ const BQ_SHOPS = [
     phrase: 'Des bocaux et des spécialités rapportés de chaque région.',
     stars: [['Calisson', 'n', 'sucre', 1, null, '#f6e3c4'], ['Huile d’olive', 'n', 'fruit', 0, null, '#a8b45a'], ['Sel de Guérande', 'm', 'sable', 0, null, '#f4f1ea']],
     keys: ['fromage', 'fruit', 'sucre', 'legume'], cats: ['epicerie', 'fromagerie', 'marche'], itemCats: ['n', 'm'],
-    crafts: ['plateau', 'confiture', 'salade'], reach: 1,
+    crafts: ['plateau', 'confiture', 'salade'], reach: 1, anyFood: 1,
     bkinds: ['reg'], mult: 1.35,
     perks: ['Spécialités régionales : +35 % de pièces', 'Clients venus de plus loin, dès le début'],
     lines: ['Avez-vous ce petit goût de là-bas que je ne retrouve nulle part ?', 'Je cuisine un plat de mon enfance, il me manque l’ingrédient secret.', 'Vos étagères, c’est un tour du monde !'] },
@@ -154,6 +154,19 @@ const BQ_SHOPS = [
     lines: ['Ça a l’air vieux… et c’est exactement ce que je cherche !', 'Pour ma collection de petites merveilles, il me manque une pièce.', 'Je décore mon nouveau terrier, il me faut du caractère.'] },
 ];
 const BQS = id => BQ_SHOPS.find(x => x.id === id) || null;
+// v19 : chaque commerce a SES habitués (des têtes différentes d'un commerce à l'autre)
+const BQ_SHOP_CLIENTS = {
+  boulangerie: ['noisette', 'mimi', 'capucine', 'grignote', 'biscotte', 'moustache'],
+  cafe: ['frisette', 'roussette', 'chips', 'capucine', 'moustache', 'eucalypso', 'hulotte'],
+  restaurant: ['bruno', 'biscotte', 'ondine', 'grignote', 'pompon', 'gaston', 'pingo'],
+  fleuriste: ['pompon', 'roussette', 'frisette', 'chips', 'rainette', 'clochette', 'leonie'],
+  mode: ['roussette', 'frisette', 'ondine', 'noisette', 'moustache', 'eucalypso', 'pingo'],
+  animalerie: ['chips', 'biscotte', 'mimi', 'pompon', 'ondine', 'rainette', 'clochette'],
+  glacier: ['noisette', 'capucine', 'grignote', 'ondine', 'chips', 'moustache', 'pingo'],
+  librairie: ['filou', 'mimi', 'capucine', 'bruno', 'hulotte', 'gaston', 'leonie', 'eucalypso'],
+  epicerie: ['bruno', 'mimi', 'grignote', 'capucine', 'ondine', 'eucalypso', 'moustache'],
+  brocante: ['filou', 'chips', 'ondine', 'bruno', 'gaston', 'hulotte', 'leonie'],
+};
 // ouverture d'un nouveau commerce : niveau de boutique requis et prix
 const BQ_SHOP_SLOTS = [{ lvl: 0, cost: 0 }, { lvl: 1, cost: 300 }, { lvl: 2, cost: 900 }, { lvl: 4, cost: 2500 }];
 const bqType = () => { const s = S.shop; return s && s.type && BQS(s.type) ? BQS(s.type) : null; };
@@ -223,6 +236,12 @@ function bqState() {
   if (s.type && !s.owned.includes(s.type)) s.owned.push(s.type);
   if (typeof s.slotSeen !== 'number') s.slotSeen = s.owned.length;
   s.orders = s.orders.filter(o => o && Array.isArray(o.req) && BQC(o.client));
+  // v19 : les commandes appartiennent à UN commerce ; celles des autres commerces attendent (s.park) qu'on y revienne
+  if (!s.park || typeof s.park !== 'object') s.park = {};
+  if (s.type && s.orders.some(o => o.shop !== s.type)) {
+    s.orders.forEach(o => { if (o.shop !== s.type && o.shop && s.owned.includes(o.shop)) (s.park[o.shop] = s.park[o.shop] || []).push(o); });
+    s.orders = s.orders.filter(o => o.shop === s.type);
+  }
   s.lvl = bqLevelOf(s.rep);
   return s;
 }
@@ -378,6 +397,24 @@ const bqIsBait = it => { try { if (typeof nsBaitSps === 'function' && it && nsBa
 const bqSpIds = () => (typeof SP_IDS !== 'undefined' ? SP_IDS : ['panda', 'capy', 'axo']);
 const bqSpName = sp => { try { return typeof spName === 'function' ? spName(sp) : sp; } catch (e) { return sp; } };
 const bqCraftOK = (T, r) => typeof T.crafts === 'function' ? T.crafts(r) : T.crafts.includes(r.id);
+// v19 : ce que vend vraiment le commerce (sous-types de ses ingrédients et de sa spécialité, ses types d'objets, ses produits phares)
+const bqShopSubs = T => new Set([].concat(...T.keys.map(k => ING[k] ? ING[k][0] : []), T.bsubs || []));
+function bqFitDef(T, d) {
+  if (!T || !d) return !T;
+  if ((T.stars || []).some(x => Array.isArray(x) && x[0] === d[0])) return true;
+  const cats = T.itemCats.concat(T.bcats || []);
+  if (!cats.includes(d[1])) return false;
+  return bqShopSubs(T).has(d[2]) || !!(T.bcats && T.bcats.includes(d[1])) || !!(T.anyFood && d[1] === 'n');
+}
+// une demande est-elle cohérente avec le commerce ?
+function bqFitReq(T, r) {
+  if (!T || !r) return true;
+  if (r.k === 'egg' || r.k === 'comp' || r.k === 'bait') return !!T.pets;
+  if (r.k === 'ing') return T.keys.includes(r.key);
+  if (r.k === 'reg') { const x = RG_RES[r.rid]; return !!x && bqFitDef(T, [x.name, x.cat, x.sub, x.rar]); }
+  if (r.k === 'craft' && !r.wonder) { const rc = RECIPES.find(x => x.id === r.id); return !!rc && (bqCraftOK(T, rc) || bqFitDef(T, rc.out)); }
+  return bqFitDef(T, r.def);
+}
 const BQ_GEN_SHOP = {
   ing(T, c, L, easy) {
     const keys = T.keys.filter(k => ING[k] && bqCatFor(k, T.cats));
@@ -385,12 +422,11 @@ const BQ_GEN_SHOP = {
     return { k: 'ing', key, n: easy ? 2 : 2 + (L >= 2 ? 1 : 0) + (Math.random() < 0.3 ? 1 : 0), src: { cat: bqCatFor(key, T.cats) } };
   },
   item(T, c, L) {
-    const cat = bqPick(T.cats.filter(x => bqPoiOK(x) && LOOT[x].some(d => T.itemCats.includes(d[1])))); if (!cat) return null;
-    const subs = new Set([].concat(...T.keys.map(k => ING[k] ? ING[k][0] : []), T.bsubs || []));
-    let defs = LOOT[cat].filter(d => d[3] <= (L >= 3 ? 1 : 0) && T.itemCats.includes(d[1]));
-    const fitting = defs.filter(d => subs.has(d[2]) || (T.bcats && T.bcats.includes(d[1]))); if (fitting.length) defs = fitting; // ce que vend vraiment le commerce
-    const def = bqPick(defs, d => d[3] ? 0.5 : 1); if (!def) return null;
-    return { k: 'item', name: def[0], def, n: 1, src: { cat } };
+    // uniquement ce que vend vraiment le commerce, trouvé dans ses lieux du quotidien
+    const opts = [];
+    T.cats.filter(bqPoiOK).forEach(cat => LOOT[cat].forEach(d => { if (d[3] <= (L >= 3 ? 1 : 0) && d[1] !== 't' && bqFitDef(T, d)) opts.push({ cat, d }); }));
+    const o = bqPick(opts, o => o.d[3] ? 0.5 : 1); if (!o) return null;
+    return { k: 'item', name: o.d[0], def: o.d, n: 1, src: { cat: o.cat } };
   },
   craft(T, c, L, easy) {
     const pool = RECIPES.filter(r => !r.multi && bqCraftOK(T, r) && bqRecOwned(r.id) && r.ing.every(([k]) => !k.startsWith('r:')) && r.out[3] <= (easy ? 2 : L >= 2 ? 4 : 3));
@@ -399,16 +435,23 @@ const BQ_GEN_SHOP = {
   },
   reg(T, c, L) {
     const regs = bqRegionsFor(Math.min(5, L + (T.reach || 0))); if (!regs.length) return null;
-    const subs = new Set([].concat(...T.keys.map(k => ING[k] ? ING[k][0] : []))), maxR = [0, 0, 1, 1, 2, 3][L] || 0, pool = [];
-    regs.forEach(R => R.res.forEach(x => { if (x.rar <= maxR && (T.reach || subs.has(x.sub) || T.itemCats.includes(x.cat) && x.cat !== 'm')) pool.push(x); }));
+    const subs = bqShopSubs(T), maxR = [0, 0, 1, 1, 2, 3][L] || 0, pool = [];
+    regs.forEach(R => R.res.forEach(x => { if (x.rar <= maxR && bqFitDef(T, [x.name, x.cat, x.sub, x.rar])) pool.push(x); }));
     const x = bqPick(pool, x => (subs.has(x.sub) ? 3 : 1) * (x.rar ? 0.6 : 1)); if (!x) return null;
     return { k: 'reg', rid: x.id, name: x.name, n: 1, src: { region: x.region } };
   },
   egg(T, c, L) { const sp = L >= 2 && Math.random() < 0.5 ? bqPick(bqSpIds()) : null; return { k: 'egg', sp, n: 1, name: sp ? `Œuf de ${bqSpName(sp).toLowerCase()}` : 'Œuf de compagnon' }; },
   comp(T, c, L) { const sp = bqPick(bqSpIds()); return { k: 'comp', sp, n: 1, name: bqSpName(sp) }; },
   bait() { return S.inv.some(bqIsBait) ? { k: 'bait', n: 1, name: 'Appât pour compagnons' } : null; },
-  souvenir(T, c, L) { return BQ_GEN.souvenir(c, Math.max(L, 3)); },
-  merveille(T, c, L) { return BQ_GEN.merveille(c, L); },
+  souvenir(T, c, L) {
+    const ps = PLACES.filter(p => p.name !== S.home && p.special && (L >= 5 || zoneOfSafe(p) !== 'monde') && bqFitDef(T, p.special)); const p = bqPick(ps); if (!p) return null;
+    return { k: 'item', name: p.special[0], def: [p.special[0], p.special[1], p.special[2], 3, p.special[4], p.special[5]], n: 1, src: { place: p.name }, souvenir: 1 };
+  },
+  merveille(T, c, L) {
+    if (typeof RG_RECIPES === 'undefined') return null;
+    const r = bqPick(RG_RECIPES.filter(r => r.out[3] <= (L >= 5 ? 4 : 3) && bqFitDef(T, r.out))); if (!r) return null;
+    return { k: 'craft', id: r.id, name: r.out[0], def: r.out, n: 1, wonder: 1 };
+  },
 };
 function bqGenShop(T, c, L, served) {
   const easy = served < 2;
@@ -426,11 +469,11 @@ function bqGenShop(T, c, L, served) {
   if (T.souv && !easy) W.souvenir = (W.souvenir || 0) + 1.2;
   if (T.pets && (served >= 1 || !easy)) { W.egg = 3.2; if (L >= 1) W.comp = 2.4; W.bait = 1; }
   const kinds = Object.keys(W).filter(k => W[k] > 0), req = [];
-  for (let t = 0; t < 14 && !req.length; t++) { const g = bqPick(kinds, k => W[k]); const r = BQ_GEN_SHOP[g](T, c, L, easy); if (r) req.push(r); }
-  if (!req.length) { const r = BQ_GEN_SHOP.ing(T, c, L, true) || BQ_GEN.ing(c, L, true); if (r) req.push(r); }
+  for (let t = 0; t < 14 && !req.length; t++) { const g = bqPick(kinds, k => W[k]); const r = BQ_GEN_SHOP[g](T, c, L, easy); if (r && bqFitReq(T, r)) req.push(r); }
+  if (!req.length) { const r = BQ_GEN_SHOP.ing(T, c, L, true) || BQ_GEN_SHOP.item(T, c, L); if (r) req.push(r); }
   if (!easy && L >= 2 && Math.random() < 0.35 && !req.some(r => r.k === 'comp')) {
     const g = bqPick(['ing', 'item', 'reg'].filter(k => W[k]), k => W[k]); const r = g && BQ_GEN_SHOP[g](T, c, L, false);
-    if (r && !req.some(x => x.k === r.k && (x.key || x.name || x.rid) === (r.key || r.name || r.rid))) req.push(r);
+    if (r && bqFitReq(T, r) && !req.some(x => x.k === r.k && (x.key || x.name || x.rid) === (r.key || r.name || r.rid))) req.push(r);
   }
   return req;
 }
@@ -450,6 +493,9 @@ function bqNewOrder(forceEasy) {
   const busy = new Set(s.orders.map(o => o.client));
   let pool = BQ_CLIENTS.filter(c => c.lvl <= L && !busy.has(c.id) && !((s.clients[c.id] || {}).away > now));
   if (forceEasy) pool = pool.filter(c => c.cats.some(bqPoiOK));
+  // v19 : les habitués du commerce ouvert (d'autres clients seulement s'ils sont tous déjà au comptoir)
+  const own = T && BQ_SHOP_CLIENTS[T.id];
+  if (own) { const p = pool.filter(c => own.includes(c.id)); if (p.length) pool = p; }
   if (!pool.length) return null;
   // les clients qui aiment ce que vend le commerce viennent plus souvent
   const fit = c => T ? (c.likes.some(k => T.keys.includes(k)) || c.cats.some(x => T.cats.includes(x)) ? 3 : 1) : 1;
@@ -464,13 +510,13 @@ function bqNewOrder(forceEasy) {
   const cr = req.find(r => r.k === 'comp');
   // (deux clients au comptoir ne disent jamais la même phrase)
   const usedL = new Set(s.orders.map(x => x.line)), fresh = l => { const f = (l || []).filter(x => !usedL.has(x)); return f.length ? pick(f) : null; };
-  const line = cr ? `Je rêve d’adopter ${typeof spArticle === 'function' ? spArticle(cr.sp) : 'un compagnon'}. Son panier est déjà prêt !` : (T && Math.random() < 0.55 && fresh(T.lines)) || fresh(c.lines) || pick(c.lines);
+  const line = cr ? `Je rêve d’adopter ${typeof spArticle === 'function' ? spArticle(cr.sp) : 'un compagnon'}. Son panier est déjà prêt !` : (T && Math.random() < 0.7 && fresh(T.lines)) || fresh(c.lines) || pick(c.lines);
   const o = { id: uidGen(), client: c.id, line, req, coins: coinsR, rep, at: now, deadline, seq: ++s.seq, shop: T ? T.id : null, spec: spec ? 1 : 0 };
   // parfois une récompense en plus : une recette du magasin pas encore connue, ou un objet rare
   if (!forceEasy && Math.random() < 0.22 * (T && T.recx ? T.recx : 1)) {
     const rec = BQ_RECIPES.find(r => r.lvl <= L + 1 && !s.recipes.includes(r.id));
     if (rec && Math.random() < 0.5) o.bonus = { rec: rec.id };
-    else { const tags = c.cats.filter(x => LOOT[x]).concat(c.tags.filter(x => LOOT[x])); const pl = [].concat(...tags.map(t => LOOT[t])).filter(d => d[3] === 2 && d[1] !== 't'); const d = bqPick(pl); if (d) o.bonus = { def: d }; }
+    else { const tags = (T ? T.cats : c.cats.concat(c.tags)).filter(x => LOOT[x]); const pl = [].concat(...tags.map(t => LOOT[t])).filter(d => d[3] === 2 && d[1] !== 't' && (!T || bqFitDef(T, d))); const d = bqPick(pl); if (d) o.bonus = { def: d }; }
   }
   return o;
 }
@@ -942,8 +988,12 @@ function bqOpenShop(id) {
 }
 function bqSwitch(id) {
   const s = bqState(); if (!s.owned.includes(id) || s.type === id) return;
-  s.type = id; s.next = Math.min(s.next || Infinity, Date.now() + 3 * 60e3); save(); renderPanel();
-  toast(`Bienvenue à la ${BQS(id).short.toLowerCase()} ! Les prochains clients viendront pour elle.`.replace('à la Restaurant', 'au restaurant'));
+  // les clients du commerce quitté l'attendent ; ceux du commerce choisi reviennent au comptoir
+  const old = s.type; if (old && s.orders.length) s.park[old] = (s.park[old] || []).concat(s.orders).slice(-5);
+  s.type = id; s.orders = (s.park[id] || []).filter(o => o && Array.isArray(o.req) && BQC(o.client)); delete s.park[id];
+  s.next = Math.min(s.next || Infinity, Date.now() + 3 * 60e3); save(); renderPanel();
+  const X = BQS(id), nm = X.short.toLowerCase(), m = ['restaurant', 'cafe', 'glacier'].includes(id);
+  toast(`Bienvenue ${m ? 'au ' : /^[aeiouéè]/.test(nm) ? 'à l’' : 'à la '}${nm} ! Les prochains clients viendront pour ${m ? 'lui' : 'elle'}.`);
 }
 // barre des commerces, en haut du comptoir
 function bqShopsBar() {

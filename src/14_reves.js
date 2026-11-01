@@ -323,7 +323,7 @@ GAME.on('craft', ({ id }) => {
   save(); _dreamFlash = { k: all[0].k, idx: all.map(g => g.i), t: Date.now() };
   renderGoal(); if (revesShown()) renderPanel();
   const g = all[0], name = CHARS[g.k].name;
-  setTimeout(() => toast(dreamReady(g.k) ? `Toutes les étapes du rêve de ${name} sont faites ! Réalisez-le depuis la carte.` : `Rêve de ${name} : « ${g.st.txt} », c’est fait !`), 900);
+  setTimeout(() => toast(dreamReady(g.k) ? `Toutes les étapes du rêve de ${name} sont faites ! Réalisez-le dans Compagnons › Rêves.` : `Rêve de ${name} : « ${g.st.txt} », c’est fait !`), 900);
 });
 function announceGains(gains) {
   const k = gains[0].k, name = CHARS[k].name, ready = dreamReady(k);
@@ -581,24 +581,56 @@ function renderDreamCard(box) {
 }
 
 // ---------- onglet « Rêves » ----------
+// v19 : chaque rêve montre d'abord, en grand, ce qu'il rapporte et à quoi ça sert ; puis les étapes à cocher.
+const DREAM_LOCK = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="9" rx="2" fill="#c9b9a6" stroke="#5b4636" stroke-width="1.6"/><path d="M7 9 V6.5 a3 3 0 0 1 6 0 V9" fill="none" stroke="#5b4636" stroke-width="1.8"/></svg>';
+const dreamShort = n => String(n).replace(/ (?:de |d’)(?:Pistache|Mochi|Bulle)$/, '');
+// la récompense principale et son utilité, en une phrase
+function dreamUse(d) {
+  const r = d.reward, it = dreamDefItem(r.item);
+  let kind = 'Trésor rare', use = 'Une pièce unique pour votre collection';
+  if (it.cat === 'v') {
+    kind = 'Tenue unique';
+    const fx = typeof cpItemEffects === 'function' ? cpItemEffects({ ...it, sub: it.sub, look: it.look }) : [];
+    use = fx.length ? fx.map(f => f.txt).join(' · ') : 'Un style que personne d’autre n’a';
+  } else if (it.cat === 'd') {
+    kind = 'Meuble pour le foyer';
+    const e = typeof FY_EFF !== 'undefined' ? FY_EFF[it.sub] : null;
+    use = e ? ucfirst(e[2]) : 'Plus de confort à la maison';
+  }
+  return { it, kind, use };
+}
+function dreamExtras(d) {
+  const r = d.reward, out = [];
+  if (r.tal) out.push([DREAM_GIFT_SVG.tal, `+${r.tal} point de talent`, 'un nouveau pouvoir en voyage']);
+  if (r.build) { let b = null; try { b = VILLAGE_BUILDINGS.find(x => x.id === r.build); } catch (e) {} out.push(['<svg viewBox="0 0 30 30"><path d="M5 25 V13 L15 5 L25 13 V25Z" fill="#fff3e2" stroke="#5b4636" stroke-width="2" stroke-linejoin="round"/><rect x="12" y="16" width="6" height="9" fill="#d9604f" stroke="#5b4636" stroke-width="1.6"/></svg>', dreamBuildName(r.build), b && b.bonus ? b.bonus.replace(/\.$/, '') : 'un nouveau bâtiment au village']); }
+  if (r.deco) { const dc = dreamDefItem(r.deco), e = typeof FY_EFF !== 'undefined' ? FY_EFF[dc.sub] : null; out.push([itemIcon(dc), dreamShort(dc.name), e ? e[2] : 'pour le foyer']); }
+  if (r.egg) out.push([DREAM_GIFT_SVG.egg, `Œuf ${r.egg >= 3 ? 'très rare' : 'rare'}`, 'une couleur unique']);
+  out.push([COIN, `${r.coins} pièces`, '']);
+  return out;
+}
 function dreamCompHTML(k) {
   const ch = CHARS[k], d = curDream(k), list = dreamsOf(k), D = S.dreams[k];
   const doneN = D.done.length;
-  if (!d) return `<article class="rvc2 done" style="--tint:${dreamTint(k)}"><div class="rvsc"><div class="rvthink">${dreamScene({ id: 'ciel', wish: '' })}<span class="rvall">♥</span></div><span class="rvwho"><img src="${portraitURI(k, 'amour')}" alt=""></span></div><b class="rvwish">${ch.name} : ${doneN}/${list.length} rêves réalisés !</b></article>`;
-  const [col, l1, l2] = goLabel(k), ready = dreamReady(k), nxt = nextStepIdx(k);
-  const main = dreamDefItem(d.reward.item);
-  let h = `<article class="rvc2 ${S.sel === k ? 'sel' : ''} ${ready ? 'ready' : ''}" style="--tint:${dreamTint(k)}">`;
-  h += `<div class="rvsc" title="${esc(d.quote)}"><div class="rvthink">${dreamScene(d)}<span class="rvrw2" style="--rc:${RARC[main.rarity]}">${itemIcon(main)}</span><span class="rvsp" aria-hidden="true"><i>✦</i><i>✦</i><i>✦</i></span></div><i class="rvb1"></i><i class="rvb2"></i><span class="rvwho"><img src="${portraitURI(k, ready ? 'amour' : 'content')}" alt=""></span><span class="rvnum">${ch.name} · ${list.indexOf(d) + 1}/${list.length}</span></div>`;
-  h += `<b class="rvwish">${esc(ucfirst(d.wish))}</b>`;
+  if (!d) return `<article class="rvc3 done" style="--tint:${dreamTint(k)}"><p class="rv3wish"><img src="${portraitURI(k, 'amour')}" alt=""><span><b>${ch.name}</b> a réalisé tous ses rêves (${doneN}/${list.length}) !</span></p></article>`;
+  const [col, l1, l2] = goLabel(k), ready = dreamReady(k), nxt = nextStepIdx(k), idx = list.indexOf(d);
+  const U = dreamUse(d), stepsDone = d.steps.filter((st, i) => stepProg(k, i) >= stepGoal(st)).length;
+  const frac = d.steps.reduce((a, st, i) => a + stepProg(k, i) / stepGoal(st), 0) / d.steps.length;
+  let h = `<article class="rvc3 cur ${S.sel === k ? 'sel' : ''} ${ready ? 'ready' : ''}" style="--tint:${dreamTint(k)}">`;
+  h += `<div class="rv3hero" style="--rc:${RARC[U.it.rarity] || '#e2b44a'}"><span class="rv3gi">${itemIcon(U.it)}<span class="rvsp" aria-hidden="true"><i>✦</i><i>✦</i><i>✦</i></span></span><div class="rv3gx"><small>${ready ? 'Prêt à gagner' : 'À gagner'} · ${esc(U.kind)}</small><b>${esc(dreamShort(U.it.name))}</b><p class="rv3use">${esc(U.use)}</p></div></div>`;
+  h += `<div class="rv3more">${dreamExtras(d).map(([ic, t, u]) => `<span class="rv3x"><i>${ic}</i><span><b>${esc(t)}</b>${u ? `<small>${esc(u)}</small>` : ''}</span></span>`).join('')}</div>`;
+  h += `<p class="rv3wish"><img src="${portraitURI(k, ready ? 'amour' : 'content')}" alt=""><span><b>${ch.name}</b> rêve de ${esc(d.wish)}.</span><em>${idx + 1}/${list.length}</em></p>`;
+  h += `<div class="rv3prog"><span class="rv3bar"><i style="width:${(frac * 100).toFixed(0)}%"></i></span><b>${stepsDone}/${d.steps.length} étape${d.steps.length > 1 ? 's' : ''}</b></div>`;
   h += `<ol class="rvsteps">${d.steps.map((st, i) => { const pr = stepProg(k, i), g = stepGoal(st), ok = pr >= g; return `<li class="${ok ? 'ok' : i === nxt ? 'next' : ''}" title="${esc(st.txt)}"><span class="rvsi">${stepIcon(st)}<em>${ok ? '✓' : g > 1 ? `${pr}/${g}` : ''}</em></span><small>${esc(st.short)}</small></li>`; }).join('')}</ol>`;
-  h += `<div class="dgifts">${dreamGiftsHTML(k, d)}</div>`;
   h += `<button class="btn ${col} rvgo" data-dream-go="${k}">${l1}${l2 && col !== 'gold' ? ` · ${esc(l2)}` : l2 ? ' ' + esc(l2) : ''}</button>`;
+  const later = list.slice(idx + 1, idx + 4);
+  if (later.length) h += `<div class="rv3next"><span class="rv3nk">Ensuite</span>${later.map((x, i) => { const u = dreamUse(x); return `<span class="rv3n" title="Se débloque après le rêve ${idx + 1 + i}" style="--rc:${RARC[u.it.rarity] || '#ccc'}"><i class="rv3ni">${itemIcon(u.it)}</i><span><b>${esc(dreamShort(u.it.name))}</b><small>${esc(u.kind)}</small></span><i class="rv3lk">${DREAM_LOCK}</i></span>`; }).join('')}</div>`;
+  void D;
   return h + '</article>';
 }
 function renderReves(box) {
   ensureDreams();
   const ks = dreamComps().filter(k => S.dreams[k]), total = ks.reduce((a, k) => a + dreamsOf(k).length, 0), done = ks.reduce((a, k) => a + S.dreams[k].done.length, 0);
-  let html = `<div class="rvhead"><div class="rvhi"><svg viewBox="0 0 30 30" aria-hidden="true">${DREAM_ICON}</svg></div><div><h2>Les rêves</h2><p>Un rêve réalisé = des cadeaux uniques.</p></div><span class="rvtot"><b>${done}</b>/${total}</span></div>`;
+  let html = `<div class="rvhead"><div class="rvhi"><svg viewBox="0 0 30 30" aria-hidden="true">${DREAM_ICON}</svg></div><div><h2>Les rêves</h2><p>Réalisez un rêve : gagnez une tenue, un meuble ou un bâtiment utile.</p></div><span class="rvtot"><b>${done}</b>/${total}</span></div>`;
   html += `<div class="rvcomps">${[S.sel, ...ks.filter(k => k !== S.sel)].map(dreamCompHTML).join('')}</div>`;
   // souvenirs
   const mem = [];
@@ -806,6 +838,38 @@ body.sheet-open #goal.goal.dream{display:none} /* comme l'ancien bandeau : le pa
 .rvsteps li.ok .rvsi{border:2.5px solid #3a8f5a;background:#e6f6e9}.rvsteps li.ok .rvsi em{background:#5fbf7f;color:#fff;border-color:#3a8f5a}
 .rvsteps li.next .rvsi{border:2.5px solid var(--ink);animation:rvnext 1.4s ease-in-out infinite alternate}
 .rvsteps small{font:700 11px/1.1 var(--display);color:var(--ink2)}
+.rvc3{position:relative;background:#fff;border:2.5px solid var(--ink);border-radius:20px;padding:10px 10px 12px;box-shadow:0 3px 0 rgba(74,53,40,.3);display:flex;flex-direction:column;gap:9px}
+.rvc3.sel{background:linear-gradient(180deg,var(--tint),#fff 160px)}
+.rvc3.ready{box-shadow:0 0 0 3px var(--gold),0 3px 0 rgba(74,53,40,.3)}
+.rvc3:not(.sel){opacity:.94}
+.rv3hero{display:flex;align-items:center;gap:12px;padding:10px;border-radius:16px;background:radial-gradient(circle at 18% 50%,#fff 0 22%,transparent 60%),linear-gradient(135deg,#fff8e2,#fff);border:2.5px solid var(--rc);box-shadow:inset 0 0 0 2px #fff}
+.rv3gi{position:relative;flex:none;width:88px;height:88px;border-radius:22px;background:#fff;border:2.5px solid var(--ink);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 var(--ink);animation:rvfloat 3s ease-in-out infinite}
+.rv3gi>svg{width:70px;height:70px}
+.rv3gi .rvsp i{position:absolute;font-style:normal;color:#fff;text-shadow:0 0 4px #f6c445,0 0 1px #b8860b;font-size:15px;animation:rvtw 2.2s ease-in-out infinite}
+.rv3gi .rvsp i:nth-child(1){left:-6px;top:-4px}.rv3gi .rvsp i:nth-child(2){right:-6px;top:10px;animation-delay:.7s}.rv3gi .rvsp i:nth-child(3){right:6px;bottom:-8px;animation-delay:1.4s}
+.rv3gx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rv3gx small{font:800 11px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--rust)}
+.rv3gx b{font:800 20px/1.1 var(--display);color:var(--ink)}
+.rv3use{margin:3px 0 0;font:800 14.5px/1.25 var(--display);color:#2f7f6c;background:#e6f6e9;border-radius:10px;padding:4px 8px;align-self:flex-start}
+.rv3more{display:flex;gap:6px;flex-wrap:wrap}
+.rv3x{display:flex;align-items:center;gap:5px;background:var(--paper,#fffaf0);border:2px solid var(--line);border-radius:12px;padding:3px 8px 3px 4px;min-width:0;max-width:100%}
+.rv3x i{flex:none;width:26px;height:26px;display:flex}.rv3x i svg{width:26px;height:26px}
+.rv3x span{display:flex;flex-direction:column;min-width:0}.rv3x b{font:800 12.5px/1.15 var(--display)}.rv3x small{font:600 11px/1.15 var(--body);color:var(--ink2)}
+.rv3wish{display:flex;align-items:center;gap:8px;margin:0;font:600 14.5px/1.25 var(--body)}
+.rv3wish img{width:38px;height:38px;flex:none;border-radius:50%;background:var(--tint);border:2px solid var(--ink)}
+.rv3wish span{flex:1;min-width:0}.rv3wish b{font:800 15px var(--display)}
+.rv3wish em{flex:none;font:700 11.5px var(--display);font-style:normal;color:var(--ink2);background:#fff;border:2px solid var(--line);border-radius:999px;padding:0 7px}
+.rv3prog{display:flex;align-items:center;gap:8px}
+.rv3bar{flex:1;height:12px;border-radius:999px;background:#efe6d6;border:2px solid var(--ink);overflow:hidden}
+.rv3bar i{display:block;height:100%;background:linear-gradient(90deg,#7fd39a,#5fbf7f);border-radius:999px;transition:width .5s}
+.rv3prog b{font:800 13px var(--display);white-space:nowrap}
+.rv3next{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;padding-top:6px;border-top:2px dashed var(--line)}
+.rv3nk{flex:none;font:800 11px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)}
+.rv3n{position:relative;flex:none;display:flex;align-items:center;gap:5px;background:#f6f1e8;border:2px solid var(--line);border-radius:12px;padding:3px 22px 3px 4px;filter:grayscale(.55);opacity:.85}
+.rv3ni{width:28px;height:28px;display:flex;border-radius:8px;background:#fff;border:1.6px solid var(--rc)}.rv3ni svg{width:100%;height:100%}
+.rv3n span{display:flex;flex-direction:column}.rv3n b{font:700 11.5px/1.1 var(--display);max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rv3n small{font:600 10px var(--body);color:var(--ink2)}
+.rv3lk{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:16px;height:16px;display:flex}.rv3lk svg{width:16px;height:16px}
+@media (prefers-reduced-motion:reduce){.rv3gi,.rv3gi .rvsp i{animation:none}}
 .dgifts{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none}
 .dgift{flex:none;width:78px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 4px 6px;border-radius:14px;background:var(--paper);border:2px solid var(--line);text-align:center}
 .dgift.main{width:96px;background:linear-gradient(180deg,#fff8e2,#fff);border-color:var(--rc,var(--gold));box-shadow:0 0 0 2px #fff inset,0 2px 0 rgba(74,53,40,.15)}

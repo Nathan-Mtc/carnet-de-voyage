@@ -322,7 +322,7 @@ function styleEnter(k) {
 }
 
 // ---------- rendu ----------
-let stSlot = null, stJoy = 0, stJoyLine = '';
+let stSlot = null, stJoy = 0, stJoyLine = '', stSetT = null;
 const ST_JOY = {
   panda: ['Tadaa ! Prête pour l’aventure !', 'Ça me va bien, hein ?', 'Je vais faire tourner les têtes… et les pigeons !', 'Je suis la plus jolie de la forêt !'],
   capy: ['Mmh. Élégant et confortable.', 'Pépin dit que ça me va bien.', 'Je me sens… très zen là-dedans.', 'Un capybara chic. C’est moi.'],
@@ -342,20 +342,51 @@ function stSelector() {
 function stSlotBtn(k, sl) {
   const it = stWorn(k, sl), n = stOwned(k, sl).length, lab = SLOT_LABEL[sl];
   const ic = it ? stIcon(it) : itemIcon({ cat: 'v', sub: sl, look: sl === 'dos' ? 'sac' : null, color: '#efe4d0' });
-  return `<button class="wrs ${it ? 'full' : 'vide'} ${stSlot === sl ? 'on' : ''}" data-wslot="${sl}" aria-pressed="${stSlot === sl}" aria-label="${lab} : ${it ? esc(it.name) : 'vide'}"><span class="wri" style="--rc:${it ? RARC[it.rarity] : 'var(--ink)'}">${ic}${it ? '' : '<em>+</em>'}</span><b>${lab}</b>${n ? `<i class="wrn">${n}</i>` : ''}</button>`;
+  const th = it && typeof cpThemeOf === 'function' ? cpThemeOf(it.look) : null;
+  return `<button class="wrs ${it ? 'full' : 'vide'} ${stSlot === sl ? 'on' : ''}" data-wslot="${sl}" aria-pressed="${stSlot === sl}" aria-label="${lab} : ${it ? esc(it.name) : 'vide'}"><span class="wri" style="--rc:${it ? RARC[it.rarity] : 'var(--ink)'}">${ic}${it ? '' : '<em>+</em>'}${th && typeof cpIco === 'function' ? `<i class="wrth">${cpIco(th)}</i>` : ''}</span><b>${lab}</b>${n ? `<i class="wrn">${n}</i>` : ''}</button>`;
 }
 function stCharSVG(k, mood, uid) { return drawChar(k, S.outfits[k], mood, uid); }
+// v19 : la cabine d'essayage illustrée : portant à vêtements, grand miroir à ampoules, lumière douce, tapis
+function stDressingSVG(k) {
+  const cols = ['#f4b7c4', '#f6e08a', '#a9dcc8', '#b8d8f0', '#c9b8ea', '#f6a68a'];
+  const hang = (x, i) => { const c = cols[i % cols.length], kind = i % 3;
+    const body = kind === 0 ? `<path d="M${x - 11} 30 L${x - 4} 27 Q${x} 31 ${x + 4} 27 L${x + 11} 30 L${x + 9} 36 L${x + 6} 35 V52 H${x - 6} V35 L${x - 9} 36Z" fill="${c}" stroke="#7a5f50" stroke-width="1.2" stroke-linejoin="round"/>`
+      : kind === 1 ? `<path d="M${x - 5} 27 H${x + 5} L${x + 12} 54 H${x - 12}Z" fill="${c}" stroke="#7a5f50" stroke-width="1.2" stroke-linejoin="round"/>`
+      : `<path d="M${x - 9} 28 H${x + 9} V38 L${x + 6} 56 H${x + 1} L${x} 40 L${x - 1} 56 H${x - 6} L${x - 9} 38Z" fill="${c}" stroke="#7a5f50" stroke-width="1.2" stroke-linejoin="round"/>`;
+    return `<g class="wrhg" style="--d:${(i * 0.35).toFixed(2)}s"><path d="M${x} 14 v4 M${x - 9} 26 L${x} 19 L${x + 9} 26" fill="none" stroke="#8a6a52" stroke-width="1.4" stroke-linecap="round"/>${body}</g>`; };
+  const bulbs = [...Array(12)].map((_, i) => { const a = Math.PI * (0.06 + i * 0.08) - Math.PI * 0.02, x = 150 + Math.cos(Math.PI - a) * 82, y = 132 - Math.sin(a) * 108; return `<circle class="wrbulb" style="--d:${(i * 0.18).toFixed(2)}s" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.2"/>`; }).join('');
+  return `<svg class="wrdeco" viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>
+    <radialGradient id="wrLight" cx="50%" cy="0%" r="80%"><stop offset="0" stop-color="#fffbe8" stop-opacity=".95"/><stop offset=".55" stop-color="#fff3d0" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="wrGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef8fb"/><stop offset="1" stop-color="#d6ebf1"/></linearGradient></defs>
+    <rect width="300" height="300" fill="var(--tint)"/>
+    <g opacity=".35">${[...Array(16)].map((_, i) => `<rect x="${i * 20}" y="0" width="10" height="235" fill="#fff"/>`).join('')}</g>
+    <path d="M0 0 H300 V60 Q150 30 0 60Z" fill="url(#wrLight)"/>
+    <ellipse cx="150" cy="140" rx="74" ry="102" fill="url(#wrGlass)" stroke="#c9963a" stroke-width="9"/>
+    <ellipse cx="150" cy="140" rx="74" ry="102" fill="none" stroke="#7a5f50" stroke-width="2"/>
+    <path d="M108 70 L128 52 M104 96 L146 56" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".75"/>
+    <g class="wrbulbs">${bulbs}</g>
+    <path d="M0 235 H300 V300 H0Z" fill="#e7c89c"/><path d="M0 235 H300" stroke="#c9a77a" stroke-width="3"/>
+    ${[...Array(7)].map((_, i) => `<path d="M${i * 50 - 10} 300 L${i * 50 + 15} 235" stroke="#d4b285" stroke-width="2"/>`).join('')}
+    <ellipse cx="150" cy="262" rx="112" ry="22" fill="var(--tint2)" stroke="#a87a50" stroke-width="2.5"/><ellipse cx="150" cy="262" rx="96" ry="16" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="5 5" opacity=".8"/>
+    <path d="M6 14 H294" stroke="#8a6a52" stroke-width="4" stroke-linecap="round"/><circle cx="6" cy="14" r="4" fill="#c9963a"/><circle cx="294" cy="14" r="4" fill="#c9963a"/>
+    ${[22, 48, 74, 226, 252, 278].map(hang).join('')}
+    <path d="M110 0 L60 235 H240 L190 0Z" fill="#fffbe8" opacity=".18"/>
+  </svg>`;
+}
 function renderWardrobe(k) {
   const ch = CHARS[k];
   if (!stSlot || !ST_SLOT_IDS.includes(stSlot)) stSlot = ST_SLOT_IDS.find(sl => stOwned(k, sl).length && !stWorn(k, sl)) || 'tete';
   const joy = Date.now() - stJoy < 1600, worn = ST_SLOT_IDS.filter(sl => stWorn(k, sl)).length;
   let h = `<div class="wr" style="--tint:${stTint(k)};--tint2:${stTint2(k)}">`;
-  h += `<div class="wrstage"><svg class="wrgar" viewBox="0 0 300 26" preserveAspectRatio="none" aria-hidden="true"><path d="M0 4 Q150 26 300 4" fill="none" stroke="#a87a50" stroke-width="1.6"/>${[...Array(9)].map((_, i) => { const x = 18 + i * 33, y = 4 + Math.sin(Math.PI * x / 300) * 11; return `<path d="M${x - 8} ${y - 1} L${x + 8} ${y - 1} L${x} ${y + 12}Z" fill="${['#f4b7c4', '#f6e08a', '#a9dcc8', '#b8d8f0', '#c9b8ea'][i % 5]}" stroke="#7a5f50" stroke-width="1"/>`; }).join('')}</svg>`;
+  // v19 : en haut, ce que la tenue apporte (icônes + valeurs)
+  if (typeof cpWearBar === 'function') h += cpWearBar(k);
+  h += `<div class="wrstage">${stDressingSVG(k)}`;
   h += `<div class="wrcol">${ST_LEFT.map(sl => stSlotBtn(k, sl)).join('')}</div>`;
-  h += `<div class="wrmid"><div class="wrchar ${joy ? 'joy' : ''}" data-wrchar="${k}">${stCharSVG(k, joy ? 'rire' : 'content', 'wr' + k)}${joy ? `<span class="wrspark" aria-hidden="true">${'<i>★</i>'.repeat(6)}</span>` : ''}</div>${joy && stJoyLine ? `<p class="wrsay">${esc(stJoyLine)}</p>` : ''}<span class="wrplate">${ch.name} <small>${worn} vêtement${worn > 1 ? 's' : ''}</small></span></div>`;
+  h += `<div class="wrmid"><div class="wrchar ${joy ? 'joy spin' : ''}" data-wrchar="${k}">${stCharSVG(k, joy ? 'rire' : 'content', 'wr' + k)}${joy ? `<span class="wrspark" aria-hidden="true">${'<i>★</i>'.repeat(6)}</span>` : ''}</div>${joy && stJoyLine ? `<p class="wrsay">${esc(stJoyLine)}</p>` : ''}<span class="wrplate">${ch.name} <small>${worn} vêtement${worn > 1 ? 's' : ''}</small></span></div>`;
   h += `<div class="wrcol">${ST_RIGHT.map(sl => stSlotBtn(k, sl)).join('')}<button class="wrs wrsave" data-wjump="saved" aria-label="Tenues enregistrées"><span class="wri"><svg viewBox="0 0 40 40"><path d="M10 6 H30 V34 L20 27 L10 34Z" fill="#f4b7c4" stroke="#5b4636" stroke-width="1.8" stroke-linejoin="round"/><path d="M20 11 l1.8 3.6 4 .6 -2.9 2.8.7 4 -3.6-1.9 -3.6 1.9.7-4 -2.9-2.8 4-.6Z" fill="#fff8ea"/></svg></span><b>Tenues</b></button></div>`;
   h += `</div>`;
-  if (typeof cpWearBar === 'function') h += cpWearBar(k); // v17 : ce que la tenue apporte (32_compagnons.js)
+  // v19 : la tenue complète, avec les pièces manquantes en aperçu (32_compagnons.js)
+  if (typeof cpSetBlock === 'function') { try { h += cpSetBlock(k, stSetT); } catch (e) { console.error(e); } }
   // emplacement choisi
   const it = stWorn(k, stSlot), list = stOwned(k, stSlot), lab = SLOT_LABEL[stSlot];
   h += `<div class="wrpanel"><div class="wrph"><span class="wrpk">${lab}</span><b>${it ? esc(it.name) : 'Rien pour l’instant'}</b>${it ? `<button class="btn cream sm" data-wunwear="${stSlot}">Retirer</button>` : ''}</div>`;
@@ -367,7 +398,7 @@ function renderWardrobe(k) {
     h += `<div class="wrgrid">${list.map(x => {
       const on = !!(it && it.id === x.id), by = on ? k : x.orig ? null : styleWornBy(x.id);
       const prov = x.orig ? 'Tenue de départ' : (typeof rgPill === 'function' && rgPill(x, 'short')) || esc(x.from || '');
-      return `<button class="wrv ${on ? 'on' : ''}" data-wput="${x.id}" style="--rc:${RARC[x.rarity]}" aria-pressed="${on}"><span class="wrvi">${stIcon(x)}</span><b>${esc(x.name)}</b><i style="color:${RARC[x.rarity]}">${RARITY[x.rarity]}${x.edition ? ' · ' + esc(x.edition) : ''}</i><span class="wrvp">${prov}</span>${typeof cpItemBadges === 'function' ? cpItemBadges(x) : ''}${on ? '<em class="wrtag">Porté</em>' : by && by !== k ? `<em class="wrtag lend">Porté par ${CHARS[by].name}</em>` : ''}</button>`;
+      return `<button class="wrv ${on ? 'on' : ''}" data-wput="${x.id}" style="--rc:${RARC[x.rarity]}" aria-pressed="${on}"><span class="wrvt"><span class="wrvi">${stIcon(x)}</span><span class="wrvn"><b>${esc(x.name)}</b><i style="color:${RARC[x.rarity]}">${RARITY[x.rarity]}${x.edition ? ' · ' + esc(x.edition) : ''}</i><span class="wrvp">${prov}</span></span></span>${typeof cpItemFxHTML === 'function' ? cpItemFxHTML(x) : ''}${on ? '<em class="wrtag">Porté</em>' : by && by !== k ? `<em class="wrtag lend">Porté par ${CHARS[by].name}</em>` : ''}</button>`;
     }).join('')}</div>`;
   } else h += `<p class="wrempty">Aucun vêtement « ${lab.toLowerCase()} » dans le sac pour l’instant.</p>`;
   if (!it) h += `<div class="wrshop"><svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS.boutique}</svg><span>Trouve des vêtements en voyage ou au magasin.</span><button class="btn gold sm" data-wshop="1">Magasin</button></div>`;
@@ -469,7 +500,8 @@ document.addEventListener('click', ev => {
   if (d.stg) { $('modal').hidden = true; const go = styleGuard._go; styleGuard._go = null; if (d.stg === 'ok' && go) go(); return; }
   if (d.stc) { if (S.sel !== d.stc) { S.sel = d.stc; S.unseen[d.stc] = 0; stSlot = null; save(); renderAll(); } return; }
   if (d.stgo) { openCompagnons(d.stgo); return; }
-  if (d.wslot) { stSlot = d.wslot; stRefresh(); return; }
+  if (d.wset) { stSetT = d.wset; stRefresh(); return; }
+  if (d.wslot) { const fromSet = !!el.closest('.cpset'); stSlot = d.wslot; stRefresh(); if (fromSet) { const pn = document.querySelector('.wrpanel'); if (pn && pn.scrollIntoView) pn.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } return; }
   if (d.wjump) { const s = document.getElementById('wrSaved'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
   const k = S.sel;
   if (d.wput) {
@@ -492,7 +524,7 @@ function stJoyBack() {
   clearTimeout(stJoyBack.t);
   stJoyBack.t = setTimeout(() => {
     const c = document.querySelector('[data-wrchar]'); if (!c || tab !== 'compagnons' || compView !== 'garde') return;
-    const k = c.dataset.wrchar; c.classList.remove('joy'); c.innerHTML = stCharSVG(k, 'content', 'wr' + k + 'b');
+    const k = c.dataset.wrchar; c.classList.remove('joy', 'spin'); c.innerHTML = stCharSVG(k, 'content', 'wr' + k + 'b');
     const say = document.querySelector('.wrsay'); if (say) say.remove();
   }, 1700);
 }
@@ -514,6 +546,18 @@ function stJoyBack() {
 .wrstage{position:relative;display:grid;grid-template-columns:62px minmax(0,1fr) 62px;gap:4px;align-items:center;padding:20px 6px 10px;border:3px solid var(--ink);border-radius:24px;box-shadow:0 4px 0 rgba(74,53,40,.35);overflow:hidden;
   background:radial-gradient(ellipse 46% 12% at 50% 86%,rgba(255,255,255,.55) 0 98%,transparent 100%),linear-gradient(transparent 78%,#e7c89c 78%,#d9b48a 100%),repeating-linear-gradient(90deg,rgba(255,255,255,.5) 0 14px,transparent 14px 28px),linear-gradient(180deg,#fffaf0,var(--tint) 70%)}
 .wrgar{position:absolute;left:0;right:0;top:0;width:100%;height:24px;pointer-events:none}
+.wrdeco{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.wrbulb{fill:#fff6c8;stroke:#c9963a;stroke-width:1.2;animation:wrBulb 2.4s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes wrBulb{from{fill:#fff6c8;filter:none}to{fill:#fffdf2;filter:drop-shadow(0 0 3px #ffe58a)}}
+.wrhg{transform-box:fill-box;transform-origin:50% 0;animation:wrSway 3.4s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes wrSway{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+.wrth{position:absolute;left:-5px;top:-5px;width:20px;height:20px;border-radius:50%;background:#fff;border:1.6px solid var(--ink);display:flex;align-items:center;justify-content:center}.wrth svg{width:15px;height:15px}
+.wrchar.spin>svg.cc{transform-origin:50% 60%;animation:wrSpin .9s cubic-bezier(.45,.05,.4,1)}
+@keyframes wrSpin{0%{transform:scaleX(1)}22%{transform:scaleX(.08) translateY(-4%)}50%{transform:scaleX(-1) translateY(-6%)}78%{transform:scaleX(.08) translateY(-4%)}100%{transform:scaleX(1)}}
+.wrvt{display:flex;align-items:center;gap:7px;width:100%;min-width:0;text-align:left}
+.wrvn{display:flex;flex-direction:column;min-width:0;flex:1}
+.wrvn b{font:700 13px/1.15 var(--display);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.wrvn>i{font:700 11px/1.2 var(--body);font-style:normal}
 .wrcol{display:flex;flex-direction:column;gap:8px;align-items:center;z-index:1}
 .wrs{position:relative;width:60px;display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:0;padding:0;cursor:pointer;color:var(--ink);-webkit-tap-highlight-color:transparent}
 .wri{position:relative;width:52px;height:52px;border-radius:50%;background:#fff;border:2.5px solid var(--ink);box-shadow:0 3px 0 var(--ink);display:flex;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
@@ -528,7 +572,7 @@ function stJoyBack() {
 .wrs:active .wri{transform:scale(.94)}
 .wrn{position:absolute;top:-4px;left:2px;min-width:18px;height:18px;border-radius:999px;background:var(--teal);color:#fff;border:2px solid #fff;font:800 11px/14px var(--display);font-style:normal;text-align:center;padding:0 3px;box-sizing:border-box}
 .wrsave .wri{background:#fff3f6}
-.wrmid{position:relative;display:flex;flex-direction:column;align-items:center;min-width:0}
+.wrmid{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;min-width:0}
 .wrchar{position:relative;width:100%;max-width:240px}
 .wrchar svg.cc{display:block;width:100%;height:auto}
 .wrchar.joy svg.cc .root{transform-box:view-box;transform-origin:160px 334px;animation:ccHop .62s cubic-bezier(.3,1.3,.5,1) 2}
@@ -552,8 +596,8 @@ function stJoyBack() {
 .sw:hover{transform:translateY(-2px)}
 .sw[aria-pressed="true"]{outline:3px solid var(--teal);outline-offset:2px;transform:scale(1.08)}
 .sw.reset{display:flex;align-items:center;justify-content:center}.sw.reset svg{width:17px;height:17px;background:rgba(255,255,255,.8);border-radius:50%;padding:1px}
-.wrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
-.wrv{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;background:#fffaf0;border:2.5px solid var(--line);border-radius:14px;padding:6px 4px 6px;cursor:pointer;color:var(--ink);text-align:center;min-width:0;transition:transform .15s}
+.wrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.wrv{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:1px;background:#fffaf0;border:2.5px solid var(--line);border-radius:14px;padding:7px 7px 7px;box-shadow:0 2px 0 rgba(74,53,40,.15);cursor:pointer;color:var(--ink);text-align:center;min-width:0;transition:transform .15s}
 .wrv:hover{transform:translateY(-2px);border-color:var(--rc)}
 .wrv:active{transform:scale(.96)}
 .wrv.on{background:#e6f6e9;border-color:var(--greenD);box-shadow:0 3px 0 var(--greenD)}
@@ -653,7 +697,7 @@ function stJoyBack() {
 .stdress{position:fixed;z-index:31;display:flex;align-items:center;gap:5px;background:var(--gold);border:2.5px solid var(--ink);border-radius:999px;padding:4px 12px 3px 6px;font:800 14px var(--display);color:var(--ink);box-shadow:0 3px 0 var(--ink);cursor:pointer;opacity:0;transform:translateY(-6px) scale(.9);transition:opacity .18s,transform .28s cubic-bezier(.3,1.6,.5,1)}
 .stdress.on{opacity:1;transform:none}
 .stdress svg{width:24px;height:24px;background:#fff;border-radius:50%;border:1.5px solid var(--ink)}
-@media (max-width:420px){.wrstage{grid-template-columns:58px minmax(0,1fr) 58px;padding:20px 3px 10px}.wrs{width:56px}.wri{width:48px;height:48px;padding:7px}.wrgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.wrv b{font-size:12px}.sw{width:27px;height:27px}.wrsw{gap:6px}.stc{padding:3px 4px 3px 3px;gap:4px}.stc img,.stc .livep{width:32px!important;height:36px!important}.stc b{font-size:13px}.ctch{width:100px}.cthero h2{font-size:23px}}
+@media (max-width:420px){.wrstage{grid-template-columns:58px minmax(0,1fr) 58px;padding:20px 3px 10px}.wrs{width:56px}.wri{width:48px;height:48px;padding:7px}.wrgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.wrv b{font-size:12px}.sw{width:27px;height:27px}.wrsw{gap:6px}.stc{padding:3px 4px 3px 3px;gap:4px}.stc img,.stc .livep{width:32px!important;height:36px!important}.stc b{font-size:13px}.ctch{width:100px}.cthero h2{font-size:23px}}
 @media (prefers-reduced-motion:reduce){.wrspark,.wrchar.joy svg.cc .root{display:none;animation:none!important}.ctv,.ctfin,.ctgain{animation:none}}
 `;
   const st = document.createElement('style'); st.id = 'stCSS'; st.textContent = css; document.head.appendChild(st);

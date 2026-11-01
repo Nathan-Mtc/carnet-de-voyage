@@ -145,6 +145,80 @@ try {
   if (document.body) startObs(); else addEventListener('DOMContentLoaded', startObs);
 } catch (e) { console.error(e); }
 
+// ---------------- v19 : « Qui part ? » ----------------
+// Retour du joueur : « si on veut aller à un endroit, on ne nous demande pas de sélectionner le familier ».
+// Toucher un lieu choisit un compagnon libre (celui qui est sélectionné s'il est libre, sinon le premier libre),
+// et le panneau de départ montre en haut les compagnons disponibles : un toucher change le voyageur.
+const trjTeam = () => (typeof hudTeam === 'function' ? hudTeam() : Object.keys(S.comps || {})).filter(k => CHARS[k] && S.prog[k]);
+const trjFree = () => trjTeam().filter(k => !S.trips[k]);
+let trjAllAway = false;
+function trjPickFree() {
+  if (!S.trips[S.sel]) { trjAllAway = false; return true; }
+  const f = trjFree()[0];
+  if (!f) { trjAllAway = true; return false; }
+  trjAllAway = false; S.sel = f; S.unseen[f] = 0; fast = false; save();
+  try { renderComps(); } catch (e) {}
+  return true;
+}
+let trjMute = false;
+const trjGoWrap = orig => function () {
+  let ok = true; try { ok = trjPickFree(); } catch (e) { console.error(e); }
+  if (ok) return orig.apply(this, arguments);
+  trjMute = true; // tout le monde est en voyage : le panneau l'explique, pas de bulle « choisissez un autre compagnon »
+  try { return orig.apply(this, arguments); } finally { trjMute = false; }
+};
+if (typeof toast === 'function') toast = (orig => function (msg) { if (trjMute && /déjà en voyage/.test(String(msg))) return; return orig.apply(this, arguments); })(toast);
+if (typeof choosePlace === 'function') choosePlace = trjGoWrap(choosePlace);
+if (typeof choosePOI === 'function') choosePOI = trjGoWrap(choosePOI);
+if (typeof goToPlace === 'function') goToPlace = trjGoWrap(goToPlace);
+if (typeof pickPoint === 'function') pickPoint = trjGoWrap(pickPoint);
+// avGoPlace (29_aventure.js) : déclaration de fonction, donc déjà connue ici (tout le jeu est assemblé dans une seule fonction)
+if (typeof avGoPlace === 'function') avGoPlace = trjGoWrap(avGoPlace);
+if (typeof regionGo === 'function') regionGo = trjGoWrap(regionGo);
+// fiche de région : « Y aller » propose un compagnon libre au lieu d'un bouton grisé
+if (typeof rgDetail === 'function') rgDetail = (orig => function (R) {
+  let h = orig.apply(this, arguments);
+  try { const f = S.trips[S.sel] && trjFree()[0]; if (f) h = h.replace(/<button class="btn green big wide" data-rggo="([^"]+)" disabled>[^<]*<\/button>/, (m, id) => `<button class="btn green big wide" data-rggo="${id}">Y aller avec ${esc(CHARS[f].name)}</button>`); } catch (e) {}
+  return h;
+})(rgDetail);
+if (typeof closeSheet === 'function') closeSheet = (orig => function () { trjAllAway = false; return orig.apply(this, arguments); })(closeSheet);
+function trjWhoHTML() {
+  const free = trjFree(), away = trjTeam().length - free.length;
+  if (!free.length) return '';
+  return `<div class="trjwho"><span class="trjwk">Qui part ?</span><div class="trjwl" role="radiogroup" aria-label="Qui part en voyage ?">${free.map(k => `<button class="trjwb${k === S.sel ? ' on' : ''}" data-trjwho="${k}" role="radio" aria-checked="${k === S.sel}" style="--tint:${typeof spTint === 'function' ? spTint(k) : '#fff3dc'}"><img src="${portraitURI(k, k === S.sel ? 'rire' : 'content')}" alt=""><b>${esc(CHARS[k].name)}</b></button>`).join('')}</div>${away ? `<span class="trjwa">${away} en voyage</span>` : ''}</div>`;
+}
+if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try {
+    if (!box) return r;
+    if (!S.trips[S.sel]) { trjAllAway = false; if (!box.querySelector('.trjwho')) box.insertAdjacentHTML('afterbegin', trjWhoHTML()); }
+    else if (trjAllAway && !trjFree().length && !box.querySelector('.trjaway')) box.insertAdjacentHTML('afterbegin', `<div class="trjaway"><b>Tous vos compagnons sont en voyage.</b><span>Ce lieu attendra : dès que l’un d’eux rentre, touchez-le à nouveau pour l’y envoyer.</span></div>`);
+  } catch (e) { console.error(e); }
+  return r;
+})(renderVoyage);
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-trjwho]'); if (!b) return;
+  const k = b.dataset.trjwho; if (!S.comps[k] || S.trips[k] || k === S.sel) return;
+  S.sel = k; S.unseen[k] = 0; fast = false; save(); renderAll();
+  const nb = document.querySelector(`.trjwb[data-trjwho="${k}"]`);
+  if (nb && nb.animate && !(typeof reduceMotion === 'function' && reduceMotion())) nb.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12) translateY(-3px)' }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
+});
+(function trjWhoCSS() {
+  const st = document.createElement('style'); st.id = 'trjWhoCSS';
+  st.textContent = `.trjwho{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 0 10px;padding:8px 10px;background:#fff8ec;border:2.5px solid var(--ink,#4a3528);border-radius:16px;box-shadow:0 3px 0 rgba(74,53,40,.25)}
+.trjwk{font:800 15px var(--display);color:var(--ink,#4a3528)}
+.trjwl{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.trjwb{display:flex;align-items:center;gap:5px;background:#fff;border:2.5px solid var(--line,#e7dccb);border-radius:999px;padding:2px 10px 2px 2px;cursor:pointer;color:var(--ink,#4a3528);transition:transform .15s}
+.trjwb img{width:34px;height:34px;border-radius:50%;background:var(--tint);border:2px solid var(--ink,#4a3528);box-sizing:border-box}
+.trjwb b{font:800 13.5px var(--display)}
+.trjwb.on{background:var(--tint);border-color:var(--ink,#4a3528);box-shadow:0 2px 0 var(--ink,#4a3528)}
+.trjwb:not(.on){opacity:.85}.trjwb:active{transform:scale(.95)}
+.trjwa{font:700 11.5px var(--display);color:var(--muted,#7b6a5c)}
+.trjaway{display:flex;flex-direction:column;gap:2px;margin:0 0 10px;padding:9px 12px;background:#fff3c4;border:2.5px dashed #d99a1e;border-radius:14px;font-size:13.5px}
+.trjaway b{font:800 15px var(--display)}`;
+  document.head.appendChild(st);
+})();
+
 // pour les tests et le tutoriel
 window.__trajet = { tripRoundMs, tripPlanMs, tripPhases, tripPhase, tripPos, trjLen, trjPlanInfo, homeObj, kmBetween, DURS, PLACES,
   get S() { return S; }, get plan() { return plan; }, startTrip: () => startTrip(), tick: dt => tick(dt),

@@ -386,7 +386,6 @@ function renderMarche(box) {
   if (mkView === 'annonces' && m.unseen) { m.unseen = 0; save(); setTimeout(() => { try { renderNav(); } catch (e) {} }, 0); }
   const online = 1180 + Math.round(240 * Math.sin(Date.now() / 3.6e6)) + (mkHash(dayKey()) % 90);
   let h = `<div class="mk-ban"><span class="mk-glob" aria-hidden="true"><svg viewBox="0 0 30 30">${MK_CATS[2][2]}</svg></span><div><b>Marché mondial <span>(bientôt avec de vrais joueurs)</span></b><small>${online.toLocaleString('fr-FR')} voyageurs simulés · ${m.list.length} annonces · le stock tourne en continu</small></div></div>`;
-  h += `<div class="filters mk-views"><button data-mkview="acheter" aria-pressed="${mkView === 'acheter'}">Acheter</button><button data-mkview="vendre" aria-pressed="${mkView === 'vendre'}">Vendre</button><button data-mkview="annonces" aria-pressed="${mkView === 'annonces'}">Mes annonces${mine ? ` <small>${mine}</small>` : ''}${m.unseen ? '<i class="mk-dot" aria-label="Ventes conclues"></i>' : ''}</button></div>`;
   if (mkView !== 'annonces') {
     h += `<div class="mk-cats" role="tablist">${MK_CATS.map(([k, l, ic]) => `<button role="tab" data-mkcat="${k}" aria-selected="${mkCat === k}"><svg viewBox="0 0 30 30" aria-hidden="true">${ic}</svg><span>${l}</span></button>`).join('')}</div>`;
     if (mkCat === 'res' && typeof REGIONS !== 'undefined') {
@@ -411,7 +410,13 @@ function renderMarche(box) {
     h += all.length ? `<div class="mk-list">${all.map(mkRowMine).join('')}</div>` : `<p class="empty">Aucune annonce. Touchez « Vendre » pour proposer un objet, un œuf ou un compagnon.</p>`;
     h += `<p class="small">${m.sold} vente${m.sold > 1 ? 's' : ''} au total · ${coins(m.earned)} gagnées au marché mondial.</p>`;
   }
-  box.innerHTML = h;
+  box.innerHTML = mkViewsBar() + h;
+}
+// v19 : la barre des vues reste collée en bas du panneau (Place et Quêtes viennent de 33_boutique.js)
+function mkViewsBar() {
+  const m = mkState(), mine = m.mine.filter(l => !l.sold).length, b2 = typeof b2MarcheHTML === 'function';
+  const v = [['place', 'Place'], ['acheter', 'Acheter'], ['vendre', 'Vendre'], ['annonces', 'Mes annonces'], ['quetes', 'Quêtes']].filter(([k]) => b2 || (k !== 'place' && k !== 'quetes'));
+  return `<div class="filters mk-views" style="--n:${v.length}" aria-label="Marché mondial">${v.map(([k, l]) => `<button data-mkview="${k}" aria-pressed="${mkView === k}">${l}${k === 'annonces' && mine ? ` <small>${mine}</small>` : ''}${k === 'annonces' && m.unseen ? '<i class="mk-dot" aria-label="Ventes conclues"></i>' : ''}</button>`).join('')}</div>`;
 }
 function openMarche(cat, sp) {
   if (cat && MK_CATS.some(c => c[0] === cat)) mkCat = cat;
@@ -499,7 +504,8 @@ setInterval(mkTick, 5000);
 .mk-ban>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .mk-ban b{font:800 16.5px/1.2 var(--display)}.mk-ban b span{font:700 13px var(--display);color:var(--teal)}
 .mk-ban small{font-size:12px;color:var(--ink2)}
-.mk-views{margin-bottom:8px}.mk-views button{position:relative}
+.mk-views{position:sticky;top:-16px;z-index:4;margin:-16px -16px 12px;padding:10px 10px 8px;display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,1fr));gap:5px;background:var(--paper);border-bottom:2.5px solid var(--ink);box-shadow:0 4px 10px rgba(74,53,40,.12)}
+.mk-views button{position:relative;padding:6px 2px 4px;font-size:12.5px;line-height:1.05;text-align:center;min-height:38px;white-space:normal}
 .mk-dot,.mk-ndot{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--rust,#d9604f);border:2px solid #fff;box-shadow:0 0 0 1.5px var(--ink)}
 .mk-dot{top:-5px;right:-5px}
 #nav button{position:relative}.mk-ndot{top:3px;left:calc(50% - 20px)}

@@ -12,7 +12,9 @@ const AXL = 'stroke="#5b4636" stroke-width="1.5" stroke-linejoin="round" stroke-
 const AX = {};
 const axDef = (id, mood, g, c, draw) => { AX[id] = { id, mood, g, c, draw }; };
 function axPet(c, x, y, mood, cls, inner) {
-  return `<g class="${cls || 'pet'}"><image href="${portraitURI(c.k, mood || 'content')}" x="${x - 22}" y="${y - 48}" width="44" height="48"/>${inner || ''}</g>`;
+  // v19 : ombre portée douce, posée au sol (elle ne suit pas les sauts) ; pas dans l'eau
+  const sh = /swim|slide|cross|float/.test(cls || '') ? '' : `<ellipse class="axsh" cx="${x}" cy="${y - 0.5}" rx="15" ry="3.2" fill="#2a1e14" opacity="${c.tod === 'nuit' ? 0.14 : 0.22}"/>`;
+  return `${sh}<g class="${cls || 'pet'}"><image href="${portraitURI(c.k, mood || 'content')}" x="${x - 22}" y="${y - 48}" width="44" height="48"/>${inner || ''}</g>`;
 }
 const axStar = (x, y, r) => `M${x} ${y - r} L${x + r * 0.3} ${y - r * 0.3} L${x + r} ${y} L${x + r * 0.3} ${y + r * 0.3} L${x} ${y + r} L${x - r * 0.3} ${y + r * 0.3} L${x - r} ${y} L${x - r * 0.3} ${y - r * 0.3}Z`;
 const axHeart = (x, y, s, cls) => `<path class="${cls || ''}" d="M${x} ${y + 3 * s} C${x - 7 * s} ${y - 2 * s} ${x - 4 * s} ${y - 7 * s} ${x} ${y - 3.5 * s} C${x + 4 * s} ${y - 7 * s} ${x + 7 * s} ${y - 2 * s} ${x} ${y + 3 * s}Z" fill="#f06a8e" stroke="#fff" stroke-width=".8"/>`;

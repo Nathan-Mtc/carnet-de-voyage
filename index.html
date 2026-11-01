@@ -4380,6 +4380,13 @@ const NAV_ICONS = {
   album: '<rect x="4" y="7" width="22" height="17" rx="2" fill="#bfe1f2" stroke="currentColor" stroke-width="2"/><path d="M4 21 L11 14 L16 19 L19 16 L26 22" fill="#8fbf7f" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="20" cy="12" r="2.4" fill="#fbd76a"/>',
 };
 function selectComp(k) { if (!S.comps || !S.comps[k]) return; S.sel = k; S.unseen[k] = 0; if (S.trips[k]) plan.dest = null; fast = false; save(); renderAll(); const t = S.trips[k]; if (t) { const p = tripPos(t); zoomTo(p[0], p[1]); } }
+// v19 : la carte vole jusqu'au compagnon : sa position en voyage, sinon la maison
+function hudFlyTo(k) {
+  if (!S.comps || !S.comps[k] || typeof map === 'undefined' || !map) return;
+  const t = S.trips[k];
+  if (t && !t.done) { const p = tripPos(t); zoomTo(p[0], p[1], Math.max(zoomT.k, 4)); return; }
+  const h = homeObj(); zoomTo(h.lon, h.lat, typeof homeZoom === 'function' ? homeZoom() : 40);
+}
 function resolveTab(name) {
   if (name === 'quetes' && questView === 'col') return ['sac', 'col']; // les collections vivent maintenant dans Sac & Album
   return TAB_ALIAS[name] || [name];
@@ -4896,7 +4903,7 @@ document.addEventListener('click', ev => {
   const d = el.dataset;
   if (el.closest('.fiche')) { $('modal').hidden = true; if (d.fclose) return; } // une action dans la fiche ferme la fiche
   if (d.fiche) return openFiche(d.fiche);
-  if (d.sel) { if (d.sel === S.sel && tab === 'carte' && typeof openCompagnons === 'function') return openCompagnons('garde'); return selectComp(d.sel); } // toucher le compagnon déjà choisi ouvre sa garde-robe
+  if (d.sel) { if (d.sel !== S.sel) selectComp(d.sel); hudFlyTo(d.sel); return; } // v19 : toucher un portrait le choisit et centre la carte sur lui
   if (d.refuge) { if (typeof openCompagnons === 'function') openCompagnons('refuge'); return; }
   if (d.nav) { if (d.nav === 'carte') closeSheet(); else openSheet(d.nav, true); return; }
   if (d.sub && el.closest('.subtabs') && SUBTABS[tab]) { /* la boutique gère ses propres sous-onglets */ setSub(tab, d.sub); houseSel = null; renderPanel(); $('panelBody').scrollTop = 0; return; }
@@ -6177,7 +6184,7 @@ GAME.on('craft', ({ id }) => {
   save(); _dreamFlash = { k: all[0].k, idx: all.map(g => g.i), t: Date.now() };
   renderGoal(); if (revesShown()) renderPanel();
   const g = all[0], name = CHARS[g.k].name;
-  setTimeout(() => toast(dreamReady(g.k) ? `Toutes les étapes du rêve de ${name} sont faites ! Réalisez-le depuis la carte.` : `Rêve de ${name} : « ${g.st.txt} », c’est fait !`), 900);
+  setTimeout(() => toast(dreamReady(g.k) ? `Toutes les étapes du rêve de ${name} sont faites ! Réalisez-le dans Compagnons › Rêves.` : `Rêve de ${name} : « ${g.st.txt} », c’est fait !`), 900);
 });
 function announceGains(gains) {
   const k = gains[0].k, name = CHARS[k].name, ready = dreamReady(k);
@@ -6435,24 +6442,56 @@ function renderDreamCard(box) {
 }
 
 // ---------- onglet « Rêves » ----------
+// v19 : chaque rêve montre d'abord, en grand, ce qu'il rapporte et à quoi ça sert ; puis les étapes à cocher.
+const DREAM_LOCK = '<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="9" rx="2" fill="#c9b9a6" stroke="#5b4636" stroke-width="1.6"/><path d="M7 9 V6.5 a3 3 0 0 1 6 0 V9" fill="none" stroke="#5b4636" stroke-width="1.8"/></svg>';
+const dreamShort = n => String(n).replace(/ (?:de |d’)(?:Pistache|Mochi|Bulle)$/, '');
+// la récompense principale et son utilité, en une phrase
+function dreamUse(d) {
+  const r = d.reward, it = dreamDefItem(r.item);
+  let kind = 'Trésor rare', use = 'Une pièce unique pour votre collection';
+  if (it.cat === 'v') {
+    kind = 'Tenue unique';
+    const fx = typeof cpItemEffects === 'function' ? cpItemEffects({ ...it, sub: it.sub, look: it.look }) : [];
+    use = fx.length ? fx.map(f => f.txt).join(' · ') : 'Un style que personne d’autre n’a';
+  } else if (it.cat === 'd') {
+    kind = 'Meuble pour le foyer';
+    const e = typeof FY_EFF !== 'undefined' ? FY_EFF[it.sub] : null;
+    use = e ? ucfirst(e[2]) : 'Plus de confort à la maison';
+  }
+  return { it, kind, use };
+}
+function dreamExtras(d) {
+  const r = d.reward, out = [];
+  if (r.tal) out.push([DREAM_GIFT_SVG.tal, `+${r.tal} point de talent`, 'un nouveau pouvoir en voyage']);
+  if (r.build) { let b = null; try { b = VILLAGE_BUILDINGS.find(x => x.id === r.build); } catch (e) {} out.push(['<svg viewBox="0 0 30 30"><path d="M5 25 V13 L15 5 L25 13 V25Z" fill="#fff3e2" stroke="#5b4636" stroke-width="2" stroke-linejoin="round"/><rect x="12" y="16" width="6" height="9" fill="#d9604f" stroke="#5b4636" stroke-width="1.6"/></svg>', dreamBuildName(r.build), b && b.bonus ? b.bonus.replace(/\.$/, '') : 'un nouveau bâtiment au village']); }
+  if (r.deco) { const dc = dreamDefItem(r.deco), e = typeof FY_EFF !== 'undefined' ? FY_EFF[dc.sub] : null; out.push([itemIcon(dc), dreamShort(dc.name), e ? e[2] : 'pour le foyer']); }
+  if (r.egg) out.push([DREAM_GIFT_SVG.egg, `Œuf ${r.egg >= 3 ? 'très rare' : 'rare'}`, 'une couleur unique']);
+  out.push([COIN, `${r.coins} pièces`, '']);
+  return out;
+}
 function dreamCompHTML(k) {
   const ch = CHARS[k], d = curDream(k), list = dreamsOf(k), D = S.dreams[k];
   const doneN = D.done.length;
-  if (!d) return `<article class="rvc2 done" style="--tint:${dreamTint(k)}"><div class="rvsc"><div class="rvthink">${dreamScene({ id: 'ciel', wish: '' })}<span class="rvall">♥</span></div><span class="rvwho"><img src="${portraitURI(k, 'amour')}" alt=""></span></div><b class="rvwish">${ch.name} : ${doneN}/${list.length} rêves réalisés !</b></article>`;
-  const [col, l1, l2] = goLabel(k), ready = dreamReady(k), nxt = nextStepIdx(k);
-  const main = dreamDefItem(d.reward.item);
-  let h = `<article class="rvc2 ${S.sel === k ? 'sel' : ''} ${ready ? 'ready' : ''}" style="--tint:${dreamTint(k)}">`;
-  h += `<div class="rvsc" title="${esc(d.quote)}"><div class="rvthink">${dreamScene(d)}<span class="rvrw2" style="--rc:${RARC[main.rarity]}">${itemIcon(main)}</span><span class="rvsp" aria-hidden="true"><i>✦</i><i>✦</i><i>✦</i></span></div><i class="rvb1"></i><i class="rvb2"></i><span class="rvwho"><img src="${portraitURI(k, ready ? 'amour' : 'content')}" alt=""></span><span class="rvnum">${ch.name} · ${list.indexOf(d) + 1}/${list.length}</span></div>`;
-  h += `<b class="rvwish">${esc(ucfirst(d.wish))}</b>`;
+  if (!d) return `<article class="rvc3 done" style="--tint:${dreamTint(k)}"><p class="rv3wish"><img src="${portraitURI(k, 'amour')}" alt=""><span><b>${ch.name}</b> a réalisé tous ses rêves (${doneN}/${list.length}) !</span></p></article>`;
+  const [col, l1, l2] = goLabel(k), ready = dreamReady(k), nxt = nextStepIdx(k), idx = list.indexOf(d);
+  const U = dreamUse(d), stepsDone = d.steps.filter((st, i) => stepProg(k, i) >= stepGoal(st)).length;
+  const frac = d.steps.reduce((a, st, i) => a + stepProg(k, i) / stepGoal(st), 0) / d.steps.length;
+  let h = `<article class="rvc3 cur ${S.sel === k ? 'sel' : ''} ${ready ? 'ready' : ''}" style="--tint:${dreamTint(k)}">`;
+  h += `<div class="rv3hero" style="--rc:${RARC[U.it.rarity] || '#e2b44a'}"><span class="rv3gi">${itemIcon(U.it)}<span class="rvsp" aria-hidden="true"><i>✦</i><i>✦</i><i>✦</i></span></span><div class="rv3gx"><small>${ready ? 'Prêt à gagner' : 'À gagner'} · ${esc(U.kind)}</small><b>${esc(dreamShort(U.it.name))}</b><p class="rv3use">${esc(U.use)}</p></div></div>`;
+  h += `<div class="rv3more">${dreamExtras(d).map(([ic, t, u]) => `<span class="rv3x"><i>${ic}</i><span><b>${esc(t)}</b>${u ? `<small>${esc(u)}</small>` : ''}</span></span>`).join('')}</div>`;
+  h += `<p class="rv3wish"><img src="${portraitURI(k, ready ? 'amour' : 'content')}" alt=""><span><b>${ch.name}</b> rêve de ${esc(d.wish)}.</span><em>${idx + 1}/${list.length}</em></p>`;
+  h += `<div class="rv3prog"><span class="rv3bar"><i style="width:${(frac * 100).toFixed(0)}%"></i></span><b>${stepsDone}/${d.steps.length} étape${d.steps.length > 1 ? 's' : ''}</b></div>`;
   h += `<ol class="rvsteps">${d.steps.map((st, i) => { const pr = stepProg(k, i), g = stepGoal(st), ok = pr >= g; return `<li class="${ok ? 'ok' : i === nxt ? 'next' : ''}" title="${esc(st.txt)}"><span class="rvsi">${stepIcon(st)}<em>${ok ? '✓' : g > 1 ? `${pr}/${g}` : ''}</em></span><small>${esc(st.short)}</small></li>`; }).join('')}</ol>`;
-  h += `<div class="dgifts">${dreamGiftsHTML(k, d)}</div>`;
   h += `<button class="btn ${col} rvgo" data-dream-go="${k}">${l1}${l2 && col !== 'gold' ? ` · ${esc(l2)}` : l2 ? ' ' + esc(l2) : ''}</button>`;
+  const later = list.slice(idx + 1, idx + 4);
+  if (later.length) h += `<div class="rv3next"><span class="rv3nk">Ensuite</span>${later.map((x, i) => { const u = dreamUse(x); return `<span class="rv3n" title="Se débloque après le rêve ${idx + 1 + i}" style="--rc:${RARC[u.it.rarity] || '#ccc'}"><i class="rv3ni">${itemIcon(u.it)}</i><span><b>${esc(dreamShort(u.it.name))}</b><small>${esc(u.kind)}</small></span><i class="rv3lk">${DREAM_LOCK}</i></span>`; }).join('')}</div>`;
+  void D;
   return h + '</article>';
 }
 function renderReves(box) {
   ensureDreams();
   const ks = dreamComps().filter(k => S.dreams[k]), total = ks.reduce((a, k) => a + dreamsOf(k).length, 0), done = ks.reduce((a, k) => a + S.dreams[k].done.length, 0);
-  let html = `<div class="rvhead"><div class="rvhi"><svg viewBox="0 0 30 30" aria-hidden="true">${DREAM_ICON}</svg></div><div><h2>Les rêves</h2><p>Un rêve réalisé = des cadeaux uniques.</p></div><span class="rvtot"><b>${done}</b>/${total}</span></div>`;
+  let html = `<div class="rvhead"><div class="rvhi"><svg viewBox="0 0 30 30" aria-hidden="true">${DREAM_ICON}</svg></div><div><h2>Les rêves</h2><p>Réalisez un rêve : gagnez une tenue, un meuble ou un bâtiment utile.</p></div><span class="rvtot"><b>${done}</b>/${total}</span></div>`;
   html += `<div class="rvcomps">${[S.sel, ...ks.filter(k => k !== S.sel)].map(dreamCompHTML).join('')}</div>`;
   // souvenirs
   const mem = [];
@@ -6660,6 +6699,38 @@ body.sheet-open #goal.goal.dream{display:none} /* comme l'ancien bandeau : le pa
 .rvsteps li.ok .rvsi{border:2.5px solid #3a8f5a;background:#e6f6e9}.rvsteps li.ok .rvsi em{background:#5fbf7f;color:#fff;border-color:#3a8f5a}
 .rvsteps li.next .rvsi{border:2.5px solid var(--ink);animation:rvnext 1.4s ease-in-out infinite alternate}
 .rvsteps small{font:700 11px/1.1 var(--display);color:var(--ink2)}
+.rvc3{position:relative;background:#fff;border:2.5px solid var(--ink);border-radius:20px;padding:10px 10px 12px;box-shadow:0 3px 0 rgba(74,53,40,.3);display:flex;flex-direction:column;gap:9px}
+.rvc3.sel{background:linear-gradient(180deg,var(--tint),#fff 160px)}
+.rvc3.ready{box-shadow:0 0 0 3px var(--gold),0 3px 0 rgba(74,53,40,.3)}
+.rvc3:not(.sel){opacity:.94}
+.rv3hero{display:flex;align-items:center;gap:12px;padding:10px;border-radius:16px;background:radial-gradient(circle at 18% 50%,#fff 0 22%,transparent 60%),linear-gradient(135deg,#fff8e2,#fff);border:2.5px solid var(--rc);box-shadow:inset 0 0 0 2px #fff}
+.rv3gi{position:relative;flex:none;width:88px;height:88px;border-radius:22px;background:#fff;border:2.5px solid var(--ink);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 0 var(--ink);animation:rvfloat 3s ease-in-out infinite}
+.rv3gi>svg{width:70px;height:70px}
+.rv3gi .rvsp i{position:absolute;font-style:normal;color:#fff;text-shadow:0 0 4px #f6c445,0 0 1px #b8860b;font-size:15px;animation:rvtw 2.2s ease-in-out infinite}
+.rv3gi .rvsp i:nth-child(1){left:-6px;top:-4px}.rv3gi .rvsp i:nth-child(2){right:-6px;top:10px;animation-delay:.7s}.rv3gi .rvsp i:nth-child(3){right:6px;bottom:-8px;animation-delay:1.4s}
+.rv3gx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rv3gx small{font:800 11px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--rust)}
+.rv3gx b{font:800 20px/1.1 var(--display);color:var(--ink)}
+.rv3use{margin:3px 0 0;font:800 14.5px/1.25 var(--display);color:#2f7f6c;background:#e6f6e9;border-radius:10px;padding:4px 8px;align-self:flex-start}
+.rv3more{display:flex;gap:6px;flex-wrap:wrap}
+.rv3x{display:flex;align-items:center;gap:5px;background:var(--paper,#fffaf0);border:2px solid var(--line);border-radius:12px;padding:3px 8px 3px 4px;min-width:0;max-width:100%}
+.rv3x i{flex:none;width:26px;height:26px;display:flex}.rv3x i svg{width:26px;height:26px}
+.rv3x span{display:flex;flex-direction:column;min-width:0}.rv3x b{font:800 12.5px/1.15 var(--display)}.rv3x small{font:600 11px/1.15 var(--body);color:var(--ink2)}
+.rv3wish{display:flex;align-items:center;gap:8px;margin:0;font:600 14.5px/1.25 var(--body)}
+.rv3wish img{width:38px;height:38px;flex:none;border-radius:50%;background:var(--tint);border:2px solid var(--ink)}
+.rv3wish span{flex:1;min-width:0}.rv3wish b{font:800 15px var(--display)}
+.rv3wish em{flex:none;font:700 11.5px var(--display);font-style:normal;color:var(--ink2);background:#fff;border:2px solid var(--line);border-radius:999px;padding:0 7px}
+.rv3prog{display:flex;align-items:center;gap:8px}
+.rv3bar{flex:1;height:12px;border-radius:999px;background:#efe6d6;border:2px solid var(--ink);overflow:hidden}
+.rv3bar i{display:block;height:100%;background:linear-gradient(90deg,#7fd39a,#5fbf7f);border-radius:999px;transition:width .5s}
+.rv3prog b{font:800 13px var(--display);white-space:nowrap}
+.rv3next{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;padding-top:6px;border-top:2px dashed var(--line)}
+.rv3nk{flex:none;font:800 11px var(--display);text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)}
+.rv3n{position:relative;flex:none;display:flex;align-items:center;gap:5px;background:#f6f1e8;border:2px solid var(--line);border-radius:12px;padding:3px 22px 3px 4px;filter:grayscale(.55);opacity:.85}
+.rv3ni{width:28px;height:28px;display:flex;border-radius:8px;background:#fff;border:1.6px solid var(--rc)}.rv3ni svg{width:100%;height:100%}
+.rv3n span{display:flex;flex-direction:column}.rv3n b{font:700 11.5px/1.1 var(--display);max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rv3n small{font:600 10px var(--body);color:var(--ink2)}
+.rv3lk{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:16px;height:16px;display:flex}.rv3lk svg{width:16px;height:16px}
+@media (prefers-reduced-motion:reduce){.rv3gi,.rv3gi .rvsp i{animation:none}}
 .dgifts{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none}
 .dgift{flex:none;width:78px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 4px 6px;border-radius:14px;background:var(--paper);border:2px solid var(--line);text-align:center}
 .dgift.main{width:96px;background:linear-gradient(180deg,#fff8e2,#fff);border-color:var(--rc,var(--gold));box-shadow:0 0 0 2px #fff inset,0 2px 0 rgba(74,53,40,.15)}
@@ -8165,7 +8236,7 @@ const bqWho = c => `${c.name} ${c.label}`;
 const BQ_LEVELS = [
   { name: 'Échoppe', rep: 0, slots: 3, rich: 1, stock: 6, title: 'Petite échoppe de quartier', reach: 'Des clients du quartier' },
   { name: 'Boutique', rep: 50, slots: 3, rich: 1.15, stock: 7, title: 'Adresse que l’on recommande', reach: 'Des clients de toute la région', perks: ['+15 % de pièces par commande', 'Rayon décoration et recettes au magasin', 'Auvent rayé et enseigne peinte', 'Clients de toute la région'] },
-  { name: 'Maison réputée', rep: 160, slots: 4, rich: 1.3, stock: 8, title: 'Maison qui compte en France', reach: 'Des clients de toute la France', perks: ['4 commandes à la fois', '+30 % de pièces par commande', 'Nouveaux vêtements et matériaux', 'Plantes, vitrine et seconde étagère', 'Clients de toute la France'] },
+  { name: 'Maison réputée', rep: 160, slots: 4, rich: 1.3, stock: 8, title: 'Maison qui compte en France', reach: 'Des clients de toute la France', perks: ['4 commandes à la fois', '+30 % de pièces par commande', 'Nouveaux vêtements et matériaux', 'Plantes et seconde étagère', 'Clients de toute la France'] },
   { name: 'Grand comptoir', rep: 360, slots: 4, rich: 1.5, stock: 9, title: 'Renommée dans toute l’Europe', reach: 'Des clients de toute l’Europe', perks: ['+50 % de pièces par commande', 'Articles rares au magasin', 'Lanternes et tapis dans la boutique', 'Clients de toute l’Europe'] },
   { name: 'Comptoir du monde', rep: 700, slots: 4, rich: 1.75, stock: 10, title: 'Célèbre aux quatre coins du monde', reach: 'Des clients du monde entier', perks: ['+75 % de pièces par commande', 'Commandes de Merveilles et de souvenirs', 'Guirlande et mappemonde géante', 'Clients du monde entier'] },
   { name: 'Légende du voyage', rep: 1200, slots: 4, rich: 2, stock: 10, title: 'Légende des voyageurs', reach: 'Les clients les plus exigeants', perks: ['Pièces doublées par commande', 'Articles légendaires au magasin', 'Enseigne dorée qui scintille'] },
@@ -8198,7 +8269,7 @@ const BQ_SHOPS = [
     phrase: 'Une petite table chaleureuse où chaque plat raconte un voyage.',
     stars: [['Fondue des copains', 'n', 'fromage', 3, null, '#f2c14e'], ['Soupe du potager', 'n', 'legume', 2, null, '#8fbf5a'], ['Croque-monsieur doré', 'n', 'pain', 2, null, '#e3b06b']],
     keys: ['plat', 'legume', 'fromage', 'pain', 'mer'], cats: ['restaurant', 'boucherie', 'fromagerie', 'marche', 'poissonnerie'], itemCats: ['n'],
-    crafts: ['soupe', 'soupepotager', 'fondue', 'plateau', 'croque', 'sandrando'],
+    crafts: ['soupe', 'soupepotager', 'fondue', 'plateau', 'croque', 'sandrando'], anyFood: 1,
     bsubs: ['plat', 'legume', 'fromage', 'mer'], mult: 1.35, slot: 1,
     perks: ['Plats cuisinés, fromages et légumes : +35 % de pièces', 'Une commande de plus à la fois au comptoir'],
     lines: ['On est quatre à table ce soir, et tout le monde a faim !', 'J’ai une faim de loup… enfin, de blaireau.', 'Le chef peut-il me préparer quelque chose de réconfortant ?'] },
@@ -8222,7 +8293,7 @@ const BQ_SHOPS = [
     phrase: 'Œufs, friandises et accessoires pour compagnons heureux.',
     stars: [{ egg: null }, ['Sachet de graines', 'm', 'graine', 0, null, '#a9784f'], ['Panier douillet', 'd', 'tapis', 1, null, '#f3aec1']],
     keys: ['graine', 'fruit', 'mer', 'legume'], cats: ['jardin', 'marche', 'poissonnerie', 'zoo'], itemCats: ['m', 'n'],
-    crafts: ['mobile', 'plante', 'collier'], pets: 1,
+    crafts: ['tapis', 'patchwork', 'plante'], pets: 1,
     bkinds: ['egg', 'comp', 'bait'], mult: 1.3, eggs: 1,
     perks: ['Œufs plus fréquents et 20 % moins chers au magasin', 'Clients qui cherchent des œufs et des compagnons : +30 %'],
     lines: ['Mon petit a besoin de friandises, il fait la grève de la sieste.', 'On m’a dit que vous connaissiez tous les compagnons du monde !', 'Je prépare un grand panier douillet… il ne manque plus qu’un locataire.'] },
@@ -8246,7 +8317,7 @@ const BQ_SHOPS = [
     phrase: 'Des bocaux et des spécialités rapportés de chaque région.',
     stars: [['Calisson', 'n', 'sucre', 1, null, '#f6e3c4'], ['Huile d’olive', 'n', 'fruit', 0, null, '#a8b45a'], ['Sel de Guérande', 'm', 'sable', 0, null, '#f4f1ea']],
     keys: ['fromage', 'fruit', 'sucre', 'legume'], cats: ['epicerie', 'fromagerie', 'marche'], itemCats: ['n', 'm'],
-    crafts: ['plateau', 'confiture', 'salade'], reach: 1,
+    crafts: ['plateau', 'confiture', 'salade'], reach: 1, anyFood: 1,
     bkinds: ['reg'], mult: 1.35,
     perks: ['Spécialités régionales : +35 % de pièces', 'Clients venus de plus loin, dès le début'],
     lines: ['Avez-vous ce petit goût de là-bas que je ne retrouve nulle part ?', 'Je cuisine un plat de mon enfance, il me manque l’ingrédient secret.', 'Vos étagères, c’est un tour du monde !'] },
@@ -8260,6 +8331,19 @@ const BQ_SHOPS = [
     lines: ['Ça a l’air vieux… et c’est exactement ce que je cherche !', 'Pour ma collection de petites merveilles, il me manque une pièce.', 'Je décore mon nouveau terrier, il me faut du caractère.'] },
 ];
 const BQS = id => BQ_SHOPS.find(x => x.id === id) || null;
+// v19 : chaque commerce a SES habitués (des têtes différentes d'un commerce à l'autre)
+const BQ_SHOP_CLIENTS = {
+  boulangerie: ['noisette', 'mimi', 'capucine', 'grignote', 'biscotte', 'moustache'],
+  cafe: ['frisette', 'roussette', 'chips', 'capucine', 'moustache', 'eucalypso', 'hulotte'],
+  restaurant: ['bruno', 'biscotte', 'ondine', 'grignote', 'pompon', 'gaston', 'pingo'],
+  fleuriste: ['pompon', 'roussette', 'frisette', 'chips', 'rainette', 'clochette', 'leonie'],
+  mode: ['roussette', 'frisette', 'ondine', 'noisette', 'moustache', 'eucalypso', 'pingo'],
+  animalerie: ['chips', 'biscotte', 'mimi', 'pompon', 'ondine', 'rainette', 'clochette'],
+  glacier: ['noisette', 'capucine', 'grignote', 'ondine', 'chips', 'moustache', 'pingo'],
+  librairie: ['filou', 'mimi', 'capucine', 'bruno', 'hulotte', 'gaston', 'leonie', 'eucalypso'],
+  epicerie: ['bruno', 'mimi', 'grignote', 'capucine', 'ondine', 'eucalypso', 'moustache'],
+  brocante: ['filou', 'chips', 'ondine', 'bruno', 'gaston', 'hulotte', 'leonie'],
+};
 // ouverture d'un nouveau commerce : niveau de boutique requis et prix
 const BQ_SHOP_SLOTS = [{ lvl: 0, cost: 0 }, { lvl: 1, cost: 300 }, { lvl: 2, cost: 900 }, { lvl: 4, cost: 2500 }];
 const bqType = () => { const s = S.shop; return s && s.type && BQS(s.type) ? BQS(s.type) : null; };
@@ -8329,6 +8413,12 @@ function bqState() {
   if (s.type && !s.owned.includes(s.type)) s.owned.push(s.type);
   if (typeof s.slotSeen !== 'number') s.slotSeen = s.owned.length;
   s.orders = s.orders.filter(o => o && Array.isArray(o.req) && BQC(o.client));
+  // v19 : les commandes appartiennent à UN commerce ; celles des autres commerces attendent (s.park) qu'on y revienne
+  if (!s.park || typeof s.park !== 'object') s.park = {};
+  if (s.type && s.orders.some(o => o.shop !== s.type)) {
+    s.orders.forEach(o => { if (o.shop !== s.type && o.shop && s.owned.includes(o.shop)) (s.park[o.shop] = s.park[o.shop] || []).push(o); });
+    s.orders = s.orders.filter(o => o.shop === s.type);
+  }
   s.lvl = bqLevelOf(s.rep);
   return s;
 }
@@ -8484,6 +8574,24 @@ const bqIsBait = it => { try { if (typeof nsBaitSps === 'function' && it && nsBa
 const bqSpIds = () => (typeof SP_IDS !== 'undefined' ? SP_IDS : ['panda', 'capy', 'axo']);
 const bqSpName = sp => { try { return typeof spName === 'function' ? spName(sp) : sp; } catch (e) { return sp; } };
 const bqCraftOK = (T, r) => typeof T.crafts === 'function' ? T.crafts(r) : T.crafts.includes(r.id);
+// v19 : ce que vend vraiment le commerce (sous-types de ses ingrédients et de sa spécialité, ses types d'objets, ses produits phares)
+const bqShopSubs = T => new Set([].concat(...T.keys.map(k => ING[k] ? ING[k][0] : []), T.bsubs || []));
+function bqFitDef(T, d) {
+  if (!T || !d) return !T;
+  if ((T.stars || []).some(x => Array.isArray(x) && x[0] === d[0])) return true;
+  const cats = T.itemCats.concat(T.bcats || []);
+  if (!cats.includes(d[1])) return false;
+  return bqShopSubs(T).has(d[2]) || !!(T.bcats && T.bcats.includes(d[1])) || !!(T.anyFood && d[1] === 'n');
+}
+// une demande est-elle cohérente avec le commerce ?
+function bqFitReq(T, r) {
+  if (!T || !r) return true;
+  if (r.k === 'egg' || r.k === 'comp' || r.k === 'bait') return !!T.pets;
+  if (r.k === 'ing') return T.keys.includes(r.key);
+  if (r.k === 'reg') { const x = RG_RES[r.rid]; return !!x && bqFitDef(T, [x.name, x.cat, x.sub, x.rar]); }
+  if (r.k === 'craft' && !r.wonder) { const rc = RECIPES.find(x => x.id === r.id); return !!rc && (bqCraftOK(T, rc) || bqFitDef(T, rc.out)); }
+  return bqFitDef(T, r.def);
+}
 const BQ_GEN_SHOP = {
   ing(T, c, L, easy) {
     const keys = T.keys.filter(k => ING[k] && bqCatFor(k, T.cats));
@@ -8491,12 +8599,11 @@ const BQ_GEN_SHOP = {
     return { k: 'ing', key, n: easy ? 2 : 2 + (L >= 2 ? 1 : 0) + (Math.random() < 0.3 ? 1 : 0), src: { cat: bqCatFor(key, T.cats) } };
   },
   item(T, c, L) {
-    const cat = bqPick(T.cats.filter(x => bqPoiOK(x) && LOOT[x].some(d => T.itemCats.includes(d[1])))); if (!cat) return null;
-    const subs = new Set([].concat(...T.keys.map(k => ING[k] ? ING[k][0] : []), T.bsubs || []));
-    let defs = LOOT[cat].filter(d => d[3] <= (L >= 3 ? 1 : 0) && T.itemCats.includes(d[1]));
-    const fitting = defs.filter(d => subs.has(d[2]) || (T.bcats && T.bcats.includes(d[1]))); if (fitting.length) defs = fitting; // ce que vend vraiment le commerce
-    const def = bqPick(defs, d => d[3] ? 0.5 : 1); if (!def) return null;
-    return { k: 'item', name: def[0], def, n: 1, src: { cat } };
+    // uniquement ce que vend vraiment le commerce, trouvé dans ses lieux du quotidien
+    const opts = [];
+    T.cats.filter(bqPoiOK).forEach(cat => LOOT[cat].forEach(d => { if (d[3] <= (L >= 3 ? 1 : 0) && d[1] !== 't' && bqFitDef(T, d)) opts.push({ cat, d }); }));
+    const o = bqPick(opts, o => o.d[3] ? 0.5 : 1); if (!o) return null;
+    return { k: 'item', name: o.d[0], def: o.d, n: 1, src: { cat: o.cat } };
   },
   craft(T, c, L, easy) {
     const pool = RECIPES.filter(r => !r.multi && bqCraftOK(T, r) && bqRecOwned(r.id) && r.ing.every(([k]) => !k.startsWith('r:')) && r.out[3] <= (easy ? 2 : L >= 2 ? 4 : 3));
@@ -8505,16 +8612,23 @@ const BQ_GEN_SHOP = {
   },
   reg(T, c, L) {
     const regs = bqRegionsFor(Math.min(5, L + (T.reach || 0))); if (!regs.length) return null;
-    const subs = new Set([].concat(...T.keys.map(k => ING[k] ? ING[k][0] : []))), maxR = [0, 0, 1, 1, 2, 3][L] || 0, pool = [];
-    regs.forEach(R => R.res.forEach(x => { if (x.rar <= maxR && (T.reach || subs.has(x.sub) || T.itemCats.includes(x.cat) && x.cat !== 'm')) pool.push(x); }));
+    const subs = bqShopSubs(T), maxR = [0, 0, 1, 1, 2, 3][L] || 0, pool = [];
+    regs.forEach(R => R.res.forEach(x => { if (x.rar <= maxR && bqFitDef(T, [x.name, x.cat, x.sub, x.rar])) pool.push(x); }));
     const x = bqPick(pool, x => (subs.has(x.sub) ? 3 : 1) * (x.rar ? 0.6 : 1)); if (!x) return null;
     return { k: 'reg', rid: x.id, name: x.name, n: 1, src: { region: x.region } };
   },
   egg(T, c, L) { const sp = L >= 2 && Math.random() < 0.5 ? bqPick(bqSpIds()) : null; return { k: 'egg', sp, n: 1, name: sp ? `Œuf de ${bqSpName(sp).toLowerCase()}` : 'Œuf de compagnon' }; },
   comp(T, c, L) { const sp = bqPick(bqSpIds()); return { k: 'comp', sp, n: 1, name: bqSpName(sp) }; },
   bait() { return S.inv.some(bqIsBait) ? { k: 'bait', n: 1, name: 'Appât pour compagnons' } : null; },
-  souvenir(T, c, L) { return BQ_GEN.souvenir(c, Math.max(L, 3)); },
-  merveille(T, c, L) { return BQ_GEN.merveille(c, L); },
+  souvenir(T, c, L) {
+    const ps = PLACES.filter(p => p.name !== S.home && p.special && (L >= 5 || zoneOfSafe(p) !== 'monde') && bqFitDef(T, p.special)); const p = bqPick(ps); if (!p) return null;
+    return { k: 'item', name: p.special[0], def: [p.special[0], p.special[1], p.special[2], 3, p.special[4], p.special[5]], n: 1, src: { place: p.name }, souvenir: 1 };
+  },
+  merveille(T, c, L) {
+    if (typeof RG_RECIPES === 'undefined') return null;
+    const r = bqPick(RG_RECIPES.filter(r => r.out[3] <= (L >= 5 ? 4 : 3) && bqFitDef(T, r.out))); if (!r) return null;
+    return { k: 'craft', id: r.id, name: r.out[0], def: r.out, n: 1, wonder: 1 };
+  },
 };
 function bqGenShop(T, c, L, served) {
   const easy = served < 2;
@@ -8532,11 +8646,11 @@ function bqGenShop(T, c, L, served) {
   if (T.souv && !easy) W.souvenir = (W.souvenir || 0) + 1.2;
   if (T.pets && (served >= 1 || !easy)) { W.egg = 3.2; if (L >= 1) W.comp = 2.4; W.bait = 1; }
   const kinds = Object.keys(W).filter(k => W[k] > 0), req = [];
-  for (let t = 0; t < 14 && !req.length; t++) { const g = bqPick(kinds, k => W[k]); const r = BQ_GEN_SHOP[g](T, c, L, easy); if (r) req.push(r); }
-  if (!req.length) { const r = BQ_GEN_SHOP.ing(T, c, L, true) || BQ_GEN.ing(c, L, true); if (r) req.push(r); }
+  for (let t = 0; t < 14 && !req.length; t++) { const g = bqPick(kinds, k => W[k]); const r = BQ_GEN_SHOP[g](T, c, L, easy); if (r && bqFitReq(T, r)) req.push(r); }
+  if (!req.length) { const r = BQ_GEN_SHOP.ing(T, c, L, true) || BQ_GEN_SHOP.item(T, c, L); if (r) req.push(r); }
   if (!easy && L >= 2 && Math.random() < 0.35 && !req.some(r => r.k === 'comp')) {
     const g = bqPick(['ing', 'item', 'reg'].filter(k => W[k]), k => W[k]); const r = g && BQ_GEN_SHOP[g](T, c, L, false);
-    if (r && !req.some(x => x.k === r.k && (x.key || x.name || x.rid) === (r.key || r.name || r.rid))) req.push(r);
+    if (r && bqFitReq(T, r) && !req.some(x => x.k === r.k && (x.key || x.name || x.rid) === (r.key || r.name || r.rid))) req.push(r);
   }
   return req;
 }
@@ -8556,6 +8670,9 @@ function bqNewOrder(forceEasy) {
   const busy = new Set(s.orders.map(o => o.client));
   let pool = BQ_CLIENTS.filter(c => c.lvl <= L && !busy.has(c.id) && !((s.clients[c.id] || {}).away > now));
   if (forceEasy) pool = pool.filter(c => c.cats.some(bqPoiOK));
+  // v19 : les habitués du commerce ouvert (d'autres clients seulement s'ils sont tous déjà au comptoir)
+  const own = T && BQ_SHOP_CLIENTS[T.id];
+  if (own) { const p = pool.filter(c => own.includes(c.id)); if (p.length) pool = p; }
   if (!pool.length) return null;
   // les clients qui aiment ce que vend le commerce viennent plus souvent
   const fit = c => T ? (c.likes.some(k => T.keys.includes(k)) || c.cats.some(x => T.cats.includes(x)) ? 3 : 1) : 1;
@@ -8570,13 +8687,13 @@ function bqNewOrder(forceEasy) {
   const cr = req.find(r => r.k === 'comp');
   // (deux clients au comptoir ne disent jamais la même phrase)
   const usedL = new Set(s.orders.map(x => x.line)), fresh = l => { const f = (l || []).filter(x => !usedL.has(x)); return f.length ? pick(f) : null; };
-  const line = cr ? `Je rêve d’adopter ${typeof spArticle === 'function' ? spArticle(cr.sp) : 'un compagnon'}. Son panier est déjà prêt !` : (T && Math.random() < 0.55 && fresh(T.lines)) || fresh(c.lines) || pick(c.lines);
+  const line = cr ? `Je rêve d’adopter ${typeof spArticle === 'function' ? spArticle(cr.sp) : 'un compagnon'}. Son panier est déjà prêt !` : (T && Math.random() < 0.7 && fresh(T.lines)) || fresh(c.lines) || pick(c.lines);
   const o = { id: uidGen(), client: c.id, line, req, coins: coinsR, rep, at: now, deadline, seq: ++s.seq, shop: T ? T.id : null, spec: spec ? 1 : 0 };
   // parfois une récompense en plus : une recette du magasin pas encore connue, ou un objet rare
   if (!forceEasy && Math.random() < 0.22 * (T && T.recx ? T.recx : 1)) {
     const rec = BQ_RECIPES.find(r => r.lvl <= L + 1 && !s.recipes.includes(r.id));
     if (rec && Math.random() < 0.5) o.bonus = { rec: rec.id };
-    else { const tags = c.cats.filter(x => LOOT[x]).concat(c.tags.filter(x => LOOT[x])); const pl = [].concat(...tags.map(t => LOOT[t])).filter(d => d[3] === 2 && d[1] !== 't'); const d = bqPick(pl); if (d) o.bonus = { def: d }; }
+    else { const tags = (T ? T.cats : c.cats.concat(c.tags)).filter(x => LOOT[x]); const pl = [].concat(...tags.map(t => LOOT[t])).filter(d => d[3] === 2 && d[1] !== 't' && (!T || bqFitDef(T, d))); const d = bqPick(pl); if (d) o.bonus = { def: d }; }
   }
   return o;
 }
@@ -9048,8 +9165,12 @@ function bqOpenShop(id) {
 }
 function bqSwitch(id) {
   const s = bqState(); if (!s.owned.includes(id) || s.type === id) return;
-  s.type = id; s.next = Math.min(s.next || Infinity, Date.now() + 3 * 60e3); save(); renderPanel();
-  toast(`Bienvenue à la ${BQS(id).short.toLowerCase()} ! Les prochains clients viendront pour elle.`.replace('à la Restaurant', 'au restaurant'));
+  // les clients du commerce quitté l'attendent ; ceux du commerce choisi reviennent au comptoir
+  const old = s.type; if (old && s.orders.length) s.park[old] = (s.park[old] || []).concat(s.orders).slice(-5);
+  s.type = id; s.orders = (s.park[id] || []).filter(o => o && Array.isArray(o.req) && BQC(o.client)); delete s.park[id];
+  s.next = Math.min(s.next || Infinity, Date.now() + 3 * 60e3); save(); renderPanel();
+  const X = BQS(id), nm = X.short.toLowerCase(), m = ['restaurant', 'cafe', 'glacier'].includes(id);
+  toast(`Bienvenue ${m ? 'au ' : /^[aeiouéè]/.test(nm) ? 'à l’' : 'à la '}${nm} ! Les prochains clients viendront pour ${m ? 'lui' : 'elle'}.`);
 }
 // barre des commerces, en haut du comptoir
 function bqShopsBar() {
@@ -9853,7 +9974,7 @@ function styleEnter(k) {
 }
 
 // ---------- rendu ----------
-let stSlot = null, stJoy = 0, stJoyLine = '';
+let stSlot = null, stJoy = 0, stJoyLine = '', stSetT = null;
 const ST_JOY = {
   panda: ['Tadaa ! Prête pour l’aventure !', 'Ça me va bien, hein ?', 'Je vais faire tourner les têtes… et les pigeons !', 'Je suis la plus jolie de la forêt !'],
   capy: ['Mmh. Élégant et confortable.', 'Pépin dit que ça me va bien.', 'Je me sens… très zen là-dedans.', 'Un capybara chic. C’est moi.'],
@@ -9873,20 +9994,51 @@ function stSelector() {
 function stSlotBtn(k, sl) {
   const it = stWorn(k, sl), n = stOwned(k, sl).length, lab = SLOT_LABEL[sl];
   const ic = it ? stIcon(it) : itemIcon({ cat: 'v', sub: sl, look: sl === 'dos' ? 'sac' : null, color: '#efe4d0' });
-  return `<button class="wrs ${it ? 'full' : 'vide'} ${stSlot === sl ? 'on' : ''}" data-wslot="${sl}" aria-pressed="${stSlot === sl}" aria-label="${lab} : ${it ? esc(it.name) : 'vide'}"><span class="wri" style="--rc:${it ? RARC[it.rarity] : 'var(--ink)'}">${ic}${it ? '' : '<em>+</em>'}</span><b>${lab}</b>${n ? `<i class="wrn">${n}</i>` : ''}</button>`;
+  const th = it && typeof cpThemeOf === 'function' ? cpThemeOf(it.look) : null;
+  return `<button class="wrs ${it ? 'full' : 'vide'} ${stSlot === sl ? 'on' : ''}" data-wslot="${sl}" aria-pressed="${stSlot === sl}" aria-label="${lab} : ${it ? esc(it.name) : 'vide'}"><span class="wri" style="--rc:${it ? RARC[it.rarity] : 'var(--ink)'}">${ic}${it ? '' : '<em>+</em>'}${th && typeof cpIco === 'function' ? `<i class="wrth">${cpIco(th)}</i>` : ''}</span><b>${lab}</b>${n ? `<i class="wrn">${n}</i>` : ''}</button>`;
 }
 function stCharSVG(k, mood, uid) { return drawChar(k, S.outfits[k], mood, uid); }
+// v19 : la cabine d'essayage illustrée : portant à vêtements, grand miroir à ampoules, lumière douce, tapis
+function stDressingSVG(k) {
+  const cols = ['#f4b7c4', '#f6e08a', '#a9dcc8', '#b8d8f0', '#c9b8ea', '#f6a68a'];
+  const hang = (x, i) => { const c = cols[i % cols.length], kind = i % 3;
+    const body = kind === 0 ? `<path d="M${x - 11} 30 L${x - 4} 27 Q${x} 31 ${x + 4} 27 L${x + 11} 30 L${x + 9} 36 L${x + 6} 35 V52 H${x - 6} V35 L${x - 9} 36Z" fill="${c}" stroke="#7a5f50" stroke-width="1.2" stroke-linejoin="round"/>`
+      : kind === 1 ? `<path d="M${x - 5} 27 H${x + 5} L${x + 12} 54 H${x - 12}Z" fill="${c}" stroke="#7a5f50" stroke-width="1.2" stroke-linejoin="round"/>`
+      : `<path d="M${x - 9} 28 H${x + 9} V38 L${x + 6} 56 H${x + 1} L${x} 40 L${x - 1} 56 H${x - 6} L${x - 9} 38Z" fill="${c}" stroke="#7a5f50" stroke-width="1.2" stroke-linejoin="round"/>`;
+    return `<g class="wrhg" style="--d:${(i * 0.35).toFixed(2)}s"><path d="M${x} 14 v4 M${x - 9} 26 L${x} 19 L${x + 9} 26" fill="none" stroke="#8a6a52" stroke-width="1.4" stroke-linecap="round"/>${body}</g>`; };
+  const bulbs = [...Array(12)].map((_, i) => { const a = Math.PI * (0.06 + i * 0.08) - Math.PI * 0.02, x = 150 + Math.cos(Math.PI - a) * 82, y = 132 - Math.sin(a) * 108; return `<circle class="wrbulb" style="--d:${(i * 0.18).toFixed(2)}s" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.2"/>`; }).join('');
+  return `<svg class="wrdeco" viewBox="0 0 300 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>
+    <radialGradient id="wrLight" cx="50%" cy="0%" r="80%"><stop offset="0" stop-color="#fffbe8" stop-opacity=".95"/><stop offset=".55" stop-color="#fff3d0" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="wrGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#eef8fb"/><stop offset="1" stop-color="#d6ebf1"/></linearGradient></defs>
+    <rect width="300" height="300" fill="var(--tint)"/>
+    <g opacity=".35">${[...Array(16)].map((_, i) => `<rect x="${i * 20}" y="0" width="10" height="235" fill="#fff"/>`).join('')}</g>
+    <path d="M0 0 H300 V60 Q150 30 0 60Z" fill="url(#wrLight)"/>
+    <ellipse cx="150" cy="140" rx="74" ry="102" fill="url(#wrGlass)" stroke="#c9963a" stroke-width="9"/>
+    <ellipse cx="150" cy="140" rx="74" ry="102" fill="none" stroke="#7a5f50" stroke-width="2"/>
+    <path d="M108 70 L128 52 M104 96 L146 56" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".75"/>
+    <g class="wrbulbs">${bulbs}</g>
+    <path d="M0 235 H300 V300 H0Z" fill="#e7c89c"/><path d="M0 235 H300" stroke="#c9a77a" stroke-width="3"/>
+    ${[...Array(7)].map((_, i) => `<path d="M${i * 50 - 10} 300 L${i * 50 + 15} 235" stroke="#d4b285" stroke-width="2"/>`).join('')}
+    <ellipse cx="150" cy="262" rx="112" ry="22" fill="var(--tint2)" stroke="#a87a50" stroke-width="2.5"/><ellipse cx="150" cy="262" rx="96" ry="16" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="5 5" opacity=".8"/>
+    <path d="M6 14 H294" stroke="#8a6a52" stroke-width="4" stroke-linecap="round"/><circle cx="6" cy="14" r="4" fill="#c9963a"/><circle cx="294" cy="14" r="4" fill="#c9963a"/>
+    ${[22, 48, 74, 226, 252, 278].map(hang).join('')}
+    <path d="M110 0 L60 235 H240 L190 0Z" fill="#fffbe8" opacity=".18"/>
+  </svg>`;
+}
 function renderWardrobe(k) {
   const ch = CHARS[k];
   if (!stSlot || !ST_SLOT_IDS.includes(stSlot)) stSlot = ST_SLOT_IDS.find(sl => stOwned(k, sl).length && !stWorn(k, sl)) || 'tete';
   const joy = Date.now() - stJoy < 1600, worn = ST_SLOT_IDS.filter(sl => stWorn(k, sl)).length;
   let h = `<div class="wr" style="--tint:${stTint(k)};--tint2:${stTint2(k)}">`;
-  h += `<div class="wrstage"><svg class="wrgar" viewBox="0 0 300 26" preserveAspectRatio="none" aria-hidden="true"><path d="M0 4 Q150 26 300 4" fill="none" stroke="#a87a50" stroke-width="1.6"/>${[...Array(9)].map((_, i) => { const x = 18 + i * 33, y = 4 + Math.sin(Math.PI * x / 300) * 11; return `<path d="M${x - 8} ${y - 1} L${x + 8} ${y - 1} L${x} ${y + 12}Z" fill="${['#f4b7c4', '#f6e08a', '#a9dcc8', '#b8d8f0', '#c9b8ea'][i % 5]}" stroke="#7a5f50" stroke-width="1"/>`; }).join('')}</svg>`;
+  // v19 : en haut, ce que la tenue apporte (icônes + valeurs)
+  if (typeof cpWearBar === 'function') h += cpWearBar(k);
+  h += `<div class="wrstage">${stDressingSVG(k)}`;
   h += `<div class="wrcol">${ST_LEFT.map(sl => stSlotBtn(k, sl)).join('')}</div>`;
-  h += `<div class="wrmid"><div class="wrchar ${joy ? 'joy' : ''}" data-wrchar="${k}">${stCharSVG(k, joy ? 'rire' : 'content', 'wr' + k)}${joy ? `<span class="wrspark" aria-hidden="true">${'<i>★</i>'.repeat(6)}</span>` : ''}</div>${joy && stJoyLine ? `<p class="wrsay">${esc(stJoyLine)}</p>` : ''}<span class="wrplate">${ch.name} <small>${worn} vêtement${worn > 1 ? 's' : ''}</small></span></div>`;
+  h += `<div class="wrmid"><div class="wrchar ${joy ? 'joy spin' : ''}" data-wrchar="${k}">${stCharSVG(k, joy ? 'rire' : 'content', 'wr' + k)}${joy ? `<span class="wrspark" aria-hidden="true">${'<i>★</i>'.repeat(6)}</span>` : ''}</div>${joy && stJoyLine ? `<p class="wrsay">${esc(stJoyLine)}</p>` : ''}<span class="wrplate">${ch.name} <small>${worn} vêtement${worn > 1 ? 's' : ''}</small></span></div>`;
   h += `<div class="wrcol">${ST_RIGHT.map(sl => stSlotBtn(k, sl)).join('')}<button class="wrs wrsave" data-wjump="saved" aria-label="Tenues enregistrées"><span class="wri"><svg viewBox="0 0 40 40"><path d="M10 6 H30 V34 L20 27 L10 34Z" fill="#f4b7c4" stroke="#5b4636" stroke-width="1.8" stroke-linejoin="round"/><path d="M20 11 l1.8 3.6 4 .6 -2.9 2.8.7 4 -3.6-1.9 -3.6 1.9.7-4 -2.9-2.8 4-.6Z" fill="#fff8ea"/></svg></span><b>Tenues</b></button></div>`;
   h += `</div>`;
-  if (typeof cpWearBar === 'function') h += cpWearBar(k); // v17 : ce que la tenue apporte (32_compagnons.js)
+  // v19 : la tenue complète, avec les pièces manquantes en aperçu (32_compagnons.js)
+  if (typeof cpSetBlock === 'function') { try { h += cpSetBlock(k, stSetT); } catch (e) { console.error(e); } }
   // emplacement choisi
   const it = stWorn(k, stSlot), list = stOwned(k, stSlot), lab = SLOT_LABEL[stSlot];
   h += `<div class="wrpanel"><div class="wrph"><span class="wrpk">${lab}</span><b>${it ? esc(it.name) : 'Rien pour l’instant'}</b>${it ? `<button class="btn cream sm" data-wunwear="${stSlot}">Retirer</button>` : ''}</div>`;
@@ -9898,7 +10050,7 @@ function renderWardrobe(k) {
     h += `<div class="wrgrid">${list.map(x => {
       const on = !!(it && it.id === x.id), by = on ? k : x.orig ? null : styleWornBy(x.id);
       const prov = x.orig ? 'Tenue de départ' : (typeof rgPill === 'function' && rgPill(x, 'short')) || esc(x.from || '');
-      return `<button class="wrv ${on ? 'on' : ''}" data-wput="${x.id}" style="--rc:${RARC[x.rarity]}" aria-pressed="${on}"><span class="wrvi">${stIcon(x)}</span><b>${esc(x.name)}</b><i style="color:${RARC[x.rarity]}">${RARITY[x.rarity]}${x.edition ? ' · ' + esc(x.edition) : ''}</i><span class="wrvp">${prov}</span>${typeof cpItemBadges === 'function' ? cpItemBadges(x) : ''}${on ? '<em class="wrtag">Porté</em>' : by && by !== k ? `<em class="wrtag lend">Porté par ${CHARS[by].name}</em>` : ''}</button>`;
+      return `<button class="wrv ${on ? 'on' : ''}" data-wput="${x.id}" style="--rc:${RARC[x.rarity]}" aria-pressed="${on}"><span class="wrvt"><span class="wrvi">${stIcon(x)}</span><span class="wrvn"><b>${esc(x.name)}</b><i style="color:${RARC[x.rarity]}">${RARITY[x.rarity]}${x.edition ? ' · ' + esc(x.edition) : ''}</i><span class="wrvp">${prov}</span></span></span>${typeof cpItemFxHTML === 'function' ? cpItemFxHTML(x) : ''}${on ? '<em class="wrtag">Porté</em>' : by && by !== k ? `<em class="wrtag lend">Porté par ${CHARS[by].name}</em>` : ''}</button>`;
     }).join('')}</div>`;
   } else h += `<p class="wrempty">Aucun vêtement « ${lab.toLowerCase()} » dans le sac pour l’instant.</p>`;
   if (!it) h += `<div class="wrshop"><svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS.boutique}</svg><span>Trouve des vêtements en voyage ou au magasin.</span><button class="btn gold sm" data-wshop="1">Magasin</button></div>`;
@@ -10000,7 +10152,8 @@ document.addEventListener('click', ev => {
   if (d.stg) { $('modal').hidden = true; const go = styleGuard._go; styleGuard._go = null; if (d.stg === 'ok' && go) go(); return; }
   if (d.stc) { if (S.sel !== d.stc) { S.sel = d.stc; S.unseen[d.stc] = 0; stSlot = null; save(); renderAll(); } return; }
   if (d.stgo) { openCompagnons(d.stgo); return; }
-  if (d.wslot) { stSlot = d.wslot; stRefresh(); return; }
+  if (d.wset) { stSetT = d.wset; stRefresh(); return; }
+  if (d.wslot) { const fromSet = !!el.closest('.cpset'); stSlot = d.wslot; stRefresh(); if (fromSet) { const pn = document.querySelector('.wrpanel'); if (pn && pn.scrollIntoView) pn.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } return; }
   if (d.wjump) { const s = document.getElementById('wrSaved'); if (s && s.scrollIntoView) s.scrollIntoView({ block: 'start', behavior: 'smooth' }); return; }
   const k = S.sel;
   if (d.wput) {
@@ -10023,7 +10176,7 @@ function stJoyBack() {
   clearTimeout(stJoyBack.t);
   stJoyBack.t = setTimeout(() => {
     const c = document.querySelector('[data-wrchar]'); if (!c || tab !== 'compagnons' || compView !== 'garde') return;
-    const k = c.dataset.wrchar; c.classList.remove('joy'); c.innerHTML = stCharSVG(k, 'content', 'wr' + k + 'b');
+    const k = c.dataset.wrchar; c.classList.remove('joy', 'spin'); c.innerHTML = stCharSVG(k, 'content', 'wr' + k + 'b');
     const say = document.querySelector('.wrsay'); if (say) say.remove();
   }, 1700);
 }
@@ -10045,6 +10198,18 @@ function stJoyBack() {
 .wrstage{position:relative;display:grid;grid-template-columns:62px minmax(0,1fr) 62px;gap:4px;align-items:center;padding:20px 6px 10px;border:3px solid var(--ink);border-radius:24px;box-shadow:0 4px 0 rgba(74,53,40,.35);overflow:hidden;
   background:radial-gradient(ellipse 46% 12% at 50% 86%,rgba(255,255,255,.55) 0 98%,transparent 100%),linear-gradient(transparent 78%,#e7c89c 78%,#d9b48a 100%),repeating-linear-gradient(90deg,rgba(255,255,255,.5) 0 14px,transparent 14px 28px),linear-gradient(180deg,#fffaf0,var(--tint) 70%)}
 .wrgar{position:absolute;left:0;right:0;top:0;width:100%;height:24px;pointer-events:none}
+.wrdeco{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.wrbulb{fill:#fff6c8;stroke:#c9963a;stroke-width:1.2;animation:wrBulb 2.4s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes wrBulb{from{fill:#fff6c8;filter:none}to{fill:#fffdf2;filter:drop-shadow(0 0 3px #ffe58a)}}
+.wrhg{transform-box:fill-box;transform-origin:50% 0;animation:wrSway 3.4s ease-in-out infinite alternate;animation-delay:var(--d)}
+@keyframes wrSway{from{transform:rotate(-3deg)}to{transform:rotate(3deg)}}
+.wrth{position:absolute;left:-5px;top:-5px;width:20px;height:20px;border-radius:50%;background:#fff;border:1.6px solid var(--ink);display:flex;align-items:center;justify-content:center}.wrth svg{width:15px;height:15px}
+.wrchar.spin>svg.cc{transform-origin:50% 60%;animation:wrSpin .9s cubic-bezier(.45,.05,.4,1)}
+@keyframes wrSpin{0%{transform:scaleX(1)}22%{transform:scaleX(.08) translateY(-4%)}50%{transform:scaleX(-1) translateY(-6%)}78%{transform:scaleX(.08) translateY(-4%)}100%{transform:scaleX(1)}}
+.wrvt{display:flex;align-items:center;gap:7px;width:100%;min-width:0;text-align:left}
+.wrvn{display:flex;flex-direction:column;min-width:0;flex:1}
+.wrvn b{font:700 13px/1.15 var(--display);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.wrvn>i{font:700 11px/1.2 var(--body);font-style:normal}
 .wrcol{display:flex;flex-direction:column;gap:8px;align-items:center;z-index:1}
 .wrs{position:relative;width:60px;display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:0;padding:0;cursor:pointer;color:var(--ink);-webkit-tap-highlight-color:transparent}
 .wri{position:relative;width:52px;height:52px;border-radius:50%;background:#fff;border:2.5px solid var(--ink);box-shadow:0 3px 0 var(--ink);display:flex;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
@@ -10059,7 +10224,7 @@ function stJoyBack() {
 .wrs:active .wri{transform:scale(.94)}
 .wrn{position:absolute;top:-4px;left:2px;min-width:18px;height:18px;border-radius:999px;background:var(--teal);color:#fff;border:2px solid #fff;font:800 11px/14px var(--display);font-style:normal;text-align:center;padding:0 3px;box-sizing:border-box}
 .wrsave .wri{background:#fff3f6}
-.wrmid{position:relative;display:flex;flex-direction:column;align-items:center;min-width:0}
+.wrmid{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;min-width:0}
 .wrchar{position:relative;width:100%;max-width:240px}
 .wrchar svg.cc{display:block;width:100%;height:auto}
 .wrchar.joy svg.cc .root{transform-box:view-box;transform-origin:160px 334px;animation:ccHop .62s cubic-bezier(.3,1.3,.5,1) 2}
@@ -10083,8 +10248,8 @@ function stJoyBack() {
 .sw:hover{transform:translateY(-2px)}
 .sw[aria-pressed="true"]{outline:3px solid var(--teal);outline-offset:2px;transform:scale(1.08)}
 .sw.reset{display:flex;align-items:center;justify-content:center}.sw.reset svg{width:17px;height:17px;background:rgba(255,255,255,.8);border-radius:50%;padding:1px}
-.wrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
-.wrv{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;background:#fffaf0;border:2.5px solid var(--line);border-radius:14px;padding:6px 4px 6px;cursor:pointer;color:var(--ink);text-align:center;min-width:0;transition:transform .15s}
+.wrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.wrv{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:1px;background:#fffaf0;border:2.5px solid var(--line);border-radius:14px;padding:7px 7px 7px;box-shadow:0 2px 0 rgba(74,53,40,.15);cursor:pointer;color:var(--ink);text-align:center;min-width:0;transition:transform .15s}
 .wrv:hover{transform:translateY(-2px);border-color:var(--rc)}
 .wrv:active{transform:scale(.96)}
 .wrv.on{background:#e6f6e9;border-color:var(--greenD);box-shadow:0 3px 0 var(--greenD)}
@@ -10184,7 +10349,7 @@ function stJoyBack() {
 .stdress{position:fixed;z-index:31;display:flex;align-items:center;gap:5px;background:var(--gold);border:2.5px solid var(--ink);border-radius:999px;padding:4px 12px 3px 6px;font:800 14px var(--display);color:var(--ink);box-shadow:0 3px 0 var(--ink);cursor:pointer;opacity:0;transform:translateY(-6px) scale(.9);transition:opacity .18s,transform .28s cubic-bezier(.3,1.6,.5,1)}
 .stdress.on{opacity:1;transform:none}
 .stdress svg{width:24px;height:24px;background:#fff;border-radius:50%;border:1.5px solid var(--ink)}
-@media (max-width:420px){.wrstage{grid-template-columns:58px minmax(0,1fr) 58px;padding:20px 3px 10px}.wrs{width:56px}.wri{width:48px;height:48px;padding:7px}.wrgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.wrv b{font-size:12px}.sw{width:27px;height:27px}.wrsw{gap:6px}.stc{padding:3px 4px 3px 3px;gap:4px}.stc img,.stc .livep{width:32px!important;height:36px!important}.stc b{font-size:13px}.ctch{width:100px}.cthero h2{font-size:23px}}
+@media (max-width:420px){.wrstage{grid-template-columns:58px minmax(0,1fr) 58px;padding:20px 3px 10px}.wrs{width:56px}.wri{width:48px;height:48px;padding:7px}.wrgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.wrv b{font-size:12px}.sw{width:27px;height:27px}.wrsw{gap:6px}.stc{padding:3px 4px 3px 3px;gap:4px}.stc img,.stc .livep{width:32px!important;height:36px!important}.stc b{font-size:13px}.ctch{width:100px}.cthero h2{font-size:23px}}
 @media (prefers-reduced-motion:reduce){.wrspark,.wrchar.joy svg.cc .root{display:none;animation:none!important}.ctv,.ctfin,.ctgain{animation:none}}
 `;
   const st = document.createElement('style'); st.id = 'stCSS'; st.textContent = css; document.head.appendChild(st);
@@ -10586,14 +10751,9 @@ function nextAction() {
   const egg = readyEggs()[0]; if (egg) return { kind: 'hatch', egg };
   // 4. une commande livrable
   try { if (typeof bqState === 'function') { const o = bqState().orders.find(bqReady); if (o) return { kind: 'deliver', o }; } } catch (e) {}
-  // 5. le rêve en cours (ou la commande la plus simple) d'un compagnon disponible
+  // 5. v19 : au repos, simplement « Explorer » (les rêves vivent dans Compagnons › Rêves, pas sur l'écran principal)
   const free = order.find(k => !S.trips[k]);
-  if (free) {
-    const d = typeof curDream === 'function' ? curDream(free) : null;
-    if (d) return { kind: typeof dreamReady === 'function' && dreamReady(free) ? 'dreamok' : 'dream', k: free, d };
-    const so = simplestOrder(); if (so) return { kind: 'order', k: free, ...so };
-    return { kind: 'idle', k: free };
-  }
+  if (free) return { kind: 'idle', k: free };
   const k = order[0]; if (k && S.trips[k]) return { kind: 'away', k, t: S.trips[k] };
   return null;
 }
@@ -10640,7 +10800,7 @@ function renderActionCard(box) {
     btn = `<button class="btn green" data-act="order" data-id="${a.o.id}">Partir</button>`;
   } else if (a.kind === 'idle') {
     ic = face(a.k); kick = esc(CHARS[a.k].species); title = `${n} est prêt${compE(a.k)} à partir`;
-    sub = 'Touchez un lieu de la carte, ou demandez une idée.'; btn = `<button class="btn green" data-act="idea" data-k="${a.k}">Partir</button>`;
+    sub = 'Touchez un lieu de la carte, ou laissez-vous guider.'; btn = `<button class="btn green" data-act="idea" data-k="${a.k}">Explorer</button>`;
   } else if (a.kind === 'away') {
     const f = Math.min(1, a.t.elapsed / a.t.total), last = a.t.journal[a.t.journal.length - 1];
     ic = face(a.k); kick = `En voyage · ${Math.floor(f * 100)} %`; title = `${n} → ${esc(a.t.dest.name)}`;
@@ -12256,7 +12416,6 @@ function renderMarche(box) {
   if (mkView === 'annonces' && m.unseen) { m.unseen = 0; save(); setTimeout(() => { try { renderNav(); } catch (e) {} }, 0); }
   const online = 1180 + Math.round(240 * Math.sin(Date.now() / 3.6e6)) + (mkHash(dayKey()) % 90);
   let h = `<div class="mk-ban"><span class="mk-glob" aria-hidden="true"><svg viewBox="0 0 30 30">${MK_CATS[2][2]}</svg></span><div><b>Marché mondial <span>(bientôt avec de vrais joueurs)</span></b><small>${online.toLocaleString('fr-FR')} voyageurs simulés · ${m.list.length} annonces · le stock tourne en continu</small></div></div>`;
-  h += `<div class="filters mk-views"><button data-mkview="acheter" aria-pressed="${mkView === 'acheter'}">Acheter</button><button data-mkview="vendre" aria-pressed="${mkView === 'vendre'}">Vendre</button><button data-mkview="annonces" aria-pressed="${mkView === 'annonces'}">Mes annonces${mine ? ` <small>${mine}</small>` : ''}${m.unseen ? '<i class="mk-dot" aria-label="Ventes conclues"></i>' : ''}</button></div>`;
   if (mkView !== 'annonces') {
     h += `<div class="mk-cats" role="tablist">${MK_CATS.map(([k, l, ic]) => `<button role="tab" data-mkcat="${k}" aria-selected="${mkCat === k}"><svg viewBox="0 0 30 30" aria-hidden="true">${ic}</svg><span>${l}</span></button>`).join('')}</div>`;
     if (mkCat === 'res' && typeof REGIONS !== 'undefined') {
@@ -12281,7 +12440,13 @@ function renderMarche(box) {
     h += all.length ? `<div class="mk-list">${all.map(mkRowMine).join('')}</div>` : `<p class="empty">Aucune annonce. Touchez « Vendre » pour proposer un objet, un œuf ou un compagnon.</p>`;
     h += `<p class="small">${m.sold} vente${m.sold > 1 ? 's' : ''} au total · ${coins(m.earned)} gagnées au marché mondial.</p>`;
   }
-  box.innerHTML = h;
+  box.innerHTML = mkViewsBar() + h;
+}
+// v19 : la barre des vues reste collée en bas du panneau (Place et Quêtes viennent de 33_boutique.js)
+function mkViewsBar() {
+  const m = mkState(), mine = m.mine.filter(l => !l.sold).length, b2 = typeof b2MarcheHTML === 'function';
+  const v = [['place', 'Place'], ['acheter', 'Acheter'], ['vendre', 'Vendre'], ['annonces', 'Mes annonces'], ['quetes', 'Quêtes']].filter(([k]) => b2 || (k !== 'place' && k !== 'quetes'));
+  return `<div class="filters mk-views" style="--n:${v.length}" aria-label="Marché mondial">${v.map(([k, l]) => `<button data-mkview="${k}" aria-pressed="${mkView === k}">${l}${k === 'annonces' && mine ? ` <small>${mine}</small>` : ''}${k === 'annonces' && m.unseen ? '<i class="mk-dot" aria-label="Ventes conclues"></i>' : ''}</button>`).join('')}</div>`;
 }
 function openMarche(cat, sp) {
   if (cat && MK_CATS.some(c => c[0] === cat)) mkCat = cat;
@@ -12369,7 +12534,8 @@ setInterval(mkTick, 5000);
 .mk-ban>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .mk-ban b{font:800 16.5px/1.2 var(--display)}.mk-ban b span{font:700 13px var(--display);color:var(--teal)}
 .mk-ban small{font-size:12px;color:var(--ink2)}
-.mk-views{margin-bottom:8px}.mk-views button{position:relative}
+.mk-views{position:sticky;top:-16px;z-index:4;margin:-16px -16px 12px;padding:10px 10px 8px;display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,1fr));gap:5px;background:var(--paper);border-bottom:2.5px solid var(--ink);box-shadow:0 4px 10px rgba(74,53,40,.12)}
+.mk-views button{position:relative;padding:6px 2px 4px;font-size:12.5px;line-height:1.05;text-align:center;min-height:38px;white-space:normal}
 .mk-dot,.mk-ndot{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--rust,#d9604f);border:2px solid #fff;box-shadow:0 0 0 1.5px var(--ink)}
 .mk-dot{top:-5px;right:-5px}
 #nav button{position:relative}.mk-ndot{top:3px;left:calc(50% - 20px)}
@@ -13853,6 +14019,80 @@ try {
   const startObs = () => { trjObs.observe(document.body, { childList: true, subtree: true, characterData: true }); trjFixBars(); };
   if (document.body) startObs(); else addEventListener('DOMContentLoaded', startObs);
 } catch (e) { console.error(e); }
+
+// ---------------- v19 : « Qui part ? » ----------------
+// Retour du joueur : « si on veut aller à un endroit, on ne nous demande pas de sélectionner le familier ».
+// Toucher un lieu choisit un compagnon libre (celui qui est sélectionné s'il est libre, sinon le premier libre),
+// et le panneau de départ montre en haut les compagnons disponibles : un toucher change le voyageur.
+const trjTeam = () => (typeof hudTeam === 'function' ? hudTeam() : Object.keys(S.comps || {})).filter(k => CHARS[k] && S.prog[k]);
+const trjFree = () => trjTeam().filter(k => !S.trips[k]);
+let trjAllAway = false;
+function trjPickFree() {
+  if (!S.trips[S.sel]) { trjAllAway = false; return true; }
+  const f = trjFree()[0];
+  if (!f) { trjAllAway = true; return false; }
+  trjAllAway = false; S.sel = f; S.unseen[f] = 0; fast = false; save();
+  try { renderComps(); } catch (e) {}
+  return true;
+}
+let trjMute = false;
+const trjGoWrap = orig => function () {
+  let ok = true; try { ok = trjPickFree(); } catch (e) { console.error(e); }
+  if (ok) return orig.apply(this, arguments);
+  trjMute = true; // tout le monde est en voyage : le panneau l'explique, pas de bulle « choisissez un autre compagnon »
+  try { return orig.apply(this, arguments); } finally { trjMute = false; }
+};
+if (typeof toast === 'function') toast = (orig => function (msg) { if (trjMute && /déjà en voyage/.test(String(msg))) return; return orig.apply(this, arguments); })(toast);
+if (typeof choosePlace === 'function') choosePlace = trjGoWrap(choosePlace);
+if (typeof choosePOI === 'function') choosePOI = trjGoWrap(choosePOI);
+if (typeof goToPlace === 'function') goToPlace = trjGoWrap(goToPlace);
+if (typeof pickPoint === 'function') pickPoint = trjGoWrap(pickPoint);
+// avGoPlace (29_aventure.js) : déclaration de fonction, donc déjà connue ici (tout le jeu est assemblé dans une seule fonction)
+if (typeof avGoPlace === 'function') avGoPlace = trjGoWrap(avGoPlace);
+if (typeof regionGo === 'function') regionGo = trjGoWrap(regionGo);
+// fiche de région : « Y aller » propose un compagnon libre au lieu d'un bouton grisé
+if (typeof rgDetail === 'function') rgDetail = (orig => function (R) {
+  let h = orig.apply(this, arguments);
+  try { const f = S.trips[S.sel] && trjFree()[0]; if (f) h = h.replace(/<button class="btn green big wide" data-rggo="([^"]+)" disabled>[^<]*<\/button>/, (m, id) => `<button class="btn green big wide" data-rggo="${id}">Y aller avec ${esc(CHARS[f].name)}</button>`); } catch (e) {}
+  return h;
+})(rgDetail);
+if (typeof closeSheet === 'function') closeSheet = (orig => function () { trjAllAway = false; return orig.apply(this, arguments); })(closeSheet);
+function trjWhoHTML() {
+  const free = trjFree(), away = trjTeam().length - free.length;
+  if (!free.length) return '';
+  return `<div class="trjwho"><span class="trjwk">Qui part ?</span><div class="trjwl" role="radiogroup" aria-label="Qui part en voyage ?">${free.map(k => `<button class="trjwb${k === S.sel ? ' on' : ''}" data-trjwho="${k}" role="radio" aria-checked="${k === S.sel}" style="--tint:${typeof spTint === 'function' ? spTint(k) : '#fff3dc'}"><img src="${portraitURI(k, k === S.sel ? 'rire' : 'content')}" alt=""><b>${esc(CHARS[k].name)}</b></button>`).join('')}</div>${away ? `<span class="trjwa">${away} en voyage</span>` : ''}</div>`;
+}
+if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try {
+    if (!box) return r;
+    if (!S.trips[S.sel]) { trjAllAway = false; if (!box.querySelector('.trjwho')) box.insertAdjacentHTML('afterbegin', trjWhoHTML()); }
+    else if (trjAllAway && !trjFree().length && !box.querySelector('.trjaway')) box.insertAdjacentHTML('afterbegin', `<div class="trjaway"><b>Tous vos compagnons sont en voyage.</b><span>Ce lieu attendra : dès que l’un d’eux rentre, touchez-le à nouveau pour l’y envoyer.</span></div>`);
+  } catch (e) { console.error(e); }
+  return r;
+})(renderVoyage);
+document.addEventListener('click', ev => {
+  const b = ev.target.closest('[data-trjwho]'); if (!b) return;
+  const k = b.dataset.trjwho; if (!S.comps[k] || S.trips[k] || k === S.sel) return;
+  S.sel = k; S.unseen[k] = 0; fast = false; save(); renderAll();
+  const nb = document.querySelector(`.trjwb[data-trjwho="${k}"]`);
+  if (nb && nb.animate && !(typeof reduceMotion === 'function' && reduceMotion())) nb.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12) translateY(-3px)' }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
+});
+(function trjWhoCSS() {
+  const st = document.createElement('style'); st.id = 'trjWhoCSS';
+  st.textContent = `.trjwho{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 0 10px;padding:8px 10px;background:#fff8ec;border:2.5px solid var(--ink,#4a3528);border-radius:16px;box-shadow:0 3px 0 rgba(74,53,40,.25)}
+.trjwk{font:800 15px var(--display);color:var(--ink,#4a3528)}
+.trjwl{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.trjwb{display:flex;align-items:center;gap:5px;background:#fff;border:2.5px solid var(--line,#e7dccb);border-radius:999px;padding:2px 10px 2px 2px;cursor:pointer;color:var(--ink,#4a3528);transition:transform .15s}
+.trjwb img{width:34px;height:34px;border-radius:50%;background:var(--tint);border:2px solid var(--ink,#4a3528);box-sizing:border-box}
+.trjwb b{font:800 13.5px var(--display)}
+.trjwb.on{background:var(--tint);border-color:var(--ink,#4a3528);box-shadow:0 2px 0 var(--ink,#4a3528)}
+.trjwb:not(.on){opacity:.85}.trjwb:active{transform:scale(.95)}
+.trjwa{font:700 11.5px var(--display);color:var(--muted,#7b6a5c)}
+.trjaway{display:flex;flex-direction:column;gap:2px;margin:0 0 10px;padding:9px 12px;background:#fff3c4;border:2.5px dashed #d99a1e;border-radius:14px;font-size:13.5px}
+.trjaway b{font:800 15px var(--display)}`;
+  document.head.appendChild(st);
+})();
 
 // pour les tests et le tutoriel
 window.__trajet = { tripRoundMs, tripPlanMs, tripPhases, tripPhase, tripPos, trjLen, trjPlanInfo, homeObj, kmBetween, DURS, PLACES,
@@ -16920,10 +17160,17 @@ function avDecor(biome, tod, wx) {
   const night = tod === 'nuit', R = avRng(biome.length * 977 + 13), r = (a, b) => a + R() * (b - a);
   const L = `stroke="${T(AV_L)}" stroke-width="1.6" stroke-linejoin="round"`;
   const hills = (y, amp, col, n = 4) => { let d = `M0 ${y}`; for (let i = 0; i < n; i++) { const x0 = (400 / n) * i, x1 = x0 + 400 / n; d += ` Q${x0 + 200 / n} ${y - amp * (0.6 + R() * 0.8)} ${x1} ${y}`; } return `<path d="${d} V240 H0Z" fill="${T(col)}"/>`; };
-  const tree = (x, y, s, col) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-4" y="-18" width="8" height="22" rx="2" fill="${T('#8a6448')}" ${L}/><circle cx="0" cy="-34" r="20" fill="${T(col)}" ${L}/><circle cx="-12" cy="-24" r="12" fill="${T(col)}"/><circle cx="12" cy="-26" r="13" fill="${T(col)}"/><circle cx="-6" cy="-40" r="5" fill="#fff" opacity=".22"/></g>`;
-  const pine = (x, y, s, col, snow) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-3" y="-8" width="6" height="12" fill="${T('#7a5a40')}"/><path d="M0 -62 L18 -30 H9 L22 -8 H-22 L-9 -30 H-18Z" fill="${T(col)}" ${L}/>${snow ? `<path d="M0 -62 L9 -46 Q0 -42 -9 -46Z M-13 -30 Q0 -26 13 -30 L9 -36 Q0 -32 -9 -36Z" fill="#fff"/>` : ''}</g>`;
-  const palm = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M0 0 Q6 -30 -2 -64" stroke="${T('#a07850')}" stroke-width="7" fill="none" stroke-linecap="round"/><g fill="${T('#4fa36a')}" ${L}><path d="M-2 -64 Q-30 -70 -40 -50 Q-22 -62 -2 -60Z"/><path d="M-2 -64 Q28 -74 40 -52 Q20 -64 -2 -60Z"/><path d="M-2 -64 Q-12 -90 -32 -88 Q-14 -80 -4 -62Z"/><path d="M-2 -64 Q14 -92 34 -86 Q14 -80 0 -62Z"/></g><circle cx="-4" cy="-60" r="4" fill="${T('#8a5a3a')}"/><circle cx="3" cy="-59" r="4" fill="${T('#8a5a3a')}"/></g>`;
-  let far = '', mid = '', ground = '', near = '';
+  const SH = (rx) => `<ellipse cx="${rx * 0.25}" cy="3" rx="${rx}" ry="${(rx / 4.5).toFixed(1)}" fill="#2a1e14" opacity="${night ? 0.08 : 0.15}"/>`;
+  const tree = (x, y, s, col) => `<g transform="translate(${x} ${y}) scale(${s})">${SH(20)}<rect x="-4" y="-18" width="8" height="22" rx="2" fill="${T('#8a6448')}" ${L}/><circle cx="0" cy="-34" r="20" fill="${T(col)}" ${L}/><circle cx="-12" cy="-24" r="12" fill="${T(col)}"/><circle cx="12" cy="-26" r="13" fill="${T(col)}"/><circle cx="-6" cy="-40" r="5" fill="#fff" opacity=".22"/></g>`;
+  const pine = (x, y, s, col, snow) => `<g transform="translate(${x} ${y}) scale(${s})">${SH(17)}<rect x="-3" y="-8" width="6" height="12" fill="${T('#7a5a40')}"/><path d="M0 -62 L18 -30 H9 L22 -8 H-22 L-9 -30 H-18Z" fill="${T(col)}" ${L}/>${snow ? `<path d="M0 -62 L9 -46 Q0 -42 -9 -46Z M-13 -30 Q0 -26 13 -30 L9 -36 Q0 -32 -9 -36Z" fill="#fff"/>` : ''}</g>`;
+  const palm = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})">${SH(15)}<path d="M0 0 Q6 -30 -2 -64" stroke="${T('#a07850')}" stroke-width="7" fill="none" stroke-linecap="round"/><g fill="${T('#4fa36a')}" ${L}><path d="M-2 -64 Q-30 -70 -40 -50 Q-22 -62 -2 -60Z"/><path d="M-2 -64 Q28 -74 40 -52 Q20 -64 -2 -60Z"/><path d="M-2 -64 Q-12 -90 -32 -88 Q-14 -80 -4 -62Z"/><path d="M-2 -64 Q14 -92 34 -86 Q14 -80 0 -62Z"/></g><circle cx="-4" cy="-60" r="4" fill="${T('#8a5a3a')}"/><circle cx="3" cy="-59" r="4" fill="${T('#8a5a3a')}"/></g>`;
+  let far = '', mid = '', ground = '', near = '', back = '';
+  // v19 : plan lointain dans la brume (perspective atmosphérique), textures légères, éléments propres au lieu
+  const HZ = tod === 'nuit' ? '#3b4a82' : tod === 'soir' ? '#fde3b4' : wx === 'pluie' ? '#dbe2ea' : '#e4f5fb';
+  const hz = (c, f) => avMix(T(c), HZ, f == null ? 0.55 : f);
+  const speck = (col, n, y0, y1) => `<g fill="${T(col)}" opacity=".35">${Array.from({ length: n }, () => `<ellipse cx="${r(0, 400).toFixed(0)}" cy="${r(y0, y1).toFixed(0)}" rx="${r(1, 2.6).toFixed(1)}" ry="${r(0.6, 1.3).toFixed(1)}"/>`).join('')}</g>`;
+  const rock = (x, y, s, col) => `<g transform="translate(${x} ${y}) scale(${s})">${SH(14)}<path d="M-16 0 Q-15 -14 -4 -17 Q8 -20 14 -8 Q17 -3 16 0Z" fill="${T(col || '#b7aea0')}" ${L}/><path d="M-8 -12 Q-2 -15 4 -13" stroke="#fff" stroke-width="2" opacity=".35" fill="none"/></g>`;
+  const gull = (x, y, d) => `<g class="avgull" style="animation-delay:${d}s"><path d="M${x - 9} ${y} q4.5 -6 9 0 q4.5 -6 9 0" stroke="${night ? '#c9d2ec' : '#fff'}" stroke-width="2.2" fill="none" stroke-linecap="round"/></g>`;
   const grass = c => `<rect x="0" y="196" width="400" height="44" fill="${T(c)}"/>`;
   const path = c => `<path d="M0 214 Q100 206 200 214 T400 214 V230 Q300 236 200 230 T0 230Z" fill="${T(c)}" opacity=".9"/>`;
   const tufts = (col, n = 7) => Array.from({ length: n }, (_, i) => { const x = 20 + i * (360 / n) + r(0, 20), y = r(224, 236); return `<path d="M${x} ${y} q-3 -9 -7 -11 M${x} ${y} q0 -12 1 -14 M${x} ${y} q3 -9 8 -10" stroke="${T(col)}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`; }).join('');
@@ -16945,9 +17192,9 @@ function avDecor(biome, tod, wx) {
       const lit = night || tod === 'soir';
       far = Array.from({ length: 8 }, (_, i) => { const w = r(34, 50), h = r(50, 100), x = 4 + i * 49; let s = `<rect x="${x}" y="${178 - h}" width="${w}" height="${h}" fill="${T('#b9c5da')}"/>`; for (let yy = 178 - h + 8; yy < 170; yy += 14) for (let xx = x + 6; xx < x + w - 6; xx += 10) s += `<rect x="${xx}" y="${yy}" width="5" height="7" fill="${lit && R() < 0.5 ? '#ffe28a' : T('#e3eaf4')}"/>`; return s; }).join('');
       const fac = ['#f4c7a1', '#f6e0a8', '#cfe2c6', '#f2b8b8', '#c9d8ef'];
-      mid = [0, 1, 2, 3].map(i => { const x = 8 + i * 100, w = 80, h = r(70, 92), c = fac[i % fac.length]; return `<g><rect x="${x}" y="${200 - h}" width="${w}" height="${h}" fill="${T(c)}" ${L}/><path d="M${x - 5} ${200 - h} L${x + w / 2} ${200 - h - 26} L${x + w + 5} ${200 - h}Z" fill="${T('#d9604f')}" ${L}/><rect x="${x + w / 2 - 9}" y="${172}" width="18" height="28" rx="8" fill="${T('#8a6448')}" ${L}/><rect x="${x + 10}" y="${200 - h + 14}" width="16" height="16" fill="${lit ? '#ffe28a' : T('#bfe1f2')}" ${L}/><rect x="${x + w - 26}" y="${200 - h + 14}" width="16" height="16" fill="${lit ? '#ffe28a' : T('#bfe1f2')}" ${L}/><path d="M${x + 6} ${200 - h + 40} H${x + w - 6}" stroke="${T('#f08aa6')}" stroke-width="6" stroke-dasharray="8 4"/></g>`; }).join('') + [92, 292].map(x => `<g><rect x="${x}" y="150" width="4" height="50" fill="${T('#4a3528')}"/><circle cx="${x + 2}" cy="148" r="6" fill="${lit ? '#ffe9a0' : T('#fff6d8')}" ${L}/>${lit ? `<circle cx="${x + 2}" cy="148" r="18" fill="#ffe9a0" opacity=".28"/>` : ''}</g>`).join('');
+      mid = [0, 1, 2, 3].map(i => { const x = 8 + i * 100, w = 80, h = r(70, 92), c = fac[i % fac.length]; return `<g><rect x="${x}" y="${200 - h}" width="${w}" height="${h}" fill="${T(c)}" ${L}/><path d="M${x - 5} ${200 - h} L${x + w / 2} ${200 - h - 26} L${x + w + 5} ${200 - h}Z" fill="${T('#d9604f')}" ${L}/><rect x="${x + w / 2 - 9}" y="${172}" width="18" height="28" rx="8" fill="${T('#8a6448')}" ${L}/><rect x="${x + 10}" y="${200 - h + 14}" width="16" height="16" fill="${lit ? '#ffe28a' : T('#bfe1f2')}" ${L}/><rect x="${x + w - 26}" y="${200 - h + 14}" width="16" height="16" fill="${lit ? '#ffe28a' : T('#bfe1f2')}" ${L}/>${[x + 5, x + w / 2 + 12].map((wx0, wi) => `<rect x="${wx0}" y="176" width="${w / 2 - 17}" height="20" rx="2" fill="${lit ? '#ffe9a8' : T('#d8eef6')}" ${L}/>${[0, 1, 2].map(g => `<circle cx="${wx0 + 5 + g * 7}" cy="191" r="3" fill="${T(['#e0a05a', '#f08aa6', '#9fd37a', '#f6c445'][(i + g + wi) % 4])}"/>`).join('')}<path d="M${wx0 + 2} 180 l6 -4" stroke="#fff" stroke-width="1.6" opacity=".7"/>`).join('')}<path d="M${x + 1} 166 H${x + w - 1} L${x + w - 5} 175 H${x + 5}Z" fill="${T(['#e2584d', '#4f97c4', '#5fae6a', '#e9a83a'][i % 4])}" ${L}/><path d="M${x + 5} 170 H${x + w - 5}" stroke="#fff" stroke-width="5" stroke-dasharray="6 6" opacity=".85"/><rect x="${x + w / 2 - 16}" y="${200 - h + 34}" width="32" height="9" rx="3" fill="${T('#fff6e6')}" ${L}/></g>`; }).join('') + [92, 292].map(x => `<g><rect x="${x}" y="150" width="4" height="50" fill="${T('#4a3528')}"/><circle cx="${x + 2}" cy="148" r="6" fill="${lit ? '#ffe9a0' : T('#fff6d8')}" ${L}/>${lit ? `<circle cx="${x + 2}" cy="148" r="18" fill="#ffe9a0" opacity=".28"/>` : ''}</g>`).join('');
       ground = `<rect x="0" y="196" width="400" height="44" fill="${T('#cfc6b8')}"/><rect x="0" y="196" width="400" height="9" fill="${T('#e8dfd0')}"/>` + Array.from({ length: 10 }, (_, i) => `<path d="M${i * 40 + 6} 222 h18" stroke="${T('#f6efe2')}" stroke-width="3"/>`).join('');
-      near = [50, 210, 340].map(x => `<g transform="translate(${x + r(-10, 10)} 236)"><path d="M-9 0 L-7 -12 H7 L9 0Z" fill="${T('#d98a5a')}" ${L}/><circle cx="-4" cy="-17" r="5" fill="${T('#f08aa6')}"/><circle cx="4" cy="-18" r="5" fill="${T('#f6c445')}"/><circle cx="0" cy="-23" r="5" fill="${T('#9fd37a')}"/></g>`).join('');
+      near = [50, 210, 340].map(x => `<g transform="translate(${x + r(-10, 10)} 236)"><path d="M-9 0 L-7 -12 H7 L9 0Z" fill="${T('#d98a5a')}" ${L}/><circle cx="-4" cy="-17" r="5" fill="${T('#f08aa6')}"/><circle cx="4" cy="-18" r="5" fill="${T('#f6c445')}"/><circle cx="0" cy="-23" r="5" fill="${T('#9fd37a')}"/></g>`).join('') + `<g transform="translate(130 238)"><ellipse cx="4" cy="1" rx="18" ry="3.5" fill="#2a1e14" opacity=".15"/><path d="M0 0 V-40" stroke="${T('#5b4636')}" stroke-width="2"/><path d="M-22 -36 Q0 -54 22 -36Z" fill="${T('#f6efe2')}" ${L}/><path d="M-11 -42 Q0 -52 11 -42" stroke="${T('#e2584d')}" stroke-width="5" fill="none"/><path d="M-10 -14 H10 M0 -14 V0 M-6 0 H6" stroke="${T('#5b4636')}" stroke-width="2.4"/><path d="M-4 -18 h6 v4 h-6Z" fill="#fff" ${L}/></g>`;
       break; }
     case 'campagne':
       far = hills(150, 30, '#b9d98e', 3) + `<path d="M0 160 Q100 140 200 158 T400 160 V175 H0Z" fill="${T('#e8d48a')}"/>` + `<g transform="translate(300 152)"><rect x="-16" y="-24" width="32" height="24" fill="${T('#d9604f')}" ${L}/><path d="M-20 -24 L0 -40 L20 -24Z" fill="${T('#a8473c')}" ${L}/></g>`;
@@ -16986,15 +17233,37 @@ function avDecor(biome, tod, wx) {
       near = [40, 160, 290].map(x => `<ellipse cx="${x + r(-10, 10)}" cy="234" rx="8" ry="5" fill="${T('#c9a07a')}" ${L}/>`).join('');
       break;
   }
-  return { far, mid, ground, near };
+  // plan du fond, selon le paysage
+  if (biome === 'montagne' || biome === 'neige') back = `<path d="M0 150 L40 102 L72 128 L118 80 L168 132 L214 92 L262 134 L322 86 L372 120 L400 108 V240 H0Z" fill="${hz('#8fa3c0')}"/><path d="M118 80 L130 96 L118 92 L108 98Z M322 86 L334 102 L322 98 L312 102Z" fill="${hz('#ffffff', 0.3)}"/>`;
+  else if (biome === 'ville' || biome === 'quartier') back = Array.from({ length: 12 }, (_, i) => { const w = r(18, 34), h = r(40, 110); return `<rect x="${(i * 34 + r(-6, 6)).toFixed(0)}" y="${(170 - h).toFixed(0)}" width="${w.toFixed(0)}" height="${h.toFixed(0)}" fill="${hz('#9fb0cc')}"/>`; }).join('') + `<rect x="250" y="40" width="10" height="130" fill="${hz('#9fb0cc')}"/><path d="M255 18 V40" stroke="${hz('#9fb0cc')}" stroke-width="2"/>`;
+  else if (biome === 'mer') back = `<path d="M10 121 Q50 104 96 121Z M300 121 Q330 110 372 121Z" fill="${hz('#6aa889')}"/>` + gull(150, 64, 0) + gull(210, 84, 1.3) + gull(330, 52, 0.6);
+  else if (biome === 'desert') back = `<path d="M0 150 Q100 128 200 146 T400 142 V240 H0Z" fill="${hz('#e9b878')}"/><path d="M60 146 V116 H120 V146Z" fill="${hz('#c98d5a')}"/>`;
+  else back = `<path d="M0 146 Q60 112 130 134 T260 126 T400 138 V240 H0Z" fill="${hz(biome === 'jungle' ? '#4c9a68' : '#8fbf8a')}"/>` + Array.from({ length: 14 }, (_, i) => `<circle cx="${(i * 29 + r(0, 12)).toFixed(0)}" cy="${(132 + r(-6, 6)).toFixed(0)}" r="${r(5, 9).toFixed(1)}" fill="${hz('#5f9a6a', 0.5)}"/>`).join('');
+  // textures légères du sol
+  if (biome === 'ville' || biome === 'quartier') ground += Array.from({ length: 20 }, (_, i) => `<path d="M${i * 20} 205 v-9" stroke="${T('#d8cfc0')}" stroke-width="1"/>`).join('');
+  else if (biome === 'mer' || biome === 'desert') ground += speck('#c9a46e', 34, 202, 240);
+  else if (biome === 'neige') ground += speck('#cfdcec', 20, 204, 240);
+  else ground += speck('#6f9a52', 40, 200, 240) + speck('#fff6c8', 12, 204, 236);
+  // éléments propres au lieu
+  if (biome === 'montagne') near += rock(130, 238, 1.1) + rock(270, 240, 0.8, '#a9a090') + pine(370, 240, 0.62, '#4f8f6a') + pine(20, 240, 0.5, '#4f8f6a');
+  if (biome === 'neige') near += rock(300, 240, 0.8, '#d6e2f0');
+  if (biome === 'mer') { far += `<path class="avsurf" d="M0 190 Q20 184 40 190 T80 190 T120 190 T160 190 T200 190 T240 190 T280 190 T320 190 T360 190 T400 190" stroke="#fff" stroke-width="2.4" fill="none" opacity=".7"/>`; near += gull(240, 150, 0.9); }
+  if (biome === 'foret' || biome === 'jungle') near += rock(330, 240, 0.6, '#9a9a88');
+  return { far, mid, ground, near, back };
 }
 function avSky(tod, wx) {
   const c = tod === 'nuit' ? ['#1b2350', '#3b4a82'] : tod === 'soir' ? ['#f19f86', '#fde3b4'] : wx === 'pluie' ? ['#a3b1c0', '#dbe2ea'] : wx === 'nuages' ? ['#b3d4e8', '#eaf4f8'] : ['#93cff0', '#e4f5fb'];
-  let s = `<defs><linearGradient id="avsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c[0]}"/><stop offset="1" stop-color="${c[1]}"/></linearGradient></defs><rect width="400" height="240" fill="url(#avsg)"/>`;
+  // v19 : dégradé, halo du soleil ou de la lune, rayons de lumière, lueur d'horizon, nuages qui dérivent
+  const [lx, ly, lc] = tod === 'nuit' ? [320, 44, '#f6efcf'] : tod === 'soir' ? [300, 120, '#ffb36a'] : [330, 46, '#fff2a8'];
+  let s = `<defs><linearGradient id="avsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c[0]}"/><stop offset="1" stop-color="${c[1]}"/></linearGradient><radialGradient id="avhalo"><stop offset="0" stop-color="${lc}" stop-opacity=".75"/><stop offset=".35" stop-color="${lc}" stop-opacity=".28"/><stop offset="1" stop-color="${lc}" stop-opacity="0"/></radialGradient><linearGradient id="avglow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tod === 'soir' ? '#ffb36a' : '#ffffff'}" stop-opacity="0"/><stop offset="1" stop-color="${tod === 'soir' ? '#ffcf8a' : tod === 'nuit' ? '#6f7fc0' : '#ffffff'}" stop-opacity="${tod === 'nuit' ? 0.35 : 0.55}"/></linearGradient></defs><rect width="400" height="240" fill="url(#avsg)"/><rect y="90" width="400" height="90" fill="url(#avglow)"/>`;
+  if (wx !== 'pluie') s += `<circle class="avhalo" cx="${lx}" cy="${ly}" r="${tod === 'soir' ? 110 : 80}" fill="url(#avhalo)"/>`;
+  if (tod === 'jour' && wx === 'clair') s += `<g class="avrays" fill="#fffbe0">${[[-150, 260], [-90, 260], [-30, 250], [40, 250]].map(([dx, dy], i) => `<path d="M${lx} ${ly} L${lx + dx - 14} ${ly + dy} L${lx + dx + 14} ${ly + dy}Z" opacity="${(0.13 - i * 0.02).toFixed(2)}"/>`).join('')}</g>`;
   if (tod === 'nuit') { const R = avRng(7); s += Array.from({ length: 28 }, () => `<circle class="avtw" style="animation-delay:${(R() * 3).toFixed(2)}s" cx="${(R() * 400).toFixed(0)}" cy="${(R() * 130).toFixed(0)}" r="${(0.8 + R() * 1.4).toFixed(1)}" fill="#fff8d8"/>`).join('') + `<circle cx="320" cy="44" r="17" fill="#f6efcf"/><circle cx="328" cy="38" r="15" fill="${c[0]}"/>`; }
   else if (tod === 'soir') s += `<circle cx="300" cy="120" r="30" fill="#f7a35e" opacity=".9"/>`;
-  else if (wx !== 'pluie') s += `<circle cx="330" cy="46" r="22" fill="#fbd96a"/><circle cx="330" cy="46" r="32" fill="#fbd96a" opacity=".25"/>`;
-  if (wx === 'nuages' || wx === 'pluie') s += [[60, 50], [200, 34], [320, 64]].map(([x, y]) => `<g fill="${wx === 'pluie' ? '#e4e8ee' : '#fff'}" opacity=".95"><ellipse cx="${x}" cy="${y}" rx="34" ry="13"/><ellipse cx="${x - 14}" cy="${y - 8}" rx="16" ry="12"/><ellipse cx="${x + 12}" cy="${y - 10}" rx="18" ry="14"/></g>`).join('');
+  else if (wx !== 'pluie') s += `<circle cx="330" cy="46" r="22" fill="#fbd96a"/>`;
+  const cl = (x, y, sc, col, op, d) => `<g class="avcl" style="animation-delay:${d}s"><g transform="translate(${x} ${y}) scale(${sc})" fill="${col}" opacity="${op}"><ellipse rx="34" ry="13"/><ellipse cx="-14" cy="-8" rx="16" ry="12"/><ellipse cx="12" cy="-10" rx="18" ry="14"/></g></g>`;
+  if (wx === 'nuages' || wx === 'pluie') s += [[60, 50, 1], [200, 34, 1.1], [320, 64, 0.9]].map(([x, y, sc], i) => cl(x, y, sc, wx === 'pluie' ? '#e4e8ee' : '#fff', 0.95, -i * 9)).join('');
+  else s += cl(90, 58, 0.6, tod === 'nuit' ? '#56639a' : '#fff', tod === 'nuit' ? 0.5 : 0.75, 0) + cl(230, 30, 0.45, tod === 'nuit' ? '#56639a' : '#fff', tod === 'nuit' ? 0.4 : 0.6, -14);
   return `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${s}</svg>`;
 }
 const avTile = inner => { const sv = `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${inner}</svg>`; return sv + sv; };
@@ -17339,9 +17608,9 @@ function avApply(t, j, fx, place) {
         if (!avTuto(t) && typeof nsFireWild === 'function' && !t.events.some(e => e.type === 'sauvage' && !e.fired)) { const f = Math.min(1, t.elapsed / t.total); t.events.push({ at: Math.min(0.95, f + 0.015), type: 'sauvage' }); t.events.sort((a, b) => a.at - b.at); chips.push(['wild', 'Une rencontre approche…']); }
         else items.push(...lootFor(tags, t.luck + 1, place.name, 1, k));
       }
-      else if (ty === 'time+') { const d = dt(); t.total += d; t.stay = (t.stay || 0) + d; chips.push(['slow', `Le voyage s’allonge (${fmtDur(d)})`]); }
-      else if (ty === 'time-') { const d = dt(); t.elapsed = Math.min(t.total - 3e3, t.elapsed + d); chips.push(['fast', `Raccourci : ${fmtDur(d)} de gagné`]); }
-      else if (ty === 'back') { const nx = t.events.find(e => !e.fired && e.type !== 'arrivee' && e.type !== 'sauvage'); if (nx) nx.fired = true; const d = dt(); t.elapsed = Math.min(t.total - 3e3, t.elapsed + d); chips.push(['back', 'Demi-tour : retour plus tôt']); }
+      else if (ty === 'time+') { const d = dt(); t.total += d; t.stay = (t.stay || 0) + d; chips.push(['slow', `+${avDurS(d)}`]); }
+      else if (ty === 'time-') { const d = dt(); t.elapsed = Math.min(t.total - 3e3, t.elapsed + d); chips.push(['fast', `−${avDurS(d)}`]); }
+      else if (ty === 'back') { const nx = t.events.find(e => !e.fired && e.type !== 'arrivee' && e.type !== 'sauvage'); if (nx) nx.fired = true; const d = dt(); t.elapsed = Math.min(t.total - 3e3, t.elapsed + d); chips.push(['back', `−${avDurS(d)} (demi-tour)`]); }
       else if (ty === 'rep') { A.rep++; chips.push(['rep', 'Réputation +1']); if (A.rep % 5 === 0) { t.coins += 40; chips.push(['rep', `On parle de vos compagnons partout ! +40 pièces`]); } }
       else if (ty === 'friend') { if (!A.friends.some(f => f.n === arg)) { A.friends.push({ n: arg, k, place: place.name, date: Date.now() }); chips.push(['friend', 'Nouvel ami : ' + arg]); } }
       else if (ty === 'hurt') { t.avHurt = (t.avHurt || 0) + 1; t.xp = Math.max(0, t.xp - 12); chips.push(['hurt', avTxt('{n} rentrera fatigué{e}', k)]); }
@@ -17358,6 +17627,54 @@ function avApply(t, j, fx, place) {
   t.xp += 10;
   t.bag.push(...items);
   return { items, chips };
+}
+
+// ---------------- v19 : on ne montre que ce qui compte, et chaque info montre son effet ----------------
+// avFx(entrée) → [[classe, libellé court, détail]] : +objet, +rumeur, +lieu caché, −10 min, fatigue… ; vide = message décoratif.
+const AV_FX_IC = { item: '✦', rare: '◆', coins: '●', photo: '▣', rumor: '✉', place: '★', friend: '♥', wild: '!', egg: '◒', slow: '⧗', fast: '»', back: '↺', hurt: '✚', rep: '☺', give: '♡', ask: '?', xp: '▲' };
+function avDurS(ms) { const s = Math.round(ms / 1000); if (s < 60) return s + ' s'; const m = Math.round(s / 60); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0'); }
+function avDurTxt(l) { const s = String(l || ''); let m = s.match(/(\d+) h (\d+)/); if (m) return `${m[1]} h ${m[2]}`; m = s.match(/(\d+) min/); if (m) return `${m[1]} min`; m = s.match(/(\d+) s\b/); return m ? `${m[1]} s` : ''; }
+function avDurMs(l) { const s = avDurTxt(l); let m = s.match(/(\d+) h (\d+)/); if (m) return (+m[1] * 60 + +m[2]) * 60e3; m = s.match(/(\d+) min/); if (m) return +m[1] * 60e3; m = s.match(/(\d+) s/); return m ? +m[1] * 1e3 : 0; }
+function avChipShort(c, l) {
+  l = String(l || '');
+  if (/^[+−-]/.test(l) && l.length <= 20) return l;
+  if (c === 'rep') { const m = l.match(/\+(\d+) pièces/); if (m) return `+${m[1]} pièces`; }
+  const d = avDurTxt(l);
+  return ({ slow: d ? '+' + d : 'Plus long', fast: d ? '−' + d : 'Raccourci', back: d ? '−' + d : 'Retour plus tôt', place: '+lieu caché', rumor: '+rumeur', friend: '+ami', rep: '+réputation', hurt: 'fatigue', wild: 'rencontre', egg: '+œuf', rare: '+objet rare', photo: '+carte postale', give: '−1 en-cas', coins: l })[c] || l;
+}
+function avFx(j) {
+  if (!j) return [];
+  const out = [], add = (c, l, ti) => { if (!out.some(x => x[1] === l)) out.push([c, l, ti || l]); };
+  if (j.pending && !j.resolved) add('ask', 'à choisir', 'Un choix vous attend');
+  (j.chips || []).forEach(([c, l]) => add(c, avChipShort(c, l), l));
+  const its = j.items || [], maps = its.filter(x => x.cat === 't'), objs = its.filter(x => x.cat !== 't');
+  if (objs.length) add('item', `+${objs.length} objet${objs.length > 1 ? 's' : ''}`, objs.map(x => x.name).join(', '));
+  if (objs.some(x => (x.rarity || 0) >= 3) && !out.some(x => x[0] === 'rare')) add('rare', '+objet rare');
+  if (maps.length && !out.some(x => x[0] === 'rumor')) add('rumor', '+rumeur', 'Bout de carte : une rumeur de trésor');
+  if (j.kind === 'pieces' && j.gain) add('coins', `+${j.gain} pièces`);
+  if (j.photo && !out.some(x => x[0] === 'photo')) add('photo', '+carte postale');
+  if (j.kind === 'tzsense') add('rumor', j.lvl === 3 ? '+trésor flairé' : '+indice trésor');
+  if (j.kind === 'sauvage' && j.resolved) add(j.tamed ? 'friend' : 'wild', j.tamed ? '+compagnon' : 'rencontre');
+  const o = String(j.outcome || '');
+  let m = o.match(/gagne (\d+) pièces/); if (m) add('coins', `+${m[1]} pièces`);
+  m = o.match(/(?:perd|sème) (\d+) pièces/); if (m) add('coins', `−${m[1]} pièces`);
+  m = o.match(/\+(\d+) expérience/); if (m) add('xp', `+${m[1]} XP`);
+  return out;
+}
+const avFxHTML = (fx, cls) => (fx || []).length ? `<span class="${cls || 'avfx'}">${fx.map(([c, l, ti]) => `<em class="avc c-${c}" title="${esc(ti || l)}">${AV_FX_IC[c] || ''} ${esc(l)}</em>`).join('')}</span>` : '';
+// l'essentiel d'une entrée, en une phrase
+const avGist = (j, max) => avOne(j.kind === 'choix' && j.resolved && j.outcome ? avStripAuto(j.outcome) : j.kind === 'sauvage' && j.outcome ? j.outcome : j.text, max || 90);
+// bilan du voyage en cours : on regroupe tout en quelques pastilles
+function avSumFx(t) {
+  const out = [], n = (t.bag || []).length, all = t.journal.flatMap(j => avFx(j));
+  if (n) out.push(['item', `${n} objet${n > 1 ? 's' : ''}`, 'Dans son sac']);
+  if (t.coins > 0) out.push(['coins', `${t.coins} pièces`]);
+  const cnt = c => all.filter(x => x[0] === c).length;
+  [['rumor', 'rumeur'], ['place', 'lieu caché', 'lieux cachés'], ['friend', 'ami'], ['egg', 'œuf']].forEach(([c, s, p]) => { const k = cnt(c); if (k) out.push([c, `${k} ${k > 1 ? (p || s + 's') : s}`]); });
+  const dt = all.reduce((a, [c, l]) => a + (c === 'slow' ? 1 : c === 'fast' || c === 'back' ? -1 : 0) * avDurMs(l), 0);
+  if (Math.abs(dt) >= 1000) out.push([dt > 0 ? 'slow' : 'fast', `${dt > 0 ? '+' : '−'}${avDurS(Math.abs(dt))}`, 'Durée du voyage modifiée par ses choix']);
+  if (t.avHurt) out.push(['hurt', 'fatigué' + (typeof compE === 'function' ? compE(t.comp) : '')]);
+  return out;
 }
 
 // ---------------- départ : parfois un nid sur la route ----------------
@@ -17399,7 +17716,7 @@ function avGoPlace(id) {
 
 // ---------------- la vue d'exploration (v17 : on regarde l'aventure, une seule ligne de texte) ----------------
 let avBusy = 0, avK = null, avSig = '', avStageKey = '', avPick = { src: null, id: null, how: null }, avAnim = null, avLastLen = 0;
-let avPlay = null, avPlayN = 0, avLogOpen = false, avReplayTrip = null;
+let avPlay = null, avPlayN = 0, avLogOpen = false, avReplayTrip = null, avPhLast = null;
 const AV_PH = [['aller', 'Aller'], ['sejour', 'Sur place'], ['retour', 'Retour']];
 const AV_SLOT = 9000;
 const avReduce = () => typeof reduceMotion === 'function' && reduceMotion();
@@ -17417,10 +17734,10 @@ const avStripAuto = s => String(s || '').replace(/^[^«]*seul\S* : « .*? »\. /
 const AV_KIND_ACT = { trouvaille: 'dig', repas: 'snack', photo: 'photo', merveille: 'photo', pieces: 'dig', tresor: 'map', animal: 'snack', retour: 'walk', depart: 'walk', rencontre: 'hello' };
 function avMoment(t, j) {
   const act = (['animal', 'merveille'].includes(j.kind) && axActFor(j.text, '', true)) || AV_KIND_ACT[j.kind] || axActFor(j.text, '', true) || 'walk';
-  return { act, line: avOne(j.text), items: j.items, gift: j.kind === 'pieces' };
+  return { act, line: avOne(j.text), items: j.items, gift: j.kind === 'pieces', chips: avFx(j) };
 }
 function avMomentChoice(t, j) {
-  return { act: j.act || 'walk', line: avOne(avStripAuto(j.outcome), 110), items: j.items, chips: j.chips, gift: (j.chips || []).some(c => ['place', 'rumor', 'rare', 'egg'].includes(c[0])) };
+  return { act: j.act || 'walk', line: avOne(avStripAuto(j.outcome), 110), items: j.items, chips: avFx(j), gift: (j.chips || []).some(c => ['place', 'rumor', 'rare', 'egg'].includes(c[0])) };
 }
 function avOpen(k) {
   const t = S.trips[k]; if (!t) return;
@@ -17429,11 +17746,13 @@ function avOpen(k) {
   avK = k; avSig = ''; avStageKey = ''; avPick = { src: null, id: null, how: null }; avLastLen = t.journal.length; avPlay = null; avLogOpen = false;
   let v = $('avView');
   if (!v) { v = document.createElement('div'); v.id = 'avView'; v.className = 'avv'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-modal', 'true'); document.body.appendChild(v); }
-  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-log="1" aria-pressed="false">Journal</button><button class="btn cream sm" data-av-replay="cur">Revoir l’aventure</button><button class="btn green sm" data-av-close="1">Carte</button></footer></div>`;
+  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"><div class="avreal" aria-hidden="true"></div><div class="avscene"></div></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-log="1" aria-pressed="false">Journal</button><button class="btn cream sm" data-av-replay="cur">Revoir l’aventure</button><button class="btn green sm" data-av-close="1">Carte</button></footer></div>`;
   v.hidden = false; document.body.classList.add('avopen');
+  avPhLast = null;
   avRender(true);
+  try { avRealOpen(t, v.querySelector('.avstage')); } catch (e) { console.error('vue réelle', e); avRealClose(); }
 }
-function avClose() { const v = $('avView'); if (v) { v.hidden = true; v.innerHTML = ''; } avK = null; avPlay = null; document.body.classList.remove('avopen'); try { renderAll(); } catch (e) {} }
+function avClose() { avRealClose(); const v = $('avView'); if (v) { v.hidden = true; v.innerHTML = ''; } avK = null; avPlay = null; document.body.classList.remove('avopen'); try { renderAll(); } catch (e) {} }
 const avPending = t => t.journal.findIndex(j => j.pending && !j.resolved);
 const AV_CHIP_S = { place: 'Nouveau lieu', rumor: 'Rumeur', friend: 'Nouvel ami', rep: 'Réputation', hurt: 'Fatigué', slow: 'Plus long', fast: 'Raccourci', back: 'Demi-tour', wild: 'Rencontre', egg: 'Un œuf !', rare: 'Objet rare', photo: 'Photo', coins: 'Pièces', give: 'Offert' };
 function avRender(force) {
@@ -17441,6 +17760,7 @@ function avRender(force) {
   if (avBusy > Date.now()) return;
   const k = avK, t = S.trips[k];
   if (!t) { avClose(); return; }
+  try { avRealTick(t); } catch (e) {}
   const w = avWhere(t), biome = avBiome(w.tags, w.lat, w.poi), hour = avLocalHour(w.lon), tod = avTod(hour), wx = avWeather(t, biome);
   const ph = t.done ? 'fin' : w.ph, pi = avPending(t), pj = pi >= 0 ? t.journal[pi] : null;
   const wild = pj && pj.kind === 'sauvage' ? pj : null, tamed = t.journal.filter(j => j.kind === 'sauvage' && j.tamed && S.comps[j.tamed]).map(j => j.tamed);
@@ -17452,7 +17772,7 @@ function avRender(force) {
   const now = Date.now();
   if (avPlay && avPlay.until <= now) { const nx = avPlay.then; avPlay = nx ? Object.assign({}, nx, { until: now + (nx.dur || 9000), id: ++avPlayN }) : null; }
   if (t.journal.length > avLastLen) {
-    const fresh = t.journal.slice(avLastLen).filter(j => !j.pending && j.kind !== 'choix' && j.kind !== 'sauvage').pop();
+    const fresh = t.journal.slice(avLastLen).filter(j => !j.pending && j.kind !== 'choix' && j.kind !== 'sauvage' && avFx(j).length).pop();
     if (fresh && !avPlay && !pj) avPlay = Object.assign(avMoment(t, fresh), { until: now + 9000, id: ++avPlayN });
     avLastLen = t.journal.length;
   }
@@ -17464,21 +17784,27 @@ function avRender(force) {
   else if (wild) { const m = avWildMood(wild); sh = { act: 'wild', wild: { sp: wild.sp, genes: wild.genes }, wildMood: m, line: AV_MOODS[m], key: 'w' + pi }; }
   else if (pj) sh = { act: pj.kind === 'aide' ? 'lost' : pj.kind === 'marchand' ? 'chest' : 'hello', line: avOne(pj.text), key: 'p' + pi };
   else if (t.done) sh = { act: 'chest', gift: true, line: avTxt('{n} est rentré{e} : le sac est plein à craquer !', k), key: 'done' };
-  else { const slot = Math.floor(now / AV_SLOT), act = axIdle(c, slot, moving); sh = { act, line: axLine(act, Math.floor(slot / 3)), key: 'i' + slot + act }; }
+  else { const slot = Math.floor(now / AV_SLOT), act = axIdle(c, slot, moving); sh = { act, line: ph === 'sejour' ? avTxt(`{n} est sur place : ${t.dest.name}`, k) : ph === 'retour' ? avTxt('{n} rentre à la maison', k) : avTxt(`{n} est en route vers ${t.dest.name}`, k), idle: 1, key: 'i' + slot + act }; }
   if (sh.wild) c.wild = sh.wild;
   if (sh.wildMood) c.wildMood = sh.wildMood;
   const walking = moving && !avPlay && sh.act === 'walk';
   const skey = [biome, tod, wx, ph, walking, tamed.join(','), t.done, sh.id || sh.key, sh.act].join('|');
   if (skey !== avStageKey || force) {
     avStageKey = skey;
-    const D = avDecor(biome, tod, wx), st = v.querySelector('.avstage');
-    st.className = `avstage b-${biome} t-${tod} ${walking ? 'mv' : 'still'} ${ph === 'retour' && walking ? 'rev' : ''}`;
-    st.innerHTML = `<div class="avl avsky">${avSky(tod, wx)}</div><div class="avl avfar"><div class="avt">${avTile(D.far)}</div></div><div class="avl avgr">${avTile(D.ground).split('</svg>')[0]}</svg></div><div class="avl avmid"><div class="avt">${avTile(D.mid)}</div></div>`
+    const D = avDecor(biome, tod, wx), st = v.querySelector('.avstage'), sc = st.querySelector('.avscene') || st;
+    st.className = `avstage b-${biome} t-${tod} w-${wx} ${walking ? 'mv' : 'still'} ${ph === 'retour' && walking ? 'rev' : ''}${avRM && avRM.ok ? ' real' : ''}`;
+    // v19 : transition douce entre l'aller, le séjour et le retour
+    let trans = '';
+    if (avPhLast && avPhLast !== ph) { const tt = ph === 'sejour' ? avTxt(`{n} est arrivé{e} à ${t.dest.name} !`, k) : ph === 'retour' ? 'En route pour la maison' : ph === 'fin' ? 'De retour !' : ''; if (tt) trans = `<div class="avtrans"><span>${esc(tt)}</span></div>`; }
+    avPhLast = ph;
+    sc.className = 'avscene' + (trans ? ' ptrans' : '');
+    sc.innerHTML = `<div class="avl avsky">${avSky(tod, wx)}</div><div class="avl avback"><div class="avt">${avTile(D.back)}</div></div><div class="avl avfar"><div class="avt">${avTile(D.far)}</div></div><div class="avl avhaze"></div><div class="avl avgr"><div class="avt">${avTile(D.ground)}</div></div><div class="avl avmid"><div class="avt">${avTile(D.mid)}</div></div><div class="avl avtint"></div>`
       + tamed.map((id, i) => `<img class="avfol" style="left:${4 + i * 9}%" src="${portraitURI(id, 'content')}" alt="${esc(CHARS[id].name)} suit le groupe">`).join('')
       + `<div class="avl avact">${axSVG(sh.act, c, { items: sh.items, gift: sh.gift, cls: sh.cls })}</div>`
       + `<div class="avl avnear"><div class="avt">${avTile(D.near)}</div></div>`
       + (wx === 'pluie' || wx === 'neige' ? `<div class="avl avwx ${wx}"></div>` : '')
-      + ((sh.chips || []).length ? `<div class="avbadges">${sh.chips.map(([cc, l], i) => `<em class="avc c-${cc}" style="animation-delay:${0.9 + i * 0.25}s" title="${esc(l)}">${AV_CHIP_IC[cc] || ''} ${esc(AV_CHIP_S[cc] || l)}</em>`).join('')}</div>` : '');
+      + ((sh.chips || []).length ? `<div class="avbadges">${sh.chips.slice(0, 4).map(([cc, l, ti], i) => `<em class="avc c-${cc}" style="animation-delay:${0.9 + i * 0.25}s" title="${esc(ti || l)}">${AV_FX_IC[cc] || AV_CHIP_IC[cc] || ''} ${esc(avChipShort(cc, l))}</em>`).join('')}</div>` : '')
+      + trans;
   }
   // sous-titre (une ligne) + vignettes de choix
   const sig = [avStageKey, pi, pj ? (pj.path || []).length : '', JSON.stringify(avPick), avLogOpen, t.journal.length, t.done, !!avPlay].join('|');
@@ -17486,25 +17812,91 @@ function avRender(force) {
   avSig = sig;
   v.querySelector('.avbox').classList.toggle('asking', !!(pj && !avPlay));
   const box = v.querySelector('.avstory');
-  let h = `<p class="avsub" title="${esc(avTxt(sh.line || '', k))}">${esc(avTxt(sh.line || '', k))}</p>`;
+  let h = `<p class="avsub${sh.idle ? ' idle' : ''}" title="${esc(avTxt(sh.line || '', k))}">${esc(avTxt(sh.line || '', k))}</p>`;
+  if (!avPlay && !pj) { const sm = avSumFx(t); if (sm.length) h += `<div class="avsum"><b>Ce voyage</b>${avFxHTML(sm)}</div>`; }
   if (!avPlay) {
     if (pj) h += avAsk(t, pj, pi, c);
     else if (t.done) h += `<div class="avend"><button class="btn green big" data-av-collect="${k}">Ouvrir son sac</button></div>`;
   }
-  if (avLogOpen) h += `<div class="avlog">${t.journal.map((j, i) => [j, i]).filter(([j, i]) => i !== pi).slice(-12).reverse().map(([j, i]) => avLine(t, j, i, false)).join('')}<button class="btn cream sm" data-av-journal="1">Ouvrir le carnet complet</button></div>`;
+  if (avLogOpen) h += avLogHTML(t, pi);
   box.innerHTML = h;
   const lb = v.querySelector('[data-av-log]'); if (lb) lb.setAttribute('aria-pressed', avLogOpen);
 }
+// ---------------- v19 : VUE RÉELLE — une seconde petite carte MapLibre « à hauteur du familier » ----------------
+// Créée à l'ouverture de la vue, détruite à la fermeture (un seul contexte WebGL de plus, au maximum).
+// Centre : tripPos(t) (ou la destination pendant le séjour), pitch 76°, cap dans le sens du voyage, zoom 17 :
+// on voit les vrais bâtiments 3D, les rues et les parcs. Tant que les tuiles ne sont pas là (mode local, pas d'internet),
+// la carte reste invisible et le décor illustré s'affiche ; sans tuiles au bout de 12 s, elle est détruite.
+let avRM = null;
+function avRealWanted(t) {
+  if (!t || avTuto(t) || typeof maplibregl === 'undefined' || typeof tilesStyle !== 'function') return false;
+  return AV_FORCE.real === true || (typeof mapMode !== 'undefined' && mapMode === 'tiles');
+}
+function avBearing(a, b) {
+  const r = Math.PI / 180, y = Math.sin((b[0] - a[0]) * r) * Math.cos(b[1] * r), x = Math.cos(a[1] * r) * Math.sin(b[1] * r) - Math.sin(a[1] * r) * Math.cos(b[1] * r) * Math.cos((b[0] - a[0]) * r);
+  const d = (Math.atan2(y, x) / r + 360) % 360; return isFinite(d) ? d : 0;
+}
+function avRealCam(t) {
+  const ph = tripPhase(t), still = ph === 'sejour' || t.done, from = [t.from.lon, t.from.lat], to = [t.dest.lon, t.dest.lat];
+  const center = still ? to : tripPos(t);
+  return { center, bearing: ph === 'retour' ? avBearing(to, from) : avBearing(from, to), pitch: 76, zoom: 17 };
+}
+function avRealStyle(tod) {
+  const sty = tilesStyle();
+  if (sty.sources) delete sty.sources.dem;
+  // allégé : pas de relief ni de grandes étiquettes (inutiles à cette échelle)
+  sty.layers = (sty.layers || []).filter(l => l.source !== 'dem' && !/^(b-admin|place-country|place-city|place-town|poi-hit|peak|water-name|lc-ice-edge)/.test(l.id));
+  if (tod === 'nuit' && typeof cvWallExpr === 'function' && typeof CV_WALL_NIGHT !== 'undefined') sty.layers.forEach(l => { if (l.id === 'building' && l.paint) l.paint['fill-extrusion-color'] = cvWallExpr(CV_WALL_NIGHT); });
+  const c = tod === 'nuit' ? ['#1b2350', '#3b4a82', '#2c3766'] : tod === 'soir' ? ['#f19f86', '#fde3b4', '#f6d2b0'] : ['#93cff0', '#e4f5fb', '#e8f2f4'];
+  sty.sky = { 'sky-color': c[0], 'horizon-color': c[1], 'fog-color': c[2], 'sky-horizon-blend': 0.7, 'horizon-fog-blend': 0.6, 'fog-ground-blend': 0.35, 'atmosphere-blend': 0 };
+  return sty;
+}
+function avRealOpen(t, st) {
+  avRealClose();
+  const box = st && st.querySelector('.avreal');
+  if (!box || !avRealWanted(t)) return;
+  const w = avWhere(t), tod = avTod(avLocalHour(w.lon)), cam = avRealCam(t);
+  const m = new maplibregl.Map(Object.assign({
+    container: box, style: avRealStyle(tod), interactive: false, attributionControl: { compact: true }, maxPitch: 85,
+    fadeDuration: 0, pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5), maxTileCacheSize: 40, refreshExpiredTiles: false,
+    renderWorldCopies: false, canvasContextAttributes: { antialias: false, powerPreference: 'low-power' },
+  }, cam));
+  const R = avRM = { m, ok: false, last: Date.now(), k: t.comp, st };
+  m.on('error', () => { /* tuiles injoignables : on garde le décor illustré */ });
+  const check = () => {
+    if (avRM !== R || R.ok) return;
+    try { if (m.queryRenderedFeatures().length > 0) { R.ok = true; st.classList.add('real'); } } catch (e) {}
+  };
+  m.on('idle', check);
+  m.on('sourcedata', e => { if (e && e.isSourceLoaded) check(); });
+  R.timer = setTimeout(() => { if (avRM === R && !R.ok) avRealClose(); }, 12000);
+}
+function avRealTick(t) {
+  const R = avRM; if (!R || !R.m || R.k !== t.comp) return;
+  const now = Date.now(), red = avReduce(), every = red ? 15000 : 4000;
+  if (now - R.last < every) return;
+  R.last = now;
+  const cam = avRealCam(t);
+  if (red) R.m.jumpTo(cam); else R.m.easeTo(Object.assign(cam, { duration: every, easing: x => x }));
+}
+function avRealClose() {
+  const R = avRM; avRM = null; if (!R) return;
+  clearTimeout(R.timer);
+  try { R.m.remove(); } catch (e) {}
+  try { if (R.st) { R.st.classList.remove('real'); const b = R.st.querySelector('.avreal'); if (b) b.innerHTML = ''; } } catch (e) {}
+}
+
 const AV_CHIP_IC = { place: '★', rumor: '✉', friend: '♥', rep: '☺', hurt: '✚', slow: '⧗', fast: '»', back: '↺', wild: '!', egg: '◒', rare: '◆', photo: '▣', coins: '●', give: '♡' };
 const avChips = cs => (cs || []).length ? `<span class="avchips">${cs.map(([c, l]) => `<em class="avc c-${c}">${AV_CHIP_IC[c] || ''} ${esc(l)}</em>`).join('')}</span>` : '';
+// v19 : journal de la vue, concis : une ligne par moment utile (heure, effet en icônes, une phrase) ; le reste est regroupé
 function avLine(t, j, i, fresh) {
   const time = new Date(j.t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  let s = `<div class="avln${fresh ? ' pop' : ''} k-${j.kind}"><small>${time}${j.place ? ' · ' + esc(j.place) : ''}</small><p>${esc(j.text)}</p>`;
-  if (j.kind === 'choix' && j.resolved) s += `<p class="avpath">${j.steps ? j.steps.map(x => `« ${esc(x.a)} »`).join(' › ') : ''}</p><p class="avout">${esc(j.outcome || '')}</p>${avChips(j.chips)}`;
-  else if (j.resolved && j.outcome) s += `<p class="avout">${esc(j.outcome)}</p>`;
-  const it = (j.items || []).slice(0, 3);
-  if (it.length) s += `<span class="avits">${it.map(x => `<span class="avit" title="${esc(x.name)}">${itemIcon(x)}</span>`).join('')}</span>`;
-  return s + `</div>`;
+  return `<div class="avln${fresh ? ' pop' : ''} k-${j.kind}"><small>${time}${j.place ? ' · ' + esc(j.place) : ''}</small>${avFxHTML(avFx(j))}<p>${esc(avGist(j, 100))}</p></div>`;
+}
+function avLogHTML(t, pi) {
+  let quiet = 0;
+  const rows = t.journal.map((j, i) => [j, i]).filter(([j, i]) => { if (i === pi) return false; if (!avFx(j).length && j.kind !== 'choix') { quiet++; return false; } return true; });
+  return `<div class="avlog">${rows.slice(-12).reverse().map(([j, i]) => avLine(t, j, i, false)).join('') || '<p class="avquiet">Rien d’important pour l’instant.</p>'}${quiet ? `<p class="avquiet">+ ${quiet} moment${quiet > 1 ? 's' : ''} sans effet (balade, paysage…)</p>` : ''}<button class="btn cream sm" data-av-journal="1">Ouvrir le carnet complet</button></div>`;
 }
 function avNeedLabel(opt, k) { return opt.h ? avTxt(opt.h, k) : ''; }
 // icônes de ce qu'une option demande (vêtement, talent, objet) ; cadenas s'il manque
@@ -17608,7 +18000,7 @@ function avPanels(t) {
 function avPanelHTML(k, p, i) {
   const tod = p.act === 'sleep' ? 'nuit' : 'jour', D = avDecor(p.biome || 'campagne', tod, 'clair');
   const c = axCtx(k, p.biome || 'campagne', tod, 'clair', p.wild ? { wild: p.wild } : null);
-  return `<figure class="avpn" style="animation-delay:${(i * 0.3).toFixed(2)}s"><div class="avpnv"><div class="avl">${avSky(tod, 'clair').replace(/avsg/g, 'avsg' + i)}</div><div class="avl"><svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${D.far}${D.ground}${D.mid}</svg></div><div class="avl">${axSVG(p.act, c, { items: p.items, gift: p.gift })}</div><i>${i + 1}</i></div><figcaption>${esc(avTxt(p.line || '', k))}</figcaption></figure>`;
+  return `<figure class="avpn" style="animation-delay:${(i * 0.3).toFixed(2)}s"><div class="avpnv"><div class="avl">${avSky(tod, 'clair').replace(/(id="|url\(#)(avsg|avhalo|avglow)/g, '$1$2' + i)}</div><div class="avl"><svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${D.back}${D.far}${D.ground}${D.mid}</svg></div><div class="avl">${axSVG(p.act, c, { items: p.items, gift: p.gift })}</div><i>${i + 1}</i></div><figcaption>${esc(avTxt(p.line || '', k))}</figcaption></figure>`;
 }
 function avComicOpen(t) {
   if (!t || !t.journal) return;
@@ -17670,10 +18062,20 @@ setInterval(() => { try { if (avK) { const t = S.trips[avK]; if (!t) return avCl
 
 // ---------------- journal (panneau) : scènes en plusieurs temps ----------------
 journalEntry = (orig => function (t, j, i) {
-  if (!j || j.kind !== 'choix' || !j.sc) return orig.apply(this, arguments);
+  if (!j || j.kind !== 'choix' || !j.sc) {
+    // v19 : messages sans effet → une ligne compacte (regroupée par renderVoyage) ; les autres montrent leur effet en icônes
+    const h = orig.apply(this, arguments);
+    try {
+      if (!j || (j.pending && !j.resolved)) return h;
+      const fx = avFx(j);
+      if (!fx.length && j.kind !== 'choix') { const time = new Date(j.t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); return `<article class="je avmini k-${j.kind}"><span>${time}</span> ${esc(avOne(j.text, 110))}</article>`; }
+      const at = h.indexOf('</header>');
+      return at < 0 ? h : h.slice(0, at + 9) + avFxHTML(fx) + h.slice(at + 9);
+    } catch (e) { console.error(e); return h; }
+  }
   try {
     const k = t.comp, time = new Date(j.t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    let h = `<article class="je k-choix"><header><span>${time}${j.place ? ' · ' + esc(j.place) : ''}</span>${j.pending && !j.resolved ? '<em class="need">À toi de choisir</em>' : ''}</header><p>${esc(j.text)}</p>`;
+    let h = `<article class="je k-choix"><header><span>${time}${j.place ? ' · ' + esc(j.place) : ''}</span>${j.pending && !j.resolved ? '<em class="need">À toi de choisir</em>' : ''}</header>${j.resolved ? avFxHTML(avFx(j)) : ''}<p>${esc(j.text)}</p>`;
     if (j.steps && j.steps.length) h += `<p class="avpath">${j.steps.map(x => `« ${esc(x.a)} »`).join(' › ')}</p>`;
     if (!j.resolved) {
       const node = avNode(j);
@@ -17681,9 +18083,9 @@ journalEntry = (orig => function (t, j, i) {
         if (j.path && j.path.length) h += `<p>${esc(j.q || avTxt(node.q, k))}</p>`;
         h += `<div class="opts">${node.o.map((o, oi) => { const ok = avNeedOk(k, o.need, t); return `<button data-choice="${i}" data-o="${oi}" ${ok ? '' : 'disabled'}>${esc(avTxt(o.a, k))}${o.need ? ` <small>(${ok ? '' : 'il faudrait : '}${esc(avNeedLabel(o, k))})</small>` : ''}</button>`; }).join('')}</div>`;
         if (!t.done && !avTuto(t)) h += `<button class="btn cream sm" data-av-open="${k}">Voir la scène avec ${esc(CHARS[k].name)}</button>`;
-        h += `<p class="small">Chaque choix compte : lieu caché, objet rare, ami, rumeur… ou petite chute. Sans réponse, ${esc(CHARS[k].name)} décidera seul${compE(k)} au retour.</p>`;
+        h += `<p class="small">Sans réponse, ${esc(CHARS[k].name)} décidera seul${compE(k)} au retour.</p>`;
       }
-    } else h += `<p class="out">${esc(j.outcome || '')}</p>${avChips(j.chips)}`;
+    } else h += `<p class="out">${esc(avOne(j.outcome || '', 160))}</p>`;
     if (j.photo) h += `<figure class="pc">${postcardSVG(j.photo, 'j' + i + t.id)}</figure>`;
     const items = j.items || []; if (items.length) h += `<div class="items">${items.map(itemChip).join('')}</div>`;
     return h + `</article>`;
@@ -17698,9 +18100,34 @@ renderVoyage = (orig => function (box) {
       const html = `<button class="avjoin" data-av-open="${S.sel}"><span>${avTxt('Voir ce que {n} voit', S.sel)}</span><small>Suivez l’aventure en direct, et choisissez avec ${esc(CHARS[S.sel].name)}.</small></button>`;
       const j = box.querySelector('.journal'); if (j) j.insertAdjacentHTML('beforebegin', html); else box.insertAdjacentHTML('beforeend', html);
     }
+    avGroupQuiet(box);
   } catch (e) { console.error(e); }
   return r;
 })(renderVoyage);
+// v19 : les moments sans effet qui se suivent sont regroupés en une ligne repliable
+function avGroupQuiet(box) {
+  const jr = box && box.querySelector('.journal'); if (!jr) return;
+  let run = [];
+  const flush = () => {
+    if (run.length >= 2) { const d = document.createElement('details'); d.className = 'avminis'; d.innerHTML = `<summary>${run.length} moments sans effet</summary>`; run[0].before(d); run.forEach(e => d.appendChild(e)); }
+    run = [];
+  };
+  [...jr.children].forEach(el => { if (el.classList.contains('avmini')) run.push(el); else flush(); });
+  flush();
+}
+// v19 : le fil du voyage (16_live.js) montre le dernier moment UTILE et son effet, pas la dernière phrase décorative
+function avLiveTidy() {
+  const bar = $('liveBar'), b = bar && !bar.hidden && bar.querySelector('.lvb.feed'); if (!b || b.dataset.avfx) return;
+  b.dataset.avfx = '1';
+  const t = S.trips[b.dataset.lk]; if (!t) return;
+  const j = t.journal.slice().reverse().find(x => avFx(x).length), bt = b.querySelector('.lvx b'), lab = b.querySelector('.lvx small i');
+  if (!bt) return;
+  if (!j) { bt.textContent = avTxt(`{n} est en route vers ${t.dest.name}.`, t.comp); if (lab) lab.textContent = 'En route'; return; }
+  bt.textContent = avGist(j, 90);
+  try { const ic = liveIcon(j.kind), li = b.querySelector('.lvi'); if (lab) lab.textContent = ic.label; if (li) { li.style.setProperty('--ic', ic.col); const sv = li.querySelector('svg'); if (sv) sv.outerHTML = ic.svg; } } catch (e) {}
+  bt.insertAdjacentHTML('afterend', avFxHTML(avFx(j).slice(0, 3), 'avfx lvfx'));
+}
+if (typeof renderLive === 'function') renderLive = (orig => function () { const r = orig.apply(this, arguments); try { avLiveTidy(); } catch (e) { console.error(e); } return r; })(renderLive);
 
 // ---------------- retour : l'œuf du nid et les moments forts ----------------
 GAME.on('trip:return', e => {
@@ -17760,7 +18187,9 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
 .avl svg{display:block;width:100%;height:100%}
 .avt{position:absolute;top:0;left:0;height:100%;width:200%;display:flex;will-change:transform}
 .avt svg{width:50%;height:100%;flex:none}
+.avstage.mv .avback .avt{animation:avScroll 140s linear infinite}
 .avstage.mv .avfar .avt{animation:avScroll 70s linear infinite}
+.avstage.mv .avgr .avt{animation:avScroll 16s linear infinite}
 .avstage.mv .avmid .avt{animation:avScroll 26s linear infinite}
 .avstage.mv .avnear .avt{animation:avScroll 9s linear infinite}
 .avstage.still .avt{animation:avScroll 120s linear infinite;animation-play-state:paused}
@@ -17900,6 +18329,54 @@ body.avopen #liveBar{visibility:hidden}
 .avpnv>i{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #4a3528;font:800 13px/20px var(--display);text-align:center;font-style:normal;color:#4a3528}
 .avpn figcaption{padding:7px 10px 9px;font-family:var(--hand);font-size:19px;line-height:1.15;color:#3f342c}
 .avcmb footer{display:flex;justify-content:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom));border-top:2px solid #eadfca;background:#fff3dc}
+/* v19 : scène plus riche (5 plans en parallaxe, brume, lumière) et vue réelle */
+.avscene{position:absolute;inset:0}
+.avreal{position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease}
+.avreal .maplibregl-ctrl-bottom-right{transform:scale(.8);transform-origin:100% 100%}
+.avhaze{background:linear-gradient(to bottom,transparent 42%,rgba(240,248,252,.38) 62%,transparent 80%);pointer-events:none}
+.t-soir .avhaze{background:linear-gradient(to bottom,transparent 42%,rgba(255,214,170,.4) 62%,transparent 80%)}
+.t-nuit .avhaze{background:linear-gradient(to bottom,transparent 42%,rgba(90,105,170,.35) 62%,transparent 80%)}
+.avtint{pointer-events:none;background:radial-gradient(ellipse 85% 70% at 50% 45%,transparent 60%,rgba(60,40,28,.22));}
+.t-soir .avtint{background:radial-gradient(ellipse 85% 70% at 50% 45%,transparent 55%,rgba(120,50,30,.25)),linear-gradient(rgba(255,170,110,.08),rgba(255,170,110,.08))}
+.t-nuit .avtint{background:radial-gradient(ellipse 85% 70% at 50% 45%,transparent 50%,rgba(10,15,45,.4))}
+.avstage.real .avreal{opacity:1}
+.avstage.real .avsky,.avstage.real .avback,.avstage.real .avfar,.avstage.real .avhaze,.avstage.real .avgr,.avstage.real .avmid,.avstage.real .avnear{display:none}
+.avstage.real .avtint{background:linear-gradient(to bottom,rgba(228,245,251,.55),rgba(228,245,251,.12) 32%,transparent 48%),linear-gradient(to top,rgba(60,40,28,.28),transparent 30%)}
+.avstage.real.t-soir .avtint{background:linear-gradient(to bottom,rgba(253,200,150,.55),rgba(253,200,150,.15) 34%,transparent 50%),linear-gradient(rgba(255,150,90,.12),rgba(255,150,90,.12))}
+.avstage.real.t-nuit .avtint{background:linear-gradient(to bottom,rgba(27,35,80,.6),transparent 45%),linear-gradient(rgba(15,22,60,.35),rgba(15,22,60,.35))}
+.avstage.real .avact{filter:drop-shadow(0 3px 2px rgba(40,25,15,.35))}
+.avrays{animation:avRays 7s ease-in-out infinite alternate;transform-origin:330px 46px}
+@keyframes avRays{from{opacity:.65;transform:rotate(-2deg)}to{opacity:1;transform:rotate(2deg)}}
+.avhalo{animation:avHalo 5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 50%}
+@keyframes avHalo{to{transform:scale(1.08)}}
+.avcl{animation:avCloud 46s linear infinite}
+@keyframes avCloud{from{transform:translateX(-40px)}to{transform:translateX(60px)}}
+.avgull{animation:avGull 3.2s ease-in-out infinite alternate}
+@keyframes avGull{from{transform:translate(0,0)}to{transform:translate(10px,-6px)}}
+.avsurf{animation:avSurf 3s ease-in-out infinite alternate}
+@keyframes avSurf{from{transform:translateX(0);opacity:.4}to{transform:translateX(-12px);opacity:.85}}
+.avscene.ptrans{animation:avFadeIn .9s ease-out}
+@keyframes avFadeIn{from{opacity:.25}to{opacity:1}}
+.avtrans{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:radial-gradient(circle,rgba(255,248,234,.75),rgba(255,248,234,0) 70%);animation:avTrans 2.2s ease-out forwards}
+.avtrans span{font:800 22px/1.15 var(--display);color:#4a3528;background:#fff8ea;border:2.5px solid #4a3528;border-radius:16px;padding:8px 14px;box-shadow:0 4px 0 rgba(74,53,40,.3);max-width:80%;text-align:center}
+@keyframes avTrans{0%{opacity:0;transform:scale(.9)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+.avsub.idle{font-size:19px;color:#6b5440}
+.avsum{display:flex;flex-wrap:wrap;align-items:center;gap:6px;justify-content:center}
+.avsum b{font:800 12.5px var(--display);color:#8a5a2a;text-transform:uppercase;letter-spacing:.04em}
+.avfx{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0 2px}
+.avsum .avfx{margin:0;justify-content:center}
+.avfx .avc,.avsum .avc{padding:4px 7px;font-size:11.5px}
+.avc.c-item,.avc.c-coins{background:#fff6d6;border-color:#e3b84a}.avc.c-photo{background:#e6f1fb;border-color:#7fb0d8}.avc.c-ask{background:#ffe3ec;border-color:#d9607e;color:#a03a58}.avc.c-xp{background:#eef6e6;border-color:#9fc77f}.avc.c-wild{background:#ffeede;border-color:#e9a06a}
+.avquiet{margin:0;font:600 12.5px var(--display);color:#a08a6c;text-align:center}
+.je.avmini{padding:4px 10px;font-size:13px;color:#8a7258;background:none;border:0;box-shadow:none}
+.je.avmini span{font:700 11.5px var(--display);color:#b9a58a;margin-right:4px}
+.avminis{margin:4px 0;border:1.5px dashed #e0cfae;border-radius:12px;padding:4px 8px;background:#fffaf0}
+.avminis summary{cursor:pointer;font:700 12.5px var(--display);color:#a08a6c;list-style-position:inside}
+.je>.avfx{margin:4px 0}
+.lvfx{display:flex;gap:4px;margin-top:2px;overflow:hidden;flex-wrap:nowrap}
+.lvfx .avc{padding:2px 6px;font-size:11px;white-space:nowrap}
+@media (prefers-reduced-motion: reduce){.avrays,.avhalo,.avcl,.avgull,.avsurf,.avscene.ptrans{animation:none!important}.avtrans{animation:avTransR 2.2s steps(1) forwards}.avreal{transition:none}}
+@keyframes avTransR{0%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){.avt,.avme,.avfol,.avwx,.avtw,.avff,.avsub,.avbadges .avc{animation:none!important}.avbadges .avc,.avpn{opacity:1;animation:none!important}}
 `;
   document.head.appendChild(st);
@@ -19347,21 +19824,81 @@ function cpWear(k) {
   return { th, set, reg, avN };
 }
 const cpRegName = id => { try { return RG[id].short; } catch (e) { return id; } };
+// v19 : résumé clair des bonus de la tenue actuelle (icônes + valeurs), en haut de la garde-robe
+const CP_WEAR_VAL = {
+  pluie: [['+1', 'trouvaille sous la pluie'], ['+2', 'trouvailles sous la pluie']],
+  froid: [['Rare+', 'objets en neige et montagne'], ['Rare++', 'objets en neige et montagne']],
+  soleil: [['+1', 'trouvaille mer, îles, désert'], ['+2', 'trouvailles mer, îles, désert']],
+  charme: [['+6 %', 'pour apprivoiser'], ['+14 %', 'pour apprivoiser']],
+  route: [['−5 %', 'de durée de voyage'], ['−10 %', 'de durée de voyage']],
+};
 function cpWearBar(k) {
-  const W = cpWear(k), ks = Object.keys(W.th);
-  let h = `<div class="cpwb" aria-label="Ce que la tenue apporte">`;
-  if (!ks.length && !W.avN) return h + `<span class="cpwe">${cpIco('charme')}<i>Chaque vêtement donne un petit bonus</i></span></div>`;
-  h += ks.map(t => `<span class="cpwi ${W.set === t ? 'set' : ''}" title="${esc(W.set === t ? CP_WEAR[t].set : CP_WEAR[t].txt)}">${cpIco(t)}<b>${W.set === t ? '×2' : W.th[t]}</b><small>${esc(W.set === t ? CP_WEAR[t].set : CP_WEAR[t].txt)}</small></span>`).join('');
-  if (W.reg) h += `<span class="cpwi set" title="Tenue complète de la région">${cpIco('region')}<b>★</b><small>Tenue ${esc(cpRegName(W.reg))} : objets plus rares là-bas</small></span>`;
-  if (W.avN) h += `<span class="cpwi av" title="Options d’aventure débloquées">${cpIco('aventure')}<b>${W.avN}</b><small>choix d’aventure en plus</small></span>`;
-  if (!W.set) { const best = ks.sort((a, b) => W.th[b] - W.th[a])[0]; if (best && W.th[best] < 3) h += `<span class="cpwnext">${cpIco(best)} ${W.th[best]}/3 : tenue complète</span>`; }
-  return h + `</div>`;
+  const W = cpWear(k), ks = Object.keys(W.th).sort((a, b) => W.th[b] - W.th[a]);
+  const chips = ks.map(t => { const v = CP_WEAR_VAL[t][W.set === t ? 1 : 0]; return `<span class="cpwi ${W.set === t ? 'set' : ''}" title="${esc(W.set === t ? CP_WEAR[t].set : CP_WEAR[t].txt)}">${cpIco(t)}<b>${v[0]}</b><small>${esc(v[1])}</small></span>`; });
+  if (W.reg) chips.push(`<span class="cpwi set" title="Tenue complète de la région">${cpIco('region')}<b>Rare+</b><small>objets en ${esc(cpRegName(W.reg))}</small></span>`);
+  if (W.avN) chips.push(`<span class="cpwi av" title="Options d’aventure débloquées">${cpIco('aventure')}<b>+${W.avN}</b><small>choix d’aventure</small></span>`);
+  return `<div class="cpwsum"><span class="cpwh">${cpIco('fan')}<b>Bonus de la tenue</b>${W.set ? '<em>Tenue complète !</em>' : ''}</span><div class="cpwb" aria-label="Ce que la tenue apporte">${chips.length ? chips.join('') : `<span class="cpwe">${cpIco('charme')}<i>Aucun bonus pour l’instant : chaque vêtement en apporte un.</i></span>`}</div></div>`;
+}
+// v19 : la « tenue complète » mise en valeur : 3 pièces d'un même thème, les manquantes en aperçu
+function cpSetBlock(k, pick) {
+  const all = Object.keys(CP_WEAR).map(t => cpSetInfo(k, t));
+  const best = all.slice().sort((a, b) => (b.n - a.n) || (b.miss.filter(m => m.own).length - a.miss.filter(m => m.own).length))[0];
+  const S0 = all.find(x => x.t === pick) || best, W = CP_WEAR[S0.t], need = Math.max(0, 3 - S0.n);
+  const ghosts = S0.miss.slice(0, need);
+  const cell = (look, sl, cls, extra) => `<button class="cpsc ${cls}" data-wslot="${sl}" aria-label="${esc(cpLookName(look))}">${itemIcon({ cat: 'v', sub: sl, look, color: cls === 'got' ? (IC[look] || '#e9c46a') : '#e9dfcf' })}${extra || ''}<small>${esc(cpLookName(look))}</small></button>`;
+  let h = `<div class="cpset ${S0.done ? 'done' : ''}"><div class="cpsh">${cpIco(S0.t)}<span><b>Tenue complète ${esc(W.name)}</b><small>${S0.done ? 'Bonus doublé : ' + esc(W.set) : `Encore ${need} pièce${need > 1 ? 's' : ''} pour : ${esc(cpLc(W.set))}`}</small></span><em>${S0.n}/3</em></div>`;
+  h += `<div class="cpsg">${S0.worn.slice(0, 3).map(w => cell(w.look, w.sl, 'got', '<i class="cpsok">✓</i>')).join('')}${ghosts.map(m => cell(m.look, m.sl, 'miss' + (m.own ? ' own' : ''), m.own ? '<i class="cpsown">Dans le sac</i>' : '<i class="cpsq">?</i>')).join('')}</div>`;
+  h += `<div class="cpsth">${all.map(x => `<button class="cpst ${x.t === S0.t ? 'on' : ''} ${x.done ? 'done' : ''}" data-wset="${x.t}" aria-pressed="${x.t === S0.t}" title="${esc(CP_WEAR[x.t].name)}">${cpIco(x.t)}<b>${x.n}/3</b></button>`).join('')}</div></div>`;
+  return h;
+}
+// v19 : sur les cartes de vêtements, l'effet en icône ET en mots courts
+function cpItemFxHTML(it) {
+  if (!it || it.cat !== 'v') return '';
+  const fx = cpItemEffects(it);
+  return `<span class="cpfx">${fx.length ? fx.map(f => `<span class="${f.kind}">${cpIco(f.ico)}${esc(f.txt)}</span>`).join('') : '<span class="none">Pour le style</span>'}</span>`;
 }
 function cpItemBadges(it) {
   if (!it || it.cat !== 'v') return '';
   const t = cpThemeOf(it.look), av = cpAvWear()[it.sub + ':' + it.look];
   if (!t && !av) return '';
   return `<span class="cpib">${t ? `<i title="${esc(CP_WEAR[t].txt)}">${cpIco(t)}</i>` : ''}${av ? `<i title="Débloque des choix d’aventure">${cpIco('aventure')}</i>` : ''}</span>`;
+}
+
+// ---------------- v19 : l'effet d'un vêtement, en icône ET en mots courts ----------------
+// options d'aventure débloquées par « emplacement:look » → libellés (« traverser le ruisseau à pied »)
+let _cpAvLab = null;
+function cpAvLabels() {
+  if (_cpAvLab) return _cpAvLab;
+  const m = {};
+  const walk = n => { if (!n || typeof n !== 'object') return; (n.o || []).forEach(o => { (o.need || []).forEach(x => { if (/^wear:/.test(x) && o.a) { const key = x.slice(5), a = String(o.a).replace(/\{[^}]*\}/g, '').trim(); (m[key] = m[key] || []).includes(a) || m[key].push(a); } }); walk(o.go); }); };
+  try { (typeof AV_SCENES !== 'undefined' ? AV_SCENES : []).forEach(walk); } catch (e) {}
+  return (_cpAvLab = m);
+}
+const cpLc = s => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+// [{ ico, txt, kind }] : ce que le vêtement apporte (rien de nouveau : thèmes CP_WEAR, choix d'aventure, région)
+function cpItemEffects(it) {
+  const out = []; if (!it || it.cat !== 'v') return out;
+  const t = cpThemeOf(it.look);
+  if (t) out.push({ ico: t, txt: CP_WEAR[t].txt, kind: 'th', th: t });
+  const av = cpAvLabels()[it.sub + ':' + it.look];
+  if (av && av.length) out.push({ ico: 'aventure', txt: `Débloque : ${cpLc(av[0])}${av.length > 1 ? ` (+${av.length - 1})` : ''}`, kind: 'av' });
+  try { const og = !it.orig && typeof originOf === 'function' ? originOf(it) : null; if (og && og.region && !og.made) out.push({ ico: 'region', txt: `Pièce de la tenue ${cpRegName(og.region)}`, kind: 'reg' }); } catch (e) {}
+  return out;
+}
+const cpLookSlot = look => { for (const s of SLOTS) if (s[2].some(x => x[1] === look)) return s[0]; return null; };
+const cpLookName = look => { for (const s of SLOTS) for (const [l, v] of s[2]) if (v === look) return l; return { chapeau: 'Chapeau', couronne: 'Couronne' }[look] || look; };
+// tenue complète d'un thème : 3 pièces portées ; les pièces manquantes possibles (et celles qui sont déjà dans le sac)
+function cpSetInfo(k, t) {
+  const o = (S.outfits && S.outfits[k]) || {}, W = CP_WEAR[t];
+  const worn = ST_SLOT_IDS.filter(sl => o[sl] && cpThemeOf(o[sl]) === t).map(sl => ({ sl, look: o[sl] }));
+  const usedSl = new Set(worn.map(w => w.sl)), miss = [];
+  for (const look of W.looks) {
+    const sl = cpLookSlot(look); if (!sl || usedSl.has(sl) || o[sl] === look) continue;
+    let own = false; try { own = typeof stOwned === 'function' && stOwned(k, sl).some(x => x.look === look); } catch (e) {}
+    miss.push({ sl, look, own });
+  }
+  miss.sort((a, b) => b.own - a.own);
+  return { t, n: Math.min(3, worn.length), worn, miss, done: worn.length >= 3 };
 }
 
 // ---------------- effets en jeu ----------------
@@ -19604,6 +20141,34 @@ document.addEventListener('click', ev => {
 @keyframes cppulse{to{transform:scale(1.07)}}
 @keyframes cppop{0%{transform:translate(-50%,-50%) scale(.6)}100%{transform:translate(-50%,-50%) scale(1)}}
 /* tenue */
+.cpwsum{display:flex;flex-direction:column;gap:2px;background:#fff;border:2.5px solid var(--ink);border-radius:16px;padding:7px 9px 4px;box-shadow:0 3px 0 rgba(74,53,40,.25)}
+.cpwh{display:flex;align-items:center;gap:6px}.cpwh svg{width:20px;height:20px}.cpwh b{font:800 15px var(--display)}
+.cpwh em{margin-left:auto;font:800 11.5px var(--display);font-style:normal;color:#8a5a00;background:linear-gradient(180deg,#fff3b0,#f6c445);border:2px solid #d99a1e;border-radius:999px;padding:0 8px;animation:cpglow 1.6s ease-in-out infinite alternate}
+@keyframes cpglow{to{box-shadow:0 0 10px #f6c445}}
+.cpset{display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg,#fff7e6,#fff);border:2.5px solid var(--ink);border-radius:18px;padding:9px 10px;box-shadow:0 3px 0 rgba(74,53,40,.25)}
+.cpset.done{background:linear-gradient(180deg,#fff3b0,#fff 70%);border-color:#d99a1e;box-shadow:0 0 0 3px #f6e08a,0 3px 0 rgba(74,53,40,.25)}
+.cpsh{display:flex;align-items:center;gap:8px}.cpsh>svg{width:30px;height:30px;flex:none}
+.cpsh span{flex:1;min-width:0;display:flex;flex-direction:column}.cpsh b{font:800 15.5px/1.15 var(--display)}.cpsh small{font:600 12px/1.2 var(--body);color:var(--ink2)}
+.cpsh em{flex:none;font:800 16px var(--display);font-style:normal;background:#fff;border:2.5px solid var(--ink);border-radius:12px;padding:1px 8px}
+.cpsg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cpsc{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px 5px;border-radius:14px;background:#fff;border:2.5px solid var(--greenD,#3a8f5a);cursor:pointer;color:var(--ink)}
+.cpsc>svg{width:44px;height:44px}
+.cpsc small{font:700 11.5px/1.1 var(--display);text-align:center}
+.cpsc.miss{border:2.5px dashed #c9b9a6;background:#fbf7f0}.cpsc.miss>svg{opacity:.45;filter:grayscale(1)}
+.cpsc.miss.own{border-color:var(--teal,#3f9c95);background:#eaf7f5}.cpsc.miss.own>svg{opacity:.8;filter:none}
+.cpsok,.cpsq{position:absolute;top:-7px;right:-5px;width:20px;height:20px;border-radius:50%;font:800 12px/16px var(--display);font-style:normal;text-align:center;border:2px solid #fff}
+.cpsok{background:#5fbf7f;color:#fff}.cpsq{background:#c9b9a6;color:#fff}
+.cpsown{position:absolute;top:-8px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--teal,#3f9c95);color:#fff;border-radius:999px;padding:0 6px;font:800 10px/16px var(--display);font-style:normal;border:2px solid #fff}
+.cpsth{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+.cpst{display:flex;align-items:center;gap:3px;background:#fff;border:2px solid var(--line);border-radius:999px;padding:1px 8px 1px 3px;cursor:pointer;color:var(--ink)}
+.cpst svg{width:20px;height:20px}.cpst b{font:800 11.5px var(--display)}
+.cpst.on{border-color:var(--ink);box-shadow:0 2px 0 var(--ink)}.cpst.done{background:#fff3b0}
+.cpfx{display:flex;flex-direction:column;gap:3px;width:100%;margin-top:3px}
+.cpfx span{display:flex;align-items:center;gap:4px;font:700 11.5px/1.15 var(--display);text-align:left;color:#2f7f6c;background:#e6f6e9;border-radius:8px;padding:2px 5px}
+.cpfx span.av{color:#a4473a;background:#fde9e4}.cpfx span.reg{color:#7a4d8f;background:#f1e8f7}
+.cpfx span.none{color:var(--muted);background:#f4efe6;font-weight:600}
+.cpfx svg{width:16px;height:16px;flex:none}
+@media (prefers-reduced-motion:reduce){.cpwh em{animation:none}}
 .cpwb{display:flex;gap:6px;overflow-x:auto;padding:6px 2px 4px;scrollbar-width:none;align-items:stretch}
 .cpwi{flex:none;display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;align-items:center;column-gap:4px;max-width:150px;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:3px 8px 3px 4px}
 .cpwi svg{grid-row:1/3;width:26px;height:26px}.cpwi b{font:800 13px var(--display)}.cpwi small{font:600 10.5px/1.15 var(--body);color:var(--ink2);grid-column:2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -19675,93 +20240,42 @@ document.addEventListener('click', ev => {
 try { cpMigrate(); } catch (e) { console.error(e); }
 window.__comp = { tree: cpTree, learn: cpLearn, free: cpPtsFree, wear: cpWear, state: cpState, apply: cpApplyTrip };
 
-// ================= BOUTIQUE VIVANTE (v17, vague 2) =================
-// Le Comptoir devient une scène animée : les clients animaux entrent, regardent la VITRINE (6 objets du sac exposés),
-// font la queue avec une bulle-image, et on les sert d'un toucher. Ventes passives quand on est absent,
-// clients fidèles (cœurs, cadeaux, rumeurs de trésor), petits événements (client pressé, critique, raton voleur),
-// décoration légère (façade, enseigne, 3 décorations) qui augmente l'attrait.
-// Le Marché mondial gagne une « place du marché » : étals par région, demandes, enchère, tendances de la semaine.
-// État : S.shop.v2 (boutique) et S.mkt.dem / S.mkt.auc (marché). Anciennes sauvegardes : tout est créé à la demande.
-// Économie : la vitrine vend au plus à value() × 1,1 (et jamais au-dessus du prix payé) ; les demandes refusent
-// les objets achetés ; l'enchère reste sous le prix juste × 1,3. Les objets uniques de trésor (it.tresor) sont exclus.
+// ================= BOUTIQUE VIVANTE (v17, allégée en v19) =================
+// Le Comptoir est une scène dessinée : les clients qui ont passé commande attendent devant le comptoir, avec une
+// bulle-image (toucher = livrer ou voir la commande). Clients fidèles : cœurs, cadeaux, rumeurs de trésor.
+// v19 : la vitrine, les ventes passives et la décoration du commerce sont retirées. Les objets exposés ou posés
+// reviennent dans le sac, les anciennes décorations achetées aussi (en objets « déco ») ; rien n'est remboursé.
+// Le Marché mondial : place du marché (étals par région, tendances, enchère) et onglet « Quêtes » (demandes des voyageurs).
+// État : S.shop.v2.fid (fidélité) et S.mkt.dem / S.mkt.auc (marché). Anciennes sauvegardes : migrées une fois (v2.mig19).
+// Économie : les quêtes refusent les objets achetés ; l'enchère reste sous le prix juste × 1,3. Les trésors uniques sont exclus.
 
-const B2_DECOS = [
-  { id: 'plante', name: 'Grande plante', price: 80, a: 1, slot: 2 },
-  { id: 'tableau', name: 'Tableau', price: 150, a: 2, slot: 0 },
-  { id: 'lampions', name: 'Lampions', price: 120, a: 2, slot: 1 },
-  { id: 'horloge', name: 'Horloge', price: 180, a: 2, slot: 0 },
-  { id: 'aquarium', name: 'Aquarium', price: 320, a: 3, slot: 1 },
-  { id: 'tapis', name: 'Tapis rond', price: 140, a: 1, slot: 2 },
-];
-const B2_FAC = ['', '#f08aa6', '#5f9fd0', '#6fb07f', '#e9a03a', '#9a6fd6', '#d9604f'];
-const B2_SIGN = [['#fff8ea', '#4a3528', 'Bois clair'], ['#f6c445', '#7a4a12', 'Doré'], ['#3b4a3f', '#fff8ea', 'Ardoise'], ['#2b2140', '#ff8fd0', 'Néon']];
-const B2_FAC_COST = 40, B2_SIGN_COST = 60, B2_HEART = [3, 7, 12, 18];
+const B2_HEART = [3, 7, 12, 18];
 const B2_INK = '#5b4636';
+// anciennes décorations achetées (v17) : [nom, sous-type, rareté, couleur, prix payé]
+const B2_OLD_DECOS = { plante: ['Grande plante', 'plante', 1, '#6fae7d', 80], tableau: ['Tableau', 'herbier', 1, '#e3b07a', 150], lampions: ['Lampions', 'lanterne', 1, '#f6c445', 120], horloge: ['Horloge', 'statue', 2, '#e3b07a', 180], aquarium: ['Aquarium', 'bocal', 2, '#9fd1e8', 320], tapis: ['Tapis rond', 'tapis', 1, '#d9604f', 140] };
 
 function b2() {
   const s = bqState();
   if (!s.v2 || typeof s.v2 !== 'object') s.v2 = {};
   const v = s.v2;
-  if (!Array.isArray(v.vit)) v.vit = [];
-  if (!Array.isArray(v.dec)) v.dec = [];
-  if (!Array.isArray(v.on)) v.on = [];
   if (!v.fid || typeof v.fid !== 'object') v.fid = {};
-  if (!Array.isArray(v.log)) v.log = [];
-  for (const k of ['fac', 'sign', 'last', 'acc', 'sold']) if (typeof v[k] !== 'number' || !isFinite(v[k])) v[k] = 0;
-  if (!v.last) v.last = Date.now();
-  v.vit = v.vit.filter(it => it && it.id && !it.tresor).slice(0, 6);
-  v.on = v.on.filter(o => o && (o.it || B2_DECOS.some(d => d.id === o.d))).slice(0, 3);
+  if (!v.mig19) {
+    // migration v19 : tout ce qui était en vitrine ou posé en décoration revient dans le sac
+    v.mig19 = 1; let back = 0;
+    (Array.isArray(v.vit) ? v.vit : []).forEach(it => { if (it && it.id) { S.inv.push(it); back++; } });
+    (Array.isArray(v.on) ? v.on : []).forEach(o => { if (o && o.it && o.it.id) { S.inv.push(o.it); back++; } });
+    (Array.isArray(v.dec) ? v.dec : []).forEach(id => {
+      const d = B2_OLD_DECOS[id]; if (!d) return;
+      const it = makeItem([d[0], 'd', d[1], d[2], null, d[3]], 1, 'Ancienne décoration de la boutique', [], { fixed: d[2] });
+      it.paid = d[4]; S.inv.push(it); back++; // revente plafonnée au prix payé : pas de boucle d'argent
+    });
+    ['vit', 'on', 'dec', 'fac', 'sign', 'log', 'acc', 'last', 'sold', 'thief', 'crit'].forEach(k => { delete v[k]; });
+    if (back) { try { save(); } catch (e) {} }
+  }
   return v;
 }
-// exposable / vendable : ni trésor unique, ni bout de carte, ni vêtement porté, ni œuf
+// vendable aux quêtes du marché : ni trésor unique, ni bout de carte, ni œuf, ni vêtement porté
 const b2Ok = it => !!(it && it.id && !it.tresor && it.cat !== 't' && it.cat !== 'o' && !it.cap && !bqWorn().has(it.id));
-const b2MaxRar = () => b2().vit.reduce((a, it) => Math.max(a, it.rarity || 0), 0);
-function b2Price(it) {
-  const base = value(it), rich = 1 + 0.05 * b2MaxRar();
-  let p = Math.min(base * 1.1, base * 0.92 * rich);
-  if (it.paid > 0) p = Math.min(p, it.paid);
-  return Math.max(3, Math.round(p));
-}
-function b2Attract() {
-  const v = b2(); let a = 0;
-  v.on.forEach(o => { a += o.d ? (B2_DECOS.find(x => x.id === o.d) || { a: 0 }).a : Math.min(3, 1 + (o.it.rarity || 0)); });
-  if (v.fac) a++; if (v.sign) a++;
-  return a + Math.min(3, Math.floor(v.vit.length / 2));
-}
-// plus d'attrait : les commandes arrivent un peu plus souvent (au plus 30 %)
-if (typeof bqInterval === 'function') bqInterval = (orig => function () { const r = orig.apply(this, arguments); try { return Math.round(r / (1 + Math.min(0.3, b2Attract() * 0.025))); } catch (e) { return r; } })(bqInterval);
-
-// ---------------- vitrine ----------------
-function b2Expose(id) {
-  const v = b2(), it = S.inv.find(x => x.id === id);
-  if (!it || !b2Ok(it)) return;
-  if (v.vit.length >= 6) { toast('La vitrine est pleine (6 objets). Touchez un objet exposé pour le reprendre.'); return; }
-  S.inv.splice(S.inv.indexOf(it), 1); v.vit.push(it); save(); renderPanel();
-}
-function b2Unexpose(id) {
-  const v = b2(), it = v.vit.find(x => x.id === id); if (!it) return;
-  v.vit.splice(v.vit.indexOf(it), 1); S.inv.push(it); save(); renderPanel();
-}
-// ventes passives : pendant qu'on n'est pas au comptoir, des clients de passage achètent en vitrine (1 à 3 par heure)
-function b2Passive(now) {
-  const v = b2(), dt = Math.min(12 * 3600e3, Math.max(0, now - v.last)); v.last = now;
-  if (!v.vit.length) { v.acc = 0; return 0; }
-  v.acc += dt * (0.6 + b2Attract() * 0.12 + b2MaxRar() * 0.1) / 3600e3;
-  let n = 0;
-  while (v.acc >= 1 && v.vit.length) {
-    v.acc -= 1;
-    const it = v.vit[Math.floor(Math.random() * v.vit.length)], p = b2Price(it);
-    const pool = BQ_CLIENTS.filter(c => c.lvl <= bqState().lvl), c = pick(pool.length ? pool : BQ_CLIENTS);
-    v.vit.splice(v.vit.indexOf(it), 1);
-    gainCoins(p); bqState().earned += p; v.sold++;
-    v.log.push({ name: it.name, it: { name: it.name, cat: it.cat, sub: it.sub, rarity: it.rarity, color: it.color, look: it.look }, p, c: c.id, at: now });
-    b2Fid(c.id).h += 1; n++;
-  }
-  if (v.acc > 3) v.acc = 3;
-  v.log = v.log.slice(-12);
-  if (n) { save(); try { renderTop(); renderNav(); } catch (e) {} }
-  return n;
-}
 
 // ---------------- clients fidèles ----------------
 function b2Fid(id) { const v = b2(); return v.fid[id] || (v.fid[id] = { h: 0, g: 0 }); }
@@ -19776,7 +20290,8 @@ function b2Heart(cid, n) {
       if (r && typeof tzRumorToast === 'function') { tzRumorToast(c.name + ' vous chuchote', r); msg = 'rumeur'; }
       else { gainCoins(40); toast(`${c.name} vous glisse 40 pièces : « Pour votre gentillesse ! »`); msg = 'cadeau'; }
     } else {
-      const T = bqType(), def = T && T.stars ? T.stars[g === 0 ? 0 : 2] : ['Petit bouquet', 'm', 'fleur', 1, null, '#f3aec1'];
+      const T = bqType(), st = T ? T.stars.filter(Array.isArray) : [];
+      const def = st.length ? st[g === 0 ? 0 : st.length - 1] : ['Petit bouquet', 'm', 'fleur', 1, null, '#f3aec1'];
       const it = makeItem(def, 1, `Cadeau de ${c.name}`, [], { fixed: Math.max(g === 0 ? 1 : 2, def[3] || 0) });
       S.inv.push(it); S.dex[it.name] = true;
       toast(`${c.name} vous offre « ${it.name} » ! Votre amitié grandit.`); msg = 'cadeau';
@@ -19786,31 +20301,22 @@ function b2Heart(cid, n) {
 }
 if (typeof GAME !== 'undefined') GAME.on('order:done', e => { try { if (e && e.client) { b2Heart(e.client.id, 2); save(); } } catch (er) {} });
 
-// ---------------- la scène dessinée ----------------
-function b2DecoSVG(id) {
-  const sw = `stroke="${B2_INK}" stroke-width="2" stroke-linejoin="round"`;
-  switch (id) {
-    case 'plante': return `<path d="M12 28 L14 40 H26 L28 28Z" fill="#d98763" ${sw}/><path d="M20 28 C18 16 8 12 3 12 C7 20 13 25 20 28Z M20 28 C22 14 30 8 37 6 C34 16 27 24 20 28Z M20 28 C20 16 20 8 19 1 C25 10 24 20 20 28Z" fill="#6fae7d" ${sw}/>`;
-    case 'tableau': return `<rect x="3" y="6" width="34" height="28" rx="2" fill="#e3b07a" ${sw}/><rect x="7" y="10" width="26" height="20" fill="#bfe1f2"/><path d="M7 30 L15 20 L21 26 L25 22 L33 30Z" fill="#7fbf6a"/><circle cx="27" cy="15" r="3" fill="#fbd76a"/>`;
-    case 'lampions': return [6, 20, 34].map((x, i) => `<path d="M${x} 0 V6" stroke="${B2_INK}" stroke-width="1.4"/><ellipse cx="${x}" cy="14" rx="6" ry="8" fill="${['#f08aa6', '#f6c445', '#5fbf7f'][i]}" ${sw}/><path d="M${x - 3} 6 h6 M${x - 3} 22 h6" stroke="${B2_INK}" stroke-width="2"/>`).join('');
-    case 'horloge': return `<circle cx="20" cy="20" r="16" fill="#fff8ea" ${sw}/><circle cx="20" cy="20" r="12.5" fill="none" stroke="#e3b07a" stroke-width="2"/><path d="M20 20 V11 M20 20 L26 23" stroke="${B2_INK}" stroke-width="2.4" stroke-linecap="round" class="b2-hand"/>`;
-    case 'aquarium': return `<rect x="3" y="10" width="34" height="26" rx="4" fill="#9fd1e8" ${sw}/><path d="M3 16 H37" stroke="#fff" stroke-width="1.5" opacity=".7"/><g class="b2-fish"><path d="M12 24 q6 -6 12 0 q-6 6 -12 0Z M24 24 l5 -4 v8Z" fill="#f6a04b" stroke="${B2_INK}" stroke-width="1.2"/></g><path d="M8 36 q3 -6 6 0 M28 36 q2 -8 5 0" fill="#6fae7d"/>`;
-    case 'tapis': return `<ellipse cx="20" cy="33" rx="19" ry="6" fill="#d9604f" ${sw}/><ellipse cx="20" cy="33" rx="13" ry="3.6" fill="none" stroke="#f6d36b" stroke-width="2"/>`;
-  }
-  return '';
-}
-const B2_SLOT = [{ x: 66, y: 46, s: 44 }, { x: 122, y: 100, s: 34 }, { x: 62, y: 134, s: 54 }];
+// ---------------- la scène dessinée (apparence par défaut du commerce) ----------------
 function b2SVG() {
-  const s = bqState(), v = b2(), T = bqType(), W = 360, H = 230, sw = `stroke="${B2_INK}" stroke-width="2.4" stroke-linejoin="round"`;
-  const wA = T ? T.wall : '#f8e6cc', wB = T ? T.wall2 : '#f6dcc0', aw = v.fac ? B2_FAC[v.fac] : T ? T.aw : '#d9604f', aw2 = T ? T.aw2 : '#fff8ea', door = v.fac ? B2_FAC[v.fac] : T ? T.door : '#b06a3a';
+  const T = bqType(), W = 360, H = 230, sw = `stroke="${B2_INK}" stroke-width="2.4" stroke-linejoin="round"`;
+  const wA = T ? T.wall : '#f8e6cc', wB = T ? T.wall2 : '#f6dcc0', aw = T ? T.aw : '#d9604f', aw2 = T ? T.aw2 : '#fff8ea', door = T ? T.door : '#b06a3a';
   let g = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true">`;
   g += `<defs><pattern id="b2wp" width="24" height="24" patternUnits="userSpaceOnUse"><rect width="24" height="24" fill="${wA}"/><rect width="12" height="24" fill="${wB}" opacity=".7"/></pattern></defs>`;
   g += `<rect width="${W}" height="${H}" fill="url(#b2wp)"/><rect y="190" width="${W}" height="40" fill="#c99a6a"/>` + [0, 1, 2].map(i => `<path d="M0 ${199 + i * 10} H${W}" stroke="#b5875a" stroke-width="1.2"/>`).join('') + `<rect y="186" width="${W}" height="6" fill="#a87a50"/>`;
-  // porte d'entrée (les clients arrivent par là)
+  // porte d'entrée
   g += `<path d="M8 188 V84 a26 26 0 0 1 52 0 V188Z" fill="#4a3528" opacity=".18"/><path d="M12 188 V86 a22 22 0 0 1 44 0 V188Z" fill="${door}" ${sw}/><circle cx="34" cy="92" r="11" fill="#bfe1f2" ${sw}/><circle cx="49" cy="142" r="3" fill="#f6c445" stroke="${B2_INK}" stroke-width="1.5"/><path d="M34 62 V70" stroke="${B2_INK}" stroke-width="1.6"/><path d="M28 70 q6 10 12 0Z" fill="#f6c445" stroke="${B2_INK}" stroke-width="1.6" class="b2-bell"/>`;
-  // étagères de la vitrine (les objets sont posés en HTML par-dessus, pour pouvoir les toucher)
-  [84, 134].forEach(y => { g += `<rect x="246" y="${y}" width="108" height="7" rx="2" fill="#a87a50" ${sw}/><path d="M256 ${y + 7} l4 8 M344 ${y + 7} l-4 8" stroke="${B2_INK}" stroke-width="2.2"/>`; });
-  g += `<rect x="242" y="34" width="116" height="10" rx="3" fill="#e3b07a" ${sw}/><text x="300" y="54" text-anchor="middle" font-family="Caveat, cursive" font-size="13" fill="#4a3528" opacity=".8">Vitrine</text>`;
+  // étagères : les produits phares du commerce (décor fixe)
+  const stars = (T ? T.stars : []).filter(Array.isArray);
+  [84, 134].forEach((y, row) => {
+    const list = row ? stars.slice().reverse() : stars;
+    list.forEach((d, i) => { try { g += itemIcon(bqItemOf(d)).replace('<svg ', `<svg x="${258 + i * 32 + (row ? 8 : 0)}" y="${y - 29}" width="30" height="30" `); } catch (e) {} });
+    g += `<rect x="246" y="${y}" width="108" height="7" rx="2" fill="#a87a50" ${sw}/><path d="M256 ${y + 7} l4 8 M344 ${y + 7} l-4 8" stroke="${B2_INK}" stroke-width="2.2"/>`;
+  });
   // le compagnon derrière le comptoir
   const k = CHARS[S.sel] && !S.trips[S.sel] ? S.sel : (typeof teamIds === 'function' ? teamIds() : []).find(x => !S.trips[x]);
   if (k) { try { g += drawChar(k, S.outfits[k], 'rire', 'b2k').replace('<svg ', `<svg x="146" y="66" width="72" height="80" class="b2-me" `); } catch (e) {} }
@@ -19818,31 +20324,16 @@ function b2SVG() {
   g += `<rect x="118" y="142" width="128" height="46" rx="6" fill="#c98a5a" ${sw}/><rect x="112" y="136" width="140" height="10" rx="4" fill="#e3b07a" ${sw}/><path d="M128 156 H236 M128 172 H236" stroke="#a87a50" stroke-width="2" opacity=".6"/>`;
   if (T) g += `<circle cx="182" cy="165" r="14" fill="#fff8ea" ${sw}/><g transform="translate(170 153) scale(.6)">${bqEmblem(T.em)}</g>`;
   g += `<g transform="translate(214 116)"><rect x="0" y="6" width="26" height="16" rx="3" fill="#7fb6d9" ${sw}/><rect x="4" y="0" width="18" height="8" rx="2" fill="#bfe1f2" ${sw}/><circle cx="13" cy="14" r="3" fill="#f6d36b"/></g>`;
-  // auvent + enseigne
+  // auvent + enseigne aux couleurs du commerce
   for (let i = 0; i < 12; i++) g += `<path d="M${i * 30} 0 H${i * 30 + 30} V18 a15 8 0 0 1 -30 0Z" fill="${i % 2 ? aw2 : aw}" ${sw}/>`;
-  const SG = B2_SIGN[v.sign] || B2_SIGN[0], name = T ? T.short : 'Ma boutique', w = 30 + name.length * 8.4;
-  g += `<g transform="translate(182 36)"><path d="M${-w / 2 + 12} -12 V-2 M${w / 2 - 12} -12 V-2" stroke="${B2_INK}" stroke-width="2"/><rect x="${-w / 2}" y="-2" width="${w}" height="26" rx="8" fill="${SG[0]}" ${sw}/><text x="0" y="16.5" text-anchor="middle" font-family="Baloo 2, Fredoka, sans-serif" font-weight="800" font-size="15" fill="${SG[1]}"${v.sign === 3 ? ' class="b2-neon"' : ''}>${esc(name)}</text></g>`;
-  // décorations posées (3 emplacements : mur, comptoir, sol)
-  v.on.forEach((o, i) => {
-    const P = B2_SLOT[o.d ? (B2_DECOS.find(x => x.id === o.d) || {}).slot ?? i : i] || B2_SLOT[i];
-    const inner = o.d ? b2DecoSVG(o.d) : itemIcon(o.it).replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '');
-    g += `<svg x="${P.x}" y="${P.y}" width="${P.s}" height="${P.s}" viewBox="0 0 40 40" class="b2-deco">${inner}</svg>`;
-  });
+  const name = T ? T.short : 'Ma boutique', w = 30 + name.length * 8.4;
+  g += `<g transform="translate(182 36)"><path d="M${-w / 2 + 12} -12 V-2 M${w / 2 - 12} -12 V-2" stroke="${B2_INK}" stroke-width="2"/><rect x="${-w / 2}" y="-2" width="${w}" height="26" rx="8" fill="#fff8ea" ${sw}/><text x="0" y="16.5" text-anchor="middle" font-family="Baloo 2, Fredoka, sans-serif" font-weight="800" font-size="15" fill="#4a3528">${esc(name)}</text></g>`;
   return g + '</svg>';
 }
-function b2ShelfHTML() {
-  const v = b2(); let h = '';
-  for (let i = 0; i < 6; i++) {
-    const it = v.vit[i], x = 69.5 + (i % 3) * 9.6, y = i < 3 ? 23.5 : 45.2;
-    h += it ? `<button class="b2v" data-b2pane="vit" style="left:${x}%;top:${y}%;--rc:${RARC[it.rarity || 0]}" aria-label="${esc(it.name)} en vitrine">${itemIcon(it)}</button>`
-      : `<button class="b2v empty" data-b2pane="vit" style="left:${x}%;top:${y}%" aria-label="Exposer un objet">+</button>`;
-  }
-  return h;
-}
-// emplacements (en % de la largeur) : commandes à gauche du comptoir, vitrine à droite
-const B2_QO = [17, 1], B2_QV = [62, 79, 45], B2_BROWSE = [80, 70];
+// les clients qui attendent leur commande, à gauche du comptoir
+const B2_QO = [17, 1];
 function b2SceneHTML() {
-  const s = bqState(), v = b2(), now = Date.now();
+  const s = bqState();
   const os = s.orders.slice().sort((a, b) => bqReady(b) - bqReady(a) || a.seq - b.seq).slice(0, 2);
   let cl = os.map((o, i) => {
     const c = BQC(o.client), ready = bqReady(o), al = bqAllocate(o), miss = o.req.find((r, j) => al[j].have < r.n);
@@ -19850,122 +20341,7 @@ function b2SceneHTML() {
     return `<button class="b2c ord${ready ? ' ready' : ''}" data-b2ord="${o.id}" style="left:${B2_QO[i]}%" aria-label="${esc(c.name)} : ${ready ? 'commande prête, toucher pour livrer' : 'voir sa commande'}"><span class="b2b">${bub}</span><img src="${clientURI(c, ready ? 'joie' : 'content')}" alt=""></button>`;
   }).join('');
   if (s.orders.length > 2) cl += `<span class="b2more" style="left:1%">+${s.orders.length - 2}</span>`;
-  const log = v.log.filter(x => !x.seen);
-  const tick = log.length ? `<div class="b2tick"><b>Pendant votre absence</b><span class="b2ti">${log.slice(-5).map(x => itemIcon(x.it)).join('')}</span><span>${log.length} vente${log.length > 1 ? 's' : ''} · ${coins(log.reduce((a, x) => a + x.p, 0))}</span><button class="btn green sm" data-b2logok="1">Super !</button></div>` : '';
-  const a = b2Attract();
-  return `<div class="b2scene" id="b2scene"><div class="b2bg">${b2SVG()}</div><div class="b2shelf">${b2ShelfHTML()}</div><div class="b2layer" id="b2layer">${cl}</div>${tick}<span class="b2attr" title="Attrait de la boutique : plus de clients">${'<i></i>'.repeat(Math.min(6, Math.ceil(a / 2)))}<b>Attrait ${a}</b></span>${!v.vit.length ? '<button class="b2hint" data-b2pane="vit">Exposez des objets en vitrine : les clients de passage les achèteront, même en votre absence !</button>' : ''}</div>`;
-}
-
-// ---------------- clients de passage (animés) ----------------
-const b2L = { cl: [], next: 0, seq: 0 };
-const B2_RATON = { id: 'b2raton', name: 'Raton chapardeur', sp: 'raton', label: 'le raton', cloth: '#3a3a48', acc: '', accC: '#000', rich: 1, lvl: 0 };
-function b2Spawn(now) {
-  const s = bqState(), v = b2(), a = b2Attract(), maxW = a >= 6 ? 3 : 2, dk = dayKey();
-  if (b2L.cl.length >= maxW) return;
-  let kind = 'walk';
-  const cheap = v.vit.filter(it => (it.rarity || 0) <= 1);
-  if (cheap.length && v.thief !== dk && b2L.seq >= 2 && Math.random() < 0.14) { kind = 'raton'; v.thief = dk; }
-  else if (v.vit.length && v.crit !== dk && b2L.seq >= 1 && Math.random() < 0.12) { kind = 'critique'; v.crit = dk; }
-  else if (v.vit.length && Math.random() < 0.22) kind = 'presse';
-  let c = B2_RATON;
-  if (kind !== 'raton') {
-    const pool = BQ_CLIENTS.filter(x => x.lvl <= s.lvl && !b2L.cl.some(y => y.c.id === x.id) && !s.orders.some(o => o.client === x.id));
-    const rich = b2MaxRar() >= 2;
-    c = bqPick(pool.length ? pool : BQ_CLIENTS, x => (rich ? (x.rich || 1) * (x.rich || 1) : 1) * (1 + Math.min(4, (v.fid[x.id] || { h: 0 }).h) * 0.3));
-  }
-  b2L.cl.push({ id: 'w' + (++b2L.seq), c, kind, st: 'enter', x: -24, t: now + 60, born: now });
-}
-function b2Wanted() { return new Set(b2L.cl.map(x => x.want).filter(Boolean)); }
-function b2Step(now) {
-  const v = b2();
-  if (now >= b2L.next && document.visibilityState !== 'hidden') { b2Spawn(now); b2L.next = now + 15000 / (1 + b2Attract() * 0.08) * (0.7 + Math.random() * 0.6); }
-  for (const w of b2L.cl.slice()) {
-    if (now < w.t) continue;
-    if (w.kind === 'raton') {
-      if (w.st === 'enter') { w.st = 'sneak'; w.x = 80; w.t = now + 2400; }
-      else if (w.st === 'sneak') { const it = v.vit.filter(x => (x.rarity || 0) <= 1)[0]; if (it) { v.vit.splice(v.vit.indexOf(it), 1); w.loot = it; save(); b2Shelf(); } w.st = 'run'; w.x = -26; w.t = now + 4700; }
-      else if (w.st === 'run') { if (w.loot) toast(`Le raton a filé avec « ${w.loot.name} » ! La prochaine fois, touchez-le pour le rattraper.`); b2L.cl.splice(b2L.cl.indexOf(w), 1); }
-      else b2L.cl.splice(b2L.cl.indexOf(w), 1);
-      continue;
-    }
-    if (w.st === 'enter') { w.st = 'browse'; w.x = B2_BROWSE[b2L.cl.filter(x => x.st === 'browse').length % 2]; w.t = now + 2600 + Math.random() * 2600; }
-    else if (w.st === 'browse') {
-      const taken = b2Wanted(), free = v.vit.filter(it => !taken.has(it.id));
-      if (free.length) { w.want = bqPick(free, it => 1 + (it.rarity || 0) * (w.c.rich || 1)).id; w.st = 'queue'; w.q = now; w.t = now + 1000; }
-      else { w.st = 'sigh'; w.empty = 1; w.t = now + 2200; }
-    } else if (w.st === 'queue') {
-      const P = w.kind === 'presse' ? 14000 : 32000;
-      if (!v.vit.some(it => it.id === w.want)) { w.st = 'browse'; w.want = null; w.t = now + 1500; }
-      else if (now - w.q > P) { w.st = 'leave'; w.sad = 1; w.want = null; w.x = -26; w.t = now + 2600; }
-      else { if (now - w.q > P * 0.6) w.sigh = 1; w.t = now + 1000; }
-    } else if (w.st === 'sigh' || w.st === 'joy') { w.st = 'leave'; w.want = null; w.x = -26; w.t = now + 2600; }
-    else if (w.st === 'leave') b2L.cl.splice(b2L.cl.indexOf(w), 1);
-  }
-  // places dans la file de la vitrine
-  b2L.cl.filter(w => w.st === 'queue').sort((a, b) => a.q - b.q).forEach((w, i) => { w.x = B2_QV[i] ?? B2_QV[2]; });
-}
-function b2Bubble(w) {
-  const v = b2();
-  if (w.kind === 'raton') return w.loot ? itemIcon(w.loot) : '';
-  if (w.st === 'joy') return '<svg viewBox="0 0 20 20"><path d="M10 17.5C3 12.5 1.5 9.5 1.5 6.8 1.5 4.2 3.5 2.5 5.8 2.5c1.8 0 3.2 1 4.2 2.6 1-1.6 2.4-2.6 4.2-2.6 2.3 0 4.3 1.7 4.3 4.3 0 2.7-1.5 5.7-8.5 10.7Z" fill="#f08aa6" stroke="#5b4636" stroke-width="1.4"/></svg>';
-  if (w.st === 'sigh' || (w.st === 'leave' && w.sad)) return '<svg viewBox="0 0 30 20"><circle cx="8" cy="12" r="5" fill="#e8e2d8"/><circle cx="17" cy="9" r="6" fill="#e8e2d8"/><circle cx="25" cy="12" r="4" fill="#e8e2d8"/></svg>';
-  if (w.st === 'queue') { const it = v.vit.find(x => x.id === w.want); return it ? itemIcon(it) : ''; }
-  if (w.st === 'browse') return '<svg viewBox="0 0 20 20"><circle cx="5" cy="10" r="2" fill="#5b4636"/><circle cx="10" cy="10" r="2" fill="#5b4636"/><circle cx="15" cy="10" r="2" fill="#5b4636"/></svg>';
-  return '';
-}
-function b2Paint() {
-  const layer = document.getElementById('b2layer'); if (!layer) return;
-  const now = Date.now(), seen = new Set();
-  for (const w of b2L.cl) {
-    seen.add(w.id);
-    let el = layer.querySelector(`[data-b2w="${w.id}"]`);
-    if (!el) {
-      el = document.createElement('button'); el.className = 'b2c b2-new'; el.dataset.b2w = w.id;
-      el.innerHTML = `<span class="b2b"></span><img src="${clientURI(w.c, 'content')}" alt="">${w.kind === 'critique' ? '<i class="b2tag crit">Critique</i>' : w.kind === 'presse' ? '<i class="b2tag fast">Pressé</i>' : ''}`;
-      el.style.left = (w.st === 'enter' ? -24 : w.x) + '%';
-      layer.appendChild(el); void el.offsetWidth; el.classList.remove('b2-new');
-    }
-    el.style.left = w.x + '%';
-    el.setAttribute('aria-label', w.kind === 'raton' ? 'Raton voleur : touchez-le pour le rattraper !' : `${w.c.name}${w.st === 'queue' ? ' attend : toucher pour servir' : ''}`);
-    const cls = `b2c st-${w.st} k-${w.kind}${w.sigh ? ' sighing' : ''}${w.st === 'queue' ? ' want' : ''}`;
-    if (el.className !== cls) el.className = cls;
-    const b = b2Bubble(w), key = w.st + (w.want || '') + (w.loot ? 'l' : '') + (w.sad ? 's' : '');
-    if (el.dataset.k !== key) { el.dataset.k = key; el.querySelector('.b2b').innerHTML = b; }
-    if (w.kind === 'presse' && w.st === 'queue') el.style.setProperty('--pt', Math.max(0, 1 - (now - w.q) / 14000).toFixed(2));
-  }
-  layer.querySelectorAll('[data-b2w]').forEach(el => { if (!seen.has(el.dataset.b2w)) el.remove(); });
-}
-function b2Shelf() { const sh = document.querySelector('#b2scene .b2shelf'); if (sh) sh.innerHTML = b2ShelfHTML(); }
-function b2Pop(el, txt) {
-  try {
-    const r = el.getBoundingClientRect(), d = document.createElement('div');
-    d.className = 'b2pop'; d.innerHTML = txt; d.style.left = (r.left + r.width / 2) + 'px'; d.style.top = (r.top + 10) + 'px';
-    bqFX().appendChild(d); setTimeout(() => d.remove(), 1400);
-  } catch (e) {}
-}
-function b2Serve(id, el) {
-  const w = b2L.cl.find(x => x.id === id); if (!w) return;
-  const v = b2(), s = bqState(), now = Date.now();
-  if (w.kind === 'raton') {
-    if (w.st === 'leave') return;
-    if (w.loot) { v.vit.push(w.loot); toast(`Rattrapé ! « ${w.loot.name} » retourne en vitrine. +3 réputation`); } else toast('Ouste ! Le raton détale les mains vides. +3 réputation');
-    w.loot = null; s.rep += 3; w.st = 'leave'; w.x = -26; w.t = now + 2000; b2Pop(el, `+3 ${BQ_STAR}`);
-    save(); b2Shelf(); b2Paint(); return;
-  }
-  if (w.st !== 'queue') { if (w.st === 'browse') b2Pop(el, '…'); return; }
-  const it = v.vit.find(x => x.id === w.want); if (!it) return;
-  const p = b2Price(it), tip = w.kind === 'presse' && now - w.q < 9000 ? Math.max(5, Math.round(p * 0.25)) : 0, lv0 = s.lvl;
-  v.vit.splice(v.vit.indexOf(it), 1); v.sold++;
-  gainCoins(p + tip); s.earned += p + tip;
-  let rep = 1; if (w.kind === 'critique') rep = 12;
-  s.rep += rep; s.lvl = bqLevelOf(s.rep);
-  bqFly(el, it); bqHearts(el); b2Pop(el, `+${p + tip} ${COIN}${tip ? ' <small>pourboire !</small>' : ''}`);
-  b2Heart(w.c.id, 1);
-  if (w.kind === 'critique') toast(`Le critique note dans son carnet : « Une boutique délicieuse ! » +${rep} réputation`);
-  w.st = 'joy'; w.want = null; w.t = now + 1300;
-  save(); b2Shelf(); b2Paint(); try { renderTop(); } catch (e) {}
-  if (s.lvl > lv0) bqLevelUp(s.lvl);
-  const hb = document.getElementById('b2fid'); if (hb) hb.outerHTML = b2FidHTML();
+  return `<div class="b2scene" id="b2scene"><div class="b2bg">${b2SVG()}</div><div class="b2layer">${cl}</div></div>`;
 }
 
 // ---------------- cartes de commande (visuelles) ----------------
@@ -20001,66 +20377,22 @@ function b2FidHTML() {
   }).join('')}</div></div>`;
 }
 
-// ---------------- panneaux : vitrine et décoration ----------------
-let b2Pane = '';
-function b2PaneHTML() {
-  const v = b2();
-  if (b2Pane === 'vit') {
-    const xs = S.inv.filter(b2Ok).sort((a, b) => (b.rarity || 0) - (a.rarity || 0) || value(b) - value(a));
-    return `<div class="b2pane"><div class="b2ph"><b>Vitrine ${v.vit.length}/6</b><span>Touchez un objet pour l’exposer ou le reprendre. Les objets rares attirent des clients plus riches.</span></div>
-      <div class="b2vit">${v.vit.map(it => `<button class="b2it on" data-b2un="${it.id}" style="--rc:${RARC[it.rarity || 0]}">${itemIcon(it)}<i>${b2Price(it)}</i></button>`).join('')}${'<span class="b2it vide"></span>'.repeat(6 - v.vit.length)}</div>
-      ${xs.length ? `<div class="b2grid">${xs.slice(0, 40).map(it => `<button class="b2it" data-b2ex="${it.id}" style="--rc:${RARC[it.rarity || 0]}" aria-label="Exposer ${esc(it.name)}">${itemIcon(it)}<i>${b2Price(it)}</i></button>`).join('')}</div>` : '<p class="empty">Le sac est vide : vos compagnons rapportent des objets à chaque voyage.</p>'}</div>`;
-  }
-  if (b2Pane === 'deco') {
-    const dIt = S.inv.filter(it => it.cat === 'd' && b2Ok(it));
-    let h = `<div class="b2pane"><div class="b2ph"><b>Décorer · attrait ${b2Attract()}</b><span>Plus d’attrait, plus de clients. 3 décorations au maximum.</span></div>`;
-    h += `<div class="b2row"><span class="b2rl">Façade <small>${B2_FAC_COST}</small></span>${B2_FAC.map((c, i) => `<button class="b2sw${v.fac === i ? ' on' : ''}" data-b2fac="${i}" style="--c:${c || (bqType() ? bqType().aw : '#d9604f')}" aria-label="Couleur ${i}"></button>`).join('')}</div>`;
-    h += `<div class="b2row"><span class="b2rl">Enseigne <small>${B2_SIGN_COST}</small></span>${B2_SIGN.map(([bg, fg, n], i) => `<button class="b2sg${v.sign === i ? ' on' : ''}" data-b2sign="${i}" style="background:${bg};color:${fg}">${n}</button>`).join('')}</div>`;
-    h += `<div class="b2grid deco">${B2_DECOS.map(d => { const own = v.dec.includes(d.id), on = v.on.some(o => o.d === d.id); return `<button class="b2dc${on ? ' on' : ''}" data-b2deco="${d.id}"><svg viewBox="0 0 40 40">${b2DecoSVG(d.id)}</svg><b>${esc(d.name)}</b><i>${on ? 'Posée' : own ? 'Poser' : coins(d.price)} · +${d.a}</i></button>`; }).join('')}
-      ${dIt.map(it => `<button class="b2dc" data-b2decit="${it.id}">${itemIcon(it)}<b>${esc(it.name)}</b><i>Du sac · +${Math.min(3, 1 + (it.rarity || 0))}</i></button>`).join('')}
-      ${v.on.filter(o => o.it).map(o => `<button class="b2dc on" data-b2decoff="${o.it.id}">${itemIcon(o.it)}<b>${esc(o.it.name)}</b><i>Posée</i></button>`).join('')}</div></div>`;
-    return h;
-  }
-  return '';
-}
-function b2Deco(id) {
-  const v = b2(), d = B2_DECOS.find(x => x.id === id); if (!d) return;
-  const on = v.on.findIndex(o => o.d === id);
-  if (on >= 0) { v.on.splice(on, 1); }
-  else if (!v.dec.includes(id)) { if (S.coins < d.price) { toast('Pas assez de pièces pour cette décoration.'); return; } S.coins -= d.price; v.dec.push(id); if (v.on.length < 3) v.on.push({ d: id }); }
-  else { if (v.on.length >= 3) { toast('3 décorations au maximum : retirez-en une d’abord.'); return; } v.on.push({ d: id }); }
-  save(); renderTop(); renderPanel();
-}
-function b2DecoItem(id, off) {
-  const v = b2();
-  if (off) { const o = v.on.find(x => x.it && x.it.id === id); if (o) { v.on.splice(v.on.indexOf(o), 1); S.inv.push(o.it); } }
-  else { const it = S.inv.find(x => x.id === id); if (!it || !b2Ok(it)) return; if (v.on.length >= 3) { toast('3 décorations au maximum : retirez-en une d’abord.'); return; } S.inv.splice(S.inv.indexOf(it), 1); v.on.push({ it }); }
-  save(); renderPanel();
-}
-function b2Style(k, i) {
-  const v = b2(), cost = k === 'fac' ? B2_FAC_COST : B2_SIGN_COST;
-  if (v[k] === i) return;
-  if (S.coins < cost) { toast('Pas assez de pièces.'); return; }
-  S.coins -= cost; v[k] = i; save(); renderTop(); renderPanel();
-}
-
 // ---------------- nouveau Comptoir ----------------
-const B2_TOOL = {
-  vit: '<path d="M4 8 H26 V25 H4Z" fill="#fff3e2" stroke="currentColor" stroke-width="2"/><path d="M4 16 H26" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="12.5" r="2.4" fill="#f08aa6"/><rect x="16" y="10" width="5" height="5" fill="#9fd1d8"/><circle cx="12" cy="21" r="2.4" fill="#f6c445"/><path d="M18 23 l3 -5 l3 5Z" fill="#7fbf6a"/>',
-  deco: '<path d="M8 25 V14 L15 8 L22 14 V25Z" fill="#fff3e2" stroke="currentColor" stroke-width="2"/><path d="M5 15 L15 6 L25 15" fill="none" stroke="#f08aa6" stroke-width="3" stroke-linecap="round"/><circle cx="15" cy="18" r="3" fill="#f6c445" stroke="currentColor" stroke-width="1.5"/><path d="M23 5 l1 2 2 .3-1.5 1.4.4 2.1-1.9-1-1.9 1 .4-2.1-1.5-1.4 2-.3Z" fill="#f6c445"/>',
-};
 if (typeof renderComptoir === 'function') renderComptoir = function (box) {
-  const s = bqState(); bqTickOrders(); b2Passive(Date.now());
+  const s = bqState(); bqTickOrders(); b2();
   let h = bqShopsBar() + b2SceneHTML();
-  h += `<div class="b2tools"><button class="b2tool${b2Pane === 'vit' ? ' on' : ''}" data-b2pane="vit"><svg viewBox="0 0 30 30">${B2_TOOL.vit}</svg><span>Vitrine <b>${b2().vit.length}/6</b></span></button><button class="b2tool${b2Pane === 'deco' ? ' on' : ''}" data-b2pane="deco"><svg viewBox="0 0 30 30">${B2_TOOL.deco}</svg><span>Décorer</span></button></div>`;
-  h += b2PaneHTML();
   const now = Date.now();
   h += `<div class="b2cards">${s.orders.slice().sort((a, b) => bqReady(b) - bqReady(a) || a.seq - b.seq).map(b2Card).join('')}`;
   if (s.orders.length < bqSlots()) h += `<div class="b2card b2wait"><svg viewBox="0 0 30 30">${BQ_ICONS.comptoir}</svg><span>Prochaine commande</span><b data-bqcd="${s.next}">${fmtDur(s.next - now)}</b></div>`;
   h += '</div>' + b2FidHTML() + bqRepHTML();
   box.innerHTML = h;
-  setTimeout(b2Paint, 0);
 };
+// tutoriel : la commande guidée demande aussi un produit que vend vraiment le commerce
+if (typeof tuPickReq === 'function') tuPickReq = (orig => function () {
+  const r = orig.apply(this, arguments), T = bqType();
+  try { if (T && (!r || !bqFitReq(T, r))) { const x = BQ_GEN_SHOP.item(T, null, 0); if (x) return { k: 'item', name: x.name, def: [x.def[0], x.def[1], x.def[2], 0, x.def[4] || null, x.def[5] || null], n: 1, src: x.src }; } } catch (e) {}
+  return r;
+})(tuPickReq);
 
 // ================= MARCHÉ : place animée =================
 let b2Tr = null;
@@ -20072,6 +20404,8 @@ function b2Trends() {
   for (let n = 0; list.length < 3 && n < 60 && pool.length; n++) { const x = pool[Math.floor(r() * pool.length)]; if (!list.some(o => o.x.region === x.region)) list.push({ x, pct: [40, 30, 20][list.length] }); }
   b2Tr = { wk, list }; return list;
 }
+// prix habituel (sans la mode de la semaine), pour l'afficher barré
+const b2FairBase = typeof mkFair === 'function' ? mkFair : null;
 if (typeof mkFair === 'function') mkFair = (orig => function (it) {
   const p = orig.apply(this, arguments);
   try { const t = it && it.rid && b2Trends().find(o => o.x.id === it.rid); return t ? mkR5(p * (1 + t.pct / 100)) : p; } catch (e) { return p; }
@@ -20083,7 +20417,7 @@ function b2GoStep(step, label) {
   else { if (step.t !== 'craft') closeSheet(); if (typeof goDreamStep === 'function') { try { goDreamStep(step); } catch (e) { openSheet('voyage'); } } else openSheet('voyage'); }
   if (label) setTimeout(() => toast(label), 900);
 }
-// demandes de joueurs simulés
+// quêtes : demandes de voyageurs simulés (onglet « Quêtes » du marché)
 const b2DemOk = it => b2Ok(it) && !(it.paid > 0);
 function b2DemHave(d) { return S.inv.filter(it => b2DemOk(it) && (d.x.rid ? it.rid === d.x.rid : it.name === d.x.name)); }
 function b2DemGen() {
@@ -20110,7 +20444,7 @@ function b2DemServe(id) {
   have.slice(0, d.n).forEach(it => S.inv.splice(S.inv.indexOf(it), 1));
   gainCoins(d.pay); m.earned += d.pay; m.sold++; d.done = Date.now(); m.demNext = Date.now() + 8 * 60e3;
   save(); renderTop(); renderPanel();
-  toast(`${d.who.name} est ravi·e : +${d.pay} pièces !`);
+  toast(`Quête accomplie : ${d.who.name} est ravi·e, +${d.pay} pièces !`);
 }
 // l'enchère du jour (une nouvelle toutes les 2 heures)
 const B2_AW = 2 * 3600e3;
@@ -20183,58 +20517,56 @@ function b2PlaceHTML() {
     return `<button class="b2stall" data-b2stall="${r}:${cat}" style="--aw:${R.color};animation-delay:${i * 0.4}s"><span class="b2aw"></span><img class="b2sel" src="${clientURI(c, 'content')}" alt=""><span class="b2goods">${ls.slice(0, 3).map(l => `<span class="b2g">${mkIcon(l)}<i>${l.price}</i></span>`).join('')}</span><span class="b2flag">${rgIcon(R, 's')}${esc(R.short)}</span></button>`;
   }).join('')}</div>`;
 }
+function b2TrendHTML(t) {
+  const it = b2ResIt(t.x), now = mkFair(it), was = b2FairBase ? b2FairBase(it) : 0;
+  return `<div class="b2tr"><span class="b2tri">${itemIcon(it)}</span><b>${esc(t.x.name)}</b><em><i aria-hidden="true">↑</i> Prix de vente +${t.pct} % cette semaine</em>${was && was < now ? `<span class="b2trp"><s aria-label="Prix habituel">${was}</s><b aria-label="Prix cette semaine">${coins(now)}</b></span>` : `<span class="b2trp"><b>${coins(now)}</b></span>`}<span class="b2trf">${rgIcon(RG[t.x.region], 's')}${esc(RG[t.x.region].short)}</span><button class="btn cream sm" data-b2trend="${t.x.id}">Où la trouver</button></div>`;
+}
 function b2MarcheHTML() {
   const m = mkState(); mkProcess(); mkRotate();
   const online = 1180 + Math.round(240 * Math.sin(Date.now() / 3.6e6)) + (mkHash(dayKey()) % 90);
   let h = `<div class="mk-ban"><span class="mk-glob" aria-hidden="true"><svg viewBox="0 0 30 30">${MK_CATS[2][2]}</svg></span><div><b>Place du marché <span>(simulé)</span></b><small>${online.toLocaleString('fr-FR')} voyageurs simulés · ${m.list.length} annonces</small></div></div>`;
   h += b2PlaceHTML();
   const tr = b2Trends();
-  if (tr.length) h += `<h3 class="bq-h3">À la mode cette semaine</h3><div class="b2trs">${tr.map(t => `<div class="b2tr"><span class="b2tri">${itemIcon(b2ResIt(t.x))}</span><b>${esc(t.x.name)}</b><em>+${t.pct} %</em><span class="b2trf">${rgIcon(RG[t.x.region], 's')}${esc(RG[t.x.region].short)}</span><button class="btn cream sm" data-b2trend="${t.x.id}">Où la trouver</button></div>`).join('')}</div>`;
+  if (tr.length) h += `<h3 class="bq-h3">À la mode cette semaine</h3><p class="small b2trh">Ces spécialités se vendent plus cher au marché mondial jusqu’à la fin de la semaine.</p><div class="b2trs">${tr.map(b2TrendHTML).join('')}</div>`;
   h += `<h3 class="bq-h3">Enchère</h3>` + b2AucHTML();
+  h += `<div class="mk-cats" role="tablist">${MK_CATS.map(([k, l, ic]) => `<button role="tab" data-b2mk="${k}" aria-selected="false"><svg viewBox="0 0 30 30" aria-hidden="true">${ic}</svg><span>${l}</span></button>`).join('')}</div>`;
+  h += `<p class="small">Vendeurs, quêtes et enchérisseurs sont simulés en attendant de vrais joueurs.</p>`;
+  return mkViewsBar() + h;
+}
+// onglet « Quêtes » : les objets que cherchent les voyageurs (on les leur vend, plus cher que le prix du marché)
+function b2QuetesHTML() {
   const dem = b2Dem();
-  h += `<h3 class="bq-h3">Ils cherchent…</h3><div class="b2dems">${dem.map(d => {
+  let h = `<div class="mk-ban"><span class="mk-glob" aria-hidden="true"><svg viewBox="0 0 30 30">${MK_CATS[2][2]}</svg></span><div><b>Quêtes des voyageurs</b><small>Ils cherchent ces objets et paient plus que le prix du marché. Objets achetés exclus.</small></div></div>`;
+  h += `<div class="b2dems">${dem.map(d => {
     const have = b2DemHave(d).length, ok = have >= d.n, R = RG[d.who.region];
     return `<div class="b2dem${d.done ? ' done' : ''}${ok ? ' ok' : ''}"><span class="b2who">${R ? rgIcon(R, 's') : ''}<b>${esc(d.who.name)}</b></span><span class="b2di" style="--rc:${RARC[d.x.rarity || 0]}">${itemIcon(d.x)}<i>×${d.n}</i></span><span class="b2dn">${esc(d.x.name)}</span><span class="b2dp">${coins(d.pay)}</span>${d.done ? '<span class="b2dok">Servi !</span>' : ok ? `<button class="btn green sm" data-b2dem="${d.id}">Servir</button>` : `<button class="btn cream sm" data-b2demw="${d.id}">${have}/${d.n} · Où ?</button>`}</div>`;
-  }).join('') || '<p class="empty">Pas de demande pour l’instant.</p>'}</div>`;
-  h += `<div class="filters mk-views"><button data-mkview="place" aria-pressed="true">Place</button><button data-mkview="acheter" aria-pressed="false">Acheter</button><button data-mkview="vendre" aria-pressed="false">Vendre</button><button data-mkview="annonces" aria-pressed="false">Mes annonces</button></div>`;
-  h += `<div class="mk-cats" role="tablist">${MK_CATS.map(([k, l, ic]) => `<button role="tab" data-b2mk="${k}" aria-selected="false"><svg viewBox="0 0 30 30" aria-hidden="true">${ic}</svg><span>${l}</span></button>`).join('')}</div>`;
-  h += `<p class="small">Vendeurs, demandes et enchérisseurs sont simulés en attendant de vrais joueurs.</p>`;
-  return h;
+  }).join('') || '<p class="empty">Pas de quête pour l’instant : revenez un peu plus tard.</p>'}</div>`;
+  h += `<p class="small">Une nouvelle quête arrive quelques minutes après chaque quête servie.</p>`;
+  return mkViewsBar() + h;
 }
 if (typeof renderMarche === 'function') {
   try { mkView = 'place'; } catch (e) {}
   renderMarche = (orig => function (box) {
     const m = mkState();
-    if (mkView !== 'place' || (m.unseen && mkAuto !== m.sold)) {
-      orig.apply(this, arguments);
-      const vb = box.querySelector('.mk-views'); if (vb) vb.insertAdjacentHTML('afterbegin', '<button data-mkview="place" aria-pressed="false">Place</button>');
-      return;
-    }
-    box.innerHTML = b2MarcheHTML();
+    if (m.unseen && mkAuto !== m.sold) return orig.apply(this, arguments); // des ventes conclues : « Mes annonces » d'abord
+    if (mkView === 'place') box.innerHTML = b2MarcheHTML();
+    else if (mkView === 'quetes') box.innerHTML = b2QuetesHTML();
+    else orig.apply(this, arguments);
   })(renderMarche);
 }
 
+
 // ---------------- clics ----------------
 document.addEventListener('click', ev => {
-  const el = ev.target.closest('[data-b2w],[data-b2ord],[data-b2pane],[data-b2ex],[data-b2un],[data-b2deco],[data-b2decit],[data-b2decoff],[data-b2fac],[data-b2sign],[data-b2logok],[data-b2where],[data-b2stall],[data-b2trend],[data-b2dem],[data-b2demw],[data-b2bid],[data-b2mk]');
+  const el = ev.target.closest('[data-b2ord],[data-b2where],[data-b2stall],[data-b2trend],[data-b2dem],[data-b2demw],[data-b2bid],[data-b2mk]');
   if (!el || el.disabled) return;
   const d = el.dataset, body = $('panelBody'), top = body ? body.scrollTop : 0, keep = () => { if (body) body.scrollTop = top; };
-  if (d.b2w) return b2Serve(d.b2w, el);
   if (d.b2ord) {
     const o = bqState().orders.find(x => x.id === d.b2ord); if (!o) return;
     if (bqReady(o)) return bqDeliver(o.id, el);
     const card = document.querySelector(`.b2card[data-oid="${o.id}"]`); if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); card.classList.remove('b2flash'); void card.offsetWidth; card.classList.add('b2flash'); }
     return;
   }
-  if (d.b2pane) { b2Pane = b2Pane === d.b2pane && !el.closest('.b2scene') ? '' : d.b2pane; renderPanel(); keep(); if (b2Pane) { const p = document.querySelector('.b2pane'); if (p && el.closest('.b2scene')) p.scrollIntoView({ block: 'nearest' }); } return; }
-  if (d.b2ex) { b2Expose(d.b2ex); keep(); return; }
-  if (d.b2un) { b2Unexpose(d.b2un); keep(); return; }
-  if (d.b2deco) { b2Deco(d.b2deco); keep(); return; }
-  if (d.b2decit) { b2DecoItem(d.b2decit); keep(); return; }
-  if (d.b2decoff) { b2DecoItem(d.b2decoff, true); keep(); return; }
-  if (d.b2fac) { b2Style('fac', +d.b2fac); keep(); return; }
-  if (d.b2sign) { b2Style('sign', +d.b2sign); keep(); return; }
-  if (d.b2logok) { b2().log.forEach(x => { x.seen = 1; }); save(); const t = el.closest('.b2tick'); if (t) t.remove(); return; }
   if (d.b2where) return b2Where(d.b2where);
   if (d.b2stall) { const [r, cat] = d.b2stall.split(':'); mkView = 'acheter'; mkCat = cat; mkRegion = cat === 'res' ? r : ''; mkSp = ''; renderPanel(); if (body) body.scrollTop = 0; return; }
   if (d.b2mk) { mkView = 'acheter'; mkCat = d.b2mk; mkSp = ''; renderPanel(); if (body) body.scrollTop = 0; return; }
@@ -20250,18 +20582,9 @@ document.addEventListener('click', ev => {
   if (d.b2bid) return b2Bid();
 });
 
-// ---------------- horloge (1 s) ----------------
+// ---------------- horloge (1 s) : l'enchère ----------------
 function b2Tick() {
-  try {
-    const now = Date.now(), sc = document.getElementById('b2scene');
-    if (sc) { b2().last = now; b2Step(now); b2Paint(); }
-    else {
-      if (b2L.cl.length) { const v = b2(); b2L.cl.forEach(w => { if (w.loot) v.vit.push(w.loot); }); b2L.cl = []; }
-      b2L.next = now + 1500;
-      if (now % 15000 < 1000) b2Passive(now);
-    }
-    if (b2AucTick(now)) { save(); b2AucPaint(true); }
-  } catch (e) { console.error('boutique2', e); }
+  try { if (b2AucTick(Date.now())) { save(); b2AucPaint(true); } } catch (e) { console.error('boutique2', e); }
 }
 setInterval(b2Tick, 1000);
 try { b2(); } catch (e) {}
@@ -20276,70 +20599,19 @@ try { b2(); } catch (e) {}
 @keyframes b2swing{0%,80%,100%{transform:rotate(0)}85%{transform:rotate(14deg)}92%{transform:rotate(-12deg)}}
 .b2-me{animation:b2breath 3.4s ease-in-out infinite;transform-origin:182px 146px}
 @keyframes b2breath{50%{transform:translateY(1.5px)}}
-.b2-fish{animation:b2fish 4s ease-in-out infinite}@keyframes b2fish{50%{transform:translateX(-6px)}}
-.b2-neon{filter:drop-shadow(0 0 3px #ff8fd0)}
-.b2shelf{position:absolute;inset:0;pointer-events:none}
-.b2v{position:absolute;width:8.6%;aspect-ratio:1;padding:0;border:0;background:none;pointer-events:auto;cursor:pointer;filter:drop-shadow(0 2px 0 rgba(91,70,54,.25))}
-.b2v svg{width:100%;height:100%}
-.b2v.empty{border:2px dashed #b9a68a;border-radius:10px;color:#a8927a;font:800 18px/1 'Baloo 2',sans-serif;background:rgba(255,248,234,.5)}
 .b2layer{position:absolute;inset:0;pointer-events:none}
 .b2c{position:absolute;bottom:0;width:19%;padding:0;border:0;background:none;pointer-events:auto;cursor:pointer;transition:left 2.3s linear;-webkit-tap-highlight-color:transparent}
-.b2c.b2-new{transition:none}
 .b2c img{width:100%;display:block;animation:b2idle 2.4s ease-in-out infinite;transform-origin:50% 100%}
-.b2c.st-enter img,.b2c.st-leave img,.b2c.st-sneak img{animation:b2walk .42s ease-in-out infinite}
-.b2c.st-browse img{animation:b2look 1.6s ease-in-out infinite}
-.b2c.st-joy img{animation:b2jump .5s ease-out 2}
-.b2c.k-raton.st-run{transition:left 4.6s cubic-bezier(.4,0,.9,.6)}
-.b2c.k-raton img{filter:saturate(.7)}
-.b2c.k-raton.st-run img{animation:b2walk .22s ease-in-out infinite}
-.b2c.sighing img,.b2c.st-sigh img{filter:grayscale(.35) brightness(.96);animation:b2sigh 2s ease-in-out infinite}
 @keyframes b2idle{50%{transform:scaleY(.975)}}
-@keyframes b2walk{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-6%) rotate(3deg)}}
 @keyframes b2look{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
-@keyframes b2jump{50%{transform:translateY(-16%)}}
-@keyframes b2sigh{50%{transform:translateY(3%) scaleY(.96)}}
 .b2b{position:absolute;left:50%;bottom:92%;transform:translateX(-50%);width:62%;aspect-ratio:1;background:#fff;border:2px solid var(--ink);border-radius:50%;display:flex;align-items:center;justify-content:center;padding:7%;box-sizing:border-box;box-shadow:0 2px 0 rgba(91,70,54,.2);animation:b2pop .35s ease-out}
 .b2b:empty{display:none}
 .b2b svg{width:100%;height:100%}
 .b2b::after{content:'';position:absolute;bottom:-7px;left:44%;border:5px solid transparent;border-top:6px solid var(--ink)}
 @keyframes b2pop{0%{transform:translateX(-50%) scale(.3)}70%{transform:translateX(-50%) scale(1.12)}}
-.b2c.want .b2b{border-color:#3a8f5a;animation:b2pop .35s ease-out,b2pulse 1.4s ease-in-out infinite .4s}
-.b2c.k-presse.want .b2b{background:conic-gradient(#ffe1a8 calc(var(--pt,1)*360deg),#fff 0)}
 @keyframes b2pulse{50%{box-shadow:0 0 0 4px rgba(95,191,127,.35)}}
 .b2c.ord.ready .b2b{border-color:#3a8f5a;animation:b2pulse 1.4s ease-in-out infinite}
-.b2tag{position:absolute;top:-4%;right:-6%;font:800 9.5px/1 'Baloo 2',sans-serif;padding:2px 5px;border-radius:8px;border:1.5px solid var(--ink);font-style:normal}
-.b2tag.crit{background:#2b2140;color:#fff}.b2tag.fast{background:#ffe1a8}
 .b2more{position:absolute;bottom:4%;font:800 12px 'Baloo 2',sans-serif;background:#fff8ea;border:2px solid var(--ink);border-radius:10px;padding:0 6px}
-.b2attr{position:absolute;left:2%;top:13%;display:flex;align-items:center;gap:2px;background:rgba(255,248,234,.92);border:1.5px solid var(--ink);border-radius:10px;padding:1px 6px;font:700 10.5px 'Baloo 2',sans-serif}
-.b2attr i{width:8px;height:8px;background:#f08aa6;border-radius:50%;border:1px solid var(--ink)}
-.b2attr b{margin-left:3px}
-.b2hint{position:absolute;right:2%;top:58%;width:32%;font:700 10.5px/1.15 'Baloo 2',sans-serif;background:#fff8ea;border:2px solid var(--ink);border-radius:10px;padding:4px 6px;animation:b2pulse 2s infinite;cursor:pointer}
-.b2tick{position:absolute;left:50%;top:22%;transform:translateX(-50%);background:#fff8ea;border:2.5px solid var(--ink);border-radius:14px;padding:6px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;box-shadow:0 4px 0 rgba(91,70,54,.2);animation:b2pop2 .5s ease-out;z-index:3}
-@keyframes b2pop2{0%{transform:translateX(-50%) scale(.5);opacity:0}}
-.b2ti{display:flex;gap:2px}.b2ti svg{width:26px;height:26px}
-.b2pop{position:fixed;z-index:60;transform:translateX(-50%);font:800 16px 'Baloo 2',sans-serif;color:#7a4a12;background:#fff3c4;border:2px solid #5b4636;border-radius:12px;padding:1px 8px;pointer-events:none;animation:b2up 1.4s ease-out forwards;white-space:nowrap}
-.b2pop svg{width:14px;height:14px;vertical-align:-2px}.b2pop small{font-size:10px}
-@keyframes b2up{0%{opacity:0;transform:translate(-50%,10px)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-60px)}}
-.b2tools{display:flex;gap:6px;margin:0 0 8px}
-.b2tool{flex:1;display:flex;align-items:center;gap:6px;justify-content:center;border:2px solid var(--ink);border-radius:14px;background:#fff8ea;padding:5px 8px;font:700 13px 'Baloo 2',sans-serif;cursor:pointer}
-.b2tool svg{width:26px;height:26px}.b2tool.on{background:#ffe1ec}
-.b2pane{border:2px solid var(--ink);border-radius:14px;background:#fffaf1;padding:8px;margin:0 0 10px}
-.b2ph{display:flex;flex-direction:column;margin-bottom:6px}.b2ph span{font-size:11.5px;color:var(--ink2)}
-.b2vit{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:6px;background:#e3b07a33;border-radius:10px;margin-bottom:6px}
-.b2grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:5px;max-height:220px;overflow:auto}
-.b2it{position:relative;aspect-ratio:1;border:2px solid var(--rc,#cbbfae);border-radius:10px;background:#fff;padding:3px;cursor:pointer}
-.b2it svg{width:100%;height:100%}.b2it.vide{border-style:dashed;background:none}
-.b2it i{position:absolute;bottom:-2px;right:-2px;font:800 9.5px/1 'Baloo 2',sans-serif;background:#fff3c4;border:1px solid var(--ink);border-radius:6px;padding:1px 3px;font-style:normal}
-.b2it.on{box-shadow:0 0 0 2px #fff,0 0 0 4px #5fbf7f}
-.b2row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:6px}
-.b2rl{font:700 12px 'Baloo 2',sans-serif;min-width:70px}.b2rl small{color:var(--ink2)}
-.b2sw{width:26px;height:26px;border-radius:50%;border:2px solid var(--ink);background:var(--c);cursor:pointer}
-.b2sw.on,.b2sg.on{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--ink)}
-.b2sg{border:2px solid var(--ink);border-radius:8px;font:800 11px 'Baloo 2',sans-serif;padding:2px 7px;cursor:pointer}
-.b2grid.deco{grid-template-columns:repeat(auto-fill,minmax(86px,1fr));max-height:none}
-.b2dc{display:flex;flex-direction:column;align-items:center;border:2px solid #cbbfae;border-radius:12px;background:#fff;padding:4px;cursor:pointer;font-size:11px}
-.b2dc svg{width:40px;height:40px}.b2dc b{font-size:11.5px;line-height:1.1;text-align:center}.b2dc i{font-style:normal;color:var(--ink2);font-size:10.5px}
-.b2dc.on{border-color:#5fbf7f;background:#effaf2}
 .b2cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:10px}
 .b2card{position:relative;border:2.5px solid var(--ink);border-radius:16px;background:#fff8ea;padding:6px 8px 8px;display:flex;flex-direction:column;gap:4px}
 .b2card.ready{background:#effaf2;border-color:#3a8f5a}
@@ -20373,7 +20645,9 @@ try { b2(); } catch (e) {}
 .b2flag{display:flex;align-items:center;gap:3px;font:700 11px 'Baloo 2',sans-serif;margin-top:3px}
 .b2trs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .b2tr{display:flex;flex-direction:column;align-items:center;gap:2px;border:2px solid var(--ink);border-radius:12px;background:#fff8ea;padding:5px 4px;text-align:center;font-size:11px}
-.b2tri svg{width:40px;height:40px}.b2tr b{font-size:11.5px;line-height:1.1}.b2tr em{font:800 15px 'Baloo 2',sans-serif;color:#2f7f6c;font-style:normal;animation:b2pulse 2s infinite;border-radius:8px;padding:0 4px}
+.b2tri svg{width:40px;height:40px}.b2tr>b{font-size:11.5px;line-height:1.1}.b2tr em{font:800 11px/1.15 'Baloo 2',sans-serif;color:#2f7f6c;font-style:normal;background:#e3f6ec;border:1.5px solid #3a8f5a;border-radius:8px;padding:2px 4px}
+.b2tr em i{font-style:normal;display:inline-block;animation:b2up2 1.6s ease-in-out infinite}@keyframes b2up2{50%{transform:translateY(-2px)}}
+.b2trh{margin:-4px 0 6px}.b2trp{display:flex;align-items:center;gap:4px;font:800 13px 'Baloo 2',sans-serif}.b2trp s{color:var(--ink2);font-weight:700;text-decoration-thickness:2px}
 .b2trf{display:flex;align-items:center;gap:2px;font-size:10.5px}.b2tr .btn{font-size:10.5px;padding:3px 6px}
 .b2auc{display:flex;align-items:center;gap:8px;border:2.5px solid var(--ink);border-radius:16px;background:linear-gradient(135deg,#fff3c4,#ffe1ec);padding:8px;margin-bottom:6px;flex-wrap:wrap}
 .b2auc.flash{animation:b2fl .8s ease-out}.b2auc.done{opacity:.7}
@@ -20388,13 +20662,16 @@ try { b2(); } catch (e) {}
 .b2who{grid-area:w;display:flex;align-items:center;gap:3px;font-size:12px}.b2di{grid-area:i;position:relative;width:46px;height:46px;border:2px solid var(--rc);border-radius:12px;background:#fff;padding:2px}.b2di svg{width:100%;height:100%}
 .b2di i{position:absolute;bottom:-5px;right:-6px;font:800 11px/1 'Baloo 2',sans-serif;background:#fff3c4;border:1.5px solid var(--ink);border-radius:8px;padding:2px 4px;font-style:normal}
 .b2dn{grid-area:n;font:700 12px/1.1 'Baloo 2',sans-serif}.b2dp{grid-area:p;font-weight:800}.b2dem .btn,.b2dok{grid-area:b}.b2dok{color:#2f7f6c;font-weight:800}
-@media (prefers-reduced-motion:reduce){.b2c,.b2c img,.b2sel,.b2b,.b2-bell,.b2-me,.b2-fish{animation:none!important;transition:none!important}}
+@media (prefers-reduced-motion:reduce){.b2c,.b2c img,.b2sel,.b2b,.b2-bell,.b2-me,.b2tr em i{animation:none!important;transition:none!important}}
 @media (min-width:700px){.b2scene{max-width:640px;margin-left:auto;margin-right:auto}.b2place{grid-template-columns:repeat(4,1fr)}}
 `;
   document.head.appendChild(st);
 })();
 
-window.__bq2 = { b2, L: b2L, serve: b2Serve, passive: b2Passive, expose: b2Expose, dem: b2Dem, auc: b2Auc, trends: b2Trends, attract: b2Attract, price: b2Price, step: b2Step, paint: b2Paint };
+window.__bq2 = { b2, dem: b2Dem, quetes: b2QuetesHTML, auc: b2Auc, trends: b2Trends, fairBase: b2FairBase,
+  // tests (v19) : cohérence des commandes
+  S: () => S, newOrder: bqNewOrder, fit: bqFitReq, label: bqReqLabel, tickOrders: bqTickOrders, switchTo: bqSwitch, type: bqType, state: bqState, makeItem,
+  tuPick: () => (typeof tuPickReq === 'function' ? tuPickReq() : null), openShop: openBoutique, render: () => renderPanel(), setMk: v => { mkView = v; } };
 
 // ================= AVENTURE (v17) : on REGARDE l'aventure =================
 // Bibliothèque de petites séquences animées (SVG + CSS) où le familier fait vraiment quelque chose :
@@ -20410,7 +20687,9 @@ const AXL = 'stroke="#5b4636" stroke-width="1.5" stroke-linejoin="round" stroke-
 const AX = {};
 const axDef = (id, mood, g, c, draw) => { AX[id] = { id, mood, g, c, draw }; };
 function axPet(c, x, y, mood, cls, inner) {
-  return `<g class="${cls || 'pet'}"><image href="${portraitURI(c.k, mood || 'content')}" x="${x - 22}" y="${y - 48}" width="44" height="48"/>${inner || ''}</g>`;
+  // v19 : ombre portée douce, posée au sol (elle ne suit pas les sauts) ; pas dans l'eau
+  const sh = /swim|slide|cross|float/.test(cls || '') ? '' : `<ellipse class="axsh" cx="${x}" cy="${y - 0.5}" rx="15" ry="3.2" fill="#2a1e14" opacity="${c.tod === 'nuit' ? 0.14 : 0.22}"/>`;
+  return `${sh}<g class="${cls || 'pet'}"><image href="${portraitURI(c.k, mood || 'content')}" x="${x - 22}" y="${y - 48}" width="44" height="48"/>${inner || ''}</g>`;
 }
 const axStar = (x, y, r) => `M${x} ${y - r} L${x + r * 0.3} ${y - r * 0.3} L${x + r} ${y} L${x + r * 0.3} ${y + r * 0.3} L${x} ${y + r} L${x - r * 0.3} ${y + r * 0.3} L${x - r} ${y} L${x - r * 0.3} ${y - r * 0.3}Z`;
 const axHeart = (x, y, s, cls) => `<path class="${cls || ''}" d="M${x} ${y + 3 * s} C${x - 7 * s} ${y - 2 * s} ${x - 4 * s} ${y - 7 * s} ${x} ${y - 3.5 * s} C${x + 4 * s} ${y - 7 * s} ${x + 7 * s} ${y - 2 * s} ${x} ${y + 3 * s}Z" fill="#f06a8e" stroke="#fff" stroke-width=".8"/>`;

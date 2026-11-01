@@ -163,21 +163,81 @@ function cpWear(k) {
   return { th, set, reg, avN };
 }
 const cpRegName = id => { try { return RG[id].short; } catch (e) { return id; } };
+// v19 : résumé clair des bonus de la tenue actuelle (icônes + valeurs), en haut de la garde-robe
+const CP_WEAR_VAL = {
+  pluie: [['+1', 'trouvaille sous la pluie'], ['+2', 'trouvailles sous la pluie']],
+  froid: [['Rare+', 'objets en neige et montagne'], ['Rare++', 'objets en neige et montagne']],
+  soleil: [['+1', 'trouvaille mer, îles, désert'], ['+2', 'trouvailles mer, îles, désert']],
+  charme: [['+6 %', 'pour apprivoiser'], ['+14 %', 'pour apprivoiser']],
+  route: [['−5 %', 'de durée de voyage'], ['−10 %', 'de durée de voyage']],
+};
 function cpWearBar(k) {
-  const W = cpWear(k), ks = Object.keys(W.th);
-  let h = `<div class="cpwb" aria-label="Ce que la tenue apporte">`;
-  if (!ks.length && !W.avN) return h + `<span class="cpwe">${cpIco('charme')}<i>Chaque vêtement donne un petit bonus</i></span></div>`;
-  h += ks.map(t => `<span class="cpwi ${W.set === t ? 'set' : ''}" title="${esc(W.set === t ? CP_WEAR[t].set : CP_WEAR[t].txt)}">${cpIco(t)}<b>${W.set === t ? '×2' : W.th[t]}</b><small>${esc(W.set === t ? CP_WEAR[t].set : CP_WEAR[t].txt)}</small></span>`).join('');
-  if (W.reg) h += `<span class="cpwi set" title="Tenue complète de la région">${cpIco('region')}<b>★</b><small>Tenue ${esc(cpRegName(W.reg))} : objets plus rares là-bas</small></span>`;
-  if (W.avN) h += `<span class="cpwi av" title="Options d’aventure débloquées">${cpIco('aventure')}<b>${W.avN}</b><small>choix d’aventure en plus</small></span>`;
-  if (!W.set) { const best = ks.sort((a, b) => W.th[b] - W.th[a])[0]; if (best && W.th[best] < 3) h += `<span class="cpwnext">${cpIco(best)} ${W.th[best]}/3 : tenue complète</span>`; }
-  return h + `</div>`;
+  const W = cpWear(k), ks = Object.keys(W.th).sort((a, b) => W.th[b] - W.th[a]);
+  const chips = ks.map(t => { const v = CP_WEAR_VAL[t][W.set === t ? 1 : 0]; return `<span class="cpwi ${W.set === t ? 'set' : ''}" title="${esc(W.set === t ? CP_WEAR[t].set : CP_WEAR[t].txt)}">${cpIco(t)}<b>${v[0]}</b><small>${esc(v[1])}</small></span>`; });
+  if (W.reg) chips.push(`<span class="cpwi set" title="Tenue complète de la région">${cpIco('region')}<b>Rare+</b><small>objets en ${esc(cpRegName(W.reg))}</small></span>`);
+  if (W.avN) chips.push(`<span class="cpwi av" title="Options d’aventure débloquées">${cpIco('aventure')}<b>+${W.avN}</b><small>choix d’aventure</small></span>`);
+  return `<div class="cpwsum"><span class="cpwh">${cpIco('fan')}<b>Bonus de la tenue</b>${W.set ? '<em>Tenue complète !</em>' : ''}</span><div class="cpwb" aria-label="Ce que la tenue apporte">${chips.length ? chips.join('') : `<span class="cpwe">${cpIco('charme')}<i>Aucun bonus pour l’instant : chaque vêtement en apporte un.</i></span>`}</div></div>`;
+}
+// v19 : la « tenue complète » mise en valeur : 3 pièces d'un même thème, les manquantes en aperçu
+function cpSetBlock(k, pick) {
+  const all = Object.keys(CP_WEAR).map(t => cpSetInfo(k, t));
+  const best = all.slice().sort((a, b) => (b.n - a.n) || (b.miss.filter(m => m.own).length - a.miss.filter(m => m.own).length))[0];
+  const S0 = all.find(x => x.t === pick) || best, W = CP_WEAR[S0.t], need = Math.max(0, 3 - S0.n);
+  const ghosts = S0.miss.slice(0, need);
+  const cell = (look, sl, cls, extra) => `<button class="cpsc ${cls}" data-wslot="${sl}" aria-label="${esc(cpLookName(look))}">${itemIcon({ cat: 'v', sub: sl, look, color: cls === 'got' ? (IC[look] || '#e9c46a') : '#e9dfcf' })}${extra || ''}<small>${esc(cpLookName(look))}</small></button>`;
+  let h = `<div class="cpset ${S0.done ? 'done' : ''}"><div class="cpsh">${cpIco(S0.t)}<span><b>Tenue complète ${esc(W.name)}</b><small>${S0.done ? 'Bonus doublé : ' + esc(W.set) : `Encore ${need} pièce${need > 1 ? 's' : ''} pour : ${esc(cpLc(W.set))}`}</small></span><em>${S0.n}/3</em></div>`;
+  h += `<div class="cpsg">${S0.worn.slice(0, 3).map(w => cell(w.look, w.sl, 'got', '<i class="cpsok">✓</i>')).join('')}${ghosts.map(m => cell(m.look, m.sl, 'miss' + (m.own ? ' own' : ''), m.own ? '<i class="cpsown">Dans le sac</i>' : '<i class="cpsq">?</i>')).join('')}</div>`;
+  h += `<div class="cpsth">${all.map(x => `<button class="cpst ${x.t === S0.t ? 'on' : ''} ${x.done ? 'done' : ''}" data-wset="${x.t}" aria-pressed="${x.t === S0.t}" title="${esc(CP_WEAR[x.t].name)}">${cpIco(x.t)}<b>${x.n}/3</b></button>`).join('')}</div></div>`;
+  return h;
+}
+// v19 : sur les cartes de vêtements, l'effet en icône ET en mots courts
+function cpItemFxHTML(it) {
+  if (!it || it.cat !== 'v') return '';
+  const fx = cpItemEffects(it);
+  return `<span class="cpfx">${fx.length ? fx.map(f => `<span class="${f.kind}">${cpIco(f.ico)}${esc(f.txt)}</span>`).join('') : '<span class="none">Pour le style</span>'}</span>`;
 }
 function cpItemBadges(it) {
   if (!it || it.cat !== 'v') return '';
   const t = cpThemeOf(it.look), av = cpAvWear()[it.sub + ':' + it.look];
   if (!t && !av) return '';
   return `<span class="cpib">${t ? `<i title="${esc(CP_WEAR[t].txt)}">${cpIco(t)}</i>` : ''}${av ? `<i title="Débloque des choix d’aventure">${cpIco('aventure')}</i>` : ''}</span>`;
+}
+
+// ---------------- v19 : l'effet d'un vêtement, en icône ET en mots courts ----------------
+// options d'aventure débloquées par « emplacement:look » → libellés (« traverser le ruisseau à pied »)
+let _cpAvLab = null;
+function cpAvLabels() {
+  if (_cpAvLab) return _cpAvLab;
+  const m = {};
+  const walk = n => { if (!n || typeof n !== 'object') return; (n.o || []).forEach(o => { (o.need || []).forEach(x => { if (/^wear:/.test(x) && o.a) { const key = x.slice(5), a = String(o.a).replace(/\{[^}]*\}/g, '').trim(); (m[key] = m[key] || []).includes(a) || m[key].push(a); } }); walk(o.go); }); };
+  try { (typeof AV_SCENES !== 'undefined' ? AV_SCENES : []).forEach(walk); } catch (e) {}
+  return (_cpAvLab = m);
+}
+const cpLc = s => s ? s.charAt(0).toLowerCase() + s.slice(1) : s;
+// [{ ico, txt, kind }] : ce que le vêtement apporte (rien de nouveau : thèmes CP_WEAR, choix d'aventure, région)
+function cpItemEffects(it) {
+  const out = []; if (!it || it.cat !== 'v') return out;
+  const t = cpThemeOf(it.look);
+  if (t) out.push({ ico: t, txt: CP_WEAR[t].txt, kind: 'th', th: t });
+  const av = cpAvLabels()[it.sub + ':' + it.look];
+  if (av && av.length) out.push({ ico: 'aventure', txt: `Débloque : ${cpLc(av[0])}${av.length > 1 ? ` (+${av.length - 1})` : ''}`, kind: 'av' });
+  try { const og = !it.orig && typeof originOf === 'function' ? originOf(it) : null; if (og && og.region && !og.made) out.push({ ico: 'region', txt: `Pièce de la tenue ${cpRegName(og.region)}`, kind: 'reg' }); } catch (e) {}
+  return out;
+}
+const cpLookSlot = look => { for (const s of SLOTS) if (s[2].some(x => x[1] === look)) return s[0]; return null; };
+const cpLookName = look => { for (const s of SLOTS) for (const [l, v] of s[2]) if (v === look) return l; return { chapeau: 'Chapeau', couronne: 'Couronne' }[look] || look; };
+// tenue complète d'un thème : 3 pièces portées ; les pièces manquantes possibles (et celles qui sont déjà dans le sac)
+function cpSetInfo(k, t) {
+  const o = (S.outfits && S.outfits[k]) || {}, W = CP_WEAR[t];
+  const worn = ST_SLOT_IDS.filter(sl => o[sl] && cpThemeOf(o[sl]) === t).map(sl => ({ sl, look: o[sl] }));
+  const usedSl = new Set(worn.map(w => w.sl)), miss = [];
+  for (const look of W.looks) {
+    const sl = cpLookSlot(look); if (!sl || usedSl.has(sl) || o[sl] === look) continue;
+    let own = false; try { own = typeof stOwned === 'function' && stOwned(k, sl).some(x => x.look === look); } catch (e) {}
+    miss.push({ sl, look, own });
+  }
+  miss.sort((a, b) => b.own - a.own);
+  return { t, n: Math.min(3, worn.length), worn, miss, done: worn.length >= 3 };
 }
 
 // ---------------- effets en jeu ----------------
@@ -420,6 +480,34 @@ document.addEventListener('click', ev => {
 @keyframes cppulse{to{transform:scale(1.07)}}
 @keyframes cppop{0%{transform:translate(-50%,-50%) scale(.6)}100%{transform:translate(-50%,-50%) scale(1)}}
 /* tenue */
+.cpwsum{display:flex;flex-direction:column;gap:2px;background:#fff;border:2.5px solid var(--ink);border-radius:16px;padding:7px 9px 4px;box-shadow:0 3px 0 rgba(74,53,40,.25)}
+.cpwh{display:flex;align-items:center;gap:6px}.cpwh svg{width:20px;height:20px}.cpwh b{font:800 15px var(--display)}
+.cpwh em{margin-left:auto;font:800 11.5px var(--display);font-style:normal;color:#8a5a00;background:linear-gradient(180deg,#fff3b0,#f6c445);border:2px solid #d99a1e;border-radius:999px;padding:0 8px;animation:cpglow 1.6s ease-in-out infinite alternate}
+@keyframes cpglow{to{box-shadow:0 0 10px #f6c445}}
+.cpset{display:flex;flex-direction:column;gap:8px;background:linear-gradient(180deg,#fff7e6,#fff);border:2.5px solid var(--ink);border-radius:18px;padding:9px 10px;box-shadow:0 3px 0 rgba(74,53,40,.25)}
+.cpset.done{background:linear-gradient(180deg,#fff3b0,#fff 70%);border-color:#d99a1e;box-shadow:0 0 0 3px #f6e08a,0 3px 0 rgba(74,53,40,.25)}
+.cpsh{display:flex;align-items:center;gap:8px}.cpsh>svg{width:30px;height:30px;flex:none}
+.cpsh span{flex:1;min-width:0;display:flex;flex-direction:column}.cpsh b{font:800 15.5px/1.15 var(--display)}.cpsh small{font:600 12px/1.2 var(--body);color:var(--ink2)}
+.cpsh em{flex:none;font:800 16px var(--display);font-style:normal;background:#fff;border:2.5px solid var(--ink);border-radius:12px;padding:1px 8px}
+.cpsg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cpsc{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px 5px;border-radius:14px;background:#fff;border:2.5px solid var(--greenD,#3a8f5a);cursor:pointer;color:var(--ink)}
+.cpsc>svg{width:44px;height:44px}
+.cpsc small{font:700 11.5px/1.1 var(--display);text-align:center}
+.cpsc.miss{border:2.5px dashed #c9b9a6;background:#fbf7f0}.cpsc.miss>svg{opacity:.45;filter:grayscale(1)}
+.cpsc.miss.own{border-color:var(--teal,#3f9c95);background:#eaf7f5}.cpsc.miss.own>svg{opacity:.8;filter:none}
+.cpsok,.cpsq{position:absolute;top:-7px;right:-5px;width:20px;height:20px;border-radius:50%;font:800 12px/16px var(--display);font-style:normal;text-align:center;border:2px solid #fff}
+.cpsok{background:#5fbf7f;color:#fff}.cpsq{background:#c9b9a6;color:#fff}
+.cpsown{position:absolute;top:-8px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--teal,#3f9c95);color:#fff;border-radius:999px;padding:0 6px;font:800 10px/16px var(--display);font-style:normal;border:2px solid #fff}
+.cpsth{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+.cpst{display:flex;align-items:center;gap:3px;background:#fff;border:2px solid var(--line);border-radius:999px;padding:1px 8px 1px 3px;cursor:pointer;color:var(--ink)}
+.cpst svg{width:20px;height:20px}.cpst b{font:800 11.5px var(--display)}
+.cpst.on{border-color:var(--ink);box-shadow:0 2px 0 var(--ink)}.cpst.done{background:#fff3b0}
+.cpfx{display:flex;flex-direction:column;gap:3px;width:100%;margin-top:3px}
+.cpfx span{display:flex;align-items:center;gap:4px;font:700 11.5px/1.15 var(--display);text-align:left;color:#2f7f6c;background:#e6f6e9;border-radius:8px;padding:2px 5px}
+.cpfx span.av{color:#a4473a;background:#fde9e4}.cpfx span.reg{color:#7a4d8f;background:#f1e8f7}
+.cpfx span.none{color:var(--muted);background:#f4efe6;font-weight:600}
+.cpfx svg{width:16px;height:16px;flex:none}
+@media (prefers-reduced-motion:reduce){.cpwh em{animation:none}}
 .cpwb{display:flex;gap:6px;overflow-x:auto;padding:6px 2px 4px;scrollbar-width:none;align-items:stretch}
 .cpwi{flex:none;display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;align-items:center;column-gap:4px;max-width:150px;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:3px 8px 3px 4px}
 .cpwi svg{grid-row:1/3;width:26px;height:26px}.cpwi b{font:800 13px var(--display)}.cpwi small{font:600 10.5px/1.15 var(--body);color:var(--ink2);grid-column:2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}

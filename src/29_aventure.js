@@ -80,10 +80,17 @@ function avDecor(biome, tod, wx) {
   const night = tod === 'nuit', R = avRng(biome.length * 977 + 13), r = (a, b) => a + R() * (b - a);
   const L = `stroke="${T(AV_L)}" stroke-width="1.6" stroke-linejoin="round"`;
   const hills = (y, amp, col, n = 4) => { let d = `M0 ${y}`; for (let i = 0; i < n; i++) { const x0 = (400 / n) * i, x1 = x0 + 400 / n; d += ` Q${x0 + 200 / n} ${y - amp * (0.6 + R() * 0.8)} ${x1} ${y}`; } return `<path d="${d} V240 H0Z" fill="${T(col)}"/>`; };
-  const tree = (x, y, s, col) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-4" y="-18" width="8" height="22" rx="2" fill="${T('#8a6448')}" ${L}/><circle cx="0" cy="-34" r="20" fill="${T(col)}" ${L}/><circle cx="-12" cy="-24" r="12" fill="${T(col)}"/><circle cx="12" cy="-26" r="13" fill="${T(col)}"/><circle cx="-6" cy="-40" r="5" fill="#fff" opacity=".22"/></g>`;
-  const pine = (x, y, s, col, snow) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-3" y="-8" width="6" height="12" fill="${T('#7a5a40')}"/><path d="M0 -62 L18 -30 H9 L22 -8 H-22 L-9 -30 H-18Z" fill="${T(col)}" ${L}/>${snow ? `<path d="M0 -62 L9 -46 Q0 -42 -9 -46Z M-13 -30 Q0 -26 13 -30 L9 -36 Q0 -32 -9 -36Z" fill="#fff"/>` : ''}</g>`;
-  const palm = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M0 0 Q6 -30 -2 -64" stroke="${T('#a07850')}" stroke-width="7" fill="none" stroke-linecap="round"/><g fill="${T('#4fa36a')}" ${L}><path d="M-2 -64 Q-30 -70 -40 -50 Q-22 -62 -2 -60Z"/><path d="M-2 -64 Q28 -74 40 -52 Q20 -64 -2 -60Z"/><path d="M-2 -64 Q-12 -90 -32 -88 Q-14 -80 -4 -62Z"/><path d="M-2 -64 Q14 -92 34 -86 Q14 -80 0 -62Z"/></g><circle cx="-4" cy="-60" r="4" fill="${T('#8a5a3a')}"/><circle cx="3" cy="-59" r="4" fill="${T('#8a5a3a')}"/></g>`;
-  let far = '', mid = '', ground = '', near = '';
+  const SH = (rx) => `<ellipse cx="${rx * 0.25}" cy="3" rx="${rx}" ry="${(rx / 4.5).toFixed(1)}" fill="#2a1e14" opacity="${night ? 0.08 : 0.15}"/>`;
+  const tree = (x, y, s, col) => `<g transform="translate(${x} ${y}) scale(${s})">${SH(20)}<rect x="-4" y="-18" width="8" height="22" rx="2" fill="${T('#8a6448')}" ${L}/><circle cx="0" cy="-34" r="20" fill="${T(col)}" ${L}/><circle cx="-12" cy="-24" r="12" fill="${T(col)}"/><circle cx="12" cy="-26" r="13" fill="${T(col)}"/><circle cx="-6" cy="-40" r="5" fill="#fff" opacity=".22"/></g>`;
+  const pine = (x, y, s, col, snow) => `<g transform="translate(${x} ${y}) scale(${s})">${SH(17)}<rect x="-3" y="-8" width="6" height="12" fill="${T('#7a5a40')}"/><path d="M0 -62 L18 -30 H9 L22 -8 H-22 L-9 -30 H-18Z" fill="${T(col)}" ${L}/>${snow ? `<path d="M0 -62 L9 -46 Q0 -42 -9 -46Z M-13 -30 Q0 -26 13 -30 L9 -36 Q0 -32 -9 -36Z" fill="#fff"/>` : ''}</g>`;
+  const palm = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})">${SH(15)}<path d="M0 0 Q6 -30 -2 -64" stroke="${T('#a07850')}" stroke-width="7" fill="none" stroke-linecap="round"/><g fill="${T('#4fa36a')}" ${L}><path d="M-2 -64 Q-30 -70 -40 -50 Q-22 -62 -2 -60Z"/><path d="M-2 -64 Q28 -74 40 -52 Q20 -64 -2 -60Z"/><path d="M-2 -64 Q-12 -90 -32 -88 Q-14 -80 -4 -62Z"/><path d="M-2 -64 Q14 -92 34 -86 Q14 -80 0 -62Z"/></g><circle cx="-4" cy="-60" r="4" fill="${T('#8a5a3a')}"/><circle cx="3" cy="-59" r="4" fill="${T('#8a5a3a')}"/></g>`;
+  let far = '', mid = '', ground = '', near = '', back = '';
+  // v19 : plan lointain dans la brume (perspective atmosphérique), textures légères, éléments propres au lieu
+  const HZ = tod === 'nuit' ? '#3b4a82' : tod === 'soir' ? '#fde3b4' : wx === 'pluie' ? '#dbe2ea' : '#e4f5fb';
+  const hz = (c, f) => avMix(T(c), HZ, f == null ? 0.55 : f);
+  const speck = (col, n, y0, y1) => `<g fill="${T(col)}" opacity=".35">${Array.from({ length: n }, () => `<ellipse cx="${r(0, 400).toFixed(0)}" cy="${r(y0, y1).toFixed(0)}" rx="${r(1, 2.6).toFixed(1)}" ry="${r(0.6, 1.3).toFixed(1)}"/>`).join('')}</g>`;
+  const rock = (x, y, s, col) => `<g transform="translate(${x} ${y}) scale(${s})">${SH(14)}<path d="M-16 0 Q-15 -14 -4 -17 Q8 -20 14 -8 Q17 -3 16 0Z" fill="${T(col || '#b7aea0')}" ${L}/><path d="M-8 -12 Q-2 -15 4 -13" stroke="#fff" stroke-width="2" opacity=".35" fill="none"/></g>`;
+  const gull = (x, y, d) => `<g class="avgull" style="animation-delay:${d}s"><path d="M${x - 9} ${y} q4.5 -6 9 0 q4.5 -6 9 0" stroke="${night ? '#c9d2ec' : '#fff'}" stroke-width="2.2" fill="none" stroke-linecap="round"/></g>`;
   const grass = c => `<rect x="0" y="196" width="400" height="44" fill="${T(c)}"/>`;
   const path = c => `<path d="M0 214 Q100 206 200 214 T400 214 V230 Q300 236 200 230 T0 230Z" fill="${T(c)}" opacity=".9"/>`;
   const tufts = (col, n = 7) => Array.from({ length: n }, (_, i) => { const x = 20 + i * (360 / n) + r(0, 20), y = r(224, 236); return `<path d="M${x} ${y} q-3 -9 -7 -11 M${x} ${y} q0 -12 1 -14 M${x} ${y} q3 -9 8 -10" stroke="${T(col)}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`; }).join('');
@@ -105,9 +112,9 @@ function avDecor(biome, tod, wx) {
       const lit = night || tod === 'soir';
       far = Array.from({ length: 8 }, (_, i) => { const w = r(34, 50), h = r(50, 100), x = 4 + i * 49; let s = `<rect x="${x}" y="${178 - h}" width="${w}" height="${h}" fill="${T('#b9c5da')}"/>`; for (let yy = 178 - h + 8; yy < 170; yy += 14) for (let xx = x + 6; xx < x + w - 6; xx += 10) s += `<rect x="${xx}" y="${yy}" width="5" height="7" fill="${lit && R() < 0.5 ? '#ffe28a' : T('#e3eaf4')}"/>`; return s; }).join('');
       const fac = ['#f4c7a1', '#f6e0a8', '#cfe2c6', '#f2b8b8', '#c9d8ef'];
-      mid = [0, 1, 2, 3].map(i => { const x = 8 + i * 100, w = 80, h = r(70, 92), c = fac[i % fac.length]; return `<g><rect x="${x}" y="${200 - h}" width="${w}" height="${h}" fill="${T(c)}" ${L}/><path d="M${x - 5} ${200 - h} L${x + w / 2} ${200 - h - 26} L${x + w + 5} ${200 - h}Z" fill="${T('#d9604f')}" ${L}/><rect x="${x + w / 2 - 9}" y="${172}" width="18" height="28" rx="8" fill="${T('#8a6448')}" ${L}/><rect x="${x + 10}" y="${200 - h + 14}" width="16" height="16" fill="${lit ? '#ffe28a' : T('#bfe1f2')}" ${L}/><rect x="${x + w - 26}" y="${200 - h + 14}" width="16" height="16" fill="${lit ? '#ffe28a' : T('#bfe1f2')}" ${L}/><path d="M${x + 6} ${200 - h + 40} H${x + w - 6}" stroke="${T('#f08aa6')}" stroke-width="6" stroke-dasharray="8 4"/></g>`; }).join('') + [92, 292].map(x => `<g><rect x="${x}" y="150" width="4" height="50" fill="${T('#4a3528')}"/><circle cx="${x + 2}" cy="148" r="6" fill="${lit ? '#ffe9a0' : T('#fff6d8')}" ${L}/>${lit ? `<circle cx="${x + 2}" cy="148" r="18" fill="#ffe9a0" opacity=".28"/>` : ''}</g>`).join('');
+      mid = [0, 1, 2, 3].map(i => { const x = 8 + i * 100, w = 80, h = r(70, 92), c = fac[i % fac.length]; return `<g><rect x="${x}" y="${200 - h}" width="${w}" height="${h}" fill="${T(c)}" ${L}/><path d="M${x - 5} ${200 - h} L${x + w / 2} ${200 - h - 26} L${x + w + 5} ${200 - h}Z" fill="${T('#d9604f')}" ${L}/><rect x="${x + w / 2 - 9}" y="${172}" width="18" height="28" rx="8" fill="${T('#8a6448')}" ${L}/><rect x="${x + 10}" y="${200 - h + 14}" width="16" height="16" fill="${lit ? '#ffe28a' : T('#bfe1f2')}" ${L}/><rect x="${x + w - 26}" y="${200 - h + 14}" width="16" height="16" fill="${lit ? '#ffe28a' : T('#bfe1f2')}" ${L}/>${[x + 5, x + w / 2 + 12].map((wx0, wi) => `<rect x="${wx0}" y="176" width="${w / 2 - 17}" height="20" rx="2" fill="${lit ? '#ffe9a8' : T('#d8eef6')}" ${L}/>${[0, 1, 2].map(g => `<circle cx="${wx0 + 5 + g * 7}" cy="191" r="3" fill="${T(['#e0a05a', '#f08aa6', '#9fd37a', '#f6c445'][(i + g + wi) % 4])}"/>`).join('')}<path d="M${wx0 + 2} 180 l6 -4" stroke="#fff" stroke-width="1.6" opacity=".7"/>`).join('')}<path d="M${x + 1} 166 H${x + w - 1} L${x + w - 5} 175 H${x + 5}Z" fill="${T(['#e2584d', '#4f97c4', '#5fae6a', '#e9a83a'][i % 4])}" ${L}/><path d="M${x + 5} 170 H${x + w - 5}" stroke="#fff" stroke-width="5" stroke-dasharray="6 6" opacity=".85"/><rect x="${x + w / 2 - 16}" y="${200 - h + 34}" width="32" height="9" rx="3" fill="${T('#fff6e6')}" ${L}/></g>`; }).join('') + [92, 292].map(x => `<g><rect x="${x}" y="150" width="4" height="50" fill="${T('#4a3528')}"/><circle cx="${x + 2}" cy="148" r="6" fill="${lit ? '#ffe9a0' : T('#fff6d8')}" ${L}/>${lit ? `<circle cx="${x + 2}" cy="148" r="18" fill="#ffe9a0" opacity=".28"/>` : ''}</g>`).join('');
       ground = `<rect x="0" y="196" width="400" height="44" fill="${T('#cfc6b8')}"/><rect x="0" y="196" width="400" height="9" fill="${T('#e8dfd0')}"/>` + Array.from({ length: 10 }, (_, i) => `<path d="M${i * 40 + 6} 222 h18" stroke="${T('#f6efe2')}" stroke-width="3"/>`).join('');
-      near = [50, 210, 340].map(x => `<g transform="translate(${x + r(-10, 10)} 236)"><path d="M-9 0 L-7 -12 H7 L9 0Z" fill="${T('#d98a5a')}" ${L}/><circle cx="-4" cy="-17" r="5" fill="${T('#f08aa6')}"/><circle cx="4" cy="-18" r="5" fill="${T('#f6c445')}"/><circle cx="0" cy="-23" r="5" fill="${T('#9fd37a')}"/></g>`).join('');
+      near = [50, 210, 340].map(x => `<g transform="translate(${x + r(-10, 10)} 236)"><path d="M-9 0 L-7 -12 H7 L9 0Z" fill="${T('#d98a5a')}" ${L}/><circle cx="-4" cy="-17" r="5" fill="${T('#f08aa6')}"/><circle cx="4" cy="-18" r="5" fill="${T('#f6c445')}"/><circle cx="0" cy="-23" r="5" fill="${T('#9fd37a')}"/></g>`).join('') + `<g transform="translate(130 238)"><ellipse cx="4" cy="1" rx="18" ry="3.5" fill="#2a1e14" opacity=".15"/><path d="M0 0 V-40" stroke="${T('#5b4636')}" stroke-width="2"/><path d="M-22 -36 Q0 -54 22 -36Z" fill="${T('#f6efe2')}" ${L}/><path d="M-11 -42 Q0 -52 11 -42" stroke="${T('#e2584d')}" stroke-width="5" fill="none"/><path d="M-10 -14 H10 M0 -14 V0 M-6 0 H6" stroke="${T('#5b4636')}" stroke-width="2.4"/><path d="M-4 -18 h6 v4 h-6Z" fill="#fff" ${L}/></g>`;
       break; }
     case 'campagne':
       far = hills(150, 30, '#b9d98e', 3) + `<path d="M0 160 Q100 140 200 158 T400 160 V175 H0Z" fill="${T('#e8d48a')}"/>` + `<g transform="translate(300 152)"><rect x="-16" y="-24" width="32" height="24" fill="${T('#d9604f')}" ${L}/><path d="M-20 -24 L0 -40 L20 -24Z" fill="${T('#a8473c')}" ${L}/></g>`;
@@ -146,15 +153,37 @@ function avDecor(biome, tod, wx) {
       near = [40, 160, 290].map(x => `<ellipse cx="${x + r(-10, 10)}" cy="234" rx="8" ry="5" fill="${T('#c9a07a')}" ${L}/>`).join('');
       break;
   }
-  return { far, mid, ground, near };
+  // plan du fond, selon le paysage
+  if (biome === 'montagne' || biome === 'neige') back = `<path d="M0 150 L40 102 L72 128 L118 80 L168 132 L214 92 L262 134 L322 86 L372 120 L400 108 V240 H0Z" fill="${hz('#8fa3c0')}"/><path d="M118 80 L130 96 L118 92 L108 98Z M322 86 L334 102 L322 98 L312 102Z" fill="${hz('#ffffff', 0.3)}"/>`;
+  else if (biome === 'ville' || biome === 'quartier') back = Array.from({ length: 12 }, (_, i) => { const w = r(18, 34), h = r(40, 110); return `<rect x="${(i * 34 + r(-6, 6)).toFixed(0)}" y="${(170 - h).toFixed(0)}" width="${w.toFixed(0)}" height="${h.toFixed(0)}" fill="${hz('#9fb0cc')}"/>`; }).join('') + `<rect x="250" y="40" width="10" height="130" fill="${hz('#9fb0cc')}"/><path d="M255 18 V40" stroke="${hz('#9fb0cc')}" stroke-width="2"/>`;
+  else if (biome === 'mer') back = `<path d="M10 121 Q50 104 96 121Z M300 121 Q330 110 372 121Z" fill="${hz('#6aa889')}"/>` + gull(150, 64, 0) + gull(210, 84, 1.3) + gull(330, 52, 0.6);
+  else if (biome === 'desert') back = `<path d="M0 150 Q100 128 200 146 T400 142 V240 H0Z" fill="${hz('#e9b878')}"/><path d="M60 146 V116 H120 V146Z" fill="${hz('#c98d5a')}"/>`;
+  else back = `<path d="M0 146 Q60 112 130 134 T260 126 T400 138 V240 H0Z" fill="${hz(biome === 'jungle' ? '#4c9a68' : '#8fbf8a')}"/>` + Array.from({ length: 14 }, (_, i) => `<circle cx="${(i * 29 + r(0, 12)).toFixed(0)}" cy="${(132 + r(-6, 6)).toFixed(0)}" r="${r(5, 9).toFixed(1)}" fill="${hz('#5f9a6a', 0.5)}"/>`).join('');
+  // textures légères du sol
+  if (biome === 'ville' || biome === 'quartier') ground += Array.from({ length: 20 }, (_, i) => `<path d="M${i * 20} 205 v-9" stroke="${T('#d8cfc0')}" stroke-width="1"/>`).join('');
+  else if (biome === 'mer' || biome === 'desert') ground += speck('#c9a46e', 34, 202, 240);
+  else if (biome === 'neige') ground += speck('#cfdcec', 20, 204, 240);
+  else ground += speck('#6f9a52', 40, 200, 240) + speck('#fff6c8', 12, 204, 236);
+  // éléments propres au lieu
+  if (biome === 'montagne') near += rock(130, 238, 1.1) + rock(270, 240, 0.8, '#a9a090') + pine(370, 240, 0.62, '#4f8f6a') + pine(20, 240, 0.5, '#4f8f6a');
+  if (biome === 'neige') near += rock(300, 240, 0.8, '#d6e2f0');
+  if (biome === 'mer') { far += `<path class="avsurf" d="M0 190 Q20 184 40 190 T80 190 T120 190 T160 190 T200 190 T240 190 T280 190 T320 190 T360 190 T400 190" stroke="#fff" stroke-width="2.4" fill="none" opacity=".7"/>`; near += gull(240, 150, 0.9); }
+  if (biome === 'foret' || biome === 'jungle') near += rock(330, 240, 0.6, '#9a9a88');
+  return { far, mid, ground, near, back };
 }
 function avSky(tod, wx) {
   const c = tod === 'nuit' ? ['#1b2350', '#3b4a82'] : tod === 'soir' ? ['#f19f86', '#fde3b4'] : wx === 'pluie' ? ['#a3b1c0', '#dbe2ea'] : wx === 'nuages' ? ['#b3d4e8', '#eaf4f8'] : ['#93cff0', '#e4f5fb'];
-  let s = `<defs><linearGradient id="avsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c[0]}"/><stop offset="1" stop-color="${c[1]}"/></linearGradient></defs><rect width="400" height="240" fill="url(#avsg)"/>`;
+  // v19 : dégradé, halo du soleil ou de la lune, rayons de lumière, lueur d'horizon, nuages qui dérivent
+  const [lx, ly, lc] = tod === 'nuit' ? [320, 44, '#f6efcf'] : tod === 'soir' ? [300, 120, '#ffb36a'] : [330, 46, '#fff2a8'];
+  let s = `<defs><linearGradient id="avsg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c[0]}"/><stop offset="1" stop-color="${c[1]}"/></linearGradient><radialGradient id="avhalo"><stop offset="0" stop-color="${lc}" stop-opacity=".75"/><stop offset=".35" stop-color="${lc}" stop-opacity=".28"/><stop offset="1" stop-color="${lc}" stop-opacity="0"/></radialGradient><linearGradient id="avglow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tod === 'soir' ? '#ffb36a' : '#ffffff'}" stop-opacity="0"/><stop offset="1" stop-color="${tod === 'soir' ? '#ffcf8a' : tod === 'nuit' ? '#6f7fc0' : '#ffffff'}" stop-opacity="${tod === 'nuit' ? 0.35 : 0.55}"/></linearGradient></defs><rect width="400" height="240" fill="url(#avsg)"/><rect y="90" width="400" height="90" fill="url(#avglow)"/>`;
+  if (wx !== 'pluie') s += `<circle class="avhalo" cx="${lx}" cy="${ly}" r="${tod === 'soir' ? 110 : 80}" fill="url(#avhalo)"/>`;
+  if (tod === 'jour' && wx === 'clair') s += `<g class="avrays" fill="#fffbe0">${[[-150, 260], [-90, 260], [-30, 250], [40, 250]].map(([dx, dy], i) => `<path d="M${lx} ${ly} L${lx + dx - 14} ${ly + dy} L${lx + dx + 14} ${ly + dy}Z" opacity="${(0.13 - i * 0.02).toFixed(2)}"/>`).join('')}</g>`;
   if (tod === 'nuit') { const R = avRng(7); s += Array.from({ length: 28 }, () => `<circle class="avtw" style="animation-delay:${(R() * 3).toFixed(2)}s" cx="${(R() * 400).toFixed(0)}" cy="${(R() * 130).toFixed(0)}" r="${(0.8 + R() * 1.4).toFixed(1)}" fill="#fff8d8"/>`).join('') + `<circle cx="320" cy="44" r="17" fill="#f6efcf"/><circle cx="328" cy="38" r="15" fill="${c[0]}"/>`; }
   else if (tod === 'soir') s += `<circle cx="300" cy="120" r="30" fill="#f7a35e" opacity=".9"/>`;
-  else if (wx !== 'pluie') s += `<circle cx="330" cy="46" r="22" fill="#fbd96a"/><circle cx="330" cy="46" r="32" fill="#fbd96a" opacity=".25"/>`;
-  if (wx === 'nuages' || wx === 'pluie') s += [[60, 50], [200, 34], [320, 64]].map(([x, y]) => `<g fill="${wx === 'pluie' ? '#e4e8ee' : '#fff'}" opacity=".95"><ellipse cx="${x}" cy="${y}" rx="34" ry="13"/><ellipse cx="${x - 14}" cy="${y - 8}" rx="16" ry="12"/><ellipse cx="${x + 12}" cy="${y - 10}" rx="18" ry="14"/></g>`).join('');
+  else if (wx !== 'pluie') s += `<circle cx="330" cy="46" r="22" fill="#fbd96a"/>`;
+  const cl = (x, y, sc, col, op, d) => `<g class="avcl" style="animation-delay:${d}s"><g transform="translate(${x} ${y}) scale(${sc})" fill="${col}" opacity="${op}"><ellipse rx="34" ry="13"/><ellipse cx="-14" cy="-8" rx="16" ry="12"/><ellipse cx="12" cy="-10" rx="18" ry="14"/></g></g>`;
+  if (wx === 'nuages' || wx === 'pluie') s += [[60, 50, 1], [200, 34, 1.1], [320, 64, 0.9]].map(([x, y, sc], i) => cl(x, y, sc, wx === 'pluie' ? '#e4e8ee' : '#fff', 0.95, -i * 9)).join('');
+  else s += cl(90, 58, 0.6, tod === 'nuit' ? '#56639a' : '#fff', tod === 'nuit' ? 0.5 : 0.75, 0) + cl(230, 30, 0.45, tod === 'nuit' ? '#56639a' : '#fff', tod === 'nuit' ? 0.4 : 0.6, -14);
   return `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${s}</svg>`;
 }
 const avTile = inner => { const sv = `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${inner}</svg>`; return sv + sv; };
@@ -499,9 +528,9 @@ function avApply(t, j, fx, place) {
         if (!avTuto(t) && typeof nsFireWild === 'function' && !t.events.some(e => e.type === 'sauvage' && !e.fired)) { const f = Math.min(1, t.elapsed / t.total); t.events.push({ at: Math.min(0.95, f + 0.015), type: 'sauvage' }); t.events.sort((a, b) => a.at - b.at); chips.push(['wild', 'Une rencontre approche…']); }
         else items.push(...lootFor(tags, t.luck + 1, place.name, 1, k));
       }
-      else if (ty === 'time+') { const d = dt(); t.total += d; t.stay = (t.stay || 0) + d; chips.push(['slow', `Le voyage s’allonge (${fmtDur(d)})`]); }
-      else if (ty === 'time-') { const d = dt(); t.elapsed = Math.min(t.total - 3e3, t.elapsed + d); chips.push(['fast', `Raccourci : ${fmtDur(d)} de gagné`]); }
-      else if (ty === 'back') { const nx = t.events.find(e => !e.fired && e.type !== 'arrivee' && e.type !== 'sauvage'); if (nx) nx.fired = true; const d = dt(); t.elapsed = Math.min(t.total - 3e3, t.elapsed + d); chips.push(['back', 'Demi-tour : retour plus tôt']); }
+      else if (ty === 'time+') { const d = dt(); t.total += d; t.stay = (t.stay || 0) + d; chips.push(['slow', `+${avDurS(d)}`]); }
+      else if (ty === 'time-') { const d = dt(); t.elapsed = Math.min(t.total - 3e3, t.elapsed + d); chips.push(['fast', `−${avDurS(d)}`]); }
+      else if (ty === 'back') { const nx = t.events.find(e => !e.fired && e.type !== 'arrivee' && e.type !== 'sauvage'); if (nx) nx.fired = true; const d = dt(); t.elapsed = Math.min(t.total - 3e3, t.elapsed + d); chips.push(['back', `−${avDurS(d)} (demi-tour)`]); }
       else if (ty === 'rep') { A.rep++; chips.push(['rep', 'Réputation +1']); if (A.rep % 5 === 0) { t.coins += 40; chips.push(['rep', `On parle de vos compagnons partout ! +40 pièces`]); } }
       else if (ty === 'friend') { if (!A.friends.some(f => f.n === arg)) { A.friends.push({ n: arg, k, place: place.name, date: Date.now() }); chips.push(['friend', 'Nouvel ami : ' + arg]); } }
       else if (ty === 'hurt') { t.avHurt = (t.avHurt || 0) + 1; t.xp = Math.max(0, t.xp - 12); chips.push(['hurt', avTxt('{n} rentrera fatigué{e}', k)]); }
@@ -518,6 +547,54 @@ function avApply(t, j, fx, place) {
   t.xp += 10;
   t.bag.push(...items);
   return { items, chips };
+}
+
+// ---------------- v19 : on ne montre que ce qui compte, et chaque info montre son effet ----------------
+// avFx(entrée) → [[classe, libellé court, détail]] : +objet, +rumeur, +lieu caché, −10 min, fatigue… ; vide = message décoratif.
+const AV_FX_IC = { item: '✦', rare: '◆', coins: '●', photo: '▣', rumor: '✉', place: '★', friend: '♥', wild: '!', egg: '◒', slow: '⧗', fast: '»', back: '↺', hurt: '✚', rep: '☺', give: '♡', ask: '?', xp: '▲' };
+function avDurS(ms) { const s = Math.round(ms / 1000); if (s < 60) return s + ' s'; const m = Math.round(s / 60); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0'); }
+function avDurTxt(l) { const s = String(l || ''); let m = s.match(/(\d+) h (\d+)/); if (m) return `${m[1]} h ${m[2]}`; m = s.match(/(\d+) min/); if (m) return `${m[1]} min`; m = s.match(/(\d+) s\b/); return m ? `${m[1]} s` : ''; }
+function avDurMs(l) { const s = avDurTxt(l); let m = s.match(/(\d+) h (\d+)/); if (m) return (+m[1] * 60 + +m[2]) * 60e3; m = s.match(/(\d+) min/); if (m) return +m[1] * 60e3; m = s.match(/(\d+) s/); return m ? +m[1] * 1e3 : 0; }
+function avChipShort(c, l) {
+  l = String(l || '');
+  if (/^[+−-]/.test(l) && l.length <= 20) return l;
+  if (c === 'rep') { const m = l.match(/\+(\d+) pièces/); if (m) return `+${m[1]} pièces`; }
+  const d = avDurTxt(l);
+  return ({ slow: d ? '+' + d : 'Plus long', fast: d ? '−' + d : 'Raccourci', back: d ? '−' + d : 'Retour plus tôt', place: '+lieu caché', rumor: '+rumeur', friend: '+ami', rep: '+réputation', hurt: 'fatigue', wild: 'rencontre', egg: '+œuf', rare: '+objet rare', photo: '+carte postale', give: '−1 en-cas', coins: l })[c] || l;
+}
+function avFx(j) {
+  if (!j) return [];
+  const out = [], add = (c, l, ti) => { if (!out.some(x => x[1] === l)) out.push([c, l, ti || l]); };
+  if (j.pending && !j.resolved) add('ask', 'à choisir', 'Un choix vous attend');
+  (j.chips || []).forEach(([c, l]) => add(c, avChipShort(c, l), l));
+  const its = j.items || [], maps = its.filter(x => x.cat === 't'), objs = its.filter(x => x.cat !== 't');
+  if (objs.length) add('item', `+${objs.length} objet${objs.length > 1 ? 's' : ''}`, objs.map(x => x.name).join(', '));
+  if (objs.some(x => (x.rarity || 0) >= 3) && !out.some(x => x[0] === 'rare')) add('rare', '+objet rare');
+  if (maps.length && !out.some(x => x[0] === 'rumor')) add('rumor', '+rumeur', 'Bout de carte : une rumeur de trésor');
+  if (j.kind === 'pieces' && j.gain) add('coins', `+${j.gain} pièces`);
+  if (j.photo && !out.some(x => x[0] === 'photo')) add('photo', '+carte postale');
+  if (j.kind === 'tzsense') add('rumor', j.lvl === 3 ? '+trésor flairé' : '+indice trésor');
+  if (j.kind === 'sauvage' && j.resolved) add(j.tamed ? 'friend' : 'wild', j.tamed ? '+compagnon' : 'rencontre');
+  const o = String(j.outcome || '');
+  let m = o.match(/gagne (\d+) pièces/); if (m) add('coins', `+${m[1]} pièces`);
+  m = o.match(/(?:perd|sème) (\d+) pièces/); if (m) add('coins', `−${m[1]} pièces`);
+  m = o.match(/\+(\d+) expérience/); if (m) add('xp', `+${m[1]} XP`);
+  return out;
+}
+const avFxHTML = (fx, cls) => (fx || []).length ? `<span class="${cls || 'avfx'}">${fx.map(([c, l, ti]) => `<em class="avc c-${c}" title="${esc(ti || l)}">${AV_FX_IC[c] || ''} ${esc(l)}</em>`).join('')}</span>` : '';
+// l'essentiel d'une entrée, en une phrase
+const avGist = (j, max) => avOne(j.kind === 'choix' && j.resolved && j.outcome ? avStripAuto(j.outcome) : j.kind === 'sauvage' && j.outcome ? j.outcome : j.text, max || 90);
+// bilan du voyage en cours : on regroupe tout en quelques pastilles
+function avSumFx(t) {
+  const out = [], n = (t.bag || []).length, all = t.journal.flatMap(j => avFx(j));
+  if (n) out.push(['item', `${n} objet${n > 1 ? 's' : ''}`, 'Dans son sac']);
+  if (t.coins > 0) out.push(['coins', `${t.coins} pièces`]);
+  const cnt = c => all.filter(x => x[0] === c).length;
+  [['rumor', 'rumeur'], ['place', 'lieu caché', 'lieux cachés'], ['friend', 'ami'], ['egg', 'œuf']].forEach(([c, s, p]) => { const k = cnt(c); if (k) out.push([c, `${k} ${k > 1 ? (p || s + 's') : s}`]); });
+  const dt = all.reduce((a, [c, l]) => a + (c === 'slow' ? 1 : c === 'fast' || c === 'back' ? -1 : 0) * avDurMs(l), 0);
+  if (Math.abs(dt) >= 1000) out.push([dt > 0 ? 'slow' : 'fast', `${dt > 0 ? '+' : '−'}${avDurS(Math.abs(dt))}`, 'Durée du voyage modifiée par ses choix']);
+  if (t.avHurt) out.push(['hurt', 'fatigué' + (typeof compE === 'function' ? compE(t.comp) : '')]);
+  return out;
 }
 
 // ---------------- départ : parfois un nid sur la route ----------------
@@ -559,7 +636,7 @@ function avGoPlace(id) {
 
 // ---------------- la vue d'exploration (v17 : on regarde l'aventure, une seule ligne de texte) ----------------
 let avBusy = 0, avK = null, avSig = '', avStageKey = '', avPick = { src: null, id: null, how: null }, avAnim = null, avLastLen = 0;
-let avPlay = null, avPlayN = 0, avLogOpen = false, avReplayTrip = null;
+let avPlay = null, avPlayN = 0, avLogOpen = false, avReplayTrip = null, avPhLast = null;
 const AV_PH = [['aller', 'Aller'], ['sejour', 'Sur place'], ['retour', 'Retour']];
 const AV_SLOT = 9000;
 const avReduce = () => typeof reduceMotion === 'function' && reduceMotion();
@@ -577,10 +654,10 @@ const avStripAuto = s => String(s || '').replace(/^[^«]*seul\S* : « .*? »\. /
 const AV_KIND_ACT = { trouvaille: 'dig', repas: 'snack', photo: 'photo', merveille: 'photo', pieces: 'dig', tresor: 'map', animal: 'snack', retour: 'walk', depart: 'walk', rencontre: 'hello' };
 function avMoment(t, j) {
   const act = (['animal', 'merveille'].includes(j.kind) && axActFor(j.text, '', true)) || AV_KIND_ACT[j.kind] || axActFor(j.text, '', true) || 'walk';
-  return { act, line: avOne(j.text), items: j.items, gift: j.kind === 'pieces' };
+  return { act, line: avOne(j.text), items: j.items, gift: j.kind === 'pieces', chips: avFx(j) };
 }
 function avMomentChoice(t, j) {
-  return { act: j.act || 'walk', line: avOne(avStripAuto(j.outcome), 110), items: j.items, chips: j.chips, gift: (j.chips || []).some(c => ['place', 'rumor', 'rare', 'egg'].includes(c[0])) };
+  return { act: j.act || 'walk', line: avOne(avStripAuto(j.outcome), 110), items: j.items, chips: avFx(j), gift: (j.chips || []).some(c => ['place', 'rumor', 'rare', 'egg'].includes(c[0])) };
 }
 function avOpen(k) {
   const t = S.trips[k]; if (!t) return;
@@ -589,11 +666,13 @@ function avOpen(k) {
   avK = k; avSig = ''; avStageKey = ''; avPick = { src: null, id: null, how: null }; avLastLen = t.journal.length; avPlay = null; avLogOpen = false;
   let v = $('avView');
   if (!v) { v = document.createElement('div'); v.id = 'avView'; v.className = 'avv'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-modal', 'true'); document.body.appendChild(v); }
-  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-log="1" aria-pressed="false">Journal</button><button class="btn cream sm" data-av-replay="cur">Revoir l’aventure</button><button class="btn green sm" data-av-close="1">Carte</button></footer></div>`;
+  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"><div class="avreal" aria-hidden="true"></div><div class="avscene"></div></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-log="1" aria-pressed="false">Journal</button><button class="btn cream sm" data-av-replay="cur">Revoir l’aventure</button><button class="btn green sm" data-av-close="1">Carte</button></footer></div>`;
   v.hidden = false; document.body.classList.add('avopen');
+  avPhLast = null;
   avRender(true);
+  try { avRealOpen(t, v.querySelector('.avstage')); } catch (e) { console.error('vue réelle', e); avRealClose(); }
 }
-function avClose() { const v = $('avView'); if (v) { v.hidden = true; v.innerHTML = ''; } avK = null; avPlay = null; document.body.classList.remove('avopen'); try { renderAll(); } catch (e) {} }
+function avClose() { avRealClose(); const v = $('avView'); if (v) { v.hidden = true; v.innerHTML = ''; } avK = null; avPlay = null; document.body.classList.remove('avopen'); try { renderAll(); } catch (e) {} }
 const avPending = t => t.journal.findIndex(j => j.pending && !j.resolved);
 const AV_CHIP_S = { place: 'Nouveau lieu', rumor: 'Rumeur', friend: 'Nouvel ami', rep: 'Réputation', hurt: 'Fatigué', slow: 'Plus long', fast: 'Raccourci', back: 'Demi-tour', wild: 'Rencontre', egg: 'Un œuf !', rare: 'Objet rare', photo: 'Photo', coins: 'Pièces', give: 'Offert' };
 function avRender(force) {
@@ -601,6 +680,7 @@ function avRender(force) {
   if (avBusy > Date.now()) return;
   const k = avK, t = S.trips[k];
   if (!t) { avClose(); return; }
+  try { avRealTick(t); } catch (e) {}
   const w = avWhere(t), biome = avBiome(w.tags, w.lat, w.poi), hour = avLocalHour(w.lon), tod = avTod(hour), wx = avWeather(t, biome);
   const ph = t.done ? 'fin' : w.ph, pi = avPending(t), pj = pi >= 0 ? t.journal[pi] : null;
   const wild = pj && pj.kind === 'sauvage' ? pj : null, tamed = t.journal.filter(j => j.kind === 'sauvage' && j.tamed && S.comps[j.tamed]).map(j => j.tamed);
@@ -612,7 +692,7 @@ function avRender(force) {
   const now = Date.now();
   if (avPlay && avPlay.until <= now) { const nx = avPlay.then; avPlay = nx ? Object.assign({}, nx, { until: now + (nx.dur || 9000), id: ++avPlayN }) : null; }
   if (t.journal.length > avLastLen) {
-    const fresh = t.journal.slice(avLastLen).filter(j => !j.pending && j.kind !== 'choix' && j.kind !== 'sauvage').pop();
+    const fresh = t.journal.slice(avLastLen).filter(j => !j.pending && j.kind !== 'choix' && j.kind !== 'sauvage' && avFx(j).length).pop();
     if (fresh && !avPlay && !pj) avPlay = Object.assign(avMoment(t, fresh), { until: now + 9000, id: ++avPlayN });
     avLastLen = t.journal.length;
   }
@@ -624,21 +704,27 @@ function avRender(force) {
   else if (wild) { const m = avWildMood(wild); sh = { act: 'wild', wild: { sp: wild.sp, genes: wild.genes }, wildMood: m, line: AV_MOODS[m], key: 'w' + pi }; }
   else if (pj) sh = { act: pj.kind === 'aide' ? 'lost' : pj.kind === 'marchand' ? 'chest' : 'hello', line: avOne(pj.text), key: 'p' + pi };
   else if (t.done) sh = { act: 'chest', gift: true, line: avTxt('{n} est rentré{e} : le sac est plein à craquer !', k), key: 'done' };
-  else { const slot = Math.floor(now / AV_SLOT), act = axIdle(c, slot, moving); sh = { act, line: axLine(act, Math.floor(slot / 3)), key: 'i' + slot + act }; }
+  else { const slot = Math.floor(now / AV_SLOT), act = axIdle(c, slot, moving); sh = { act, line: ph === 'sejour' ? avTxt(`{n} est sur place : ${t.dest.name}`, k) : ph === 'retour' ? avTxt('{n} rentre à la maison', k) : avTxt(`{n} est en route vers ${t.dest.name}`, k), idle: 1, key: 'i' + slot + act }; }
   if (sh.wild) c.wild = sh.wild;
   if (sh.wildMood) c.wildMood = sh.wildMood;
   const walking = moving && !avPlay && sh.act === 'walk';
   const skey = [biome, tod, wx, ph, walking, tamed.join(','), t.done, sh.id || sh.key, sh.act].join('|');
   if (skey !== avStageKey || force) {
     avStageKey = skey;
-    const D = avDecor(biome, tod, wx), st = v.querySelector('.avstage');
-    st.className = `avstage b-${biome} t-${tod} ${walking ? 'mv' : 'still'} ${ph === 'retour' && walking ? 'rev' : ''}`;
-    st.innerHTML = `<div class="avl avsky">${avSky(tod, wx)}</div><div class="avl avfar"><div class="avt">${avTile(D.far)}</div></div><div class="avl avgr">${avTile(D.ground).split('</svg>')[0]}</svg></div><div class="avl avmid"><div class="avt">${avTile(D.mid)}</div></div>`
+    const D = avDecor(biome, tod, wx), st = v.querySelector('.avstage'), sc = st.querySelector('.avscene') || st;
+    st.className = `avstage b-${biome} t-${tod} w-${wx} ${walking ? 'mv' : 'still'} ${ph === 'retour' && walking ? 'rev' : ''}${avRM && avRM.ok ? ' real' : ''}`;
+    // v19 : transition douce entre l'aller, le séjour et le retour
+    let trans = '';
+    if (avPhLast && avPhLast !== ph) { const tt = ph === 'sejour' ? avTxt(`{n} est arrivé{e} à ${t.dest.name} !`, k) : ph === 'retour' ? 'En route pour la maison' : ph === 'fin' ? 'De retour !' : ''; if (tt) trans = `<div class="avtrans"><span>${esc(tt)}</span></div>`; }
+    avPhLast = ph;
+    sc.className = 'avscene' + (trans ? ' ptrans' : '');
+    sc.innerHTML = `<div class="avl avsky">${avSky(tod, wx)}</div><div class="avl avback"><div class="avt">${avTile(D.back)}</div></div><div class="avl avfar"><div class="avt">${avTile(D.far)}</div></div><div class="avl avhaze"></div><div class="avl avgr"><div class="avt">${avTile(D.ground)}</div></div><div class="avl avmid"><div class="avt">${avTile(D.mid)}</div></div><div class="avl avtint"></div>`
       + tamed.map((id, i) => `<img class="avfol" style="left:${4 + i * 9}%" src="${portraitURI(id, 'content')}" alt="${esc(CHARS[id].name)} suit le groupe">`).join('')
       + `<div class="avl avact">${axSVG(sh.act, c, { items: sh.items, gift: sh.gift, cls: sh.cls })}</div>`
       + `<div class="avl avnear"><div class="avt">${avTile(D.near)}</div></div>`
       + (wx === 'pluie' || wx === 'neige' ? `<div class="avl avwx ${wx}"></div>` : '')
-      + ((sh.chips || []).length ? `<div class="avbadges">${sh.chips.map(([cc, l], i) => `<em class="avc c-${cc}" style="animation-delay:${0.9 + i * 0.25}s" title="${esc(l)}">${AV_CHIP_IC[cc] || ''} ${esc(AV_CHIP_S[cc] || l)}</em>`).join('')}</div>` : '');
+      + ((sh.chips || []).length ? `<div class="avbadges">${sh.chips.slice(0, 4).map(([cc, l, ti], i) => `<em class="avc c-${cc}" style="animation-delay:${0.9 + i * 0.25}s" title="${esc(ti || l)}">${AV_FX_IC[cc] || AV_CHIP_IC[cc] || ''} ${esc(avChipShort(cc, l))}</em>`).join('')}</div>` : '')
+      + trans;
   }
   // sous-titre (une ligne) + vignettes de choix
   const sig = [avStageKey, pi, pj ? (pj.path || []).length : '', JSON.stringify(avPick), avLogOpen, t.journal.length, t.done, !!avPlay].join('|');
@@ -646,25 +732,91 @@ function avRender(force) {
   avSig = sig;
   v.querySelector('.avbox').classList.toggle('asking', !!(pj && !avPlay));
   const box = v.querySelector('.avstory');
-  let h = `<p class="avsub" title="${esc(avTxt(sh.line || '', k))}">${esc(avTxt(sh.line || '', k))}</p>`;
+  let h = `<p class="avsub${sh.idle ? ' idle' : ''}" title="${esc(avTxt(sh.line || '', k))}">${esc(avTxt(sh.line || '', k))}</p>`;
+  if (!avPlay && !pj) { const sm = avSumFx(t); if (sm.length) h += `<div class="avsum"><b>Ce voyage</b>${avFxHTML(sm)}</div>`; }
   if (!avPlay) {
     if (pj) h += avAsk(t, pj, pi, c);
     else if (t.done) h += `<div class="avend"><button class="btn green big" data-av-collect="${k}">Ouvrir son sac</button></div>`;
   }
-  if (avLogOpen) h += `<div class="avlog">${t.journal.map((j, i) => [j, i]).filter(([j, i]) => i !== pi).slice(-12).reverse().map(([j, i]) => avLine(t, j, i, false)).join('')}<button class="btn cream sm" data-av-journal="1">Ouvrir le carnet complet</button></div>`;
+  if (avLogOpen) h += avLogHTML(t, pi);
   box.innerHTML = h;
   const lb = v.querySelector('[data-av-log]'); if (lb) lb.setAttribute('aria-pressed', avLogOpen);
 }
+// ---------------- v19 : VUE RÉELLE — une seconde petite carte MapLibre « à hauteur du familier » ----------------
+// Créée à l'ouverture de la vue, détruite à la fermeture (un seul contexte WebGL de plus, au maximum).
+// Centre : tripPos(t) (ou la destination pendant le séjour), pitch 76°, cap dans le sens du voyage, zoom 17 :
+// on voit les vrais bâtiments 3D, les rues et les parcs. Tant que les tuiles ne sont pas là (mode local, pas d'internet),
+// la carte reste invisible et le décor illustré s'affiche ; sans tuiles au bout de 12 s, elle est détruite.
+let avRM = null;
+function avRealWanted(t) {
+  if (!t || avTuto(t) || typeof maplibregl === 'undefined' || typeof tilesStyle !== 'function') return false;
+  return AV_FORCE.real === true || (typeof mapMode !== 'undefined' && mapMode === 'tiles');
+}
+function avBearing(a, b) {
+  const r = Math.PI / 180, y = Math.sin((b[0] - a[0]) * r) * Math.cos(b[1] * r), x = Math.cos(a[1] * r) * Math.sin(b[1] * r) - Math.sin(a[1] * r) * Math.cos(b[1] * r) * Math.cos((b[0] - a[0]) * r);
+  const d = (Math.atan2(y, x) / r + 360) % 360; return isFinite(d) ? d : 0;
+}
+function avRealCam(t) {
+  const ph = tripPhase(t), still = ph === 'sejour' || t.done, from = [t.from.lon, t.from.lat], to = [t.dest.lon, t.dest.lat];
+  const center = still ? to : tripPos(t);
+  return { center, bearing: ph === 'retour' ? avBearing(to, from) : avBearing(from, to), pitch: 76, zoom: 17 };
+}
+function avRealStyle(tod) {
+  const sty = tilesStyle();
+  if (sty.sources) delete sty.sources.dem;
+  // allégé : pas de relief ni de grandes étiquettes (inutiles à cette échelle)
+  sty.layers = (sty.layers || []).filter(l => l.source !== 'dem' && !/^(b-admin|place-country|place-city|place-town|poi-hit|peak|water-name|lc-ice-edge)/.test(l.id));
+  if (tod === 'nuit' && typeof cvWallExpr === 'function' && typeof CV_WALL_NIGHT !== 'undefined') sty.layers.forEach(l => { if (l.id === 'building' && l.paint) l.paint['fill-extrusion-color'] = cvWallExpr(CV_WALL_NIGHT); });
+  const c = tod === 'nuit' ? ['#1b2350', '#3b4a82', '#2c3766'] : tod === 'soir' ? ['#f19f86', '#fde3b4', '#f6d2b0'] : ['#93cff0', '#e4f5fb', '#e8f2f4'];
+  sty.sky = { 'sky-color': c[0], 'horizon-color': c[1], 'fog-color': c[2], 'sky-horizon-blend': 0.7, 'horizon-fog-blend': 0.6, 'fog-ground-blend': 0.35, 'atmosphere-blend': 0 };
+  return sty;
+}
+function avRealOpen(t, st) {
+  avRealClose();
+  const box = st && st.querySelector('.avreal');
+  if (!box || !avRealWanted(t)) return;
+  const w = avWhere(t), tod = avTod(avLocalHour(w.lon)), cam = avRealCam(t);
+  const m = new maplibregl.Map(Object.assign({
+    container: box, style: avRealStyle(tod), interactive: false, attributionControl: { compact: true }, maxPitch: 85,
+    fadeDuration: 0, pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5), maxTileCacheSize: 40, refreshExpiredTiles: false,
+    renderWorldCopies: false, canvasContextAttributes: { antialias: false, powerPreference: 'low-power' },
+  }, cam));
+  const R = avRM = { m, ok: false, last: Date.now(), k: t.comp, st };
+  m.on('error', () => { /* tuiles injoignables : on garde le décor illustré */ });
+  const check = () => {
+    if (avRM !== R || R.ok) return;
+    try { if (m.queryRenderedFeatures().length > 0) { R.ok = true; st.classList.add('real'); } } catch (e) {}
+  };
+  m.on('idle', check);
+  m.on('sourcedata', e => { if (e && e.isSourceLoaded) check(); });
+  R.timer = setTimeout(() => { if (avRM === R && !R.ok) avRealClose(); }, 12000);
+}
+function avRealTick(t) {
+  const R = avRM; if (!R || !R.m || R.k !== t.comp) return;
+  const now = Date.now(), red = avReduce(), every = red ? 15000 : 4000;
+  if (now - R.last < every) return;
+  R.last = now;
+  const cam = avRealCam(t);
+  if (red) R.m.jumpTo(cam); else R.m.easeTo(Object.assign(cam, { duration: every, easing: x => x }));
+}
+function avRealClose() {
+  const R = avRM; avRM = null; if (!R) return;
+  clearTimeout(R.timer);
+  try { R.m.remove(); } catch (e) {}
+  try { if (R.st) { R.st.classList.remove('real'); const b = R.st.querySelector('.avreal'); if (b) b.innerHTML = ''; } } catch (e) {}
+}
+
 const AV_CHIP_IC = { place: '★', rumor: '✉', friend: '♥', rep: '☺', hurt: '✚', slow: '⧗', fast: '»', back: '↺', wild: '!', egg: '◒', rare: '◆', photo: '▣', coins: '●', give: '♡' };
 const avChips = cs => (cs || []).length ? `<span class="avchips">${cs.map(([c, l]) => `<em class="avc c-${c}">${AV_CHIP_IC[c] || ''} ${esc(l)}</em>`).join('')}</span>` : '';
+// v19 : journal de la vue, concis : une ligne par moment utile (heure, effet en icônes, une phrase) ; le reste est regroupé
 function avLine(t, j, i, fresh) {
   const time = new Date(j.t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  let s = `<div class="avln${fresh ? ' pop' : ''} k-${j.kind}"><small>${time}${j.place ? ' · ' + esc(j.place) : ''}</small><p>${esc(j.text)}</p>`;
-  if (j.kind === 'choix' && j.resolved) s += `<p class="avpath">${j.steps ? j.steps.map(x => `« ${esc(x.a)} »`).join(' › ') : ''}</p><p class="avout">${esc(j.outcome || '')}</p>${avChips(j.chips)}`;
-  else if (j.resolved && j.outcome) s += `<p class="avout">${esc(j.outcome)}</p>`;
-  const it = (j.items || []).slice(0, 3);
-  if (it.length) s += `<span class="avits">${it.map(x => `<span class="avit" title="${esc(x.name)}">${itemIcon(x)}</span>`).join('')}</span>`;
-  return s + `</div>`;
+  return `<div class="avln${fresh ? ' pop' : ''} k-${j.kind}"><small>${time}${j.place ? ' · ' + esc(j.place) : ''}</small>${avFxHTML(avFx(j))}<p>${esc(avGist(j, 100))}</p></div>`;
+}
+function avLogHTML(t, pi) {
+  let quiet = 0;
+  const rows = t.journal.map((j, i) => [j, i]).filter(([j, i]) => { if (i === pi) return false; if (!avFx(j).length && j.kind !== 'choix') { quiet++; return false; } return true; });
+  return `<div class="avlog">${rows.slice(-12).reverse().map(([j, i]) => avLine(t, j, i, false)).join('') || '<p class="avquiet">Rien d’important pour l’instant.</p>'}${quiet ? `<p class="avquiet">+ ${quiet} moment${quiet > 1 ? 's' : ''} sans effet (balade, paysage…)</p>` : ''}<button class="btn cream sm" data-av-journal="1">Ouvrir le carnet complet</button></div>`;
 }
 function avNeedLabel(opt, k) { return opt.h ? avTxt(opt.h, k) : ''; }
 // icônes de ce qu'une option demande (vêtement, talent, objet) ; cadenas s'il manque
@@ -768,7 +920,7 @@ function avPanels(t) {
 function avPanelHTML(k, p, i) {
   const tod = p.act === 'sleep' ? 'nuit' : 'jour', D = avDecor(p.biome || 'campagne', tod, 'clair');
   const c = axCtx(k, p.biome || 'campagne', tod, 'clair', p.wild ? { wild: p.wild } : null);
-  return `<figure class="avpn" style="animation-delay:${(i * 0.3).toFixed(2)}s"><div class="avpnv"><div class="avl">${avSky(tod, 'clair').replace(/avsg/g, 'avsg' + i)}</div><div class="avl"><svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${D.far}${D.ground}${D.mid}</svg></div><div class="avl">${axSVG(p.act, c, { items: p.items, gift: p.gift })}</div><i>${i + 1}</i></div><figcaption>${esc(avTxt(p.line || '', k))}</figcaption></figure>`;
+  return `<figure class="avpn" style="animation-delay:${(i * 0.3).toFixed(2)}s"><div class="avpnv"><div class="avl">${avSky(tod, 'clair').replace(/(id="|url\(#)(avsg|avhalo|avglow)/g, '$1$2' + i)}</div><div class="avl"><svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${D.back}${D.far}${D.ground}${D.mid}</svg></div><div class="avl">${axSVG(p.act, c, { items: p.items, gift: p.gift })}</div><i>${i + 1}</i></div><figcaption>${esc(avTxt(p.line || '', k))}</figcaption></figure>`;
 }
 function avComicOpen(t) {
   if (!t || !t.journal) return;
@@ -830,10 +982,20 @@ setInterval(() => { try { if (avK) { const t = S.trips[avK]; if (!t) return avCl
 
 // ---------------- journal (panneau) : scènes en plusieurs temps ----------------
 journalEntry = (orig => function (t, j, i) {
-  if (!j || j.kind !== 'choix' || !j.sc) return orig.apply(this, arguments);
+  if (!j || j.kind !== 'choix' || !j.sc) {
+    // v19 : messages sans effet → une ligne compacte (regroupée par renderVoyage) ; les autres montrent leur effet en icônes
+    const h = orig.apply(this, arguments);
+    try {
+      if (!j || (j.pending && !j.resolved)) return h;
+      const fx = avFx(j);
+      if (!fx.length && j.kind !== 'choix') { const time = new Date(j.t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); return `<article class="je avmini k-${j.kind}"><span>${time}</span> ${esc(avOne(j.text, 110))}</article>`; }
+      const at = h.indexOf('</header>');
+      return at < 0 ? h : h.slice(0, at + 9) + avFxHTML(fx) + h.slice(at + 9);
+    } catch (e) { console.error(e); return h; }
+  }
   try {
     const k = t.comp, time = new Date(j.t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    let h = `<article class="je k-choix"><header><span>${time}${j.place ? ' · ' + esc(j.place) : ''}</span>${j.pending && !j.resolved ? '<em class="need">À toi de choisir</em>' : ''}</header><p>${esc(j.text)}</p>`;
+    let h = `<article class="je k-choix"><header><span>${time}${j.place ? ' · ' + esc(j.place) : ''}</span>${j.pending && !j.resolved ? '<em class="need">À toi de choisir</em>' : ''}</header>${j.resolved ? avFxHTML(avFx(j)) : ''}<p>${esc(j.text)}</p>`;
     if (j.steps && j.steps.length) h += `<p class="avpath">${j.steps.map(x => `« ${esc(x.a)} »`).join(' › ')}</p>`;
     if (!j.resolved) {
       const node = avNode(j);
@@ -841,9 +1003,9 @@ journalEntry = (orig => function (t, j, i) {
         if (j.path && j.path.length) h += `<p>${esc(j.q || avTxt(node.q, k))}</p>`;
         h += `<div class="opts">${node.o.map((o, oi) => { const ok = avNeedOk(k, o.need, t); return `<button data-choice="${i}" data-o="${oi}" ${ok ? '' : 'disabled'}>${esc(avTxt(o.a, k))}${o.need ? ` <small>(${ok ? '' : 'il faudrait : '}${esc(avNeedLabel(o, k))})</small>` : ''}</button>`; }).join('')}</div>`;
         if (!t.done && !avTuto(t)) h += `<button class="btn cream sm" data-av-open="${k}">Voir la scène avec ${esc(CHARS[k].name)}</button>`;
-        h += `<p class="small">Chaque choix compte : lieu caché, objet rare, ami, rumeur… ou petite chute. Sans réponse, ${esc(CHARS[k].name)} décidera seul${compE(k)} au retour.</p>`;
+        h += `<p class="small">Sans réponse, ${esc(CHARS[k].name)} décidera seul${compE(k)} au retour.</p>`;
       }
-    } else h += `<p class="out">${esc(j.outcome || '')}</p>${avChips(j.chips)}`;
+    } else h += `<p class="out">${esc(avOne(j.outcome || '', 160))}</p>`;
     if (j.photo) h += `<figure class="pc">${postcardSVG(j.photo, 'j' + i + t.id)}</figure>`;
     const items = j.items || []; if (items.length) h += `<div class="items">${items.map(itemChip).join('')}</div>`;
     return h + `</article>`;
@@ -858,9 +1020,34 @@ renderVoyage = (orig => function (box) {
       const html = `<button class="avjoin" data-av-open="${S.sel}"><span>${avTxt('Voir ce que {n} voit', S.sel)}</span><small>Suivez l’aventure en direct, et choisissez avec ${esc(CHARS[S.sel].name)}.</small></button>`;
       const j = box.querySelector('.journal'); if (j) j.insertAdjacentHTML('beforebegin', html); else box.insertAdjacentHTML('beforeend', html);
     }
+    avGroupQuiet(box);
   } catch (e) { console.error(e); }
   return r;
 })(renderVoyage);
+// v19 : les moments sans effet qui se suivent sont regroupés en une ligne repliable
+function avGroupQuiet(box) {
+  const jr = box && box.querySelector('.journal'); if (!jr) return;
+  let run = [];
+  const flush = () => {
+    if (run.length >= 2) { const d = document.createElement('details'); d.className = 'avminis'; d.innerHTML = `<summary>${run.length} moments sans effet</summary>`; run[0].before(d); run.forEach(e => d.appendChild(e)); }
+    run = [];
+  };
+  [...jr.children].forEach(el => { if (el.classList.contains('avmini')) run.push(el); else flush(); });
+  flush();
+}
+// v19 : le fil du voyage (16_live.js) montre le dernier moment UTILE et son effet, pas la dernière phrase décorative
+function avLiveTidy() {
+  const bar = $('liveBar'), b = bar && !bar.hidden && bar.querySelector('.lvb.feed'); if (!b || b.dataset.avfx) return;
+  b.dataset.avfx = '1';
+  const t = S.trips[b.dataset.lk]; if (!t) return;
+  const j = t.journal.slice().reverse().find(x => avFx(x).length), bt = b.querySelector('.lvx b'), lab = b.querySelector('.lvx small i');
+  if (!bt) return;
+  if (!j) { bt.textContent = avTxt(`{n} est en route vers ${t.dest.name}.`, t.comp); if (lab) lab.textContent = 'En route'; return; }
+  bt.textContent = avGist(j, 90);
+  try { const ic = liveIcon(j.kind), li = b.querySelector('.lvi'); if (lab) lab.textContent = ic.label; if (li) { li.style.setProperty('--ic', ic.col); const sv = li.querySelector('svg'); if (sv) sv.outerHTML = ic.svg; } } catch (e) {}
+  bt.insertAdjacentHTML('afterend', avFxHTML(avFx(j).slice(0, 3), 'avfx lvfx'));
+}
+if (typeof renderLive === 'function') renderLive = (orig => function () { const r = orig.apply(this, arguments); try { avLiveTidy(); } catch (e) { console.error(e); } return r; })(renderLive);
 
 // ---------------- retour : l'œuf du nid et les moments forts ----------------
 GAME.on('trip:return', e => {
@@ -920,7 +1107,9 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
 .avl svg{display:block;width:100%;height:100%}
 .avt{position:absolute;top:0;left:0;height:100%;width:200%;display:flex;will-change:transform}
 .avt svg{width:50%;height:100%;flex:none}
+.avstage.mv .avback .avt{animation:avScroll 140s linear infinite}
 .avstage.mv .avfar .avt{animation:avScroll 70s linear infinite}
+.avstage.mv .avgr .avt{animation:avScroll 16s linear infinite}
 .avstage.mv .avmid .avt{animation:avScroll 26s linear infinite}
 .avstage.mv .avnear .avt{animation:avScroll 9s linear infinite}
 .avstage.still .avt{animation:avScroll 120s linear infinite;animation-play-state:paused}
@@ -1060,6 +1249,54 @@ body.avopen #liveBar{visibility:hidden}
 .avpnv>i{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #4a3528;font:800 13px/20px var(--display);text-align:center;font-style:normal;color:#4a3528}
 .avpn figcaption{padding:7px 10px 9px;font-family:var(--hand);font-size:19px;line-height:1.15;color:#3f342c}
 .avcmb footer{display:flex;justify-content:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom));border-top:2px solid #eadfca;background:#fff3dc}
+/* v19 : scène plus riche (5 plans en parallaxe, brume, lumière) et vue réelle */
+.avscene{position:absolute;inset:0}
+.avreal{position:absolute;inset:0;opacity:0;transition:opacity 1.2s ease}
+.avreal .maplibregl-ctrl-bottom-right{transform:scale(.8);transform-origin:100% 100%}
+.avhaze{background:linear-gradient(to bottom,transparent 42%,rgba(240,248,252,.38) 62%,transparent 80%);pointer-events:none}
+.t-soir .avhaze{background:linear-gradient(to bottom,transparent 42%,rgba(255,214,170,.4) 62%,transparent 80%)}
+.t-nuit .avhaze{background:linear-gradient(to bottom,transparent 42%,rgba(90,105,170,.35) 62%,transparent 80%)}
+.avtint{pointer-events:none;background:radial-gradient(ellipse 85% 70% at 50% 45%,transparent 60%,rgba(60,40,28,.22));}
+.t-soir .avtint{background:radial-gradient(ellipse 85% 70% at 50% 45%,transparent 55%,rgba(120,50,30,.25)),linear-gradient(rgba(255,170,110,.08),rgba(255,170,110,.08))}
+.t-nuit .avtint{background:radial-gradient(ellipse 85% 70% at 50% 45%,transparent 50%,rgba(10,15,45,.4))}
+.avstage.real .avreal{opacity:1}
+.avstage.real .avsky,.avstage.real .avback,.avstage.real .avfar,.avstage.real .avhaze,.avstage.real .avgr,.avstage.real .avmid,.avstage.real .avnear{display:none}
+.avstage.real .avtint{background:linear-gradient(to bottom,rgba(228,245,251,.55),rgba(228,245,251,.12) 32%,transparent 48%),linear-gradient(to top,rgba(60,40,28,.28),transparent 30%)}
+.avstage.real.t-soir .avtint{background:linear-gradient(to bottom,rgba(253,200,150,.55),rgba(253,200,150,.15) 34%,transparent 50%),linear-gradient(rgba(255,150,90,.12),rgba(255,150,90,.12))}
+.avstage.real.t-nuit .avtint{background:linear-gradient(to bottom,rgba(27,35,80,.6),transparent 45%),linear-gradient(rgba(15,22,60,.35),rgba(15,22,60,.35))}
+.avstage.real .avact{filter:drop-shadow(0 3px 2px rgba(40,25,15,.35))}
+.avrays{animation:avRays 7s ease-in-out infinite alternate;transform-origin:330px 46px}
+@keyframes avRays{from{opacity:.65;transform:rotate(-2deg)}to{opacity:1;transform:rotate(2deg)}}
+.avhalo{animation:avHalo 5s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:50% 50%}
+@keyframes avHalo{to{transform:scale(1.08)}}
+.avcl{animation:avCloud 46s linear infinite}
+@keyframes avCloud{from{transform:translateX(-40px)}to{transform:translateX(60px)}}
+.avgull{animation:avGull 3.2s ease-in-out infinite alternate}
+@keyframes avGull{from{transform:translate(0,0)}to{transform:translate(10px,-6px)}}
+.avsurf{animation:avSurf 3s ease-in-out infinite alternate}
+@keyframes avSurf{from{transform:translateX(0);opacity:.4}to{transform:translateX(-12px);opacity:.85}}
+.avscene.ptrans{animation:avFadeIn .9s ease-out}
+@keyframes avFadeIn{from{opacity:.25}to{opacity:1}}
+.avtrans{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;background:radial-gradient(circle,rgba(255,248,234,.75),rgba(255,248,234,0) 70%);animation:avTrans 2.2s ease-out forwards}
+.avtrans span{font:800 22px/1.15 var(--display);color:#4a3528;background:#fff8ea;border:2.5px solid #4a3528;border-radius:16px;padding:8px 14px;box-shadow:0 4px 0 rgba(74,53,40,.3);max-width:80%;text-align:center}
+@keyframes avTrans{0%{opacity:0;transform:scale(.9)}15%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+.avsub.idle{font-size:19px;color:#6b5440}
+.avsum{display:flex;flex-wrap:wrap;align-items:center;gap:6px;justify-content:center}
+.avsum b{font:800 12.5px var(--display);color:#8a5a2a;text-transform:uppercase;letter-spacing:.04em}
+.avfx{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0 2px}
+.avsum .avfx{margin:0;justify-content:center}
+.avfx .avc,.avsum .avc{padding:4px 7px;font-size:11.5px}
+.avc.c-item,.avc.c-coins{background:#fff6d6;border-color:#e3b84a}.avc.c-photo{background:#e6f1fb;border-color:#7fb0d8}.avc.c-ask{background:#ffe3ec;border-color:#d9607e;color:#a03a58}.avc.c-xp{background:#eef6e6;border-color:#9fc77f}.avc.c-wild{background:#ffeede;border-color:#e9a06a}
+.avquiet{margin:0;font:600 12.5px var(--display);color:#a08a6c;text-align:center}
+.je.avmini{padding:4px 10px;font-size:13px;color:#8a7258;background:none;border:0;box-shadow:none}
+.je.avmini span{font:700 11.5px var(--display);color:#b9a58a;margin-right:4px}
+.avminis{margin:4px 0;border:1.5px dashed #e0cfae;border-radius:12px;padding:4px 8px;background:#fffaf0}
+.avminis summary{cursor:pointer;font:700 12.5px var(--display);color:#a08a6c;list-style-position:inside}
+.je>.avfx{margin:4px 0}
+.lvfx{display:flex;gap:4px;margin-top:2px;overflow:hidden;flex-wrap:nowrap}
+.lvfx .avc{padding:2px 6px;font-size:11px;white-space:nowrap}
+@media (prefers-reduced-motion: reduce){.avrays,.avhalo,.avcl,.avgull,.avsurf,.avscene.ptrans{animation:none!important}.avtrans{animation:avTransR 2.2s steps(1) forwards}.avreal{transition:none}}
+@keyframes avTransR{0%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){.avt,.avme,.avfol,.avwx,.avtw,.avff,.avsub,.avbadges .avc{animation:none!important}.avbadges .avc,.avpn{opacity:1;animation:none!important}}
 `;
   document.head.appendChild(st);

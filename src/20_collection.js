@@ -392,14 +392,9 @@ function nextAction() {
   const egg = readyEggs()[0]; if (egg) return { kind: 'hatch', egg };
   // 4. une commande livrable
   try { if (typeof bqState === 'function') { const o = bqState().orders.find(bqReady); if (o) return { kind: 'deliver', o }; } } catch (e) {}
-  // 5. le rêve en cours (ou la commande la plus simple) d'un compagnon disponible
+  // 5. v19 : au repos, simplement « Explorer » (les rêves vivent dans Compagnons › Rêves, pas sur l'écran principal)
   const free = order.find(k => !S.trips[k]);
-  if (free) {
-    const d = typeof curDream === 'function' ? curDream(free) : null;
-    if (d) return { kind: typeof dreamReady === 'function' && dreamReady(free) ? 'dreamok' : 'dream', k: free, d };
-    const so = simplestOrder(); if (so) return { kind: 'order', k: free, ...so };
-    return { kind: 'idle', k: free };
-  }
+  if (free) return { kind: 'idle', k: free };
   const k = order[0]; if (k && S.trips[k]) return { kind: 'away', k, t: S.trips[k] };
   return null;
 }
@@ -446,7 +441,7 @@ function renderActionCard(box) {
     btn = `<button class="btn green" data-act="order" data-id="${a.o.id}">Partir</button>`;
   } else if (a.kind === 'idle') {
     ic = face(a.k); kick = esc(CHARS[a.k].species); title = `${n} est prêt${compE(a.k)} à partir`;
-    sub = 'Touchez un lieu de la carte, ou demandez une idée.'; btn = `<button class="btn green" data-act="idea" data-k="${a.k}">Partir</button>`;
+    sub = 'Touchez un lieu de la carte, ou laissez-vous guider.'; btn = `<button class="btn green" data-act="idea" data-k="${a.k}">Explorer</button>`;
   } else if (a.kind === 'away') {
     const f = Math.min(1, a.t.elapsed / a.t.total), last = a.t.journal[a.t.journal.length - 1];
     ic = face(a.k); kick = `En voyage · ${Math.floor(f * 100)} %`; title = `${n} → ${esc(a.t.dest.name)}`;

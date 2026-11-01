@@ -49,6 +49,13 @@ const NAV_ICONS = {
   album: '<rect x="4" y="7" width="22" height="17" rx="2" fill="#bfe1f2" stroke="currentColor" stroke-width="2"/><path d="M4 21 L11 14 L16 19 L19 16 L26 22" fill="#8fbf7f" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="20" cy="12" r="2.4" fill="#fbd76a"/>',
 };
 function selectComp(k) { if (!S.comps || !S.comps[k]) return; S.sel = k; S.unseen[k] = 0; if (S.trips[k]) plan.dest = null; fast = false; save(); renderAll(); const t = S.trips[k]; if (t) { const p = tripPos(t); zoomTo(p[0], p[1]); } }
+// v19 : la carte vole jusqu'au compagnon : sa position en voyage, sinon la maison
+function hudFlyTo(k) {
+  if (!S.comps || !S.comps[k] || typeof map === 'undefined' || !map) return;
+  const t = S.trips[k];
+  if (t && !t.done) { const p = tripPos(t); zoomTo(p[0], p[1], Math.max(zoomT.k, 4)); return; }
+  const h = homeObj(); zoomTo(h.lon, h.lat, typeof homeZoom === 'function' ? homeZoom() : 40);
+}
 function resolveTab(name) {
   if (name === 'quetes' && questView === 'col') return ['sac', 'col']; // les collections vivent maintenant dans Sac & Album
   return TAB_ALIAS[name] || [name];
@@ -565,7 +572,7 @@ document.addEventListener('click', ev => {
   const d = el.dataset;
   if (el.closest('.fiche')) { $('modal').hidden = true; if (d.fclose) return; } // une action dans la fiche ferme la fiche
   if (d.fiche) return openFiche(d.fiche);
-  if (d.sel) { if (d.sel === S.sel && tab === 'carte' && typeof openCompagnons === 'function') return openCompagnons('garde'); return selectComp(d.sel); } // toucher le compagnon déjà choisi ouvre sa garde-robe
+  if (d.sel) { if (d.sel !== S.sel) selectComp(d.sel); hudFlyTo(d.sel); return; } // v19 : toucher un portrait le choisit et centre la carte sur lui
   if (d.refuge) { if (typeof openCompagnons === 'function') openCompagnons('refuge'); return; }
   if (d.nav) { if (d.nav === 'carte') closeSheet(); else openSheet(d.nav, true); return; }
   if (d.sub && el.closest('.subtabs') && SUBTABS[tab]) { /* la boutique gère ses propres sous-onglets */ setSub(tab, d.sub); houseSel = null; renderPanel(); $('panelBody').scrollTop = 0; return; }
