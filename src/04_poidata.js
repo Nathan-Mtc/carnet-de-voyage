@@ -277,8 +277,8 @@ const NOMS = ['Martin', 'Bernard', 'Dubois', 'Moreau', 'Laurent', 'Simon', 'Mich
 const ARBRES = ['des Tilleuls', 'des Lilas', 'des Cèdres', 'des Roses', 'Bellevue', 'du Moulin', 'des Acacias', 'des Platanes', 'du Château', 'des Mésanges', 'des Oliviers', 'du Lavoir'];
 const VOIES = ['Victor-Hugo', 'Jean-Jaurès', 'de la République', 'Pasteur', 'des Lilas', 'du Marché', 'de la Gare', 'Voltaire', 'des Écoles', 'du Moulin', 'Gambetta', 'de la Paix', 'des Fleurs', 'du Commerce', 'Émile-Zola', 'des Tanneurs', 'du Four', 'des Remparts', 'Saint-Jean', 'de la Fontaine'];
 const POI_NAMES = {
-  boulangerie: ['Boulangerie {N}', 'Au Bon Pain', 'Le Fournil {N}', 'Maison {N}', 'La Mie Dorée'], cafe: ['Café du Centre', 'Le Bistrot {N}', 'Café de la Place', 'Chez {N}', 'Le Petit Zinc'],
-  restaurant: ['Restaurant {N}', 'La Table de {N}', 'Le Petit Bouchon', 'Pizzeria Bella', 'L’Auberge {A}'], marche: ['Marché couvert', 'Marché du samedi', 'Halle {A}'],
+  boulangerie: ['Boulangerie {N}', 'Au Bon Pain', 'Le Fournil {N}', 'Maison {N}', 'La Mie Dorée', 'Pâtisserie {N}', 'Boulangerie bio {N}'], cafe: ['Café du Centre', 'Le Bistrot {N}', 'Café de la Place', 'Chez {N}', 'Le Petit Zinc', 'Salon de thé {N}', 'Coffee {N}', 'La Gaufrerie {N}'],
+  restaurant: ['Restaurant {N}', 'La Table de {N}', 'Le Petit Bouchon', 'Pizzeria Bella', 'L’Auberge {A}', 'Crêperie {N}', 'Pizzeria {N}', 'Sushi {N}', 'Kebab {N}', 'Le Burger {N}', 'Le Curry de {N}', 'La Trattoria {N}', 'Taqueria {N}', 'Le Petit Tokyo', 'Ty Krampouezh'], marche: ['Marché couvert', 'Marché du samedi', 'Halle {A}'],
   epicerie: ['Épicerie {N}', 'La Fromagerie', 'Comptoir {N}'], poissonnerie: ['Poissonnerie {N}', 'La Marée'], fleuriste: ['Fleurs de {N}', 'Le Jardin Fleuri', 'L’Atelier Floral'],
   librairie: ['Librairie {N}', 'Bibliothèque municipale', 'Le Bouquiniste'], parc: ['Parc {A}', 'Jardin {A}', 'Square {A}'], glacier: ['Glacier {N}', 'Les Délices Glacés'], piscine: ['Piscine municipale', 'Centre aquatique'],
   musee: ['Musée {A}', 'Musée des Beaux-Arts', 'Galerie {N}'], patrimoine: ['Église Saint-{S}', 'Chapelle {A}', 'Château {A}'], ecole: ['École {A}', 'Collège {N}', 'Groupe scolaire {A}'],

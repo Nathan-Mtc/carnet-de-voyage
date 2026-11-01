@@ -137,6 +137,7 @@ function autoChoice(comp, c) {
 }
 function resolveChoice(t, entry, choice, auto) {
   if (entry.resolved) return;
+  if (entry.sc && typeof avChoose === 'function') return avChoose(t, entry, choice, auto); // v16 : scènes en plusieurs temps (29_aventure.js)
   const c = CHOICES[entry.ctag], k = t.comp, n = CHARS[k].name, place = entry.place;
   entry.resolved = true; entry.choice = choice; entry.auto = !!auto;
   let text = '', items = [];
@@ -208,7 +209,7 @@ function fireEvent(t, e) {
       break;
     }
     case 'rencontre': { const pl = pick(PLAYERS); J({ kind: 'rencontre', text: `${n} croise ${pl[1]}, le compagnon ${/^[AEIOUYÉÈ]/.test(pl[0]) ? 'd’' : 'de '}${pl[0]}, qui voyage aussi par ici.`, other: pl, pending: true }); break; }
-    case 'choix': { const ctag = choiceTag(place, tags); J({ kind: 'choix', text: CHOICES[ctag].q(n), ctag, pending: true }); break; }
+    case 'nid': case 'choix': { if (typeof avFireChoice === 'function') { try { if (avFireChoice(t, e, place, J)) break; } catch (er) { console.error(er); } } if (e.type === 'nid') break; const ctag = choiceTag(place, tags); J({ kind: 'choix', text: CHOICES[ctag].q(n), ctag, pending: true }); break; }
     case 'marchand': {
       const offers = lootFor(tags, t.luck + 1, pName, 2).map(it => { it.rarity = Math.max(it.rarity, 1); return { item: it, price: Math.round(value(it) * (hasEff(k, 'nego') ? 0.7 : 1)) }; });
       J({ kind: 'marchand', text: `Un marchand ambulant déballe ses trésors devant ${n}.`, offers, pending: true });
@@ -284,7 +285,7 @@ function resolveHelp(t, entry, yes, auto) {
 function autoResolve(t) {
   for (const j of t.journal) {
     if (!j.pending || j.resolved) continue;
-    if (j.kind === 'choix') resolveChoice(t, j, autoChoice(t.comp, CHOICES[j.ctag]), true);
+    if (j.kind === 'choix') { if (j.sc && typeof avAuto === 'function') avAuto(t, j); else resolveChoice(t, j, autoChoice(t.comp, CHOICES[j.ctag]), true); }
     if (j.kind === 'rencontre') { const tp = compTemper(t.comp); resolveMeeting(t, j, tp === 0 ? 0 : tp === 1 ? 1 : 2, true); }
     if (j.kind === 'marchand') resolveMerchant(t, j, null, true);
     if (j.kind === 'aide') resolveHelp(t, j, true, true);

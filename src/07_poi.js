@@ -94,11 +94,103 @@ function nearestCityName(lon, lat) { let b = null, bd = 1e9; for (const c of geo
 const CELL = 0.01;
 const BLDG_COLORS = ['#f4dcc0', '#efd0b8', '#f2e6cf', '#e8d2c4', '#f6e2b8', '#e9d9c9', '#f0cfc4', '#dfe0cf'];
 function treeFeat(lon, lat, rM, h, col) { const ring = [], k = 1 / (111000 * Math.cos(lat * Math.PI / 180)); for (let i = 0; i <= 6; i++) { const a = i / 6 * 6.283; ring.push([lon + Math.cos(a) * rM * k, lat + Math.sin(a) * rM / 111000]); } return { type: 'Feature', properties: { kind: 'tree', h: Math.round(h), c: col }, geometry: { type: 'Polygon', coordinates: [ring] } }; }
-function boxFeat(lon, lat, w, d, h, col) { const k = 1 / (111000 * Math.cos(lat * Math.PI / 180)), dl = d / 111000; return { type: 'Feature', properties: { kind: 'bldg', h, c: col }, geometry: { type: 'Polygon', coordinates: [[[lon - w / 2 * k, lat - dl / 2], [lon + w / 2 * k, lat - dl / 2], [lon + w / 2 * k, lat + dl / 2], [lon - w / 2 * k, lat + dl / 2], [lon - w / 2 * k, lat - dl / 2]]] } }; }
+function boxFeat(lon, lat, w, d, h, col, rc) { const k = 1 / (111000 * Math.cos(lat * Math.PI / 180)), dl = d / 111000; return { type: 'Feature', properties: { kind: 'bldg', h, c: col, rc: rc || '#d9604f', nc: '#ffdf9a' }, geometry: { type: 'Polygon', coordinates: [[[lon - w / 2 * k, lat - dl / 2], [lon + w / 2 * k, lat - dl / 2], [lon + w / 2 * k, lat + dl / 2], [lon - w / 2 * k, lat + dl / 2], [lon - w / 2 * k, lat - dl / 2]]] } }; }
 const cityRad = c => c.gen ? 1.3 : c.r <= 2 ? 7 : c.r <= 4 ? 4.5 : c.r <= 6 ? 3.2 : c.r <= 8 ? 2.4 : 1.9;
 const cityW = c => c.gen ? 0.62 : c.r <= 6 ? 1 : 0.85;
 const RURAL = [['foret', 4], ['campagne', 4], ['ferme', 2], ['route', 1], ['camping', 0.3], ['belvedere', 0.4], ['etang', 0.8], ['riviere', 0.8], ['sentier', 0.6]];
 let cellCache = {};
+// --- campagne : noms ruraux, parcelles dessinées (mode secours) et lieux générés en mode tuiles quand OSM est vide
+const CAMP_N = {
+  patrimoine: ['Chapelle Saint-{S}', 'Lavoir du {A2}', 'Vieille croix du {A2}', 'Fontaine {A}', 'Calvaire de {V}', 'Vieux moulin du {A2}', 'Pigeonnier {A}'],
+  belvedere: ['Point de vue {A}', 'Belvédère du {A2}', "Table d'orientation", 'Le Panorama', 'Banc des collines'],
+  sentier: ['Sentier {A}', 'Chemin creux', 'Chemin des haies', 'Sentier du {A2}'],
+  etang: ['Étang {A}', 'Mare aux canards', 'Étang du Moulin', 'Mare {A}'],
+  riviere: ['Bords de rivière', 'Gué du {A2}', 'Le Ruisseau {A}', 'Berges de {V}', 'Petit pont de pierre'],
+  jardin: ['Potager {A}', 'Jardin du {A2}', 'Vergers de {V}'],
+  verger: ['Verger {A}', 'Les Pommiers', 'Verger du {A2}'],
+  vigne: ['Vignes {A}', 'Les Coteaux', 'Clos du {A2}'],
+};
+const CAMP_FIELD = ['#f0d685', '#e9dc8e', '#d9e59a', '#f2cf86', '#cfe39c'];
+function cvRuralPatch(feats, cat, lon, lat, id) {
+  if (cat !== 'campagne' && cat !== 'ferme' && cat !== 'foret') return;
+  const r = rng(hashStr('f' + id)), kx = 1 / (111000 * Math.cos(lat * Math.PI / 180)), ky = 1 / 111000, ring = [];
+  if (cat === 'foret') { const R = 140 + r() * 80; for (let i = 0; i <= 14; i++) { const a = i / 14 * 6.283, k = R * (0.75 + 0.35 * Math.sin(a * 3 + r() * 6)); ring.push([lon + Math.cos(a) * k * kx, lat + Math.sin(a) * k * ky]); } ring[14] = ring[0]; feats.push({ type: 'Feature', properties: { kind: 'wood', fc: '#a2d48a' }, geometry: { type: 'Polygon', coordinates: [ring] } }); return; }
+  const w = 160 + r() * 140, d = 100 + r() * 90, th = r() * Math.PI, c = Math.cos(th), s = Math.sin(th);
+  for (const [x, y] of [[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]]) { const X = x * w / 2, Y = y * d / 2; ring.push([lon + (X * c - Y * s) * kx, lat + (X * s + Y * c) * ky]); }
+  feats.push({ type: 'Feature', properties: { kind: 'field', fc: CAMP_FIELD[Math.floor(r() * CAMP_FIELD.length)] }, geometry: { type: 'Polygon', coordinates: [ring] } });
+}
+// Mode tuiles : en pleine campagne, OSM a peu de lieux. On complète par une grille déterministe de lieux plausibles,
+// dont le type est choisi d'après ce qui est dessiné dessous (bois → forêt, champs → ferme, eau → rivière, village → chapelle…).
+// Le type retenu est mémorisé (localStorage) pour que le même lieu garde le même nom et le même id d'une session à l'autre.
+const CAMP_CELL = 0.016, CAMP_MIN = 14, CAMP_KEY = 'carnet-campagne-v1';
+let campCats = null, campSaveT = 0;
+function campStore() { if (!campCats) { try { campCats = JSON.parse(localStorage.getItem(CAMP_KEY) || '{}') || {}; } catch (e) { campCats = {}; } } return campCats; }
+function campSave() { clearTimeout(campSaveT); campSaveT = setTimeout(() => { try { const k = Object.keys(campCats); if (k.length > 6000) k.slice(0, 2000).forEach(x => delete campCats[x]); localStorage.setItem(CAMP_KEY, JSON.stringify(campCats)); } catch (e) {} }, 800); }
+function campClassify(pt, q, nearVil) {
+  let fs = [];
+  try { fs = map.queryRenderedFeatures([[pt.x - 1, pt.y - 1], [pt.x + 1, pt.y + 1]], { layers: ['water', 'park', 'lu', 'lc'] }); } catch (e) { return null; }
+  const has = id => fs.find(f => f.layer.id === id);
+  const w = has('water'); if (w) return (w.properties.class === 'river' ? 'riviere' : 'etang');
+  let ww = []; try { ww = map.queryRenderedFeatures([[pt.x - 14, pt.y - 14], [pt.x + 14, pt.y + 14]], { layers: ['waterway'] }); } catch (e) {}
+  if (ww.length && q < 0.6) return 'riviere';
+  const lu = has('lu');
+  if (lu) {
+    const c = lu.properties.class;
+    if (c === 'cemetery') return 'patrimoine';
+    if (['residential', 'suburb', 'neighbourhood', 'quarter'].includes(c)) return nearVil ? (q < 0.65 ? 'patrimoine' : 'jardin') : '-';
+    if (!['farmyard', 'allotments', 'grass', 'meadow', 'village_green', 'recreation_ground', 'orchard', 'vineyard'].includes(c)) return '-';
+  }
+  if (has('park')) return q < 0.55 ? 'sentier' : 'belvedere';
+  const lc = has('lc');
+  if (lc) {
+    const c = lc.properties.class, sc = lc.properties.subclass;
+    if (c === 'wood') return q < 0.75 ? 'foret' : 'sentier';
+    if (sc === 'orchard') return 'campagne:verger';
+    if (sc === 'vineyard') return 'campagne:vigne';
+    if (c === 'farmland') return q < 0.45 ? 'ferme' : 'campagne';
+    if (c === 'grass') return q < 0.45 ? 'campagne' : q < 0.75 ? 'belvedere' : 'sentier';
+    if (c === 'wetland') return 'etang';
+    if (c === 'rock' || c === 'ice') return 'belvedere';
+    if (c === 'sand') return 'sentier';
+  }
+  if (nearVil) return q < 0.5 ? 'patrimoine' : 'campagne';
+  return q < 0.45 ? 'campagne' : q < 0.75 ? 'sentier' : 'belvedere';
+}
+function campPOIs() {
+  const b = map.getBounds(), ct = map.getContainer(), W = ct.clientWidth, H = ct.clientHeight;
+  const x0 = Math.floor(b.getWest() / CAMP_CELL), x1 = Math.ceil(b.getEast() / CAMP_CELL), y0 = Math.floor(b.getSouth() / CAMP_CELL), y1 = Math.ceil(b.getNorth() / CAMP_CELL);
+  if ((x1 - x0) * (y1 - y0) > 500) return [];
+  const st = campStore(), ready = map.areTilesLoaded ? map.areTilesLoaded() : map.loaded();
+  let vil = [];
+  try { vil = map.queryRenderedFeatures({ layers: ['place-small'] }).filter(f => ['village', 'hamlet'].includes(f.properties.class) && f.geometry.type === 'Point').map(f => ({ lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], n: f.properties['name:fr'] || f.properties.name || '' })); } catch (e) {}
+  const out = []; let dirty = false;
+  for (let gx = x0; gx < x1; gx++) for (let gy = y0; gy < y1; gy++) {
+    const r = rng(hashStr('g' + gx + ':' + gy)), n = 1 + (r() < 0.55 ? 1 : 0);
+    for (let i = 0; i < n; i++) {
+      const lon = (gx + 0.1 + r() * 0.8) * CAMP_CELL, lat = (gy + 0.1 + r() * 0.8) * CAMP_CELL, q = r(), id = 'g' + gx + '_' + gy + '_' + i;
+      if (!isLand(lon, lat)) continue;
+      const kmLon = 111 * Math.cos(lat * Math.PI / 180);
+      let v = null, vd = 1e9; for (const x of vil) { const d = Math.hypot((x.lon - lon) * kmLon, (x.lat - lat) * 111); if (d < vd) { vd = d; v = x; } }
+      let kind = st[id];
+      if (!kind) {
+        const pt = map.project([lon, lat]);
+        if (pt.x < 0 || pt.y < 0 || pt.x > W || pt.y > H) continue;
+        kind = campClassify(pt, q, vd < 0.8);
+        if (!kind) continue;
+        if (ready) { st[id] = kind; dirty = true; } // mémorisé seulement quand les tuiles sont chargées
+      }
+      if (kind === '-') continue;
+      const [cat, sub] = kind.split(':');
+      if (!POI_CATS[cat]) continue;
+      const rn = rng(hashStr(id + kind)), city = (v && vd < 3 && v.n) || nearestCityName(lon, lat);
+      let tpl = CAMP_N[sub || cat] || { foret: BOIS_N, campagne: CHAMP_N, ferme: FERME_N }[cat] || POI_NAMES[cat] || [POI_CATS[cat][0]];
+      if (!city) tpl = tpl.filter(t => !t.includes('{V}'));
+      out.push({ id, cat, name: fillName(pick3(tpl, rn), rn, city), lon, lat, city, imp: 0.35 + rn() * 0.5, gen: 'campagne', sub: sub || cat });
+    }
+  }
+  if (dirty) campSave();
+  return out;
+}
 function urbanAt(lon, lat, towns) {
   let u = 0, best = null, bd = 1e9;
   const kmLon = 111 * Math.cos(lat * Math.PI / 180);
@@ -159,7 +251,8 @@ function genCell(gx, gy, towns) {
         const sx = h0 > 0.5 ? 0.5 : 2.5 + rb() * 3, x1 = -inner / 2 + a2 * pw + sx, x2 = x1 + pw - 2 * sx, y1 = -inner / 2 + b2 * ph + sx, y2 = y1 + ph - 2 * sx;
         const ring = [[x1, y1], [x2, y1], [x2, y2], [x1, y2], [x1, y1]].map(([a3, b3]) => toLL(cx + a3, cy + b3));
         const h = h0 > 0.5 ? 9 + rb() * 18 * h0 + (rb() < 0.05 ? 30 : 0) : 5 + rb() * 6;
-        out.feats.push({ type: 'Feature', properties: { kind: 'bldg', h: Math.round(h), c: BLDG_COLORS[Math.floor(rb() * BLDG_COLORS.length)] }, geometry: { type: 'Polygon', coordinates: [ring] } });
+        const bi = Math.floor(rb() * BLDG_COLORS.length), hh = Math.round(h);
+        out.feats.push({ type: 'Feature', properties: { kind: 'bldg', h: hh, c: CV_WALL[bi % CV_WALL.length], nc: CV_WALL_NIGHT[bi % CV_WALL_NIGHT.length], rc: CV_ROOF[(bi * 5 + hh) % CV_ROOF.length] }, geometry: { type: 'Polygon', coordinates: [ring] } });
       }
     }
   } else if (land && u > 0.05 && r() < 0.35) {
@@ -176,15 +269,18 @@ function genCell(gx, gy, towns) {
     if (u > 0.12) { let x = r() * tot; for (const [kk, v] of cats) { x -= v[4]; if (x <= 0) { cat = kk; break; } } }
     else { let x = r() * rtot; for (const [kk, w] of RURAL) { x -= w; if (x <= 0) { cat = kk; break; } } }
     cat = cat || 'boulangerie';
+    const pid = 'c' + key + 'p' + i;
+    if (cat === 'route' && u <= 0.12 && hashStr(pid) % 2 === 0) cat = 'patrimoine'; // chapelle, lavoir, calvaire… (sans toucher au tirage aléatoire)
     if (!isLand(lon, lat)) { if (u > 0.05 && (isLand(lon + CELL, lat) || isLand(lon - CELL, lat) || isLand(lon, lat + CELL) || isLand(lon, lat - CELL))) { const q = r(); cat = q < 0.66 ? 'plage' : q < 0.95 ? 'port' : 'phare'; } else continue; }
-    const names = { foret: BOIS_N, campagne: CHAMP_N, ferme: FERME_N }[cat] || POI_NAMES[cat] || [POI_CATS[cat][0]];
-    out.pois.push({ id: 'c' + key + 'p' + i, cat, name: fillName(pick3(names, r), r, city), lon, lat, city, imp: r() * (cat === 'plage' || cat === 'gare' || cat === 'musee' ? 0.3 : 1) });
+    const names = (u <= 0.12 && CAMP_N[cat]) || { foret: BOIS_N, campagne: CHAMP_N, ferme: FERME_N }[cat] || POI_NAMES[cat] || [POI_CATS[cat][0]];
+    if (u <= 0.12) cvRuralPatch(out.feats, cat, lon, lat, pid);
+    out.pois.push({ id: pid, rural: u <= 0.12 || undefined, cat, name: fillName(pick3(names, r), r, city), lon, lat, city, imp: r() * (cat === 'plage' || cat === 'gare' || cat === 'musee' ? 0.3 : 1) });
     if (cat === 'parc' || cat === 'foret' || cat === 'camping') {
       const nt = cat === 'foret' ? 22 : 9, spread = cat === 'foret' ? 160 : 70;
       for (let q = 0; q < nt; q++) { const a = r() * 6.283, d = Math.sqrt(r()) * spread, tl = lon + Math.cos(a) * d / (111000 * Math.cos(lat * Math.PI / 180)), tt = lat + Math.sin(a) * d / 111000; out.feats.push(treeFeat(tl, tt, 3 + r() * 3, 7 + r() * 9, cat === 'foret' ? '#5f9a6a' : '#7fbf74')); }
       if (cat === 'parc') { const rad = 75 / 111000, ring = []; for (let q = 0; q <= 18; q++) { const a = q / 18 * 6.283; ring.push([lon + Math.cos(a) * rad / Math.cos(lat * Math.PI / 180), lat + Math.sin(a) * rad * 0.8]); } out.feats.push({ type: 'Feature', properties: { kind: 'park' }, geometry: { type: 'Polygon', coordinates: [ring] } }); }
     }
-    if (cat === 'ferme') out.feats.push(boxFeat(lon + 0.0004, lat + 0.0002, 18, 12, 7, '#c9604f'));
+    if (cat === 'ferme') out.feats.push(boxFeat(lon + 0.0004, lat + 0.0002, 18, 12, 7, '#fbeedd', '#d9604f'));
   }
   if (Object.keys(cellCache).length > 6000) cellCache = {};
   return (cellCache[key] = out);
@@ -206,7 +302,7 @@ function fallbackPOIs() {
       for (let gx = x0; gx < x1; gx++) for (let gy = y0; gy < y1; gy++) {
         const cell = genCell(gx, gy, towns);
         if (z >= 12.2) for (const f of cell.feats) { const kd = f.properties.kind; if ((kd === 'bldg' || kd === 'tree') && z < 14) continue; feats.push(f); }
-        for (const p of cell.pois) if (p.imp < thr && !(p.cat === 'rue' && z < 13)) all.push(p);
+        for (const p of cell.pois) if ((p.imp < thr || (p.rural && z >= 11.5 && p.imp < 0.75)) && !(p.cat === 'rue' && z < 13)) all.push(p);
       }
       all.sort((p, q) => p.imp - q.imp);
       pois.push(...all.slice(0, 600)); // la sélection d'affichage (poiPick) ne garde qu'une vingtaine de lieux à l'écran
@@ -216,10 +312,10 @@ function fallbackPOIs() {
   if (key !== townKey && mapReady && map.getSource('town')) { townKey = key; map.getSource('town').setData({ type: 'FeatureCollection', features: feats }); }
   return pois;
 }
-function tilesPOIs() {
+function tilesPOIs(z) {
   const out = [], seen = new Set();
-  let feats = [];
-  try { feats = map.queryRenderedFeatures({ layers: ['poi-hit'] }); } catch (e) { return out; }
+  let feats = [], nReal = 0;
+  try { feats = map.queryRenderedFeatures({ layers: ['poi-hit'] }); } catch (e) { feats = []; }
   for (const f of feats) {
     const p = f.properties || {}, cat = OSM_CAT[p.subclass] || OSM_CAT[p.class];
     const name = p['name:fr'] || p.name || p['name:latin'];
@@ -227,10 +323,14 @@ function tilesPOIs() {
     const g = f.geometry.type === 'Point' ? f.geometry.coordinates : null; if (!g) continue;
     const id = cat + name + g[0].toFixed(4) + g[1].toFixed(4);
     if (seen.has(id)) continue; seen.add(id);
+    if (cat !== 'rue' && cat !== 'route') nReal++;
+    if (z < POI_MIN_Z()) continue; // aux zooms 12-14 on compte seulement les vrais lieux (densité)
     // rank OSM (plus petit = plus connu) : sert à départager les lieux d'une même priorité
-    out.push({ id, cat, name, lon: g[0], lat: g[1], imp: Math.min(1, (+p.rank || 40) / 100) });
+    out.push({ id, cat, name, lon: g[0], lat: g[1], imp: Math.min(1, (+p.rank || 40) / 100), osm: { class: p.class || '', subclass: p.subclass || '' } });
     if (out.length > 700) break; // la sélection plus bas n'en garde qu'une vingtaine à l'écran
   }
+  // campagne : peu de vrais lieux à l'écran → lieux générés plausibles (toujours de quoi jouer près de chez soi)
+  if (nReal < CAMP_MIN && z >= 12.5) { try { out.push(...campPOIs()); } catch (e) { console.warn(e); } }
   return out;
 }
 function poiMarkerHTML(p) { const c = POI_CATS[p.cat]; return `<div class="poib" style="--pc:${c[1]}"><svg viewBox="0 0 24 24" aria-hidden="true">${POI_GLYPH[c[2]]}</svg></div><span class="poil">${esc(p.name)}</span>`; }
@@ -507,7 +607,7 @@ function refreshPOIs(force) {
   if (force !== true && now - poiLast < 150) { clearTimeout(poiTimer); poiTimer = setTimeout(() => refreshPOIs(true), 170); return; }
   clearTimeout(poiTimer); poiLast = now;
   const z = map.getZoom();
-  const want = mapMode === 'tiles' ? (z >= POI_MIN_Z() ? tilesPOIs() : []) : (z >= 10 ? fallbackPOIs() : []);
+  const want = mapMode === 'tiles' ? (z >= 12.5 ? tilesPOIs(z) : []) : (z >= 10 ? fallbackPOIs() : []);
   if (mapMode === 'local' && z < 10 && townKey && map.getSource('town')) { townKey = ''; map.getSource('town').setData({ type: 'FeatureCollection', features: [] }); }
   // noms de villages (mode secours) : petites étiquettes HTML, peu nombreuses
   const keep = new Set(want.map(p => p.id));
@@ -555,7 +655,9 @@ function poiStateCheck() {
   }
   if (ch) { poiSig = ''; refreshPOIs(); }
 }
-window.__carte = { stats: () => Object.assign({}, poiStats), setMode: m => { mapMode = m; }, refresh: () => refreshPOIs(true), setPoiFilter, poiUsefulNow, shown: () => (map && map.getSource('pois') ? map.querySourceFeatures('pois').length : 0), poiAtPoint, rendered: () => map.queryRenderedFeatures({ layers: ['poi-sym'] }).length, get S() { return S; }, get plan() { return plan; } };
+window.__carte = { stats: () => Object.assign({}, poiStats), setMode: m => { mapMode = m; }, refresh: () => refreshPOIs(true), setPoiFilter, poiUsefulNow, shown: () => (map && map.getSource('pois') ? map.querySourceFeatures('pois').length : 0), poiAtPoint, rendered: () => map.queryRenderedFeatures({ layers: ['poi-sym'] }).length, get S() { return S; }, get plan() { return plan; },
+  pois: () => Object.values(poiById), km: (a, b) => kmBetween(a, b), tilesStyle: () => tilesStyle(),
+  withTiles: (m2, f) => { const m0 = map, mm = mapMode; try { map = m2; mapMode = 'tiles'; return f({ mapDecorInit, tilesPOIs, resetPhase: () => { cvPhase = ''; } }); } finally { map = m0; mapMode = mm; } } };
 function poiDest(p) {
   const c = POI_CATS[p.cat];
   const spec = (SPECIALTY[p.cat] || SPEC_DEFAULT).slice(); spec[0] = spec[0].replace('{P}', p.name).replace(/\bde (Le|Les|Au|Aux) /, (m, a) => ({ Le: 'du ', Les: 'des ', Au: 'd’Au ', Aux: 'd’Aux ' })[a]);

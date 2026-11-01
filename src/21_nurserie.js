@@ -251,6 +251,7 @@ const nsEggLabel = e => e.known && e.sp ? `Œuf de ${nsLow(e.sp)}` : e.from && e
 const NS_EGG_P = { eclair: 0.12, court: 0.22, moyen: 0.32, long: 0.45, expe: 0.6 };
 function nsTripEgg(e) {
   const N = nsState(), t = e.trip; if (!t || !t.dest) return null;
+  if (t.avNest) return null; // v16 : ce voyage a déjà eu sa scène de nid (29_aventure.js)
   if (S.eggs.length >= 8) return null; // le nid est plein : on fait d'abord éclore
   const dest = t.dest, baitSps = t.bait ? t.bait.sps : null, trips = (S.stats && S.stats.trips) || 0;
   let p = NS_EGG_P[t.dur] != null ? NS_EGG_P[t.dur] : 0.2;
@@ -323,7 +324,8 @@ function nsResolveTame(t, j, src, itemId, auto) {
   j.resolved = true; j.auto = !!auto;
   if (src === 'leave') { j.outcome = `${n} salue le ${nm}, qui retourne tranquillement se cacher.`; return; }
   if (!nsRoomFor(j.sp)) { j.outcome = `Le ${nm} voudrait bien suivre ${n}… mais le refuge est plein. ${nsRoomText(j.sp)}`; if (it) (src === 'inv' ? S.inv : t.bag).push(it); return; }
-  const p = nsTameChance(j.sp, it, src), ok = Math.random() < p, what = it ? `« ${it.name} »` : 'une caresse';
+  // v16 : j.avBonus = l'approche choisie dans la vue d'exploration (29_aventure.js)
+  const p = Math.max(0.03, Math.min(0.97, nsTameChance(j.sp, it, src) + (+j.avBonus || 0))), ok = Math.random() < p, what = it ? `« ${it.name} »` : 'une caresse';
   if (!auto) S.stats.choices = (S.stats.choices || 0) + 1;
   if (ok) {
     const id = addComp({ sp: j.sp, genes: j.genes, rarity: j.rarity, from: { how: 'rencontre', region: j.region, place: j.place } });

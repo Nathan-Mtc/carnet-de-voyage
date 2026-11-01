@@ -12,7 +12,7 @@ const TAG_ICON = {
   ile: '<path d="M12 22 C11 16 11 11 13 7" stroke="#fff" stroke-width="2.6" fill="none"/><path d="M13 7 C7 3 3 6 3 9 M13 7 C19 2 23 5 22 9 M13 7 C11 2 15 1 18 2" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>',
   agrumes: '<circle cx="12" cy="14" r="7.5" fill="#fff"/><path d="M12 6 q4 -5 8 -2 q-3 3 -8 2Z" fill="#fff"/>',
 };
-const LAND_PAL = ['#f4e4b8', '#e9e3b0', '#efd9b4', '#e3e6b8', '#f2dcc0', '#e8dfb6', '#f6e8c6', '#e2dcb2'];
+const LAND_PAL = ['#d3eaa6', '#ecdf9c', '#c9e6a4', '#f2d9a4', '#dbe9a2', '#e6e4ac', '#cfe5b0', '#efe2b0'];
 let map = null, mapMode = 'local', mapReady = false, landFeatures = null, geoLayers = null, ovEls = {}, cityEls = [];
 const zoomT = { get k() { return map ? Math.pow(2, map.getZoom() - 1.5) : 1; } };
 const kToZoom = k => 1.5 + Math.log2(Math.max(1, k));
@@ -61,39 +61,64 @@ const isLand = (lon, lat) => {
 };
 
 // --- styles
+// Style « carnet illustré » : pastels francs mais doux, eau turquoise, toits colorés, halo crème.
+// Les tuiles OpenFreeMap ne servent que Noto Sans (pas de glyphes Baloo 2 en PBF) : on garde Noto, en gras arrondi et halo crème.
+const CV_WALL = ['#fdf3e1', '#f8e7d0', '#fbeedd', '#f4e4d6', '#fff6e6'];
+const CV_WALL_NIGHT = ['#ffe3a3', '#ffd98e', '#ffe9b8', '#f9d79a', '#ffdf9a'];
+const CV_ROOF = ['#f0b39c', '#f6e2c4', '#b9d7e0', '#c9e2b3', '#f4d398', '#ecc3cf', '#f6e2c4', '#d2c8e8'];
+const cvBH = ['coalesce', ['get', 'render_height'], 8];
+const cvBId = ['to-number', ['id'], 0];
+const cvMatch = (idx, pal) => { const m = ['match', idx]; pal.forEach((c, i) => m.push(i, c)); m.push(pal[0]); return m; };
+const cvWallExpr = pal => cvMatch(['%', ['+', cvBId, ['floor', ['/', cvBH, 5]]], pal.length], pal);
 function tilesStyle() {
   const F = ['Noto Sans Regular'], FB = ['Noto Sans Bold'], FI = ['Noto Sans Italic'];
-  const ink = '#4a3528', halo = '#fff8ea';
+  const ink = '#5b3f2c', halo = '#fff8ea';
+  const H = (w = 1.8) => ({ 'text-halo-color': halo, 'text-halo-width': w, 'text-halo-blur': 0.5 });
+  const omt = (id, type, layer, extra) => Object.assign({ id, type, source: 'omt', 'source-layer': layer }, extra);
+  const roof = cvMatch(['%', ['+', ['floor', ['/', cvBId, 7]], ['floor', ['/', cvBH, 9]]], CV_ROOF.length], CV_ROOF);
+  const zH = v => ['interpolate', ['linear'], ['zoom'], 14, 0, 15, v];
   return {
     version: 8, glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
-    sources: { omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet', attribution: '© <a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>' } },
+    sources: {
+      omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet', attribution: '© <a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> © <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>' },
+      // relief : tuiles d'altitude publiques (AWS Open Data, format Terrarium). Si elles ne répondent pas, la carte reste sans ombrage.
+      dem: { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 12, attribution: 'Relief © Mapzen, AWS Terrain Tiles' },
+    },
     layers: [
-      { id: 'bg', type: 'background', paint: { 'background-color': '#f5ead0' } },
-      { id: 'lc', type: 'fill', source: 'omt', 'source-layer': 'landcover', paint: { 'fill-color': ['match', ['get', 'class'], 'wood', '#cfe3b0', 'grass', '#dcebbd', 'farmland', '#efe7c0', 'ice', '#f6fafc', 'sand', '#f3dfb2', 'wetland', '#d6e8cf', 'rock', '#e4ddcc', '#e6e9c4'], 'fill-opacity': 0.9 } },
-      { id: 'lu', type: 'fill', source: 'omt', 'source-layer': 'landuse', minzoom: 9, paint: { 'fill-color': ['match', ['get', 'class'], 'residential', '#f2e3cb', 'commercial', '#f3dcc8', 'industrial', '#ece0d2', 'cemetery', '#d9e6c6', 'school', '#f6e2cc', 'stadium', '#d9ebc0', 'pitch', '#cde6b4', '#efe4cc'], 'fill-opacity': 0.85 } },
-      { id: 'park', type: 'fill', source: 'omt', 'source-layer': 'park', paint: { 'fill-color': '#c6e2a3', 'fill-opacity': 0.8 } },
-      { id: 'water', type: 'fill', source: 'omt', 'source-layer': 'water', paint: { 'fill-color': '#9fd1d8' } },
-      { id: 'water-edge', type: 'line', source: 'omt', 'source-layer': 'water', paint: { 'line-color': '#7cbccb', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.4, 14, 1.6] } },
-      { id: 'waterway', type: 'line', source: 'omt', 'source-layer': 'waterway', paint: { 'line-color': '#86c4d3', 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.6, 16, 3] } },
-      { id: 'building', type: 'fill-extrusion', source: 'omt', 'source-layer': 'building', minzoom: 14, paint: { 'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 8], 0, '#f2e2c8', 30, '#ead2b4', 80, '#dcc4a8'], 'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 15, ['coalesce', ['get', 'render_height'], 8]], 'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0], 'fill-extrusion-opacity': 0.92 } },
-      { id: 'b-admin4', type: 'line', source: 'omt', 'source-layer': 'boundary', filter: ['==', ['get', 'admin_level'], 4], minzoom: 4, paint: { 'line-color': '#c7b18c', 'line-width': 1, 'line-dasharray': [2, 2] } },
-      { id: 'b-admin2', type: 'line', source: 'omt', 'source-layer': 'boundary', filter: ['all', ['==', ['get', 'admin_level'], 2], ['!=', ['get', 'maritime'], 1]], paint: { 'line-color': '#a68b62', 'line-width': ['interpolate', ['linear'], ['zoom'], 2, 1, 10, 2.4], 'line-dasharray': [3, 2] } },
-      { id: 'rd-minor-c', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 12, filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'tertiary']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#e1cfa8', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 12, 2, 18, 18] } },
-      { id: 'rd-minor', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 12, filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'tertiary']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#fffaf0', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 12, 1, 18, 15] } },
-      { id: 'rd-path', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 14, filter: ['in', ['get', 'class'], ['literal', ['path', 'track']]], paint: { 'line-color': '#b8946a', 'line-width': 1.4, 'line-dasharray': [2, 2] } },
-      { id: 'rd-rail', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 8, filter: ['==', ['get', 'class'], 'rail'], paint: { 'line-color': '#b5a595', 'line-width': 1.2, 'line-dasharray': [3, 3] } },
-      { id: 'rd-main-c', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 5, filter: ['in', ['get', 'class'], ['literal', ['primary', 'secondary', 'trunk']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#d9b77a', 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 5, 0.8, 18, 22] } },
-      { id: 'rd-main', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 5, filter: ['in', ['get', 'class'], ['literal', ['primary', 'secondary', 'trunk']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffe9b0', 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 5, 0.4, 18, 18] } },
-      { id: 'rd-mw-c', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 4, filter: ['==', ['get', 'class'], 'motorway'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#c98f3e', 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 4, 1, 18, 26] } },
-      { id: 'rd-mw', type: 'line', source: 'omt', 'source-layer': 'transportation', minzoom: 4, filter: ['==', ['get', 'class'], 'motorway'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#f6c86b', 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 4, 0.6, 18, 21] } },
-      { id: 'poi-hit', type: 'circle', source: 'omt', 'source-layer': 'poi', minzoom: 13, paint: { 'circle-radius': 4, 'circle-opacity': 0 } },
-      { id: 'rd-name', type: 'symbol', source: 'omt', 'source-layer': 'transportation_name', minzoom: 14, layout: { 'symbol-placement': 'line', 'text-field': ['get', 'name'], 'text-font': F, 'text-size': 12 }, paint: { 'text-color': '#6b5440', 'text-halo-color': halo, 'text-halo-width': 1.6 } },
-      { id: 'water-name', type: 'symbol', source: 'omt', 'source-layer': 'water_name', layout: { 'text-field': ['coalesce', ['get', 'name:fr'], ['get', 'name']], 'text-font': FI, 'text-size': ['interpolate', ['linear'], ['zoom'], 2, 12, 10, 16], 'text-letter-spacing': 0.1 }, paint: { 'text-color': '#3f7f96', 'text-halo-color': '#cdeef2', 'text-halo-width': 1.5 } },
-      { id: 'peak', type: 'symbol', source: 'omt', 'source-layer': 'mountain_peak', minzoom: 10, layout: { 'text-field': ['concat', '▲ ', ['get', 'name']], 'text-font': F, 'text-size': 11, 'text-anchor': 'top' }, paint: { 'text-color': '#7a6450', 'text-halo-color': halo, 'text-halo-width': 1.4 } },
-      { id: 'place-small', type: 'symbol', source: 'omt', 'source-layer': 'place', minzoom: 10, filter: ['in', ['get', 'class'], ['literal', ['village', 'suburb', 'hamlet', 'neighbourhood', 'quarter']]], layout: { 'text-field': ['coalesce', ['get', 'name:fr'], ['get', 'name']], 'text-font': F, 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 11, 16, 14] }, paint: { 'text-color': '#5b4636', 'text-halo-color': halo, 'text-halo-width': 1.6 } },
-      { id: 'place-town', type: 'symbol', source: 'omt', 'source-layer': 'place', minzoom: 7, filter: ['==', ['get', 'class'], 'town'], layout: { 'text-field': ['coalesce', ['get', 'name:fr'], ['get', 'name']], 'text-font': F, 'text-size': ['interpolate', ['linear'], ['zoom'], 7, 11, 14, 16] }, paint: { 'text-color': ink, 'text-halo-color': halo, 'text-halo-width': 1.8 } },
-      { id: 'place-city', type: 'symbol', source: 'omt', 'source-layer': 'place', minzoom: 3, filter: ['==', ['get', 'class'], 'city'], layout: { 'text-field': ['coalesce', ['get', 'name:fr'], ['get', 'name']], 'text-font': FB, 'text-size': ['interpolate', ['linear'], ['zoom'], 3, 11, 12, 19] }, paint: { 'text-color': ink, 'text-halo-color': halo, 'text-halo-width': 2 } },
-      { id: 'place-country', type: 'symbol', source: 'omt', 'source-layer': 'place', maxzoom: 7, filter: ['==', ['get', 'class'], 'country'], layout: { 'text-field': ['upcase', ['coalesce', ['get', 'name:fr'], ['get', 'name']]], 'text-font': FB, 'text-size': ['interpolate', ['linear'], ['zoom'], 1, 10, 6, 16], 'text-letter-spacing': 0.2 }, paint: { 'text-color': '#9a7f5a', 'text-halo-color': halo, 'text-halo-width': 1.4 } },
+      { id: 'bg', type: 'background', paint: { 'background-color': '#f4ecc9' } },
+      omt('lc', 'fill', 'landcover', { paint: { 'fill-color': ['match', ['get', 'subclass'], 'forest', '#93c97f', 'orchard', '#c6e39a', 'vineyard', '#dcd28c', 'meadow', '#c2e69b', 'scrub', '#b5d98f', 'heath', '#c9d99a', 'beach', '#f7dea0', 'glacier', '#e8f3fc',
+        ['match', ['get', 'class'], 'wood', '#a2d48a', 'grass', '#c8e8a0', 'farmland', '#f0da8e', 'ice', '#ebf5fd', 'sand', '#f6dca2', 'wetland', '#b3dfc6', 'rock', '#e2d8cf', '#d6e9ab']], 'fill-opacity': 0.95 } }),
+      omt('lc-ice-edge', 'line', 'landcover', { filter: ['==', ['get', 'class'], 'ice'], paint: { 'line-color': '#bcd8f0', 'line-width': 1 } }),
+      { id: 'hill', type: 'hillshade', source: 'dem', minzoom: 3, maxzoom: 15, paint: { 'hillshade-exaggeration': 0.38, 'hillshade-shadow-color': 'rgba(98,78,150,0.42)', 'hillshade-highlight-color': 'rgba(255,248,222,0.55)', 'hillshade-accent-color': 'rgba(130,100,80,0.22)' } },
+      omt('lu', 'fill', 'landuse', { minzoom: 9, paint: { 'fill-color': ['match', ['get', 'class'], 'residential', '#f8e4cc', 'suburb', '#f8e4cc', 'neighbourhood', '#f8e4cc', 'commercial', '#f9dccb', 'retail', '#fbd9cf', 'industrial', '#ece2d9', 'railway', '#ebe1d8', 'cemetery', '#cde6b8', 'hospital', '#fcdcd8', 'school', '#fde6c6', 'kindergarten', '#fde6c6', 'university', '#fde6c6', 'college', '#fde6c6', 'stadium', '#bfe49c', 'pitch', '#b7e29a', 'playground', '#d6efa8', 'track', '#f3c9a4', 'zoo', '#cfe8a6', 'theme_park', '#f6d4e4', '#f4e6cf'], 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9, 0, 10, 0.88] } }),
+      omt('park', 'fill', 'park', { paint: { 'fill-color': ['match', ['get', 'class'], 'national_park', '#b9e19a', 'nature_reserve', '#b9e19a', 'protected_area', '#c3e3a5', '#acdd8a'], 'fill-opacity': ['match', ['get', 'class'], 'national_park', 0.45, 'nature_reserve', 0.5, 'protected_area', 0.4, 0.92] } }),
+      omt('park-edge', 'line', 'park', { minzoom: 12, paint: { 'line-color': '#8cc773', 'line-width': 1.2, 'line-opacity': 0.8 } }),
+      omt('water', 'fill', 'water', { paint: { 'fill-color': ['interpolate', ['linear'], ['zoom'], 3, '#79cfd6', 12, '#82d6d8'] } }),
+      // reflet : un liseré clair juste à l'intérieur de la rive, puis la rive turquoise plus soutenue
+      omt('water-shine', 'line', 'water', { minzoom: 9, paint: { 'line-color': '#c6f2ec', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1, 16, 5], 'line-offset': ['interpolate', ['linear'], ['zoom'], 9, 1, 16, 4], 'line-blur': 1.5, 'line-opacity': 0.75 } }),
+      omt('water-edge', 'line', 'water', { paint: { 'line-color': '#4fb8c4', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.4, 14, 1.6] } }),
+      omt('waterway', 'line', 'waterway', { layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#6ccbd3', 'line-width': ['interpolate', ['linear'], ['zoom'], 6, 0.6, 16, ['match', ['get', 'class'], 'river', 7, 3]] } }),
+      omt('b-admin4', 'line', 'boundary', { filter: ['==', ['get', 'admin_level'], 4], minzoom: 4, paint: { 'line-color': '#cbb08a', 'line-width': 1, 'line-dasharray': [2, 2] } }),
+      omt('b-admin2', 'line', 'boundary', { filter: ['all', ['==', ['get', 'admin_level'], 2], ['!=', ['get', 'maritime'], 1]], paint: { 'line-color': '#b08a5e', 'line-width': ['interpolate', ['linear'], ['zoom'], 2, 1, 10, 2.4], 'line-dasharray': [3, 2] } }),
+      omt('rd-path', 'line', 'transportation', { minzoom: 13, filter: ['in', ['get', 'class'], ['literal', ['path', 'track']]], paint: { 'line-color': '#c49a6c', 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 1, 18, 2.6], 'line-dasharray': [1.6, 1.4] } }),
+      omt('rd-minor-c', 'line', 'transportation', { minzoom: 12, filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'tertiary']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#eacd9c', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 12, 2, 18, 18] } }),
+      omt('rd-rail', 'line', 'transportation', { minzoom: 8, filter: ['==', ['get', 'class'], 'rail'], paint: { 'line-color': '#b9a39b', 'line-width': 1.3, 'line-dasharray': [3, 3] } }),
+      omt('rd-main-c', 'line', 'transportation', { minzoom: 5, filter: ['in', ['get', 'class'], ['literal', ['primary', 'secondary', 'trunk']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#e4b071', 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 5, 0.8, 18, 22] } }),
+      omt('rd-mw-c', 'line', 'transportation', { minzoom: 4, filter: ['==', ['get', 'class'], 'motorway'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#e2955f', 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 4, 1, 18, 26] } }),
+      omt('rd-minor', 'line', 'transportation', { minzoom: 12, filter: ['in', ['get', 'class'], ['literal', ['minor', 'service', 'tertiary']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#fffaf0', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 12, 1, 18, 15] } }),
+      omt('rd-main', 'line', 'transportation', { minzoom: 5, filter: ['in', ['get', 'class'], ['literal', ['primary', 'secondary', 'trunk']]], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#fff0c6', 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 5, 0.4, 18, 18] } }),
+      omt('rd-mw', 'line', 'transportation', { minzoom: 4, filter: ['==', ['get', 'class'], 'motorway'], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffd99c', 'line-width': ['interpolate', ['exponential', 1.5], ['zoom'], 4, 0.6, 18, 21] } }),
+      // bâtiments : murs crème (fenêtres éclairées la nuit) + une fine dalle de toit colorée par-dessus
+      omt('building', 'fill-extrusion', 'building', { minzoom: 14, paint: { 'fill-extrusion-color': cvWallExpr(CV_WALL), 'fill-extrusion-height': zH(cvBH), 'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0], 'fill-extrusion-opacity': 1 } }),
+      omt('building-roof', 'fill-extrusion', 'building', { minzoom: 14, paint: { 'fill-extrusion-color': roof, 'fill-extrusion-base': zH(cvBH), 'fill-extrusion-height': zH(['+', cvBH, ['max', 1.2, ['*', cvBH, 0.07]]]), 'fill-extrusion-opacity': 1 } }),
+      omt('poi-hit', 'circle', 'poi', { minzoom: 12, paint: { 'circle-radius': 4, 'circle-opacity': 0 } }),
+      omt('rd-name', 'symbol', 'transportation_name', { minzoom: 14, layout: { 'symbol-placement': 'line', 'text-field': ['get', 'name'], 'text-font': F, 'text-size': 12 }, paint: Object.assign({ 'text-color': '#7a5a40' }, H(1.8)) }),
+      omt('water-name', 'symbol', 'water_name', { layout: { 'text-field': ['coalesce', ['get', 'name:fr'], ['get', 'name']], 'text-font': FI, 'text-size': ['interpolate', ['linear'], ['zoom'], 2, 12, 10, 16], 'text-letter-spacing': 0.1 }, paint: { 'text-color': '#24808f', 'text-halo-color': '#d6f6f2', 'text-halo-width': 1.6, 'text-halo-blur': 0.5 } }),
+      omt('peak', 'symbol', 'mountain_peak', { minzoom: 10, layout: { 'text-field': ['concat', '▲ ', ['get', 'name']], 'text-font': FB, 'text-size': 11, 'text-anchor': 'top' }, paint: Object.assign({ 'text-color': '#8a6650' }, H(1.6)) }),
+      omt('place-small', 'symbol', 'place', { minzoom: 10, filter: ['in', ['get', 'class'], ['literal', ['village', 'suburb', 'hamlet', 'neighbourhood', 'quarter']]], layout: { 'text-field': ['coalesce', ['get', 'name:fr'], ['get', 'name']], 'text-font': FB, 'text-size': ['interpolate', ['linear'], ['zoom'], 10, 11, 16, 14] }, paint: Object.assign({ 'text-color': '#7a5640' }, H(1.8)) }),
+      omt('place-town', 'symbol', 'place', { minzoom: 7, filter: ['==', ['get', 'class'], 'town'], layout: { 'text-field': ['coalesce', ['get', 'name:fr'], ['get', 'name']], 'text-font': FB, 'text-size': ['interpolate', ['linear'], ['zoom'], 7, 11, 14, 16] }, paint: Object.assign({ 'text-color': ink }, H(2)) }),
+      omt('place-city', 'symbol', 'place', { minzoom: 3, filter: ['==', ['get', 'class'], 'city'], layout: { 'text-field': ['coalesce', ['get', 'name:fr'], ['get', 'name']], 'text-font': FB, 'text-size': ['interpolate', ['linear'], ['zoom'], 3, 12, 12, 21] }, paint: Object.assign({ 'text-color': '#4a3020' }, H(2.4)) }),
+      omt('place-country', 'symbol', 'place', { maxzoom: 7, filter: ['==', ['get', 'class'], 'country'], layout: { 'text-field': ['upcase', ['coalesce', ['get', 'name:fr'], ['get', 'name']]], 'text-font': FB, 'text-size': ['interpolate', ['linear'], ['zoom'], 1, 10, 6, 16], 'text-letter-spacing': 0.2 }, paint: Object.assign({ 'text-color': '#a5805a' }, H(1.6)) }),
     ],
   };
 }
@@ -112,22 +137,25 @@ function localStyle() {
       rd: { type: 'geojson', data: fc(roads) }, a: { type: 'geojson', data: { type: 'Feature', geometry: ml(GEO.a.map(decLine)) } },
     },
     layers: [
-      { id: 'bg', type: 'background', paint: { 'background-color': '#9fd1d8' } },
-      { id: 'coast-halo', type: 'line', source: 'c', paint: { 'line-color': '#c6e9ed', 'line-width': ['interpolate', ['linear'], ['zoom'], 1, 3, 8, 14], 'line-blur': 2 } },
+      { id: 'bg', type: 'background', paint: { 'background-color': '#7fd0d6' } },
+      { id: 'coast-halo', type: 'line', source: 'c', paint: { 'line-color': '#b4ece6', 'line-width': ['interpolate', ['linear'], ['zoom'], 1, 3, 8, 16], 'line-blur': 3 } },
+      { id: 'coast-shine', type: 'line', source: 'c', minzoom: 3, paint: { 'line-color': '#e2fbf5', 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 1, 10, 3], 'line-blur': 1, 'line-opacity': 0.8 } },
       { id: 'land', type: 'fill', source: 'c', paint: { 'fill-color': ['get', 'fill'] } },
       { id: 'admin', type: 'line', source: 'a', minzoom: 3.5, paint: { 'line-color': '#c9b48e', 'line-width': 0.8, 'line-dasharray': [2, 2] } },
-      { id: 'border', type: 'line', source: 'c', paint: { 'line-color': '#7a6048', 'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.6, 8, 1.6] } },
-      { id: 'riv', type: 'line', source: 'r', filter: ['<=', ['get', 'rank'], ['step', ['zoom'], 4, 3, 6, 5, 8, 7, 10]], paint: { 'line-color': '#7fc0d6', 'line-width': ['interpolate', ['linear'], ['zoom'], 2, 0.6, 9, 2.4] } },
-      { id: 'lake', type: 'fill', source: 'l', paint: { 'fill-color': '#a6dbe3', 'fill-outline-color': '#6aaec4' } },
-      { id: 'town-fill', type: 'fill', source: 'town', minzoom: 9.5, filter: ['==', ['get', 'kind'], 'town'], paint: { 'fill-color': '#f2dfc4', 'fill-outline-color': '#d9bf98', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9.5, 0, 10.5, 0.85] } },
-      { id: 'town-road-c', type: 'line', source: 'town', minzoom: 10.5, filter: ['in', ['get', 'kind'], ['literal', ['main', 'road']]], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#d9b77a', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 10.5, 2, 15, 16] } },
-      { id: 'town-street-c', type: 'line', source: 'town', minzoom: 12.2, filter: ['==', ['get', 'kind'], 'street'], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#e1cfa8', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 12.2, 1.8, 16, 16] } },
+      { id: 'border', type: 'line', source: 'c', paint: { 'line-color': '#a5845e', 'line-width': ['interpolate', ['linear'], ['zoom'], 1, 0.6, 8, 1.6], 'line-dasharray': [3, 2] } },
+      { id: 'riv', type: 'line', source: 'r', filter: ['<=', ['get', 'rank'], ['step', ['zoom'], 4, 3, 6, 5, 8, 7, 10]], paint: { 'line-color': '#62c4cf', 'line-width': ['interpolate', ['linear'], ['zoom'], 2, 0.6, 9, 2.6, 14, 6] }, layout: { 'line-cap': 'round', 'line-join': 'round' } },
+      { id: 'lake', type: 'fill', source: 'l', paint: { 'fill-color': '#7fd0d6', 'fill-outline-color': '#4fb8c4' } },
+      { id: 'town-field', type: 'fill', source: 'town', minzoom: 11.5, filter: ['in', ['get', 'kind'], ['literal', ['field', 'wood']]], paint: { 'fill-color': ['get', 'fc'], 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 11.5, 0, 12.5, 0.9] } },
+      { id: 'town-fill', type: 'fill', source: 'town', minzoom: 9.5, filter: ['==', ['get', 'kind'], 'town'], paint: { 'fill-color': '#f8e4cc', 'fill-outline-color': '#e6c9a2', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 9.5, 0, 10.5, 0.85] } },
+      { id: 'town-road-c', type: 'line', source: 'town', minzoom: 10.5, filter: ['in', ['get', 'kind'], ['literal', ['main', 'road']]], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#e4b071', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 10.5, 2, 15, 16] } },
+      { id: 'town-street-c', type: 'line', source: 'town', minzoom: 12.2, filter: ['==', ['get', 'kind'], 'street'], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#eacd9c', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 12.2, 1.8, 16, 16] } },
       { id: 'town-street', type: 'line', source: 'town', minzoom: 12.2, filter: ['==', ['get', 'kind'], 'street'], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#fffaf0', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 12.2, 1, 16, 12] } },
-      { id: 'town-road', type: 'line', source: 'town', minzoom: 10.5, filter: ['in', ['get', 'kind'], ['literal', ['main', 'road']]], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#ffe9b0', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 10.5, 1, 15, 12] } },
-      { id: 'town-park', type: 'fill', source: 'town', filter: ['==', ['get', 'kind'], 'park'], paint: { 'fill-color': '#c6e2a3' } },
-      { id: 'town-3d', type: 'fill-extrusion', source: 'town', minzoom: 14, filter: ['in', ['get', 'kind'], ['literal', ['bldg', 'tree']]], paint: { 'fill-extrusion-color': ['get', 'c'], 'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 14.6, ['get', 'h']], 'fill-extrusion-base': ['case', ['==', ['get', 'kind'], 'tree'], 2, 0], 'fill-extrusion-opacity': 0.95 } },
-      { id: 'rd-c', type: 'line', source: 'rd', minzoom: 4.5, filter: ['==', ['get', 'maj'], 1], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#d9a65a', 'line-width': ['interpolate', ['linear'], ['zoom'], 4.5, 1.2, 9, 4.4] } },
-      { id: 'rd', type: 'line', source: 'rd', minzoom: 4.5, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['case', ['==', ['get', 'maj'], 1], '#ffe08a', '#fff6dc'], 'line-width': ['interpolate', ['linear'], ['zoom'], 4.5, 0.6, 9, ['case', ['==', ['get', 'maj'], 1], 2.6, 1.6]] } },
+      { id: 'town-road', type: 'line', source: 'town', minzoom: 10.5, filter: ['in', ['get', 'kind'], ['literal', ['main', 'road']]], layout: { 'line-cap': 'round' }, paint: { 'line-color': '#fff0c6', 'line-width': ['interpolate', ['exponential', 1.6], ['zoom'], 10.5, 1, 15, 12] } },
+      { id: 'town-park', type: 'fill', source: 'town', filter: ['==', ['get', 'kind'], 'park'], paint: { 'fill-color': '#acdd8a', 'fill-outline-color': '#8cc773' } },
+      { id: 'town-3d', type: 'fill-extrusion', source: 'town', minzoom: 14, filter: ['in', ['get', 'kind'], ['literal', ['bldg', 'tree']]], paint: { 'fill-extrusion-color': ['get', 'c'], 'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 14.6, ['get', 'h']], 'fill-extrusion-base': ['case', ['==', ['get', 'kind'], 'tree'], 2, 0], 'fill-extrusion-opacity': 1 } },
+      { id: 'town-roof', type: 'fill-extrusion', source: 'town', minzoom: 14, filter: ['==', ['get', 'kind'], 'bldg'], paint: { 'fill-extrusion-color': ['coalesce', ['get', 'rc'], '#e8917a'], 'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 14, 0, 14.6, ['get', 'h']], 'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 14.6, ['+', ['get', 'h'], 1.4]], 'fill-extrusion-opacity': 1 } },
+      { id: 'rd-c', type: 'line', source: 'rd', minzoom: 4.5, filter: ['==', ['get', 'maj'], 1], layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#e4b071', 'line-width': ['interpolate', ['linear'], ['zoom'], 4.5, 1.2, 9, 4.4] } },
+      { id: 'rd', type: 'line', source: 'rd', minzoom: 4.5, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['case', ['==', ['get', 'maj'], 1], '#fff0c6', '#fffaf0'], 'line-width': ['interpolate', ['linear'], ['zoom'], 4.5, 0.6, 9, ['case', ['==', ['get', 'maj'], 1], 2.6, 1.6]] } },
     ],
   };
 }
@@ -136,6 +164,99 @@ function routeLayers() {
   map.addLayer({ id: 'route-shadow', type: 'line', source: 'routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#fff8ea', 'line-width': 7, 'line-opacity': 0.8 } });
   map.addLayer({ id: 'route', type: 'line', source: 'routes', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'c'], 'line-width': ['get', 'w'], 'line-dasharray': [0.1, 2] } });
 }
+// --- décor vivant : motifs (vaguelettes, arbres et fleurs, sillons), nuages, ambiance selon l'heure réelle
+const cvReduce = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+function cvPattern(w, h, draw) {
+  const pr = 2, cv = document.createElement('canvas'); cv.width = w * pr; cv.height = h * pr;
+  const g = cv.getContext('2d'); g.scale(pr, pr); g.lineCap = 'round'; draw(g);
+  return { img: g.getImageData(0, 0, w * pr, h * pr), opt: { pixelRatio: pr } };
+}
+const cvTree = (g, x, y, r, c1, c2) => { g.fillStyle = 'rgba(70,90,60,.18)'; g.beginPath(); g.ellipse(x + 1, y + r * 0.9, r * 0.9, r * 0.35, 0, 0, 7); g.fill(); g.fillStyle = c1; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.fillStyle = c2; g.beginPath(); g.arc(x - r * 0.3, y - r * 0.35, r * 0.45, 0, 7); g.fill(); };
+const cvFlower = (g, x, y, c) => { g.fillStyle = c; for (let i = 0; i < 5; i++) { const a = i * 1.2566; g.beginPath(); g.arc(x + Math.cos(a) * 1.6, y + Math.sin(a) * 1.6, 1.2, 0, 7); g.fill(); } g.fillStyle = '#fff3b0'; g.beginPath(); g.arc(x, y, 0.9, 0, 7); g.fill(); };
+function cvImages() {
+  const add = (id, p) => { if (!map.hasImage(id)) map.addImage(id, p.img, p.opt); };
+  add('cv-wave', cvPattern(56, 36, g => { g.strokeStyle = 'rgba(236,253,250,.85)'; g.lineWidth = 1.3; [[8, 10], [34, 27]].forEach(([x, y]) => { g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 3, y - 3, x + 6, y); g.quadraticCurveTo(x + 9, y + 3, x + 12, y); g.stroke(); }); }));
+  add('cv-park', cvPattern(72, 72, g => { cvTree(g, 16, 18, 5.5, '#6fb06a', '#8fd07f'); cvTree(g, 52, 50, 4.5, '#5fa266', '#86c879'); cvFlower(g, 46, 16, '#f49ab4'); cvFlower(g, 20, 54, '#f7c95e'); cvFlower(g, 60, 30, '#b9a3f0'); }));
+  add('cv-wood', cvPattern(44, 44, g => { cvTree(g, 11, 12, 4.5, 'rgba(70,140,80,.75)', 'rgba(140,200,120,.7)'); cvTree(g, 33, 32, 4, 'rgba(60,128,74,.75)', 'rgba(130,192,112,.7)'); }));
+  add('cv-field', cvPattern(24, 24, g => { g.strokeStyle = 'rgba(196,150,70,.35)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(-2, 26); g.lineTo(26, -2); g.moveTo(10, 26); g.lineTo(26, 10); g.moveTo(-2, 14); g.lineTo(14, -2); g.stroke(); }));
+}
+function cvLayer(def, before) { if (map.getLayer(def.id)) return; try { map.addLayer(def, before && map.getLayer(before) ? before : undefined); } catch (e) { console.warn('décor', def.id, e && e.message); } }
+function mapDecorInit() {
+  cvImages();
+  const fadeIn = (z0, o) => ['interpolate', ['linear'], ['zoom'], z0, 0, z0 + 1, o];
+  if (mapMode === 'tiles') {
+    cvLayer({ id: 'lc-wood-tex', type: 'fill', source: 'omt', 'source-layer': 'landcover', minzoom: 11, filter: ['==', ['get', 'class'], 'wood'], paint: { 'fill-pattern': 'cv-wood', 'fill-opacity': fadeIn(11, 0.6) } }, 'hill');
+    cvLayer({ id: 'lc-field-tex', type: 'fill', source: 'omt', 'source-layer': 'landcover', minzoom: 12, filter: ['==', ['get', 'class'], 'farmland'], paint: { 'fill-pattern': 'cv-field', 'fill-opacity': fadeIn(12, 0.8) } }, 'hill');
+    cvLayer({ id: 'park-deco', type: 'fill', source: 'omt', 'source-layer': 'park', minzoom: 14.5, filter: ['!', ['in', ['get', 'class'], ['literal', ['national_park', 'nature_reserve', 'protected_area']]]], paint: { 'fill-pattern': 'cv-park', 'fill-opacity': fadeIn(14.5, 0.95) } }, 'park-edge');
+    cvLayer({ id: 'water-wave', type: 'fill', source: 'omt', 'source-layer': 'water', minzoom: 11.5, paint: { 'fill-pattern': 'cv-wave', 'fill-opacity': fadeIn(11.5, 0.7) } }, 'water-shine');
+  } else {
+    cvLayer({ id: 'bg-wave', type: 'background', minzoom: 9, paint: { 'background-pattern': 'cv-wave', 'background-opacity': fadeIn(9, 0.6) } }, 'coast-halo');
+    cvLayer({ id: 'lake-wave', type: 'fill', source: 'l', minzoom: 9, paint: { 'fill-pattern': 'cv-wave', 'fill-opacity': fadeIn(9, 0.6) } }, 'town-field');
+    cvLayer({ id: 'town-wood-tex', type: 'fill', source: 'town', minzoom: 12.5, filter: ['==', ['get', 'kind'], 'wood'], paint: { 'fill-pattern': 'cv-wood', 'fill-opacity': fadeIn(12.5, 0.7) } }, 'town-fill');
+    cvLayer({ id: 'town-field-tex', type: 'fill', source: 'town', minzoom: 12.5, filter: ['==', ['get', 'kind'], 'field'], paint: { 'fill-pattern': 'cv-field', 'fill-opacity': fadeIn(12.5, 0.8) } }, 'town-fill');
+    cvLayer({ id: 'town-park-deco', type: 'fill', source: 'town', minzoom: 13.5, filter: ['==', ['get', 'kind'], 'park'], paint: { 'fill-pattern': 'cv-park', 'fill-opacity': fadeIn(13.5, 0.95) } }, 'town-3d');
+  }
+  cvAmbInit();
+}
+(function cvCSS() {
+  const st = document.createElement('style');
+  st.textContent = `#cvAmb{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#cvAmb .veil{position:absolute;inset:0;opacity:0;transition:opacity 1.6s ease;mix-blend-mode:multiply}
+#cvAmb[data-ph="gold"] .veil{opacity:1;background:linear-gradient(180deg,rgba(255,176,128,.20),rgba(255,214,160,.08) 55%,rgba(250,180,176,.14))}
+#cvAmb[data-ph="night"] .veil{opacity:1;background:radial-gradient(120% 90% at 50% 40%,rgba(118,124,196,.52),rgba(62,70,140,.66))}
+#cvAmb .glow{position:absolute;inset:0;opacity:0;transition:opacity 1.6s;mix-blend-mode:screen;background:radial-gradient(60% 40% at 80% 0%,rgba(255,236,190,.35),transparent 70%)}
+#cvAmb[data-ph="gold"] .glow{opacity:1}
+#cvAmb[data-ph="night"] .glow{opacity:.5;background:radial-gradient(40% 30% at 82% 8%,rgba(200,215,255,.35),transparent 70%)}
+#cvAmb .cld{position:absolute;left:0;width:150px;height:60px;opacity:0;transition:opacity 1.2s;animation:cvDrift var(--d) linear infinite;animation-delay:var(--dl);will-change:transform}
+#cvAmb.far .cld{opacity:1}
+#cvAmb:not(.far) .cld{animation-play-state:paused}
+#cvAmb .cld i{position:absolute;border-radius:50%}
+#cvAmb .cld .sh{inset:34px -10px -30px 30px;background:radial-gradient(closest-side,rgba(52,70,96,.16),rgba(52,70,96,0));border-radius:50%}
+#cvAmb .cld .p1{left:18px;top:22px;width:110px;height:34px;background:rgba(255,255,255,.72)}
+#cvAmb .cld .p2{left:40px;top:6px;width:52px;height:46px;background:rgba(255,255,255,.72)}
+#cvAmb .cld .p3{left:78px;top:14px;width:40px;height:34px;background:rgba(255,255,255,.72)}
+@keyframes cvDrift{from{transform:translateX(-200px) scale(var(--s))}to{transform:translateX(calc(100vw + 60px)) scale(var(--s))}}
+@media (prefers-reduced-motion: reduce){#cvAmb .cld{display:none}#cvAmb .veil,#cvAmb .glow{transition:none}}`;
+  document.head.appendChild(st);
+})();
+let cvForced = null, cvPhase = '', cvT = 0;
+function cvSun(lat, lon, d) {
+  const doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5), dec = 0.4093 * Math.sin(2 * Math.PI * (284 + doy) / 365);
+  const c = Math.max(-1, Math.min(1, -Math.tan(lat * Math.PI / 180) * Math.tan(dec))), half = Math.acos(c) * 12 / Math.PI;
+  const noon = 12 - d.getTimezoneOffset() / 60 - lon / 15; // midi solaire, en heure locale de l'appareil
+  return [noon - half, noon + half];
+}
+function cvPhaseNow() {
+  if (cvForced) return cvForced;
+  const d = new Date(), h = homeObj(), [up, down] = cvSun(h.lat, h.lon, d), t = d.getHours() + d.getMinutes() / 60;
+  if (t < up - 0.6 || t > down + 0.6) return 'night';
+  if (t < up + 0.9 || t > down - 1.1) return 'gold';
+  return 'day';
+}
+function cvAmbInit() {
+  if ($('cvAmb')) return;
+  const el = document.createElement('div'); el.id = 'cvAmb'; el.setAttribute('aria-hidden', 'true');
+  let html = '<div class="veil"></div><div class="glow"></div>';
+  [[18, 150, -40, 1], [46, 190, -120, 0.8], [72, 130, -75, 1.15]].forEach(([top, d, dl, s]) => { html += `<div class="cld" style="top:${top}%;--d:${d}s;--dl:${dl}s;--s:${s}"><i class="sh"></i><i class="p1"></i><i class="p2"></i><i class="p3"></i></div>`; });
+  el.innerHTML = html;
+  const cc = map.getCanvasContainer(), cv = map.getCanvas();
+  cc.insertBefore(el, cv.nextSibling); // sous les marqueurs HTML et l'overlay #ov
+  const upd = () => { el.classList.toggle('far', map.getZoom() < 9); };
+  map.on('zoom', upd); upd();
+  cvAmbTick(); clearInterval(cvT); cvT = setInterval(cvAmbTick, 5 * 60 * 1000);
+}
+function cvAmbTick() {
+  const el = $('cvAmb'); if (!el || !map) return;
+  const ph = cvPhaseNow(); el.dataset.ph = ph;
+  if (ph === cvPhase) return; cvPhase = ph;
+  const night = ph === 'night';
+  try {
+    if (map.getLayer('building')) map.setPaintProperty('building', 'fill-extrusion-color', cvWallExpr(night ? CV_WALL_NIGHT : CV_WALL));
+    if (map.getLayer('town-3d')) map.setPaintProperty('town-3d', 'fill-extrusion-color', night ? ['case', ['==', ['get', 'kind'], 'bldg'], ['coalesce', ['get', 'nc'], '#ffdf9a'], ['get', 'c']] : ['get', 'c']);
+  } catch (e) { console.warn(e); }
+}
+// pour les tests et le débogage : __ambiance('night' | 'gold' | 'day' | null)
+window.__ambiance = ph => { cvForced = ph || null; cvAmbTick(); return cvPhaseNow(); };
 async function probeTiles() {
   try {
     const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 3500);
@@ -155,7 +276,7 @@ async function buildMap() {
   map.touchZoomRotate.disableRotation && 0;
   map.keyboard.disableRotation && map.keyboard.disableRotation();
   map.on('error', e => { if (mapMode === 'tiles' && !mapReady) { /* tuiles inaccessibles : on garde la carte intégrée */ } });
-  map.on('load', () => { routeLayers(); mapReady = true; if (typeof liveOnMapLoad === 'function') { try { liveOnMapLoad(); } catch (e) { console.error(e); } } try { poiLayerInit(); } catch (e) { console.error(e); } setTimeout(() => refreshPOIs(true), 50); const n = $('mapNote'); n.hidden = mapMode === 'tiles'; if (!n.hidden) setTimeout(() => n.classList.add('gone'), 9000); drawMarks(); });
+  map.on('load', () => { routeLayers(); try { mapDecorInit(); } catch (e) { console.error(e); } mapReady = true; if (typeof liveOnMapLoad === 'function') { try { liveOnMapLoad(); } catch (e) { console.error(e); } } try { poiLayerInit(); } catch (e) { console.error(e); } setTimeout(() => refreshPOIs(true), 50); const n = $('mapNote'); n.hidden = mapMode === 'tiles'; if (!n.hidden) setTimeout(() => n.classList.add('gone'), 9000); drawMarks(); });
   map.on('move', positionOverlay);
   map.on('zoom', () => { lodOverlay(); });
   map.on('moveend', refreshPOIs);
@@ -235,7 +356,7 @@ function lodOverlay() {
   const z = map.getZoom();
   $('ov').dataset.z = z < 4 ? 'far' : z < 6.5 ? 'mid' : z < 10.5 ? 'near' : z < (mapMode === 'tiles' ? 16 : 13.6) ? 'city' : 'street';
   // le bouton « lieux affichés » n'apparaît que lorsque des lieux du quotidien sont à l'écran
-  const fb = $('zFilt'), show = z >= (mapMode === 'tiles' ? POI_MIN_Z() - 0.5 : 10.5);
+  const fb = $('zFilt'), show = z >= (mapMode === 'tiles' ? 12.5 : 10.5);
   if (fb && fb.hidden === show) { fb.hidden = !show; if (!show) poiFiltOpen(false); }
 }
 function suggestions() {
