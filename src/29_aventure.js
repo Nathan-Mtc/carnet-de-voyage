@@ -1083,6 +1083,7 @@ GAME.on('trip:return', e => {
   } catch (err) { console.error('aventure retour', err); }
 });
 function avRecapHTML(h) {
+  return ''; // v20 : « les moments forts ne servent à rien » (retour du joueur)
   const t = h.trip; if (!t || !t.journal) return '';
   avReplayTrip = t;
   const k = h.comp || t.comp, n = CHARS[k] ? CHARS[k].name : '', P = avPanels(t).slice(1, -1), fol = t.journal.filter(j => j.kind === 'sauvage' && j.tamed && S.comps[j.tamed]);

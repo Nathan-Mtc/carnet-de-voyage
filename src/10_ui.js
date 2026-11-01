@@ -265,12 +265,7 @@ function renderVoyage(box) {
   if (!t) {
     const sug = suggestions(), h = homeObj();
     if (!plan.dest) {
-      let html = phead(k, `Où part ${ch.name} ?`, 'Une idée du jour, ou n’importe quel endroit de la carte.');
-      html += `<div class="sugs">` + sug.map((pl, i) => {
-        const d = kmBetween(h, pl);
-        return `<button class="sug" data-goplace="${pl.id}"><span class="sugk">${['Tout près', 'Un peu plus loin', 'Grande aventure'][i]}</span><span class="sname">${esc(pl.name)} <small>${esc(pl.country)} · ${d.toLocaleString('fr-FR')} km</small></span><span class="tags">${pl.tags.map(tg => `<i style="--tc:${TAGC[tg]}">${TAGL[tg]}</i>`).join('')}</span></button>`;
-      }).join('') + `</div>`;
-      html += `<div class="talents"><h3>Talents de ${ch.name} · niveau ${p.lvl}</h3>${talentsOf(k).map(([l, n, d]) => `<div class="tal ${p.lvl >= l ? 'on' : ''}"><b>${n}</b><span>${p.lvl >= l ? d : `Débloqué au niveau ${l}`}</span></div>`).join('')}</div>`;
+      let html = phead(k, `Où part ${ch.name} ?`, 'Touchez un lieu sur la carte : ce que vous pouvez y trouver s’affiche avant de partir.');
       box.innerHTML = html; return;
     }
     const d = plan.dest, dist = kmBetween(h, d);

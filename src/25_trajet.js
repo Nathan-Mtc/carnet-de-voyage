@@ -196,13 +196,22 @@ if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
   } catch (e) { console.error(e); }
   return r;
 })(renderVoyage);
+// v20 : sélection dès l'appui (pointerdown, en capture) : un autre module redessinait le portrait au toucher,
+// si bien que le « click » n'arrivait jamais sur le bouton et le voyageur ne changeait pas.
+document.addEventListener('pointerdown', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-trjwho]'); if (!b) return;
+  ev.stopPropagation(); trjWhoPick(b.dataset.trjwho);
+}, true);
 document.addEventListener('click', ev => {
   const b = ev.target.closest('[data-trjwho]'); if (!b) return;
-  const k = b.dataset.trjwho; if (!S.comps[k] || S.trips[k] || k === S.sel) return;
+  ev.stopPropagation(); trjWhoPick(b.dataset.trjwho);
+}, true);
+function trjWhoPick(k) {
+  if (!S.comps[k] || S.trips[k] || k === S.sel) return;
   S.sel = k; S.unseen[k] = 0; fast = false; save(); renderAll();
   const nb = document.querySelector(`.trjwb[data-trjwho="${k}"]`);
   if (nb && nb.animate && !(typeof reduceMotion === 'function' && reduceMotion())) nb.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12) translateY(-3px)' }, { transform: 'scale(1)' }], { duration: 380, easing: 'ease-out' });
-});
+}
 (function trjWhoCSS() {
   const st = document.createElement('style'); st.id = 'trjWhoCSS';
   st.textContent = `.trjwho{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 0 10px;padding:8px 10px;background:#fff8ec;border:2.5px solid var(--ink,#4a3528);border-radius:16px;box-shadow:0 3px 0 rgba(74,53,40,.25)}
