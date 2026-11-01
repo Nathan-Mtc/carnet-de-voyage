@@ -193,7 +193,7 @@ const avTile = inner => { const sv = `<svg viewBox="0 0 400 240" preserveAspectR
 // need : conditions alternatives ('sp:axo,phoque', 'eff:audace', 'lvl:4', 'wear:pieds:bottes', 'food', 'sub:lumiere', 'friend', 'coins:5') ; h : étiquette.
 // fx : loot loot2 rare food place:Nom rumor wild time+ time- back rep friend:Nom hurt cN xN photo give egg
 const R_ = (t, fx) => ({ t, fx: fx || '' });
-const SWIM = 'sp:axo,phoque,capy', CLIMB = ['sp:panda,lemur,paresseux,tanuki', 'eff:audace'];
+const SWIM = 'sp:axo,phoque,capy', CLIMB = ['sp:panda,lemur,paresseux,tanuki', 'eff:audace', 'tool:corde'];
 const AV_SCENES = [
   // ---------- forêt ----------
   { id: 'sentier', b: ['foret'], q: 'Un sentier moussu s’enfonce sous les grands chênes. {n} renifle l’air : ça sent la noisette… et l’aventure.', o: [
@@ -404,6 +404,22 @@ const AV_SCENES = [
     { a: 'Attendre la maman, caché{e}', p: 0.5, r: R_('Une maman apparaît, renifle {n}… et lui confie l’œuf, comme si elle savait.', 'egg rep'), f: R_('La maman revient et emporte l’œuf. {n} est content{e} de les voir réunis.', 'rep') },
     { a: 'Couvrir le nid de feuilles', r: R_('Bien au chaud, bien caché. {n} trouve une jolie plume en partant.', 'rep loot') } ] },
 ];
+// v20 : les outils de la famille 🧭 (36_familles.js). Ils ouvrent des options : need 'tool:canne' ; fx 'fam:poisson|insecte|coquillage|coffre|gemme'
+AV_SCENES.push(
+  { id: 'ponton', b: ['lac', 'mer'], q: 'Un vieux ponton de bois avance sur l’eau. Sous les planches, des poissons frétillent et des coquillages brillent.', o: [
+    { a: 'Lancer la canne à pêche', need: ['tool:canne'], h: 'Avec sa canne à pêche', r: R_('Ça mord ! {n} remonte un beau poisson, et le pêcheur du coin l’applaudit.', 'fam:poisson rep x10') },
+    { a: 'Plonger chercher des coquillages', need: [SWIM, 'tool:masque'], h: 'Nageur ou masque de plongée', r: R_('Au fond, entre deux algues, un coquillage rare ! {n} le remonte, tout fier{e}.', 'fam:coquillage x10') },
+    { a: 'Regarder passer les bateaux', r: R_('{n} compte les voiles et dessine le plus beau bateau sur une carte postale.', 'photo') } ] },
+  { id: 'butte', b: ['campagne', 'foret', 'desert', 'montagne'], q: 'Au pied d’un vieux rocher, la terre est fraîchement retournée… et un papillon magnifique danse au-dessus des fleurs.', o: [
+    { a: 'Creuser au pied du rocher', need: ['tool:pelle'], h: 'Avec sa pelle', r: R_('Tchok ! La pelle cogne contre du bois : un petit coffre enfoui !', 'fam:coffre x10') },
+    { a: 'Attraper le papillon au filet', need: ['tool:filet'], h: 'Avec son filet', r: R_('Hop ! Délicatement attrapé, admiré… et noté dans la collection.', 'fam:insecte x10') },
+    { a: 'Reprendre la route', r: R_('{n} cueille une fleur en passant et reprend son chemin.', 'loot') } ] },
+  { id: 'grotte_lampe', b: ['montagne', 'foret', 'mer', 'desert'], q: 'Une grotte sombre s’ouvre dans la roche. Au fond, quelque chose scintille…', o: [
+    { a: 'Explorer avec une lumière', need: ['tool:lampe', 'sub:lumiere', 'sub:lune'], h: 'Lampe frontale ou lumière', r: R_('Le faisceau éclaire une veine de pierre précieuse. {n} en détache un bel éclat brut !', 'fam:gemme x10') },
+    { a: 'Écouter l’écho', r: R_('« Coucou… coucou… coucou ! » {n} rit de sa propre voix et repart de bonne humeur.', 'x10 rep') } ] },
+);
+// les outils remplacent aussi les talents : masque de plongée pour nager, lampe frontale pour éclairer
+(function avToolNeeds(list) { for (const o of list) { if (o.need && o.need.includes(SWIM) && !o.need.includes('tool:masque')) o.need.push('tool:masque'); if (o.need && o.need.includes('sub:lumiere') && !o.need.includes('tool:lampe')) o.need.push('tool:lampe'); if (o.go) avToolNeeds(o.go.o); } })(AV_SCENES.flatMap(s => s.o));
 const AV_BY = Object.fromEntries(AV_SCENES.map(s => [s.id, s]));
 
 // ---------------- moteur des choix ----------------
@@ -420,6 +436,7 @@ function avNeedOk(k, need, t) {
     if (ty === 'sub') return avHasItem(t, i => i.sub === a);
     if (ty === 'friend') return avState().friends.length > 0;
     if (ty === 'coins') return S.coins >= +a;
+    if (ty === 'tool') return typeof famHasTool === 'function' && famHasTool(a);
     return false;
   });
 }
@@ -541,6 +558,7 @@ function avApply(t, j, fx, place) {
         const src = (t.bag || []).find(i => i.cat === 'n') ? t.bag : S.inv, it = src.filter(i => i.cat === 'n').sort((a, b) => a.rarity - b.rarity)[0];
         if (it) { src.splice(src.indexOf(it), 1); chips.push(['give', `Offert : ${it.name}`]); }
       }
+      else if (ty === 'fam') { if (typeof famAdvLoot === 'function') { const it = famAdvLoot(arg, tags, place, t); if (it) { items.push(it); chips.push(['rare', it.name]); } } }
       else if (ty === 'egg') { if (j.egg) { t.avEgg = j.egg; chips.push(['egg', 'Un œuf pour le refuge !']); } else items.push(...lootFor(tags, t.luck + 1, place.name, 1, k)); }
     } catch (e) { console.error('aventure', tok, e); }
   }
@@ -846,6 +864,7 @@ function avNeedIcon(need) {
   if (ty === 'sp') return /axo|phoque|capy/.test(a) ? AV_IC.swim : AV_IC.climb;
   if (ty === 'food') return AV_IC.food;
   if (ty === 'sub') return AV_IC.light;
+  if (ty === 'tool') return a === 'lampe' ? AV_IC.light : /masque/.test(a) ? AV_IC.swim : a === 'corde' ? AV_IC.climb : AV_IC.star;
   if (ty === 'friend') return AV_IC.friend;
   if (ty === 'coins') return AV_IC.coins;
   return AV_IC.star;

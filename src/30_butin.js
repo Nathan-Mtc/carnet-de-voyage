@@ -574,6 +574,7 @@ function btEnrich(out, tags, luck, placeArg, comp, n) {
 if (typeof lootFor === 'function') lootFor = (orig => function (tags, luck, place, n = 1, comp = null) {
   const out = orig.apply(this, arguments);
   try { btEnrich(out, tags || [], luck || 0, place, comp, n); } catch (e) { console.error('butin', e); }
+  try { if (comp && typeof famLoot === 'function') famLoot(out, tags || [], luck || 0, place, n, comp); } catch (e) { console.error('familles', e); } // v20 : nature, graines, pierres, coffres, clés, fragments (36_familles.js)
   return out;
 })(lootFor);
 // le lieu courant d'un événement (pour que lootFor sache où l'on est)

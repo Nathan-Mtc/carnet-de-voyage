@@ -187,7 +187,7 @@ function fyNurseryHTML() {
 function fyNextRoom() { return NS_HABS.find(H => H.id !== 'prairie' && !nsHabLvl(H.id)); }
 
 // ---------------- rendu de la scène ----------------
-function fyRender(box) {
+function fyRenderOld(box) {
   fyState();
   const ph = fyPhase(), deco = fyPanel === 'deco', P = fyPlacement(), m = fyMods();
   if (fySel && (!S.comps[fySel] || S.trips[fySel])) fySel = null;
@@ -209,6 +209,50 @@ function fyRender(box) {
   else if (fyPanel === 'rooms') h += fyRoomsHTML();
   else h += `<p class="fy-tip">${fyIco('paw')}<span>Touchez un compagnon</span></p>`;
   box.innerHTML = h;
+  fyFx = null;
+}
+// ---------------- v20 : foyer simplifié (bonheur, nurserie, jardin) ----------------
+// Les meubles posés et les pièces à thème ne s'affichent plus. Ancienne sauvegarde : les meubles reviennent dans le sac
+// (une seule fois, S.foyer.v20) ; les pièces construites gardent leur capacité d'accueil.
+function fyMig20() {
+  const F = fyState(); if (F.v20) return; F.v20 = 1; let n = 0;
+  for (const [id, v] of Object.entries(S.house || {})) { if (v && v.item && v.item.id) { S.inv.push(v.item); n++; } delete S.house[id]; }
+  if (n) setTimeout(() => toast(`Le foyer devient plus simple : ${n} meuble${n > 1 ? 's' : ''} rangé${n > 1 ? 's' : ''} dans votre sac.`), 1500);
+  save();
+}
+// le bonus du bonheur, en clair (appliqué dans lootFor plus bas)
+const fyPct = k => { const j = fyC(k).joy; return j >= 70 ? 20 : j >= 40 ? 10 : 0; };
+function fyBonusTxt(k) { const n = CHARS[k].name, p = fyPct(k); return p === 20 ? `${n} heureux : +20 % d’objets rares` : p ? `${n} content : +10 % d’objets rares` : `${n} s’ennuie : un repas ou un câlin, et le bonus revient`; }
+function fyCapInfo() {
+  const n = compIds().filter(k => S.comps[k]).length, cap = 3 + NS_HABS.reduce((a, H) => a + nsCap(H.id), 0), L = nsLayout();
+  const opts = NS_HABS.filter(H => H.id !== 'prairie' && H.lv[nsHabLvl(H.id)] && H.lv[nsHabLvl(H.id)].cost).map(H => ({ H, nx: H.lv[nsHabLvl(H.id)], tight: L.tent.some(k => nsHabOf(S.comps[k].sp) === H.id) ? 1 : 0 }));
+  opts.sort((a, b) => b.tight - a.tight || a.nx.coins - b.nx.coins);
+  return { n, cap, up: opts[0] || null };
+}
+function fyFoodHTML(k) {
+  const food = S.inv.filter(i => i.cat === 'n'), rank = { love: 0, like: 1, hate: 2 };
+  food.sort((a, b) => rank[tasteOf(k, a)] - rank[tasteOf(k, b)] || b.rarity - a.rarity);
+  return `<div class="fy-food fy2-food">${food.length ? food.slice(0, 18).map(it => { const t = tasteOf(k, it); return `<button class="fy-fi t-${t}" data-fy="eat" data-fi="${it.id}" aria-label="${esc(it.name)}" title="${esc(it.name)}"><span class="ico">${itemIcon(it)}</span><i>${fyIco(t === 'love' ? 'heart' : t === 'hate' ? 'sad' : 'star')}</i></button>`; }).join('') : `<span class="fy-none">${fyIco('bowl')}<span>Rien à manger : préparez un plat au commerce ou partez en voyage.</span></span>`}</div>`;
+}
+function fyRender(box) {
+  fyState(); fyMig20();
+  if (fySel && !S.comps[fySel]) fySel = null;
+  const ci = fyCapInfo(), ids = compIds().filter(k => CHARS[k] && S.comps[k]);
+  const canUp = ci.up && nsCanPay(ci.up.nx.cost, ci.up.nx.coins);
+  let h = `<div class="fy2-cap">${fyIco('house')}<b>${ci.n}/${ci.cap} familiers</b>${ci.up ? `<span class="fy2-cost">${nsCostHTML(ci.up.nx.cost, ci.up.nx.coins)}</span><button class="btn ${canUp ? 'green' : 'cream'} sm" data-fy="grow" data-fk="${ci.up.H.id}" ${canUp ? '' : 'disabled'}>Agrandir</button>` : ''}</div>`;
+  h += `<h3 class="fy2-h">${fyIco('heart')} Bonheur <small>Nourrir et câliner : un familier heureux rapporte plus d’objets rares</small></h3><div class="fy2-list">`;
+  h += ids.map(k => {
+    const c = fyC(k), p = fyPct(k), away = !!S.trips[k];
+    return `<div class="fy2-c p${p}${fySel === k ? ' sel' : ''}"><span class="fy2-pic"><img src="${portraitURI(k, c.joy >= 70 ? 'rire' : 'content')}" alt=""></span><div class="fy2-x"><b>${esc(CHARS[k].name)}${away ? ' <small>en voyage</small>' : ''}</b>${fyDots(c.joy, 'heart', 'joy')}<span class="fy2-b">${esc(fyBonusTxt(k))}</span></div>${away ? '' : `<div class="fy2-a"><button data-fy="feed2" data-fk="${k}" aria-label="Nourrir">${fyIco('bowl')}</button><button data-fy="pet2" data-fk="${k}" aria-label="Câliner">${fyIco('paw')}</button><button data-fy="dress2" data-fk="${k}" aria-label="Habiller (garde-robe)">${fyIco('hanger')}</button></div>`}</div>${fySel === k && fyMode === 'food' ? fyFoodHTML(k) : ''}`;
+  }).join('') + `</div>`;
+  const N = nsState(), eggs = S.eggs || [], cr = N.cross, now = Date.now();
+  h += `<h3 class="fy2-h">${fyIco('egg')} Nurserie</h3><div class="fy2-nur"><div class="fy2-eggs">${eggs.slice(0, 6).map(e => { const ok = e.ready <= now; return `<div class="fy2-egg"><span>${eggArt(e, ok ? 1 : 0, 'fy2' + e.id)}</span>${ok ? `<button class="btn gold sm" data-act="hatch" data-id="${e.id}">Éclore</button>` : `<small>${fmtDur(e.ready - now)}</small>`}</div>`; }).join('') || `<span class="fy2-none">Pas d’œuf pour l’instant</span>`}</div>
+    <div class="fy2-cross">${fyIco('heart')}<span>${cr ? `${esc(cr.names[0])} × ${esc(cr.names[1])} : ${cr.ready <= now ? 'œuf prêt !' : 'œuf dans ' + fmtDur(cr.ready - now)}` : N.enclos ? 'Croisements : choisissez deux parents' : 'Croisements : fabriquez le panier double'}</span><button class="btn cream sm" data-fy="nurse">Ouvrir</button></div></div>`;
+  let jic = '🌱'; try { const f = typeof FAM !== 'undefined' && FAM && FAM.jardin; const i = f && (f.icone || f['icône'] || f.icon); if (i) jic = String(i); } catch (e) {}
+  h += `<h3 class="fy2-h">${jic.trim().startsWith('<') ? jic : esc(jic)} Jardin</h3><div id="fyJardin" class="fy2-jar">${typeof jardinHTML === 'function' ? '' : '<p class="fy2-none">Le jardin arrive bientôt : vous y sèmerez les graines rapportées de voyage.</p>'}</div>`;
+  try { const vb = VILLAGE_BUILDINGS.filter(b => villageBuilt(b.id)); if (vb.length) h += `<p class="small fy2-vb">Bâtiments construits (bonus de voyage actifs) : ${vb.map(b => esc(b.name)).join(', ')}.</p>`; } catch (e) {}
+  box.innerHTML = h;
+  if (typeof jardinHTML === 'function') { const j = box.querySelector('#fyJardin'); try { const r = jardinHTML(j); if (typeof r === 'string' && r) j.innerHTML = r; } catch (e) { console.error('jardin', e); } }
   fyFx = null;
 }
 // ---- menu de soin d'un compagnon
@@ -292,7 +336,7 @@ if (typeof startTrip === 'function') startTrip = (orig => function () {
     const t = S.trips[k];
     if (t && t !== before) {
       const c = fyC(k), m = fyMods();
-      if (good) { t.luck = (t.luck || 0) + 0.6; t.fyBoost = 1; } else if (tired) { t.luck = Math.max(0, (t.luck || 0) - 0.3); t.fyTired = 1; }
+      if (good) t.fyBoost = 1; void tired; // v20 : le bonus du bonheur est appliqué au butin (affiché au foyer)
       c.nrg = fyClamp(c.nrg - ({ eclair: 5, court: 10, moyen: 18, long: 28, expe: 40 }[t.dur] || 12));
       if (m.trip > 0 && isFinite(t.total)) { const f = 1 - m.trip; t.out = Math.round(t.out * f); t.stay = Math.round((t.stay || 0) * f); t.total = 2 * t.out + t.stay; }
       c.t = fyNow(); save();
@@ -302,8 +346,9 @@ if (typeof startTrip === 'function') startTrip = (orig => function () {
 })(startTrip);
 // butin : la bonne humeur porte chance (meilleurs objets)
 if (typeof lootFor === 'function') lootFor = (orig => function (tags, luck, place, n, comp) {
-  try { if (comp && S.comps && S.comps[comp] && S.foyer && S.foyer.c && S.foyer.c[comp]) { const c = S.foyer.c[comp]; if (c.joy >= 70 && c.nrg >= 40) luck = (luck || 0) + 0.4; else if (c.joy < 30) luck = Math.max(0, (luck || 0) - 0.2); } } catch (e) {}
-  return orig.call(this, tags, luck, place, n, comp);
+  const out = orig.apply(this, arguments);
+  try { if (comp && S.comps && S.comps[comp] && Array.isArray(out)) { const p = fyPct(comp) / 100; if (p) out.forEach(it => { if (it && typeof it.rarity === 'number' && it.rarity < 4 && !it.tresor && Math.random() < p) it.rarity++; }); } } catch (e) {}
+  return out;
 })(lootFor);
 // retour : un peu de bonheur ; après une aventure difficile (29_aventure.js), il rentre fatigué et se repose au foyer
 if (typeof GAME !== 'undefined') GAME.on('trip:return', e => {
@@ -382,6 +427,10 @@ document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-fy]'); if (!el || el.disabled || !el.closest('#panelBody')) return;
   const a = el.dataset.fy, k = el.dataset.fk, id = el.dataset.fi;
   const scrollCare = () => setTimeout(() => { const c = document.getElementById('fyCare'); if (c && c.scrollIntoView) c.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 30);
+  if (a === 'feed2') { fyMode = fySel === k && fyMode === 'food' ? 'menu' : 'food'; fySel = k; renderPanel(); return; }
+  if (a === 'pet2') { fySel = k; fyMode = 'menu'; fyPet(k); toast(`${CHARS[k].name} adore les câlins ! ${fyBonusTxt(k)}.`); return; }
+  if (a === 'dress2') { if (S.comps[k]) { S.sel = k; save(); } fySel = null; if (typeof openCompagnons === 'function') openCompagnons('garde'); return; }
+  if (a === 'grow') { if (typeof nsUpgrade === 'function') nsUpgrade(k); renderPanel(); return; }
   if (a === 'comp') { if (fyPanel === 'deco') return; fySel = fySel === k ? null : k; fyMode = 'menu'; fyPanel = null; renderPanel(); if (fySel) scrollCare(); return; }
   if (a === 'close') { fySel = null; fySlot = null; fyPanel = null; renderPanel(); return; }
   if (a === 'menu') { fyMode = 'menu'; renderPanel(); return; }
@@ -401,6 +450,26 @@ document.addEventListener('click', ev => {
 });
 
 // ---------------- style ----------------
+(function fy2CSS() {
+  const st = document.createElement('style');
+  st.textContent = `
+.fy2-cap{display:flex;align-items:center;gap:6px;flex-wrap:wrap;border:2.5px solid var(--ink);border-radius:14px;background:#fff8ea;padding:6px 10px;margin:2px 0 8px;font-size:15px}.fy2-cap>b{flex:1}.fy2-cap .fyi{font-size:20px;color:#d9604f}
+.fy2-cost{display:flex;gap:4px;font-size:11px}.fy2-cost ul{display:flex;gap:4px;margin:0;padding:0;list-style:none}
+.fy2-h{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin:10px 0 6px;font:800 16px 'Baloo 2',sans-serif}.fy2-h small{font:600 11.5px sans-serif;color:var(--ink2)}
+.fy2-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:6px}
+.fy2-c{display:flex;align-items:center;gap:8px;border:2px solid var(--ink);border-radius:14px;background:#fff8ea;padding:5px 8px}.fy2-c.p20{background:#effaf2;border-color:#3a8f5a}.fy2-c.p0{background:#fdeee8}
+.fy2-pic{flex:none;width:52px;height:52px}#panelBody .fy2-pic img{width:52px!important;height:52px!important;max-width:none;border-radius:50%;background:#fff;border:2px solid var(--ink)}
+.fy2-x{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}.fy2-x b{font-size:14px}.fy2-x b small{font-weight:600;color:var(--ink2)}
+.fy2-b{font:800 12px/1.15 'Baloo 2',sans-serif;color:#2f7f6c}.fy2-c.p0 .fy2-b{color:#b0482f}.fy2-c.p10 .fy2-b{color:#7a5f50}
+.fy2-a{display:flex;flex-direction:column;gap:3px}.fy2-a button{width:34px;height:30px;border:2px solid var(--ink);border-radius:10px;background:#fff;font-size:18px;display:grid;place-items:center;cursor:pointer;color:#5b4636}
+.fy2-food{grid-column:1/-1}
+.fy2-nur{border:2px solid var(--ink);border-radius:14px;background:#fffaf0;padding:6px 8px;display:flex;flex-direction:column;gap:6px}
+.fy2-eggs{display:flex;gap:6px;flex-wrap:wrap}.fy2-egg{display:flex;flex-direction:column;align-items:center;gap:2px;width:64px}.fy2-egg>span{width:44px;height:56px}.fy2-egg svg{width:100%;height:100%}
+.fy2-cross{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700}.fy2-cross>span{flex:1}.fy2-cross .fyi{color:#f08aa6;font-size:18px}
+.fy2-none{font-size:12.5px;color:var(--ink2)}.fy2-jar{min-height:20px}
+`;
+  document.head.appendChild(st);
+})();
 (function fyCSS() {
   if (document.getElementById('fyCSS')) return;
   const st = document.createElement('style'); st.id = 'fyCSS';

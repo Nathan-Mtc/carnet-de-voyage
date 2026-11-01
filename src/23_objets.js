@@ -224,29 +224,42 @@ function obGroupInv() {
   out.sort((a, b) => (b.inf.now - a.inf.now) || (b.inf.ready - a.inf.ready) || (b.it.rarity - a.it.rarity) || (b.inf.main.prio - a.inf.main.prio) || (b.date - a.date));
   return out;
 }
+// v20 : chaque carte montre la pastille de sa famille (36_familles.js) et UNE ligne d'usage (famUseLine) ;
+// une commande ou un rêve en cours garde la priorité sur la ligne (on le signale en rose)
+const obFam = it => (typeof famOf === 'function' ? famOf(it) : null);
+const obFamPill = (it, cls = '') => { const f = obFam(it), F = f && typeof FAM !== 'undefined' ? FAM[f] : null; return F ? `<span class="fampill ${cls}" style="--fc:${F.couleur};--fb:${F.fond}"><i aria-hidden="true">${F.icone}</i>${F.nom}</span>` : ''; };
+function obFamLine(it, inf) {
+  if (inf.now || typeof famUseLine !== 'function') return obLineHTML(inf);
+  const F = FAM[obFam(it)] || {};
+  return `<span class="obu famu" style="--uc:${F.couleur};--ub:${F.fond}"><span>→ ${esc(famUseLine(it))}</span></span>`;
+}
 function obCard(g, i) {
-  const it = g.it, inf = g.inf;
-  return `<button class="obc r${it.rarity}${inf.now ? ' now' : ''}" data-fiche="${esc(it.id)}" style="--rc:${RARC[it.rarity]};--d:${Math.min(i, 14) * 0.025}s" aria-label="${esc(it.name)}, ${RARITY[it.rarity]}${g.n > 1 ? ', ' + g.n + ' exemplaires' : ''}. ${esc(inf.main.line)}">
-<span class="obtop">${obRegPill(it)}${g.n > 1 ? `<span class="obx">×${g.n}</span>` : ''}</span>
+  const it = g.it, inf = g.inf, line = typeof famUseLine === 'function' && !inf.now ? famUseLine(it) : inf.main.line;
+  return `<button class="obc r${it.rarity}${inf.now ? ' now' : ''}" data-fiche="${esc(it.id)}" style="--rc:${RARC[it.rarity]};--d:${Math.min(i, 14) * 0.025}s" aria-label="${esc(it.name)}, ${RARITY[it.rarity]}${g.n > 1 ? ', ' + g.n + ' exemplaires' : ''}. ${esc(line)}">
+<span class="obtop">${obFamPill(it, 'mini')}${g.n > 1 ? `<span class="obx">×${g.n}</span>` : ''}</span>
 <span class="obi">${itemIcon(it)}${g.worn ? '<em class="obworn">Porté</em>' : ''}</span>
 <b class="obnm">${esc(it.name)}</b><span class="obrar">${RARITY[it.rarity]}${it.edition ? ' · Édition' : it.special ? ' · Unique' : ''}</span>
-${obLineHTML(inf)}</button>`;
+${obFamLine(it, inf)}</button>`;
 }
+const OB_FAM_ALIAS = { comp: 'jardin', client: 'tout', fab: 'materiaux', vendre: 'tresors', col: 'nature' };
+const OB_FAM_EMPTY = { nourriture: 'Pas de nourriture : les marchés, cafés et vergers en regorgent.', materiaux: 'Pas de matériaux : bois, laine, pierres… se trouvent partout en voyage.', vetements: 'Pas de vêtement : chaque paysage a les siens.', jardin: 'Pas de graine : on en trouve à la campagne, en forêt et sur les îles.', equipement: 'Pas d’équipement : fabriquez-en à l’atelier (onglet Équipement).', nature: 'Pas encore d’insecte ni de coquillage : explorez forêts, prairies et plages.', tresors: 'Pas encore de trésor : coffres, pierres précieuses et fragments vous attendent au loin.' };
 function obRenderBag(box) {
-  if (typeof bagFilter !== 'undefined' && bagFilter !== obLastBag) { obFilter = bagFilter === 'v' ? 'comp' : 'tout'; obLastBag = bagFilter; }
+  if (typeof bagFilter !== 'undefined' && bagFilter !== obLastBag) { obFilter = bagFilter === 'v' ? 'vetements' : 'tout'; obLastBag = bagFilter; }
+  if (OB_FAM_ALIAS[obFilter]) obFilter = OB_FAM_ALIAS[obFilter];
   OB_FNS = [];
-  const all = obGroupInv(), total = S.inv.length;
-  const cnt = {}; OB_GROUPS.forEach(([k]) => { cnt[k] = 0; });
-  all.forEach(g => { cnt.tout += g.n; g.inf.grps.forEach(k => { if (k in cnt) cnt[k] += g.n; }); });
-  if (obFilter !== 'tout' && !cnt[obFilter]) obFilter = obFilter in cnt ? obFilter : 'tout';
-  const list = obFilter === 'tout' ? all : all.filter(g => g.inf.grps.has(obFilter));
+  const all = obGroupInv(), total = S.inv.length, fams = typeof FAM !== 'undefined' ? Object.keys(FAM) : [];
+  const cnt = { tout: 0 }; fams.forEach(k => { cnt[k] = 0; });
+  all.forEach(g => { cnt.tout += g.n; const f = obFam(g.it); if (f in cnt) cnt[f] += g.n; });
+  if (!(obFilter in cnt)) obFilter = 'tout';
+  const list = obFilter === 'tout' ? all : all.filter(g => obFam(g.it) === obFilter);
   const nowN = all.filter(g => g.inf.now).reduce((a, g) => a + g.n, 0);
-  let h = `<div class="obhead"><div class="obht"><b>Mon sac</b><span>${obPl(total, 'objet', 'objets')} · touchez un objet pour savoir à quoi il sert</span></div><button class="obhelp" data-oblegend="1" aria-expanded="${obLegend}" aria-controls="obLegend" title="Les raretés">?</button></div>`;
+  let h = `<div class="obhead"><div class="obht"><b>Mon sac</b><span>${obPl(total, 'objet', 'objets')} · 7 familles, chacune son usage</span></div><button class="obhelp" data-oblegend="1" aria-expanded="${obLegend}" aria-controls="obLegend" title="Les raretés">?</button></div>`;
   if (obLegend) h += obLegendHTML();
-  h += `<div class="obfil" role="tablist" aria-label="Trier le sac par usage">${OB_GROUPS.map(([k, l, ic]) => `<button role="tab" class="obf-${k}${cnt[k] ? '' : ' zero'}" data-obf="${k}" aria-selected="${obFilter === k}">${obIco(ic)}<span>${l}</span><i>${cnt[k]}</i></button>`).join('')}</div>`;
-  if (nowN && (obFilter === 'tout' || obFilter === 'client' || obFilter === 'comp')) h += `<p class="obnowtip"><span class="obdot"></span>${obPl(nowN, 'objet est attendu', 'objets sont attendus')} en ce moment par une commande ou un rêve : ${nowN > 1 ? 'ils sont' : 'il est'} en tête.</p>`;
+  h += `<div class="obfil famfil" role="tablist" aria-label="Trier le sac par famille"><button role="tab" class="obf-tout" data-obf="tout" aria-selected="${obFilter === 'tout'}">${obIco('tout')}<span>Tout</span><i>${cnt.tout}</i></button>${fams.map(k => { const F = FAM[k]; return `<button role="tab" class="obf-${k}${cnt[k] ? '' : ' zero'}" data-obf="${k}" aria-selected="${obFilter === k}" style="--fc:${F.couleur};--fb:${F.fond}"><b class="famico" aria-hidden="true">${F.icone}</b><span>${F.nom}</span><i>${cnt[k]}</i></button>`; }).join('')}</div>`;
+  if (obFilter !== 'tout' && FAM[obFilter]) h += `<p class="famhint" style="--fc:${FAM[obFilter].couleur};--fb:${FAM[obFilter].fond}"><b>${FAM[obFilter].icone} ${FAM[obFilter].nom}</b> : ${esc(FAM[obFilter].usage)}.</p>`;
+  if (nowN && obFilter === 'tout') h += `<p class="obnowtip"><span class="obdot"></span>${obPl(nowN, 'objet est attendu', 'objets sont attendus')} en ce moment par une commande ou un rêve : ${nowN > 1 ? 'ils sont' : 'il est'} en tête.</p>`;
   if (!total) h += `<div class="obempty">${obIco('tout', 'big')}<p>Le sac est vide. Envoyez un compagnon en voyage : il reviendra avec des vêtements, des matériaux et des spécialités locales.</p><button class="btn gold sm" data-obgo="voyage">Partir en voyage</button></div>`;
-  else if (!list.length) h += `<div class="obempty">${obIco(OB_GROUPS.find(x => x[0] === obFilter)[2], 'big')}<p>${{ comp: 'Rien pour vos compagnons pour l’instant : vêtements, appâts et objets de rêve arrivent avec les voyages.', client: 'Aucun objet demandé par vos clients pour l’instant. Regardez ce qu’ils veulent au comptoir.', fab: 'Aucun ingrédient de recette pour l’instant.', vendre: 'Tout ce que vous avez sert à quelque chose !', col: 'Pas encore d’objet rare. Les longs voyages lointains en rapportent plus.' }[obFilter] || ''}</p>${obFilter === 'client' ? '<button class="btn gold sm" data-obgo="order">Voir les commandes</button>' : ''}</div>`;
+  else if (!list.length) h += `<div class="obempty"><b class="famico big">${FAM[obFilter] ? FAM[obFilter].icone : ''}</b><p>${OB_FAM_EMPTY[obFilter] || ''}</p></div>`;
   else h += `<div class="obgrid">${list.map(obCard).join('')}</div>`;
   if (total) h += `<p class="small obfoot">Les objets identiques sont regroupés (×N). En tête : ce qui sert maintenant, puis les plus rares.</p>`;
   box.innerHTML = h;
@@ -280,7 +293,7 @@ function obRowHTML(u, it) {
 function obFicheHTML(it, keep) {
   OB_FNS = [];
   const inf = obInfo(it), n = S.inv.filter(x => x.name === it.name && x.rarity === it.rarity).length;
-  const kind = it.cat === 'v' ? `Vêtement · ${SLOT_LABEL[it.sub] || ''}` : (CAT_LABEL[it.cat] || '');
+  const kind = it.cat === 'v' ? `Vêtement · ${SLOT_LABEL[it.sub] || ''}` : (typeof famOf === 'function' && FAM[famOf(it)] ? FAM[famOf(it)].nom : (CAT_LABEL[it.cat] || ''));
   const sp = obSafe(() => sellPrice(it), 0);
   // au plus 2 recettes et 2 bâtiments détaillés : les autres sont résumés en une ligne
   const uses = [], nK = {}, more = {};
@@ -294,6 +307,7 @@ function obFicheHTML(it, keep) {
   let h = `<div class="fiche obf r${it.rarity}" style="--rc:${RARC[it.rarity]}">`;
   h += `<div class="obfh"><span class="obfray" aria-hidden="true"></span><div class="fico obfi">${itemIcon(it)}</div>${n > 1 ? `<span class="obfx">×${n} dans le sac</span>` : ''}</div>`;
   h += `<h2>${esc(it.name)}</h2><span class="obfrar"><i>${'★'.repeat(it.rarity + 1)}</i>${RARITY[it.rarity]}</span><span class="frar obfk">${esc(kind)}${it.special && !it.edition ? ' · Souvenir unique' : ''}</span>`;
+  if (typeof famTopHTML === 'function') h += famTopHTML(it);
   h += keep.rgfo || '';
   const story = obStory(it, !!keep.rgdesc);
   h += keep.rgdesc || (story ? `<p class="rgdesc obst">${story}</p>` : '');
