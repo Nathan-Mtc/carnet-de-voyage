@@ -17284,7 +17284,8 @@ function avChoose(t, j, oi, auto) {
   const out = avApply(t, j, res.fx || '', place);
   j.resolved = true; j.choice = oi; j.auto = !!auto; j.ok = ok;
   j.outcome = (auto ? avTxt(`{n} a décidé tout{e} seul{e} : « ${j.steps.map(s => s.a).join(' › ')} ». `, k) : '') + avTxt(res.t, k);
-  j.items = out.items; j.chips = out.chips;
+  j.items = out.items; j.chips = out.chips; j.fx = res.fx || '';
+  try { const fxs = j.fx, last = j.steps.length ? j.steps[j.steps.length - 1].a : ''; j.act = /\bhurt\b/.test(fxs) || (!ok && /time\+|back/.test(fxs)) ? 'fall' : (axActFor(avTxt(res.t, k), '', true) || axActFor(last, '', true) || axActFor('', fxs, true) || 'walk'); } catch (e) { j.act = 'walk'; }
   t.avLog = t.avLog || [];
   t.avLog.push({ a: j.steps.map(s => s.a).join(' › '), t: avTxt(res.t, k), chips: out.chips, place: j.place, auto: !!auto });
   const A = avState(); A.seen[j.sc] = (A.seen[j.sc] || 0) + 1;
@@ -17396,22 +17397,45 @@ function avGoPlace(id) {
   openSheet('voyage'); drawMarks();
 }
 
-// ---------------- la vue d'exploration ----------------
+// ---------------- la vue d'exploration (v17 : on regarde l'aventure, une seule ligne de texte) ----------------
 let avBusy = 0, avK = null, avSig = '', avStageKey = '', avPick = { src: null, id: null, how: null }, avAnim = null, avLastLen = 0;
+let avPlay = null, avPlayN = 0, avLogOpen = false, avReplayTrip = null;
 const AV_PH = [['aller', 'Aller'], ['sejour', 'Sur place'], ['retour', 'Retour']];
+const AV_SLOT = 9000;
+const avReduce = () => typeof reduceMotion === 'function' && reduceMotion();
+// une seule phrase, courte
+function avOne(s, max) {
+  max = max || 96; s = String(s || '').replace(/\s+/g, ' ').trim();
+  const m = s.match(/^.*?[.!?…](?=\s|$)/); let r = m ? m[0] : s;
+  if (m && r.length < 22 && s.length > r.length) { const m2 = s.slice(r.length).trim().match(/^.*?[.!?…](?=\s|$)/); if (m2 && (r + ' ' + m2[0]).length <= max) r += ' ' + m2[0]; }
+  if (r.length > max) r = r.slice(0, max).replace(/\s+\S*$/, '') + '…';
+  return r;
+}
+const AV_STOP = new Set(['le', 'la', 'les', 'de', 'du', 'des', 'dans', 'au', 'aux', 'à', 'sur', 'un', 'une', 'en', 'et', 'avec', 'pour', 'son', 'sa', 'ses', 'par', 'sous', 'vers', 'd’', 'l’']);
+function avShort(a) { const w = String(a || '').replace(/[«»"]/g, '').trim().split(/\s+/); const r = w.slice(0, 4); while (r.length > 1 && AV_STOP.has(r[r.length - 1].toLowerCase())) r.pop(); return r.join(' '); }
+const avStripAuto = s => String(s || '').replace(/^[^«]*seul\S* : « .*? »\. /, '');
+const AV_KIND_ACT = { trouvaille: 'dig', repas: 'snack', photo: 'photo', merveille: 'photo', pieces: 'dig', tresor: 'map', animal: 'snack', retour: 'walk', depart: 'walk', rencontre: 'hello' };
+function avMoment(t, j) {
+  const act = (['animal', 'merveille'].includes(j.kind) && axActFor(j.text, '', true)) || AV_KIND_ACT[j.kind] || axActFor(j.text, '', true) || 'walk';
+  return { act, line: avOne(j.text), items: j.items, gift: j.kind === 'pieces' };
+}
+function avMomentChoice(t, j) {
+  return { act: j.act || 'walk', line: avOne(avStripAuto(j.outcome), 110), items: j.items, chips: j.chips, gift: (j.chips || []).some(c => ['place', 'rumor', 'rare', 'egg'].includes(c[0])) };
+}
 function avOpen(k) {
   const t = S.trips[k]; if (!t) return;
   if (S.sel !== k) { S.sel = k; S.unseen[k] = 0; plan.dest = null; save(); try { renderComps(); drawMarks(); } catch (e) {} }
   S.unseen[k] = 0;
-  avK = k; avSig = ''; avStageKey = ''; avPick = { src: null, id: null, how: null }; avLastLen = t.journal.length;
+  avK = k; avSig = ''; avStageKey = ''; avPick = { src: null, id: null, how: null }; avLastLen = t.journal.length; avPlay = null; avLogOpen = false;
   let v = $('avView');
   if (!v) { v = document.createElement('div'); v.id = 'avView'; v.className = 'avv'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-modal', 'true'); document.body.appendChild(v); }
-  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-journal="1">Journal complet</button><button class="btn green sm" data-av-close="1">Retour à la carte</button></footer></div>`;
+  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-log="1" aria-pressed="false">Journal</button><button class="btn cream sm" data-av-replay="cur">Revoir l’aventure</button><button class="btn green sm" data-av-close="1">Carte</button></footer></div>`;
   v.hidden = false; document.body.classList.add('avopen');
   avRender(true);
 }
-function avClose() { const v = $('avView'); if (v) { v.hidden = true; v.innerHTML = ''; } avK = null; document.body.classList.remove('avopen'); try { renderAll(); } catch (e) {} }
+function avClose() { const v = $('avView'); if (v) { v.hidden = true; v.innerHTML = ''; } avK = null; avPlay = null; document.body.classList.remove('avopen'); try { renderAll(); } catch (e) {} }
 const avPending = t => t.journal.findIndex(j => j.pending && !j.resolved);
+const AV_CHIP_S = { place: 'Nouveau lieu', rumor: 'Rumeur', friend: 'Nouvel ami', rep: 'Réputation', hurt: 'Fatigué', slow: 'Plus long', fast: 'Raccourci', back: 'Demi-tour', wild: 'Rencontre', egg: 'Un œuf !', rare: 'Objet rare', photo: 'Photo', coins: 'Pièces', give: 'Offert' };
 function avRender(force) {
   const v = $('avView'); if (!v || v.hidden || !avK) return;
   if (avBusy > Date.now()) return;
@@ -17424,34 +17448,52 @@ function avRender(force) {
   const left = Math.max(0, (t.total - t.elapsed) / (typeof fast !== 'undefined' && fast && k === S.sel ? 30 : 1));
   v.querySelector('.avh').innerHTML = `<img src="${portraitURI(k)}" alt=""><div><b>${esc(CHARS[k].name)} · ${esc(w.name)}</b><span>${esc(AV_BIOME_NAME[biome] || '')} · ${tod === 'nuit' ? 'la nuit' : tod === 'soir' ? 'au crépuscule' : 'en journée'}${wx === 'pluie' ? ' · sous la pluie' : wx === 'neige' ? ' · il neige' : ''} · ${Math.floor(hour)} h ${String(Math.floor((hour % 1) * 60)).padStart(2, '0')} là-bas</span></div><button class="avx" data-av-close="1" aria-label="Fermer">×</button>`;
   v.querySelector('.avph').innerHTML = AV_PH.map(([id, l]) => `<i class="${id === ph ? 'on' : AV_PH.findIndex(x => x[0] === id) < AV_PH.findIndex(x => x[0] === ph) || ph === 'fin' ? 'past' : ''}">${l}</i>`).join('<b>·</b>') + `<span>${t.done ? 'Rentré !' : 'Retour dans ' + fmtDur(left)}</span>`;
-  // décor (reconstruit seulement s'il change, pour ne pas relancer les animations)
-  const moving = !t.done && ph !== 'sejour' && !wild;
-  const skey = [biome, tod, wx, ph, moving, wild ? wild.t : '', tamed.join(','), t.done].join('|');
+  // que montre-t-on ? une séquence qui se joue, la question en cours, la rencontre, ou la vie du voyage
+  const now = Date.now();
+  if (avPlay && avPlay.until <= now) { const nx = avPlay.then; avPlay = nx ? Object.assign({}, nx, { until: now + (nx.dur || 9000), id: ++avPlayN }) : null; }
+  if (t.journal.length > avLastLen) {
+    const fresh = t.journal.slice(avLastLen).filter(j => !j.pending && j.kind !== 'choix' && j.kind !== 'sauvage').pop();
+    if (fresh && !avPlay && !pj) avPlay = Object.assign(avMoment(t, fresh), { until: now + 9000, id: ++avPlayN });
+    avLastLen = t.journal.length;
+  }
+  const moving = !t.done && ph !== 'sejour' && !pj;
+  const c = axCtx(k, biome, tod, wx);
+  let sh;
+  if (avPlay) sh = avPlay;
+  else if (pj && pj.kind === 'choix' && pj.sc && avNode(pj)) { const q = pj.path && pj.path.length ? (pj.q || avTxt(avNode(pj).q, k)) : pj.text; sh = { act: axActFor(q, '', true) || 'tracks', line: avOne(q, 110), key: 'q' + pi + '.' + (pj.path || []).length }; }
+  else if (wild) { const m = avWildMood(wild); sh = { act: 'wild', wild: { sp: wild.sp, genes: wild.genes }, wildMood: m, line: AV_MOODS[m], key: 'w' + pi }; }
+  else if (pj) sh = { act: pj.kind === 'aide' ? 'lost' : pj.kind === 'marchand' ? 'chest' : 'hello', line: avOne(pj.text), key: 'p' + pi };
+  else if (t.done) sh = { act: 'chest', gift: true, line: avTxt('{n} est rentré{e} : le sac est plein à craquer !', k), key: 'done' };
+  else { const slot = Math.floor(now / AV_SLOT), act = axIdle(c, slot, moving); sh = { act, line: axLine(act, Math.floor(slot / 3)), key: 'i' + slot + act }; }
+  if (sh.wild) c.wild = sh.wild;
+  if (sh.wildMood) c.wildMood = sh.wildMood;
+  const walking = moving && !avPlay && sh.act === 'walk';
+  const skey = [biome, tod, wx, ph, walking, tamed.join(','), t.done, sh.id || sh.key, sh.act].join('|');
   if (skey !== avStageKey || force) {
     avStageKey = skey;
-    const D = avDecor(biome, tod, wx), mood = t.done ? 'rire' : wild ? 'curieux' : tod === 'nuit' && ph === 'sejour' ? 'dodo' : 'content';
-    const st = v.querySelector('.avstage');
-    st.className = `avstage b-${biome} t-${tod} ${moving ? 'mv' : 'still'} ${ph === 'retour' ? 'rev' : ''}`;
+    const D = avDecor(biome, tod, wx), st = v.querySelector('.avstage');
+    st.className = `avstage b-${biome} t-${tod} ${walking ? 'mv' : 'still'} ${ph === 'retour' && walking ? 'rev' : ''}`;
     st.innerHTML = `<div class="avl avsky">${avSky(tod, wx)}</div><div class="avl avfar"><div class="avt">${avTile(D.far)}</div></div><div class="avl avgr">${avTile(D.ground).split('</svg>')[0]}</svg></div><div class="avl avmid"><div class="avt">${avTile(D.mid)}</div></div>`
       + tamed.map((id, i) => `<img class="avfol" style="left:${4 + i * 9}%" src="${portraitURI(id, 'content')}" alt="${esc(CHARS[id].name)} suit le groupe">`).join('')
-      + `<img class="avme" src="${portraitURI(k, mood)}" alt="${esc(CHARS[k].name)}">`
-      + (wild ? `<div class="avwild wary" id="avWild"><img src="${nsPortrait(wild.sp, wild.genes, null, 'curieux')}" alt="${esc(spName(wild.sp))} sauvage"><svg class="avbush" viewBox="0 0 100 60" aria-hidden="true"><path d="M4 60 Q0 34 22 34 Q24 14 46 20 Q60 6 76 22 Q100 20 96 60Z" fill="#5fa063" stroke="#3d6b40" stroke-width="2.4"/><circle cx="30" cy="40" r="3" fill="#f08aa6"/><circle cx="70" cy="34" r="3" fill="#f6c445"/></svg><i class="avq">?</i></div>` : '')
+      + `<div class="avl avact">${axSVG(sh.act, c, { items: sh.items, gift: sh.gift, cls: sh.cls })}</div>`
       + `<div class="avl avnear"><div class="avt">${avTile(D.near)}</div></div>`
-      + (wx === 'pluie' || wx === 'neige' ? `<div class="avl avwx ${wx}"></div>` : '');
+      + (wx === 'pluie' || wx === 'neige' ? `<div class="avl avwx ${wx}"></div>` : '')
+      + ((sh.chips || []).length ? `<div class="avbadges">${sh.chips.map(([cc, l], i) => `<em class="avc c-${cc}" style="animation-delay:${0.9 + i * 0.25}s" title="${esc(l)}">${AV_CHIP_IC[cc] || ''} ${esc(AV_CHIP_S[cc] || l)}</em>`).join('')}</div>` : '');
   }
-  // récit
-  const sig = [t.journal.length, pi, pj ? (pj.path || []).length : '', JSON.stringify(avPick), t.done].join('|');
+  // sous-titre (une ligne) + vignettes de choix
+  const sig = [avStageKey, pi, pj ? (pj.path || []).length : '', JSON.stringify(avPick), avLogOpen, t.journal.length, t.done, !!avPlay].join('|');
   if (sig === avSig && !force) return;
   avSig = sig;
+  v.querySelector('.avbox').classList.toggle('asking', !!(pj && !avPlay));
   const box = v.querySelector('.avstory');
-  const past = t.journal.map((j, i) => [j, i]).filter(([j, i]) => i !== pi).slice(-6);
-  let h = past.map(([j, i]) => avLine(t, j, i, i >= avLastLen)).join('');
-  avLastLen = t.journal.length;
-  if (pj) h += avAsk(t, pj, pi);
-  else if (!t.done) h += `<p class="avnext">${esc(avTxt(ph === 'sejour' ? '{n} explore les environs…' : ph === 'retour' ? '{n} reprend le chemin de la maison…' : '{n} marche, le nez au vent…', k))}<span class="avdots"><i></i><i></i><i></i></span></p>`;
-  else h += `<div class="avend"><button class="btn green big" data-av-collect="${k}">Ouvrir son sac</button></div>`;
+  let h = `<p class="avsub" title="${esc(avTxt(sh.line || '', k))}">${esc(avTxt(sh.line || '', k))}</p>`;
+  if (!avPlay) {
+    if (pj) h += avAsk(t, pj, pi, c);
+    else if (t.done) h += `<div class="avend"><button class="btn green big" data-av-collect="${k}">Ouvrir son sac</button></div>`;
+  }
+  if (avLogOpen) h += `<div class="avlog">${t.journal.map((j, i) => [j, i]).filter(([j, i]) => i !== pi).slice(-12).reverse().map(([j, i]) => avLine(t, j, i, false)).join('')}<button class="btn cream sm" data-av-journal="1">Ouvrir le carnet complet</button></div>`;
   box.innerHTML = h;
-  box.scrollTop = box.scrollHeight;
+  const lb = v.querySelector('[data-av-log]'); if (lb) lb.setAttribute('aria-pressed', avLogOpen);
 }
 const AV_CHIP_IC = { place: '★', rumor: '✉', friend: '♥', rep: '☺', hurt: '✚', slow: '⧗', fast: '»', back: '↺', wild: '!', egg: '◒', rare: '◆', photo: '▣', coins: '●', give: '♡' };
 const avChips = cs => (cs || []).length ? `<span class="avchips">${cs.map(([c, l]) => `<em class="avc c-${c}">${AV_CHIP_IC[c] || ''} ${esc(l)}</em>`).join('')}</span>` : '';
@@ -17465,38 +17507,72 @@ function avLine(t, j, i, fresh) {
   return s + `</div>`;
 }
 function avNeedLabel(opt, k) { return opt.h ? avTxt(opt.h, k) : ''; }
-function avAsk(t, j, i) {
+// icônes de ce qu'une option demande (vêtement, talent, objet) ; cadenas s'il manque
+const AVI = (s) => `<svg viewBox="0 0 24 24" aria-hidden="true">${s}</svg>`, AVL = 'stroke="#5b4636" stroke-width="1.6" stroke-linejoin="round"';
+const AV_IC = {
+  pieds: AVI(`<path d="M8 3h6v11l5 2c2 1 2 5 0 5H6c-1 0-1-2 0-3l2-3Z" fill="#f6c445" ${AVL}/>`),
+  tete: AVI(`<path d="M7 17c0-6 2-10 5-10s5 4 5 10Z" fill="#e2584d" ${AVL}/><path d="M3 17h18" stroke="#5b4636" stroke-width="2.4" stroke-linecap="round"/>`),
+  cou: AVI(`<path d="M4 7h16v5H4Z M13 12v9h4v-9" fill="#e2584d" ${AVL}/>`),
+  dos: AVI(`<rect x="6" y="7" width="12" height="14" rx="3" fill="#d9a868" ${AVL}/><path d="M9 7a3 3 0 0 1 6 0" fill="none" ${AVL}/>`),
+  mains: AVI(`<path d="M7 21v-8c0-6 10-6 10 0v8Z" fill="#7fb6e0" ${AVL}/><ellipse cx="6" cy="14" rx="2" ry="3" fill="#7fb6e0" ${AVL}/>`),
+  swim: AVI(`<path d="M2 12q2.5-3 5 0t5 0t5 0t5 0M2 18q2.5-3 5 0t5 0t5 0t5 0" stroke="#3f8ac0" stroke-width="2.2" fill="none"/>`),
+  climb: AVI(`<rect x="10" y="12" width="4" height="10" fill="#a07850"/><circle cx="12" cy="9" r="7" fill="#6fae5f" ${AVL}/>`),
+  star: AVI(`<path d="M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21l1.5-7L2 9.3l7-.8Z" fill="#ffd95a" ${AVL}/>`),
+  food: AVI(`<circle cx="12" cy="14" r="7" fill="#e5584f" ${AVL}/><path d="M12 7q1-4 4-4" stroke="#5b8a3a" stroke-width="2" fill="none"/>`),
+  light: AVI(`<circle cx="12" cy="11" r="6" fill="#ffe46a" ${AVL}/><path d="M9 18h6M10 21h4" stroke="#5b4636" stroke-width="2"/>`),
+  friend: AVI(`<path d="M12 20C4 14 3 9 6.5 6.5 9 5 11 6.5 12 8c1-1.5 3-3 5.5-1.5C21 9 20 14 12 20Z" fill="#f06a8e" ${AVL}/>`),
+  coins: AVI(`<circle cx="12" cy="12" r="8" fill="#f6c445" ${AVL}/><circle cx="12" cy="12" r="4.5" fill="none" stroke="#c9952a" stroke-width="1.6"/>`),
+  lock: AVI(`<rect x="5" y="11" width="14" height="10" rx="2" fill="#8a7258"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#8a7258" stroke-width="2.5" fill="none"/>`),
+  paw: AVI(`<ellipse cx="12" cy="15" rx="5" ry="4.5" fill="#f2b8b8" ${AVL}/><circle cx="6.5" cy="9.5" r="2" fill="#f2b8b8" ${AVL}/><circle cx="10" cy="6.5" r="2" fill="#f2b8b8" ${AVL}/><circle cx="14" cy="6.5" r="2" fill="#f2b8b8" ${AVL}/><circle cx="17.5" cy="9.5" r="2" fill="#f2b8b8" ${AVL}/>`),
+  ball: AVI(`<circle cx="12" cy="12" r="8" fill="#7fb6e0" ${AVL}/><path d="M4.5 10q7.5 3 15 0M6 16.5q6 -2.5 12 0" stroke="#fff" stroke-width="2" fill="none"/>`),
+  wait: AVI(`<path d="M6 3h12M6 21h12M7 3q0 6 5 9q-5 3 -5 9M17 3q0 6 -5 9q5 3 5 9" fill="#fdf3dc" ${AVL}/><path d="M9 19q3-3 6 0Z" fill="#e9c46a"/>`),
+};
+function avNeedIcon(need) {
+  const n = (need || [])[0] || '', [ty, a] = n.split(':');
+  if (ty === 'wear') return AV_IC[a] || AV_IC.star;
+  if (ty === 'sp') return /axo|phoque|capy/.test(a) ? AV_IC.swim : AV_IC.climb;
+  if (ty === 'food') return AV_IC.food;
+  if (ty === 'sub') return AV_IC.light;
+  if (ty === 'friend') return AV_IC.friend;
+  if (ty === 'coins') return AV_IC.coins;
+  return AV_IC.star;
+}
+function avAsk(t, j, i, c) {
   const k = t.comp;
   if (j.kind === 'choix' && j.sc) {
     const node = avNode(j); if (!node) return '';
-    let s = `<div class="avask"><p class="avq1">${esc(j.path && j.path.length ? (j.q || avTxt(node.q, k)) : j.text)}</p>`;
-    if (j.steps && j.steps.length) s = `<div class="avask"><p class="avpath">${j.steps.map(x => `« ${esc(x.a)} »`).join(' › ')}</p><p class="avq1">${esc(j.q || avTxt(node.q, k))}</p>`;
-    s += `<div class="avopts">${node.o.map((o, oi) => { const ok = avNeedOk(k, o.need, t), lb = avNeedLabel(o, k); return `<button data-av-ch="${i}" data-o="${oi}" ${ok ? '' : 'disabled'} class="${o.need ? 'sp' : ''}">${esc(avTxt(o.a, k))}${o.need ? `<small>${ok ? '✓ ' + esc(lb) : 'Il faudrait : ' + esc(lb)}</small>` : o.p != null ? `<small>Risqué</small>` : ''}</button>`; }).join('')}</div>`;
-    return s + `<p class="small">Sans réponse, ${esc(CHARS[k].name)} décidera seul${typeof compE === 'function' ? compE(k) : ''} au retour.</p></div>`;
+    c = c || axCtx(k, j.biome || 'campagne', 'jour', 'clair');
+    const n = node.o.length;
+    return `<div class="avopts2" style="grid-template-columns:repeat(${n === 4 ? 2 : n},1fr)">${node.o.map((o, oi) => {
+      const ok = avNeedOk(k, o.need, t), lb = avNeedLabel(o, k), full = avTxt(o.a, k);
+      const tag = o.need ? `<span class="avneed${ok ? ' ok' : ''}" title="${esc(ok ? lb : 'Il faudrait : ' + lb)}">${avNeedIcon(o.need)}${ok ? '' : `<i class="lk">${AV_IC.lock}</i>`}</span>` : o.p != null ? `<span class="avneed risk" title="Risqué">?</span>` : '';
+      return `<button class="avopt${ok ? '' : ' locked'}" data-av-ch="${i}" data-o="${oi}" ${ok ? '' : 'disabled'} aria-label="${esc(full + (o.need ? ' (' + (ok ? '' : 'il faudrait : ') + lb + ')' : o.p != null ? ' (risqué)' : ''))}" title="${esc(full)}"><span class="avth">${axSVG(axOptAct(o, k), c, { thumb: true })}</span><b>${esc(avShort(full))}</b>${tag}</button>`;
+    }).join('')}</div>`;
   }
   if (j.kind === 'sauvage') return avTameHTML(t, j, i);
   // autres événements (rencontre, marchand, aide) : la carte du journal habituelle
   try { return `<div class="avask avold">${journalEntry(t, j, i)}</div>`; } catch (e) { return ''; }
 }
 // ---------------- la rencontre vécue ----------------
-const AV_MOODS = { timide: 'Il se cache à moitié derrière un buisson et tremble un peu.', joueur: 'Il remue la queue et sautille sur place, l’œil pétillant.', gourmand: 'Son ventre gargouille si fort qu’on l’entend d’ici.' };
+const AV_MOODS = { timide: 'Il se cache derrière un buisson et tremble un peu.', joueur: 'Il remue la queue et sautille sur place.', gourmand: 'Son ventre gargouille si fort qu’on l’entend d’ici.' };
 const AV_HOW = [['doux', 'Approcher doucement'], ['jeu', 'Jouer avec lui'], ['attendre', 'Attendre sans bouger']];
+const AV_HOW_S = { doux: 'Doucement', jeu: 'Jouer', attendre: 'Attendre' }, AV_HOW_IC = { doux: 'paw', jeu: 'ball', attendre: 'wait' };
 const AV_HOW_BONUS = { timide: { doux: 0.18, jeu: -0.12, attendre: 0.12 }, joueur: { doux: 0.04, jeu: 0.2, attendre: -0.06 }, gourmand: { doux: 0.06, jeu: 0, attendre: 0.1 } };
 function avWildMood(j) { if (!j.avMood) j.avMood = pick(Object.keys(AV_MOODS)); return j.avMood; }
 function avTameHTML(t, j, i) {
-  const k = t.comp, mood = avWildMood(j), nm = nsLow(j.sp);
-  let s = `<div class="avask avtame"><p class="avq1">${esc(j.text)}</p><p class="avmood">${esc(AV_MOODS[mood])}</p>`;
-  if (!nsRoomFor(j.sp)) return s + `<p class="small">${esc(nsRoomText(j.sp))}</p><div class="avopts"><button data-av-tame="${i}" data-go="leave">Le laisser partir</button></div></div>`;
+  const nm = nsLow(j.sp);
+  if (!nsRoomFor(j.sp)) return `<div class="avask avtame"><p class="small">${esc(nsRoomText(j.sp))}</p><div class="avopts row"><button data-av-tame="${i}" data-go="leave">Le laisser partir</button></div></div>`;
   const offs = nsTameOffers(t, j);
-  s += `<b class="avlbl">1. Que lui offrir ?</b><div class="avopts row">${offs.map(o => `<button data-av-off="${o.src}:${o.it.id}" aria-pressed="${avPick.id === o.it.id}"><span class="avoi">${itemIcon(o.it)}</span>${esc(o.it.name)}<small>${o.src === 'bait' ? 'votre appât' : nsBaitPower(o.it, j.sp) > 0 ? 'il adore ça' : 'à grignoter'}</small></button>`).join('')}<button data-av-off="pet:" aria-pressed="${avPick.src === 'pet'}">Une caresse<small>rien à offrir</small></button></div>`;
-  if (!offs.length) s += `<p class="small">Il aime : ${esc(NS_BAIT_HINT[j.sp] || 'les bonnes choses')}. Emportez un appât la prochaine fois !</p>`;
-  s += `<b class="avlbl">2. Comment approcher ?</b><div class="avopts row">${AV_HOW.map(([id, l]) => `<button data-av-how="${id}" aria-pressed="${avPick.how === id}">${l}</button>`).join('')}</div>`;
-  s += `<div class="avopts"><button class="go" data-av-tame="${i}" data-go="try" ${avPick.src && avPick.how ? '' : 'disabled'}>Tenter l’approche</button><button data-av-tame="${i}" data-go="leave">Laisser le ${esc(nm)} tranquille</button></div></div>`;
+  let s = `<div class="avask avtame"><div class="avrow"><b class="avlbl">Offrir</b>${offs.map(o => `<button class="avtile" data-av-off="${o.src}:${o.it.id}" aria-pressed="${avPick.id === o.it.id}" title="${esc(o.it.name)}"><span class="avoi">${itemIcon(o.it)}</span><small>${o.src === 'bait' ? 'Appât' : nsBaitPower(o.it, j.sp) > 0 ? 'Il adore' : esc(avShort(o.it.name).split(' ')[0])}</small></button>`).join('')}<button class="avtile" data-av-off="pet:" aria-pressed="${avPick.src === 'pet'}" title="Une caresse"><span class="avoi">${AV_IC.paw}</span><small>Caresse</small></button></div>`;
+  s += `<div class="avrow"><b class="avlbl">Approcher</b>${AV_HOW.map(([id, l]) => `<button class="avtile" data-av-how="${id}" aria-pressed="${avPick.how === id}" title="${l}"><span class="avoi">${AV_IC[AV_HOW_IC[id]]}</span><small>${AV_HOW_S[id]}</small></button>`).join('')}</div>`;
+  if (!offs.length) s += `<p class="small">Il aime : ${esc(NS_BAIT_HINT[j.sp] || 'les bonnes choses')}.</p>`;
+  s += `<div class="avopts row"><button class="go" data-av-tame="${i}" data-go="try" ${avPick.src && avPick.how ? '' : 'disabled'}>Tenter !</button><button data-av-tame="${i}" data-go="leave" title="Laisser le ${esc(nm)} tranquille">Le laisser</button></div></div>`;
   return s;
 }
 function avTry(t, i, leave) {
   const j = t.journal[i]; if (!j || j.resolved) return;
-  if (leave) { nsResolveTame(t, j, 'leave', null, false); save(); avRender(true); return; }
+  const wl = { sp: j.sp, genes: j.genes }, now = Date.now();
+  if (leave) { nsResolveTame(t, j, 'leave', null, false); save(); avPlay = { act: 'wildflee', wild: wl, line: avOne(j.outcome || 'Il retourne dans les fourrés.'), until: now + 6000, id: ++avPlayN }; avRender(true); return; }
   const mood = avWildMood(j);
   let bonus = (AV_HOW_BONUS[mood] || {})[avPick.how] || 0;
   const it = avPick.src === 'bag' ? t.bag.find(x => x.id === avPick.id) : avPick.src === 'inv' ? S.inv.find(x => x.id === avPick.id) : avPick.src === 'bait' && t.bait ? t.bait.item : null;
@@ -17508,15 +17584,41 @@ function avTry(t, i, leave) {
   t.avLog.push({ a: `Rencontre : ${AV_HOW.find(x => x[0] === avPick.how)[1].toLowerCase()}`, t: j.outcome, chips: ok ? [['friend', `${CHARS[j.tamed].name} suit ${CHARS[t.comp].name}`]] : [], place: j.place, tamed: j.tamed || null });
   save();
   avPick = { src: null, id: null, how: null };
-  const w = $('avWild'), reduce = typeof reduceMotion === 'function' && reduceMotion();
-  if (w && !reduce) {
-    avBusy = Date.now() + 2900;
-    w.className = 'avwild hesit';
-    clearTimeout(avAnim);
-    avAnim = setTimeout(() => { w.className = 'avwild ' + (ok ? 'love' : 'flee'); if (ok) w.insertAdjacentHTML('beforeend', '<span class="avhearts"><i>♥</i><i>♥</i><i>♥</i></span>'); const im = w.querySelector('img'); if (im) im.src = nsPortrait(j.sp, j.genes, null, ok ? 'amour' : 'boude'); avAnim = setTimeout(() => { avBusy = 0; avAnim = null; avRender(true); }, 1700); }, 1100);
-    const box = $('avView').querySelector('.avstory'); if (box) box.innerHTML = `<p class="avnext">${esc(avTxt(ok ? '{n} tend la patte… le silence… et…' : '{n} tend la patte… le silence… et…', t.comp))}<span class="avdots"><i></i><i></i><i></i></span></p>`;
-  } else avRender(true);
+  const res = { act: ok ? 'wildlove' : 'wildflee', wild: wl, line: avOne(j.outcome || ''), chips: ok ? [['friend', 'Nouvel ami']] : null };
+  if (avReduce()) avPlay = Object.assign(res, { until: now + 9000, id: ++avPlayN });
+  else { avPlay = { act: 'wild', cls: 'hesit', wild: wl, line: avTxt('{n} tend la patte… silence… et…', t.comp), until: now + 1600, id: ++avPlayN, then: res }; setTimeout(() => avRender(false), 1650); }
+  avRender(true);
 }
+
+// ---------------- « Revoir l'aventure » : une petite bande dessinée animée ----------------
+function avPanels(t) {
+  const k = t.comp, P = [], b0 = avBiome(t.dest.tags, t.dest.lat, t.dest.poi);
+  for (const j of t.journal) {
+    const b = j.biome || avBiome(j.tags || t.dest.tags, j.lat != null ? j.lat : t.dest.lat);
+    if (j.kind === 'choix' && j.resolved && j.sc) P.push(Object.assign(avMomentChoice(t, j), { biome: b, big: 1 }));
+    else if (j.kind === 'sauvage' && j.resolved && j.sp) P.push({ act: j.tamed ? 'wildlove' : 'wildflee', wild: { sp: j.sp, genes: j.genes }, line: avOne(j.outcome || j.text), biome: b, big: 1 });
+    else if (['trouvaille', 'merveille', 'tresor', 'animal', 'repas', 'photo', 'pieces'].includes(j.kind)) P.push(Object.assign(avMoment(t, j), { biome: b }));
+  }
+  let extra = Math.max(0, 7 - P.filter(p => p.big).length);
+  const mid = P.filter(p => p.big || extra-- > 0).slice(-7);
+  const best = (t.bag || []).slice().sort((a, b) => (b.rarity || 0) - (a.rarity || 0)).slice(0, 3);
+  return [{ act: 'walk', line: avTxt(`{n} part pour ${t.dest.name}.`, k), biome: b0 }, ...mid,
+    { act: 'chest', items: best, gift: true, biome: b0, line: t.done || S.trips[k] !== t ? 'Retour à la maison, le sac plein !' : 'La suite au prochain épisode…' }];
+}
+function avPanelHTML(k, p, i) {
+  const tod = p.act === 'sleep' ? 'nuit' : 'jour', D = avDecor(p.biome || 'campagne', tod, 'clair');
+  const c = axCtx(k, p.biome || 'campagne', tod, 'clair', p.wild ? { wild: p.wild } : null);
+  return `<figure class="avpn" style="animation-delay:${(i * 0.3).toFixed(2)}s"><div class="avpnv"><div class="avl">${avSky(tod, 'clair').replace(/avsg/g, 'avsg' + i)}</div><div class="avl"><svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${D.far}${D.ground}${D.mid}</svg></div><div class="avl">${axSVG(p.act, c, { items: p.items, gift: p.gift })}</div><i>${i + 1}</i></div><figcaption>${esc(avTxt(p.line || '', k))}</figcaption></figure>`;
+}
+function avComicOpen(t) {
+  if (!t || !t.journal) return;
+  const k = t.comp, P = avPanels(t);
+  let el = $('avComic');
+  if (!el) { el = document.createElement('div'); el.id = 'avComic'; el.className = 'avcm'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); document.body.appendChild(el); }
+  el.innerHTML = `<div class="avcmb"><header><div><b>${esc(avTxt('L’aventure de {n}', k))}</b><span>${esc(t.dest.name)}</span></div><button class="avx" data-av-cmx="1" aria-label="Fermer">×</button></header><div class="avcmg">${P.map((p, i) => avPanelHTML(k, p, i)).join('')}</div><footer><button class="btn green sm" data-av-cmx="1">Fermer</button></footer></div>`;
+  el.hidden = false;
+}
+function avComicClose() { const el = $('avComic'); if (el) { el.hidden = true; el.innerHTML = ''; } }
 
 // ---------------- clics ----------------
 document.addEventListener('click', ev => {
@@ -17537,18 +17639,24 @@ document.addEventListener('click', ev => {
   const el = ev.target.closest && ev.target.closest('button'); if (!el || el.disabled) return;
   const d = el.dataset;
   if (d.avOpen) { if (typeof closeSheet === 'function' && tab !== 'carte') closeSheet(); avOpen(d.avOpen); return; }
+  if (d.avCmx) { avComicClose(); return; }
+  if (d.avReplay) { avComicOpen(d.avReplay === 'last' ? avReplayTrip : S.trips[avK]); return; }
   if (!el.closest('#avView')) return;
   const k = avK, t = k && S.trips[k];
   if (d.avClose) return avClose();
+  if (d.avLog) { avLogOpen = !avLogOpen; avRender(true); return; }
   if (d.avJournal) { avClose(); if (typeof liveOpenJournal === 'function') liveOpenJournal(k, true); else openSheet('voyage'); return; }
   if (d.avCollect) { avClose(); S.sel = d.avCollect; collect(); return; }
   if (!t) return;
   if (d.avCh != null) {
-    const j = t.journal[+d.avCh];
-    const r = avChoose(t, j, +d.o, false); S.stats.choices = (S.stats.choices || 0) + 1;
-    avSig = ''; avRender(false);
-    const me = $('avView') && $('avView').querySelector('.avme');
-    if (me && r === 'done' && !(typeof reduceMotion === 'function' && reduceMotion())) { me.src = portraitURI(k, (j.chips || []).some(c => c[0] === 'hurt') ? 'boude' : 'rire'); me.classList.add('hop'); avBusy = Date.now() + 1300; setTimeout(() => { me.classList.remove('hop'); avBusy = 0; avStageKey = ''; avRender(true); }, 1400); }
+    const j = t.journal[+d.avCh], node = j && avNode(j), opt = node && node.o[+d.o]; if (!opt) return;
+    const act1 = axOptAct(opt, k), lbl = avShort(avTxt(opt.a, k));
+    const r = avChoose(t, j, +d.o, false); if (!r) return;
+    S.stats.choices = (S.stats.choices || 0) + 1;
+    const now = Date.now(), res = r === 'done' ? avMomentChoice(t, j) : null;
+    if (avReduce()) avPlay = res ? Object.assign(res, { until: now + 9000, id: ++avPlayN }) : null;
+    else { avPlay = { act: act1, line: `${CHARS[k].name} : ${lbl.charAt(0).toLowerCase() + lbl.slice(1)}…`, until: now + 2800, id: ++avPlayN, then: res }; setTimeout(() => avRender(false), 2850); }
+    avRender(true);
     return;
   }
   if (d.avOff != null) { const [src, id] = d.avOff.split(':'); avPick.src = src; avPick.id = id || null; avRender(); return; }
@@ -17557,7 +17665,7 @@ document.addEventListener('click', ev => {
   // anciennes cartes (rencontre, marchand, aide) : traitées par 10_ui.js, puis on rafraîchit la scène
   setTimeout(() => avRender(true), 30);
 });
-document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && avK) avClose(); });
+document.addEventListener('keydown', ev => { if (ev.key !== 'Escape') return; const cm = $('avComic'); if (cm && !cm.hidden) { avComicClose(); return; } if (avK) avClose(); });
 setInterval(() => { try { if (avK) { const t = S.trips[avK]; if (!t) return avClose(); avRender(false); } } catch (e) { console.error(e); } }, 1000);
 
 // ---------------- journal (panneau) : scènes en plusieurs temps ----------------
@@ -17608,12 +17716,14 @@ GAME.on('trip:return', e => {
   } catch (err) { console.error('aventure retour', err); }
 });
 function avRecapHTML(h) {
-  const t = h.trip; if (!t) return '';
-  const log = (t.avLog || []).slice(-6), k = h.comp, n = CHARS[k] ? CHARS[k].name : '';
-  if (!log.length && !t.avHurt) return '';
-  let s = `<div class="avrecap"><h3>Les moments forts du voyage</h3>`;
-  s += log.map(l => `<div class="avrm">${l.tamed && S.comps[l.tamed] ? `<img src="${portraitURI(l.tamed, 'amour')}" alt="">` : ''}<div><b>${esc(l.a)}</b>${l.auto ? ' <small>(décidé tout seul)</small>' : ''}<p>${esc(l.t)}</p>${avChips(l.chips)}${l.tamed && S.comps[l.tamed] ? `<p class="avfollow">${esc(CHARS[l.tamed].name)} a suivi ${esc(n)} jusqu’à la maison et s’installe au refuge !</p>` : ''}</div></div>`).join('');
-  if (t.avHurt) s += `<p class="avhurt"><img src="${portraitURI(k, 'dodo')}" alt="">${esc(avTxt('{n} est rentré{e} un peu fatigué{e} : un pansement, un câlin et au lit !', k))}</p>`;
+  const t = h.trip; if (!t || !t.journal) return '';
+  avReplayTrip = t;
+  const k = h.comp || t.comp, n = CHARS[k] ? CHARS[k].name : '', P = avPanels(t).slice(1, -1), fol = t.journal.filter(j => j.kind === 'sauvage' && j.tamed && S.comps[j.tamed]);
+  if (!P.length && !t.avHurt) return '';
+  let s = `<div class="avrecap"><h3>Les moments forts</h3>`;
+  if (P.length) s += `<div class="avrstrip">${P.slice(0, 4).map(p => `<span class="avrth" title="${esc(avTxt(p.line || '', k))}">${axSVG(p.act, axCtx(k, p.biome || 'campagne', 'jour', 'clair', p.wild ? { wild: p.wild } : null), { thumb: true })}</span>`).join('')}</div><button class="btn green sm" data-av-replay="last">Revoir l’aventure</button>`;
+  s += fol.map(j => `<p class="avfollow"><img src="${portraitURI(j.tamed, 'amour')}" alt="">${esc(CHARS[j.tamed].name)} a suivi ${esc(n)} jusqu’au refuge !</p>`).join('');
+  if (t.avHurt) s += `<p class="avhurt"><img src="${portraitURI(k, 'dodo')}" alt="">${esc(avTxt('{n} est rentré{e} un peu fatigué{e} : un câlin et au lit !', k))}</p>`;
   return s + `</div>`;
 }
 if (typeof showHaul === 'function') showHaul = (orig => function (h) {
@@ -17645,7 +17755,7 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
 .avph i.on{background:#e6f6e9;border-color:#2f7f6c;color:#2f6f5c}
 .avph b{color:#d8c8ae}
 .avph span{margin-left:auto;color:#6b5440;font-variant-numeric:tabular-nums}
-.avstage{position:relative;height:min(36vh,300px);min-height:200px;overflow:hidden;border-top:3px solid #4a3528;border-bottom:3px solid #4a3528;flex:none;contain:strict}
+.avstage{position:relative;height:min(46vh,400px);min-height:220px;overflow:hidden;border-top:3px solid #4a3528;border-bottom:3px solid #4a3528;flex:none;contain:strict}
 .avl{position:absolute;inset:0}
 .avl svg{display:block;width:100%;height:100%}
 .avt{position:absolute;top:0;left:0;height:100%;width:200%;display:flex;will-change:transform}
@@ -17740,14 +17850,64 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
 .avpin .pinb svg path{fill:#fff}
 .avpin .pinl{background:#fff1c9}
 body.avopen #liveBar{visibility:hidden}
-@media (prefers-reduced-motion: reduce){.avt,.avme,.avfol,.avwx,.avtw,.avff{animation:none!important}}
+.avstage.rev .avact{transform:scaleX(-1)}
+.avact{pointer-events:none}
+.avbadges{position:absolute;top:8px;left:8px;right:8px;display:flex;flex-wrap:wrap;gap:5px;pointer-events:none}
+.avbadges .avc{opacity:0;animation:avBadge .5s ease-out forwards;box-shadow:0 2px 0 rgba(74,53,40,.25)}
+@keyframes avBadge{from{opacity:0;transform:translateY(-8px) scale(.7)}to{opacity:1;transform:none}}
+.avstory{gap:8px;padding:10px 12px}
+.avsub{flex:none;margin:0;font-family:var(--hand);font-size:22px;line-height:1.15;color:#3f342c;text-align:center;min-height:1.2em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;animation:avIn .45s ease-out}
+.avopts2{display:grid;gap:8px}
+.avopt{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:5px 5px 7px;background:#fff;border:2.5px solid #4a3528;border-radius:16px;box-shadow:0 4px 0 rgba(74,53,40,.3);cursor:pointer;font:800 14px/1.15 var(--display);color:#4a3528;text-align:center;min-height:44px;transition:transform .12s}
+.avopt:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(74,53,40,.3)}
+.avbox.asking .avstage{height:min(34vh,290px)}
+.avopt .avth{display:block;aspect-ratio:16/9;border-radius:11px;overflow:hidden;border:1.5px solid #eadfca;background:#eaf4f8}
+.avopt .avth svg{width:100%;height:100%;display:block}
+.avopt b{font:inherit;padding:0 2px}
+.avopt.locked{opacity:.6;border-style:dashed;cursor:default;box-shadow:none}
+.avopt.locked .avth{filter:grayscale(.7)}
+.avneed{position:absolute;top:-6px;right:-6px;width:32px;height:32px;border-radius:50%;background:#fff;border:2.5px solid #2f7f6c;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 0 rgba(74,53,40,.25)}
+.avneed svg{width:22px;height:22px}
+.avneed:not(.ok){border-color:#a05a4a}
+.avneed .lk{position:absolute;right:-7px;bottom:-7px;width:18px;height:18px;background:#fff;border-radius:50%;display:flex}
+.avneed .lk svg{width:18px;height:18px}
+.avneed.risk{border-color:#e09a3a;font:800 17px/1 var(--display);color:#e0703a}
+.avrow{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:2px 2px 6px;-webkit-overflow-scrolling:touch}
+.avrow .avlbl{margin:0;flex:none;writing-mode:horizontal-tb;min-width:62px}
+.avtile{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;width:68px;padding:6px 4px;border:2.5px solid #4a3528;border-radius:14px;background:#fff;box-shadow:0 3px 0 rgba(74,53,40,.3);cursor:pointer;font:700 11.5px var(--display);color:#4a3528}
+.avtile .avoi{width:34px;height:34px}
+.avtile small{font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.avtile[aria-pressed="true"]{background:#ffe3ec;border-color:#d9607e;box-shadow:0 3px 0 #d9607e}
+.avask.avtame{padding:8px 10px}
+.avlog{display:flex;flex-direction:column;gap:8px;padding-top:6px;border-top:2px dashed #eadfca}
+.avf [aria-pressed="true"]{background:#ffe9b8}
+.avrstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0 8px}
+.avrth{display:block;aspect-ratio:5/3;border-radius:10px;overflow:hidden;border:2px solid #e7c27a}
+.avrth svg{width:100%;height:100%;display:block}
+.avfollow{display:flex;align-items:center;gap:6px;margin:8px 0 0;font-size:13.5px}.avfollow img{width:36px;height:40px}
+.avcm{position:fixed;inset:0;z-index:95;background:rgba(58,42,32,.55);display:flex;align-items:center;justify-content:center}
+.avcm[hidden]{display:none}
+.avcmb{width:min(760px,100%);height:min(900px,100%);background:#fff8ea;display:flex;flex-direction:column;border-radius:22px;border:3px solid #4a3528;overflow:hidden}
+@media (max-width:600px){.avcmb{border-radius:0;border:0}}
+.avcmb header{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.avcmb header div{flex:1;display:flex;flex-direction:column}
+.avcmb header b{font:800 19px var(--display);color:#4a3528}.avcmb header span{font-size:12.5px;color:#8a7258}
+.avcmg{flex:1;overflow-y:auto;padding:4px 12px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px;align-content:start;grid-auto-rows:max-content;-webkit-overflow-scrolling:touch}
+.avpn{margin:0;background:#fff;border:3px solid #4a3528;border-radius:14px;overflow:hidden;box-shadow:0 4px 0 rgba(74,53,40,.3);opacity:0;animation:avPanel .5s ease-out forwards}
+@keyframes avPanel{from{opacity:0;transform:translateY(14px) rotate(-1deg)}to{opacity:1;transform:none}}
+.avpnv{position:relative;height:0;padding-bottom:60%;overflow:hidden;border-bottom:3px solid #4a3528}
+.avpnv .avl svg{width:100%;height:100%;display:block}
+.avpnv>i{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #4a3528;font:800 13px/20px var(--display);text-align:center;font-style:normal;color:#4a3528}
+.avpn figcaption{padding:7px 10px 9px;font-family:var(--hand);font-size:19px;line-height:1.15;color:#3f342c}
+.avcmb footer{display:flex;justify-content:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom));border-top:2px solid #eadfca;background:#fff3dc}
+@media (prefers-reduced-motion: reduce){.avt,.avme,.avfol,.avwx,.avtw,.avff,.avsub,.avbadges .avc{animation:none!important}.avbadges .avc,.avpn{opacity:1;animation:none!important}}
 `;
   document.head.appendChild(st);
 })();
 
 // ---------------- tests ----------------
 window.__av = {
-  open: avOpen, close: avClose, scenes: AV_SCENES, state: avState, force: o => { Object.assign(AV_FORCE, o || {}); avStageKey = ''; avRender(true); },
+  open: avOpen, comic: avComicOpen, panels: avPanels, acts: () => Object.keys(AX), close: avClose, scenes: AV_SCENES, state: avState, force: o => { Object.assign(AV_FORCE, o || {}); avStageKey = ''; avRender(true); },
   choose: avChoose, auto: avAuto, needOk: avNeedOk, biome: avBiome,
 };
 
@@ -20235,6 +20395,367 @@ try { b2(); } catch (e) {}
 })();
 
 window.__bq2 = { b2, L: b2L, serve: b2Serve, passive: b2Passive, expose: b2Expose, dem: b2Dem, auc: b2Auc, trends: b2Trends, attract: b2Attract, price: b2Price, step: b2Step, paint: b2Paint };
+
+// ================= AVENTURE (v17) : on REGARDE l'aventure =================
+// Bibliothèque de petites séquences animées (SVG + CSS) où le familier fait vraiment quelque chose :
+// grimper, nager, sauter de pierre en pierre, traverser un pont, creuser, pêcher, cueillir, glisser, s'abriter sous une feuille,
+// sauter dans les flaques, partager un goûter, faire une photo, se perdre puis trouver, dormir sous les étoiles, coffre, nid,
+// suivre des traces, être surpris, tomber, magie, courir, grelotter, carte au trésor, et la rencontre d'un familier sauvage.
+// Chaque séquence : AX[id] = { mood, c (sous-titres drôles), draw(ctx), g (où l'objet trouvé apparaît) }.
+// axSVG(id, ctx, opts) dessine la séquence dans un repère 200×120 (sol à y=112), posé sur le décor de 29_aventure.js.
+// axActFor(texte, fx, ok) devine la séquence d'après le texte d'un choix ; axIdle(ctx, créneau) varie selon biome, heure,
+// météo, espèce et vêtements. Utilisé par avRender, les vignettes de choix et « Revoir l'aventure ».
+
+const AXL = 'stroke="#5b4636" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"';
+const AX = {};
+const axDef = (id, mood, g, c, draw) => { AX[id] = { id, mood, g, c, draw }; };
+function axPet(c, x, y, mood, cls, inner) {
+  return `<g class="${cls || 'pet'}"><image href="${portraitURI(c.k, mood || 'content')}" x="${x - 22}" y="${y - 48}" width="44" height="48"/>${inner || ''}</g>`;
+}
+const axStar = (x, y, r) => `M${x} ${y - r} L${x + r * 0.3} ${y - r * 0.3} L${x + r} ${y} L${x + r * 0.3} ${y + r * 0.3} L${x} ${y + r} L${x - r * 0.3} ${y + r * 0.3} L${x - r} ${y} L${x - r * 0.3} ${y - r * 0.3}Z`;
+const axHeart = (x, y, s, cls) => `<path class="${cls || ''}" d="M${x} ${y + 3 * s} C${x - 7 * s} ${y - 2 * s} ${x - 4 * s} ${y - 7 * s} ${x} ${y - 3.5 * s} C${x + 4 * s} ${y - 7 * s} ${x + 7 * s} ${y - 2 * s} ${x} ${y + 3 * s}Z" fill="#f06a8e" stroke="#fff" stroke-width=".8"/>`;
+function axCritter(c, x, y, cls) {
+  const ty = c.critter || 'herisson';
+  let s;
+  if (ty === 'oiseau') s = `<ellipse cx="${x}" cy="${y - 8}" rx="9" ry="8" fill="#7fb6e0" ${AXL}/><path d="M${x - 4} ${y - 8} q-4 4 2 6" fill="#5f96c0" ${AXL}/><path d="M${x + 8} ${y - 10} l5 1.5 l-5 1.5Z" fill="#f6c445" ${AXL}/><circle cx="${x + 4}" cy="${y - 11}" r="1.3" fill="#5b4636"/><path d="M${x - 2} ${y} v2 M${x + 2} ${y} v2" stroke="#f08a4a" stroke-width="1.4"/>`;
+  else if (ty === 'lapin') s = `<path d="M${x - 2} ${y - 16} q-4 -14 1 -15 q4 1 2 15 M${x + 3} ${y - 16} q1 -14 6 -13 q3 3 -2 14" fill="#f4ece0" ${AXL}/><ellipse cx="${x}" cy="${y - 8}" rx="10" ry="8.5" fill="#f4ece0" ${AXL}/><circle cx="${x + 4}" cy="${y - 10}" r="1.3" fill="#5b4636"/><circle cx="${x + 8}" cy="${y - 7}" r="1.2" fill="#f08aa6"/><circle cx="${x - 10}" cy="${y - 6}" r="3" fill="#fff" ${AXL}/>`;
+  else if (ty === 'grenouille') s = `<ellipse cx="${x}" cy="${y - 6}" rx="11" ry="7" fill="#7fc56a" ${AXL}/><circle cx="${x - 4}" cy="${y - 13}" r="3.5" fill="#7fc56a" ${AXL}/><circle cx="${x + 4}" cy="${y - 13}" r="3.5" fill="#7fc56a" ${AXL}/><circle cx="${x - 4}" cy="${y - 13}" r="1.3" fill="#5b4636"/><circle cx="${x + 4}" cy="${y - 13}" r="1.3" fill="#5b4636"/><path d="M${x - 4} ${y - 5} q4 3 8 0" stroke="#5b4636" stroke-width="1.2" fill="none"/>`;
+  else s = `<path d="M${x - 12} ${y} Q${x - 13} ${y - 14} ${x - 1} ${y - 15} Q${x + 9} ${y - 14} ${x + 12} ${y - 5} L${x + 16} ${y - 3} Q${x + 12} ${y} ${x} ${y}Z" fill="#c9a07a" ${AXL}/><path d="M${x - 11} ${y - 4} l-4 -3 M${x - 10} ${y - 9} l-4 -4 M${x - 5} ${y - 13} l-2 -5 M${x + 1} ${y - 14} l1 -5 M${x + 6} ${y - 12} l3 -4" stroke="#7a5a40" stroke-width="2"/><circle cx="${x + 8}" cy="${y - 7}" r="1.3" fill="#5b4636"/><circle cx="${x + 15.5}" cy="${y - 3}" r="1.5" fill="#5b4636"/>`;
+  return `<g class="${cls || 'crit'}">${s}</g>`;
+}
+const axDrops = (n, x0, x1, cls) => Array.from({ length: n }, (_, i) => `<path class="${cls || 'drp'}" style="animation-delay:${(i * 0.23).toFixed(2)}s" d="M${x0 + (x1 - x0) * i / Math.max(1, n - 1)} ${-4 - (i % 3) * 8} l-1.5 6" stroke="#9fd0ee" stroke-width="1.6" stroke-linecap="round"/>`).join('');
+const axWater = (y, col) => `<path d="M-10 ${y} Q15 ${y - 3} 40 ${y} T90 ${y} T140 ${y} T190 ${y} T240 ${y} T290 ${y} V122 H-10Z" fill="${col || '#7fcbe0'}"/>`;
+
+// ---------- les séquences ----------
+axDef('walk', 'content', [100, 50], ['{n} marche, le nez au vent.', '{n} fredonne une chanson de route.', 'Un pas, deux pas… et une pause goûter ?'],
+  c => `${axPet(c, 100, 112, 'content', 'pet bob')}<g class="dust"><circle cx="80" cy="110" r="3" fill="#fff" opacity=".7"/><circle cx="72" cy="108" r="2" fill="#fff" opacity=".6"/></g>`);
+axDef('climb', 'fier', [125, 24], ['{n} grimpe… sans regarder en bas.', 'Tout là-haut, la vue est meilleure !', '{n} fait la course avec un écureuil.'],
+  c => `<rect x="117" y="20" width="16" height="94" rx="5" fill="#a07850" ${AXL}/><path d="M133 62 l14 -8 M117 76 l-10 -6" stroke="#8a6448" stroke-width="4" stroke-linecap="round"/><g class="crown"><circle cx="104" cy="28" r="16" fill="#5fa063" ${AXL}/><circle cx="146" cy="28" r="17" fill="#5fa063" ${AXL}/><circle cx="125" cy="16" r="24" fill="#6fae5f" ${AXL}/><circle cx="116" cy="10" r="5" fill="#fff" opacity=".25"/></g><path class="leaf l1" d="M140 40 q5 -5 10 0 q-5 5 -10 0Z" fill="#8cc474" ${AXL}/><path class="leaf l2" d="M104 46 q5 -5 10 0 q-5 5 -10 0Z" fill="#a8d27e" ${AXL}/>${axPet(c, 114, 112, 'fier', 'pet climb')}`);
+axDef('swim', 'rire', [100, 70], ['Plouf ! {n} fait la planche.', '{n} nage le crawl… du chien.', 'Des bulles, encore des bulles !'],
+  c => `${axWater(84, '#8fd0e6')}${axPet(c, 100, 112, 'rire', 'pet swim', c.swimmer ? '' : `<ellipse cx="100" cy="96" rx="21" ry="6" fill="none" stroke="#f06a6a" stroke-width="5" stroke-dasharray="9 6"/>`)}<g class="wave" opacity=".82">${axWater(98, '#6fc3df')}</g><circle class="bub b1" cx="92" cy="104" r="2.4" fill="#fff" opacity=".8"/><circle class="bub b2" cx="108" cy="104" r="1.8" fill="#fff" opacity=".8"/><circle class="bub b3" cx="100" cy="106" r="2" fill="#fff" opacity=".8"/><g class="splash"><path d="M84 92 l-6 -8 M92 88 l-2 -10 M108 88 l2 -10 M116 92 l6 -8" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>`);
+axDef('stones', 'content', [164, 70], ['De pierre en pierre… sans se mouiller !', '{n} vise bien la pierre du milieu.', 'Hop, hop, hop ! Les pieds au sec.'],
+  c => `<rect x="0" y="100" width="200" height="22" fill="#a6d185"/><path d="M28 98 Q100 92 172 98 V116 Q100 110 28 116Z" fill="#7fcbe0"/><path class="rip" d="M40 106 h12 M80 110 h10 M120 104 h12 M150 110 h10" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>${[64, 100, 136].map(x => `<ellipse cx="${x}" cy="104" rx="11" ry="5" fill="#b7aea0" ${AXL}/>`).join('')}${axPet(c, 34, 106, 'content', 'pet hop3')}<g class="splash s2"><path d="M96 98 l-4 -6 M104 98 l4 -6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></g>`);
+axDef('bridge', 'curieux', [170, 60], ['Le pont fait « crr… crr… ». Ne pas regarder en bas.', '{n} traverse, sur la pointe des pattes.', 'Une planche manque. Grand pas !'],
+  c => `${axWater(110, '#7fcbe0')}<g class="sway"><rect x="26" y="62" width="6" height="40" fill="#8a6448" ${AXL}/><rect x="168" y="62" width="6" height="40" fill="#8a6448" ${AXL}/><path d="M29 66 Q100 84 171 66" stroke="#b38a62" stroke-width="2" fill="none"/><path d="M29 92 Q100 106 171 92" stroke="#8a6448" stroke-width="6" fill="none" stroke-dasharray="7 2.5 7 2.5 7 2.5 7 2.5 7 2.5 7 2.5 7 2.5 0 14 7 2.5"/><path d="M50 72 v24 M80 77 v25 M120 77 v25 M150 72 v24" stroke="#b38a62" stroke-width="1.2"/></g>${axPet(c, 30, 94, 'curieux', 'pet cross')}`);
+axDef('dig', 'curieux', [114, 98], ['{n} creuse, creuse… ça va sortir !', 'Ça gratte, ça gratte. La terre vole partout.', 'Il y a quelque chose là-dessous !'],
+  c => `<path d="M96 113 Q114 92 134 113Z" fill="${c.biome === 'mer' || c.biome === 'desert' ? '#e8c07e' : '#a8825a'}" ${AXL}/><ellipse cx="114" cy="111" rx="10" ry="3" fill="#5b4636" opacity=".7"/>${axPet(c, 84, 112, 'curieux', 'pet dig')}<g class="dirt">${[[70, 96], [64, 90], [74, 86]].map(([x, y], i) => `<circle class="d${i}" cx="${x}" cy="${y}" r="${2.6 - i * 0.4}" fill="#8a6448"/>`).join('')}</g>`);
+axDef('fish', 'content', [150, 92], ['Chut… ça mord ?', '{n} attend. Le poisson aussi.', 'Un poisson saute pour dire bonjour.'],
+  c => `<rect x="0" y="100" width="110" height="22" fill="#a6d185"/><path d="M104 98 Q150 95 210 98 V122 H98Z" fill="#7fcbe0"/><path class="rip" d="M120 106 h12 M160 112 h10" stroke="#fff" stroke-width="1.4" opacity=".8"/><g class="rod"><path d="M84 92 L120 52" stroke="#8a6448" stroke-width="2.4" stroke-linecap="round"/><path d="M120 52 Q134 68 142 98" stroke="#fff" stroke-width=".9" fill="none"/></g><g class="bobr"><circle cx="142" cy="98" r="3" fill="#f06a6a" ${AXL}/></g><g class="fishj"><path d="M150 104 q8 -6 16 0 q-8 6 -16 0Z M166 104 l5 -4 v8Z" fill="#f6a06a" ${AXL}/></g>${axPet(c, 72, 112, 'content', 'pet idle')}`);
+axDef('pick', 'rire', [120, 40], ['Une pour le sac, une pour la bouche…', '{n} cueille les plus belles.', 'Miam. Il en restera pour vous, promis.'],
+  c => `<g class="bush"><circle cx="128" cy="78" r="22" fill="#5fa063" ${AXL}/><circle cx="110" cy="92" r="16" fill="#6fae5f" ${AXL}/><circle cx="146" cy="94" r="16" fill="#6fae5f" ${AXL}/><rect x="104" y="96" width="50" height="16" fill="#6fae5f"/></g>${[[118, 70], [136, 80], [124, 90]].map(([x, y], i) => `<circle class="fruit f${i}" cx="${x}" cy="${y}" r="4" fill="${c.biome === 'jungle' ? '#f6c445' : '#e5584f'}" ${AXL}/>`).join('')}${axPet(c, 82, 112, 'rire', 'pet hopl')}<path d="M70 100 h22 l-3 12 h-16Z" fill="#d9a868" ${AXL}/><path d="M72 104 h18 M73 108 h16" stroke="#b38a62" stroke-width="1"/>`);
+axDef('slide', 'rire', [170, 80], ['Wiiiii ! {n} glisse sur le ventre.', 'Encore un tour ! Et encore un !', 'Freiner ? Quel freinage ?'],
+  c => `<path d="M-10 46 Q80 58 210 108 V122 H-10Z" fill="#f6f9fd" stroke="#cfdcec" stroke-width="2"/><path d="M20 60 Q90 72 180 106" stroke="#dbe6f2" stroke-width="3" fill="none" stroke-dasharray="6 6"/>${axPet(c, 40, 64, 'rire', 'pet slide', c.o.cou === 'echarpe' || c.o.cou === 'foulard' ? `<path class="scarf" d="M28 44 q-10 -2 -18 3 q8 1 16 -1" fill="#e2584d" ${AXL}/>` : '')}<g class="puff"><circle cx="24" cy="60" r="4" fill="#fff"/><circle cx="18" cy="56" r="3" fill="#fff"/></g>`);
+axDef('leaf', 'content', [100, 30], ['Pluie ? Pas de souci : une feuille-parapluie.', '{n} écoute la pluie faire « tap tap ».', 'Au sec, sous la plus grande feuille du coin.'],
+  c => `${axDrops(9, 20, 180)}${axPet(c, 100, 112, 'content', 'pet idle')}<g class="leafu"><path d="M66 56 Q100 22 136 56 Q100 46 66 56Z" fill="#5fae5f" ${AXL}/><path d="M100 46 L101 100" stroke="#3f8a52" stroke-width="2.5"/></g><g class="bnc"><circle cx="66" cy="58" r="1.6" fill="#9fd0ee"/><circle cx="136" cy="58" r="1.6" fill="#9fd0ee"/></g>`);
+axDef('puddle', 'rire', [110, 80], ['Avec des bottes, on saute dans TOUTES les flaques.', 'Splash ! Et re-splash !', '{n} a inventé un sport : la flaque olympique.'],
+  c => `${axDrops(7, 20, 180)}<ellipse cx="110" cy="112" rx="34" ry="6" fill="#8fc3dc" ${AXL}/>${axPet(c, 110, 112, 'rire', 'pet jump')}<g class="splash s3"><path d="M84 108 l-8 -8 M92 104 l-3 -10 M128 104 l3 -10 M136 108 l8 -8" stroke="#8fc3dc" stroke-width="2.6" stroke-linecap="round"/></g>`);
+axDef('snack', 'amour', [112, 70], ['Un biscuit coupé en deux : la moitié de l’amitié.', '{n} partage son goûter. Miam à deux.', 'Une miette pour toi, une miette pour moi.'],
+  c => `${axPet(c, 74, 112, 'amour', 'pet idle')}${axCritter(c, 146, 112, 'crit nod')}<g class="cookie"><circle cx="104" cy="96" r="6" fill="#d9a05a" ${AXL}/><circle cx="102" cy="94" r="1" fill="#7a4a2a"/><circle cx="106" cy="98" r="1" fill="#7a4a2a"/></g>${axHeart(112, 70, 1.1, 'hrt h1')}${axHeart(124, 64, 0.8, 'hrt h2')}`);
+axDef('hello', 'rire', [120, 50], ['Un nouvel ami ! Il dit bonjour avec les oreilles.', '{n} papote avec les gens du coin.', 'Salut ! On voyage ensemble un bout ?'],
+  c => `${axPet(c, 76, 112, 'rire', 'pet hopl')}${axCritter(c, 140, 112, 'crit nod')}<g class="bubl"><path d="M128 64 h28 a6 6 0 0 1 6 6 v10 a6 6 0 0 1 -6 6 h-18 l-6 6 v-6 h-4 a6 6 0 0 1 -6 -6 v-10 a6 6 0 0 1 6 -6Z" fill="#fff" ${AXL}/>${axHeart(142, 75, 0.9)}</g>`);
+axDef('photo', 'rire', [146, 54], ['Clic ! Souvenir de voyage dans la boîte.', 'Ne bougez plus… Ouistiti !', '{n} fait sa plus belle tête de carte postale.'],
+  c => `${axPet(c, 82, 112, 'rire', 'pet idle')}<g class="cam"><path d="M112 112 l6 -18 l6 18 M118 94 v18" stroke="#5b4636" stroke-width="1.6"/><rect x="106" y="80" width="24" height="15" rx="3" fill="#5b4636"/><circle cx="118" cy="87.5" r="4.5" fill="#bfe1f2" stroke="#fff" stroke-width="1.4"/><rect x="109" y="77" width="6" height="4" fill="#5b4636"/></g><g class="polar"><rect x="134" y="54" width="26" height="30" fill="#fff" ${AXL}/><rect x="137" y="57" width="20" height="18" fill="#93cff0"/><path d="M137 75 l7 -8 l5 5 l3 -3 l5 6Z" fill="#7fbf6a"/></g><rect class="flash" x="-60" y="-60" width="320" height="240" fill="#fff"/>`);
+axDef('lost', 'curieux', [100, 30], ['Euh… c’était à gauche ou à droite ?', '{n} se gratte la tête… et trouve !', 'Perdu… puis retrouvé. Comme les chaussettes.'],
+  c => `<g><rect x="28" y="70" width="4" height="42" fill="#8a6448"/><path d="M14 72 h26 l6 5 l-6 5 h-26Z" fill="#f2dfae" ${AXL}/><rect x="168" y="70" width="4" height="42" fill="#8a6448"/><path d="M186 72 h-26 l-6 5 l6 5 h26Z" fill="#f2dfae" ${AXL}/></g>${axPet(c, 100, 112, 'curieux', 'pet look')}<g class="qm"><circle cx="114" cy="50" r="10" fill="#fff" ${AXL}/><text x="114" y="55" text-anchor="middle" font-size="14" font-weight="800" fill="#d9607e">?</text></g><g class="bulb"><path d="M114 38 a9 9 0 0 1 5 16 v4 h-10 v-4 a9 9 0 0 1 5 -16Z" fill="#ffe46a" ${AXL}/><path d="M110 61 h8" stroke="#5b4636" stroke-width="2"/><path d="M114 28 v-5 M100 34 l-4 -3 M128 34 l4 -3 M98 46 h-5 M130 46 h5" stroke="#f6c445" stroke-width="2" stroke-linecap="round"/></g>`);
+axDef('sleep', 'dodo', [100, 40], ['Dodo sous les étoiles. Chut.', '{n} compte les étoiles… zzz.', 'Une étoile filante ! Vite, un vœu.'],
+  c => `${Array.from({ length: 7 }, (_, i) => `<path class="tw" style="animation-delay:${(i * 0.4).toFixed(1)}s" d="${axStar(18 + i * 27, 12 + (i % 3) * 12, 2.6)}" fill="#fff6c0"/>`).join('')}<path class="shoot" d="M150 10 l-22 10" stroke="#fff6c0" stroke-width="1.6" stroke-linecap="round"/><ellipse cx="96" cy="112" rx="34" ry="5" fill="#d98a8a" ${AXL}/><g class="fire"><path d="M146 112 l8 -4 l8 4" stroke="#8a6448" stroke-width="3"/><path class="flm" d="M154 108 q-7 -8 0 -18 q7 10 0 18Z" fill="#f6a03a"/><path class="flm f2" d="M154 108 q-3 -5 0 -10 q3 5 0 10Z" fill="#ffe46a"/></g>${axPet(c, 96, 112, 'dodo', 'pet breathe')}<g class="zz"><text class="z z1" x="112" y="62" font-size="10" font-weight="800" fill="#fff">z</text><text class="z z2" x="118" y="54" font-size="12" font-weight="800" fill="#fff">z</text><text class="z z3" x="126" y="44" font-size="14" font-weight="800" fill="#fff">Z</text></g>`);
+axDef('chest', 'surpris', [130, 88], ['Un coffre ! Qu’y a-t-il dedans ?', 'Ça brille… {n} n’en croit pas ses yeux.', 'Trésor ! (ou chaussette perdue ?)'],
+  c => `<g class="rays">${Array.from({ length: 8 }, (_, i) => `<path d="M130 92 L${130 + Math.cos(i * 0.785) * 40} ${92 + Math.sin(i * 0.785) * 40}" stroke="#ffe46a" stroke-width="5" opacity=".5"/>`).join('')}</g><rect x="114" y="94" width="32" height="18" rx="2" fill="#c9884a" ${AXL}/><path d="M114 101 h32" stroke="#8a5a3a" stroke-width="2"/><g class="lid"><path d="M114 94 v-6 q16 -10 32 0 v6Z" fill="#d9985a" ${AXL}/></g><rect x="127" y="96" width="6" height="7" fill="#f6c445" ${AXL}/>${axPet(c, 80, 112, 'surpris', 'pet jump')}<path class="spk" d="${axStar(150, 80, 4)}" fill="#fff6a8"/><path class="spk k2" d="${axStar(110, 84, 3)}" fill="#fff6a8"/>`);
+axDef('nest', 'amour', [126, 84], ['Un nid qui brille. L’œuf a bougé !', '{n} parle tout bas à l’œuf.', 'Toc toc… il y a quelqu’un ?'],
+  c => `<circle class="halo" cx="126" cy="98" r="18" fill="#fff6c0" opacity=".6"/><g class="egg"><ellipse cx="126" cy="98" rx="8" ry="10" fill="#fdf3dc" ${AXL}/><circle cx="123" cy="96" r="1.6" fill="#f08aa6"/><circle cx="129" cy="101" r="1.4" fill="#7fb6e0"/></g><path d="M106 104 Q126 118 146 104 Q146 112 126 113 Q106 112 106 104Z" fill="#b38a62" ${AXL}/><path d="M108 106 l10 4 M144 106 l-10 4 M114 110 l8 -2 M138 110 l-8 -2" stroke="#8a6448" stroke-width="1.2"/>${axPet(c, 82, 112, 'amour', 'pet lean')}<path class="spk" d="${axStar(144, 84, 3.4)}" fill="#fff6a8"/>`);
+axDef('tracks', 'curieux', [170, 80], ['Des traces ! {n} mène l’enquête.', 'Le nez au sol, comme un vrai détective.', 'Petites pattes, grandes pattes… qui est passé ici ?'],
+  c => `${Array.from({ length: 6 }, (_, i) => `<g class="pr" style="animation-delay:${(i * 0.42).toFixed(2)}s"><ellipse cx="${66 + i * 20}" cy="${i % 2 ? 114 : 109}" rx="3" ry="2.2" fill="#8a6448" opacity=".75"/><circle cx="${63 + i * 20}" cy="${i % 2 ? 111 : 106}" r="1" fill="#8a6448"/><circle cx="${69 + i * 20}" cy="${i % 2 ? 111 : 106}" r="1" fill="#8a6448"/></g>`).join('')}${axPet(c, 44, 112, 'curieux', 'pet sniff')}<g class="mag"><circle cx="0" cy="0" r="0"/></g>`);
+axDef('surprise', 'surpris', [146, 70], ['Bouh ! Qui est là ?', '{n} a fait un bond de trois mètres.', 'Ce n’était qu’un petit voisin curieux.'],
+  c => `${axPet(c, 84, 112, 'surpris', 'pet back')}<g class="excl"><circle cx="70" cy="48" r="8" fill="#ffe46a" ${AXL}/><text x="70" y="52.5" text-anchor="middle" font-size="12" font-weight="800" fill="#d9607e">!</text></g>${axCritter(c, 146, 104, 'crit popc')}<path d="M118 114 Q114 92 132 94 Q138 80 152 88 Q166 80 172 96 Q186 98 180 114Z" fill="#5fa063" ${AXL}/>`);
+axDef('fall', 'boude', [100, 40], ['Aïe ! Plus de peur que de mal.', 'Patatras ! {n} se relève, digne.', 'Petite chute, grand courage.'],
+  c => `${axPet(c, 100, 112, 'boude', 'pet tumble')}<g class="orb"><path d="${axStar(100, 52, 4)}" fill="#ffe46a" ${AXL}/><path d="${axStar(84, 60, 3)}" fill="#ffe46a"/><path d="${axStar(116, 60, 3)}" fill="#ffe46a"/></g><g class="puff"><circle cx="80" cy="110" r="5" fill="#fff" opacity=".8"/><circle cx="122" cy="110" r="4" fill="#fff" opacity=".8"/></g>`);
+axDef('magic', 'surpris', [100, 30], ['Pouf ! Des étincelles partout.', 'Les fées font une ronde autour de {n}.', 'Tout tourne… c’est magique !'],
+  c => `${Array.from({ length: 7 }, (_, i) => { const a = i / 7 * Math.PI * 2, x = 100 + Math.cos(a) * 44, y = 108 + Math.sin(a) * 6; return `<g><rect x="${x - 1.5}" y="${y - 6}" width="3" height="6" fill="#f6ead2"/><path d="M${x - 5} ${y - 5} Q${x} ${y - 12} ${x + 5} ${y - 5}Z" fill="#e2584d" ${AXL}/></g>`; }).join('')}<circle class="halo" cx="100" cy="88" r="26" fill="#fff6c0" opacity=".45"/>${axPet(c, 100, 112, 'surpris', 'pet float')}<g class="spin">${[0, 1, 2, 3, 4].map(i => `<path d="${axStar(100 + Math.cos(i * 1.256) * 34, 80 + Math.sin(i * 1.256) * 22, 3.4)}" fill="${['#fff6a8', '#f6b8d8', '#bfe8ff'][i % 3]}"/>`).join('')}</g>`);
+axDef('run', 'content', [130, 70], ['Raccourci ! {n} fonce.', 'Plus vite que le vent (enfin presque).', 'Zoum ! Le voyage raccourcit.'],
+  c => `<g class="spd"><path d="M20 70 h30 M10 86 h40 M24 100 h26" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".85"/></g>${axPet(c, 110, 112, 'content', 'pet dash')}<g class="dust"><circle cx="86" cy="110" r="4" fill="#fff" opacity=".7"/><circle cx="76" cy="107" r="3" fill="#fff" opacity=".6"/></g>`);
+axDef('shiver', 'triste', [100, 40], ['Brrr… {n} rêve d’une écharpe.', 'Il fait froid ! Un bonnet serait parfait.', 'Les moustaches gèlent. Brrrr.'],
+  c => `${Array.from({ length: 8 }, (_, i) => `<circle class="flk" style="animation-delay:${(i * 0.4).toFixed(1)}s" cx="${15 + i * 24}" cy="-4" r="2" fill="#fff"/>`).join('')}${axPet(c, 100, 112, 'triste', 'pet shake')}<g class="breath"><circle cx="122" cy="80" r="4" fill="#fff" opacity=".8"/><circle cx="130" cy="76" r="3" fill="#fff" opacity=".6"/></g>`);
+axDef('map', 'fier', [126, 70], ['Un bout de carte ! La croix rouge, c’est le trésor ?', '{n} déroule un vieux parchemin…', 'Une rumeur de trésor. Affaire à suivre !'],
+  c => `<g class="btl"><path d="M114 112 h20 q4 0 4 -4 v-6 q0 -4 -4 -4 h-12 l-4 -4 h-4Z" fill="#bfe1d8" opacity=".85" ${AXL}/></g><g class="scroll"><rect x="110" y="62" width="34" height="24" fill="#f2dfae" ${AXL}/><path d="M116 70 q6 -4 10 2 q4 5 10 -2" stroke="#c9604f" stroke-width="1.4" fill="none" stroke-dasharray="2 2"/><path d="M134 74 l5 5 M139 74 l-5 5" stroke="#c9604f" stroke-width="2"/></g>${axPet(c, 80, 112, 'fier', 'pet idle')}`);
+// rencontre d'un familier sauvage : il s'approche, renifle, recule, fait un cœur
+const axWildImg = (c, x, mood, cls) => c.wild ? `<g class="${cls}"><image href="${nsPortrait(c.wild.sp, c.wild.genes, null, mood)}" x="${x - 20}" y="68" width="40" height="44"/></g>` : axCritter(c, x, 112, cls);
+axDef('wild', 'curieux', [150, 60], ['Qui se cache derrière ce buisson ?'],
+  c => `${axPet(c, 62, 112, 'curieux', 'pet lean')}${axWildImg(c, 152, 'curieux', 'wl')}<path d="M150 114 Q144 96 160 96 Q166 84 180 92 Q196 92 196 114Z" fill="#5fa063" ${AXL}/>${axHeart(126, 66, 1, 'wh')}<g class="snf"><path d="M118 92 q-3 -3 0 -6 M114 94 q-3 -3 0 -6" stroke="#fff" stroke-width="1.4" fill="none"/></g>`);
+axDef('wildlove', 'amour', [110, 50], ['Coup de foudre ! Il suit {n} partout.'],
+  c => `${axPet(c, 80, 112, 'amour', 'pet hopl')}${axWildImg(c, 124, 'amour', 'wlv')}${axHeart(100, 60, 1.1, 'hrt h1')}${axHeart(114, 52, 0.8, 'hrt h2')}${axHeart(90, 50, 0.7, 'hrt h3')}`);
+axDef('wildflee', 'triste', [150, 60], ['Il est reparti… une autre fois !'],
+  c => `${axPet(c, 70, 112, 'triste', 'pet idle')}${axWildImg(c, 140, 'boude', 'wfl')}<g class="dust"><circle cx="122" cy="110" r="4" fill="#fff" opacity=".7"/></g>`);
+
+// ---------- quelle séquence ? ----------
+const AX_RULES = [
+  ['climb', /grimp|escalad|arbre|branche|chêne|cime|sommet/],
+  ['fish', /pêch|canne|poisson/],
+  ['swim', /nag|plong|plouf|baign|courant|vague/],
+  ['bridge', /\bpont\b|passerelle|pont de corde/],
+  ['stones', /pierre en pierre|galet|ruisseau|gué|botte/],
+  ['dig', /creus|fouill|terrier|sable|enterr|souche|racine/],
+  ['pick', /cueill|fruit|baie|champignon|pomme|cerise|noisette|mangue/],
+  ['slide', /glis|luge|toboggan|pente/],
+  ['leaf', /abri|feuille|parapluie/],
+  ['snack', /goûter|partag|offr|festin|tisane|biscuit|miam/],
+  ['photo', /photo|dessin|croqu|carnet|souvenir|crayon/],
+  ['lost', /perd|demi-tour|rebrouss|égar/],
+  ['sleep', /dorm|sieste|étoile|dodo/],
+  ['map', /carte|bouteille|rumeur|parchemin/],
+  ['nest', /nid|œuf/],
+  ['chest', /coffre|trésor|brill|éclat|or\b/],
+  ['magic', /fée|vœu|magi|cercle|lucioles/],
+  ['tracks', /trace|empreinte|sentier|suivre|piste|renifl/],
+  ['surprise', /cach|fourré|bruit|surpri|sursaut|bouh/],
+  ['hello', /ami|frapp|salu|hibou|devinette|bonjour|aider|papote/],
+  ['run', /route|raccourci|vite|filer|file |cours|fonce/],
+];
+function axActFor(text, fx, ok) {
+  fx = fx || '';
+  if (ok === false && /hurt|time\+|back/.test(fx)) return 'fall';
+  if (/\bhurt\b/.test(fx)) return 'fall';
+  const s = String(text || '').toLowerCase();
+  for (const [id, re] of AX_RULES) if (re.test(s)) return id;
+  if (/egg/.test(fx)) return 'nest';
+  if (/friend|give/.test(fx)) return 'hello';
+  if (/rumor/.test(fx)) return 'map';
+  if (/rare/.test(fx)) return 'chest';
+  if (/place|photo/.test(fx)) return 'photo';
+  if (/time-/.test(fx)) return 'run';
+  if (/back/.test(fx)) return 'lost';
+  if (/loot|food/.test(fx)) return 'dig';
+  return '';
+}
+// séquence d'une option : son texte, ou ce qu'elle demande (bottes, nageur, grimpeur…)
+function axOptAct(opt, k) {
+  const need = (opt.need || []).flat().join(' ');
+  if (/wear:pieds:bottes/.test(need)) return 'stones';
+  if (/sp:axo|phoque/.test(need) && /nag|plong|courant|eau/i.test(opt.a)) return 'swim';
+  const r = axActFor(opt.a, '', true) || axActFor((opt.r && opt.r.t) || (opt.go && opt.go.q) || '', (opt.r && opt.r.fx) || '', true);
+  return r || 'walk';
+}
+const AX_BIOME = { foret: ['tracks', 'climb', 'pick', 'dig', 'snack'], jungle: ['climb', 'pick', 'swim', 'surprise'], mer: ['swim', 'dig', 'fish', 'photo'], lac: ['fish', 'stones', 'swim', 'snack'], montagne: ['climb', 'bridge', 'photo', 'tracks'], neige: ['slide', 'tracks', 'photo'], desert: ['dig', 'tracks', 'lost', 'photo'], ville: ['photo', 'snack', 'hello', 'lost'], quartier: ['photo', 'hello', 'snack', 'lost'], campagne: ['pick', 'snack', 'tracks', 'hello'] };
+function axIdle(c, slot, moving) {
+  if (moving && slot % 2 === 0) return 'walk';
+  let L = (AX_BIOME[c.biome] || AX_BIOME.campagne).slice();
+  if (c.tod === 'nuit') L = ['sleep', 'tracks', 'lost', 'snack'];
+  if (c.wx === 'pluie') L.unshift(c.o.pieds === 'bottes' ? 'puddle' : 'leaf');
+  if (c.wx === 'neige' || c.biome === 'neige') { const warm = c.o.cou === 'echarpe' || c.o.tete === 'bonnet' || c.o.mains === 'moufles'; L = warm ? ['slide', ...L] : ['shiver', ...L.filter(x => x !== 'slide')]; }
+  if (c.swimmer && ['mer', 'lac', 'jungle'].includes(c.biome)) L.unshift('swim');
+  if (c.climber && ['foret', 'jungle', 'montagne'].includes(c.biome) && c.tod !== 'nuit') L.unshift('climb');
+  if (c.o.dos === 'sac' && c.tod !== 'nuit') L.push('pick');
+  L = [...new Set(L)];
+  return L[Math.floor(slot / (moving ? 2 : 1)) % L.length];
+}
+const AX_CRIT = { foret: 'herisson', campagne: 'lapin', montagne: 'lapin', desert: 'lapin', lac: 'grenouille', jungle: 'oiseau', mer: 'oiseau', neige: 'oiseau', ville: 'oiseau', quartier: 'oiseau' };
+function axCtx(k, biome, tod, wx, extra) {
+  const sp = typeof avSp === 'function' ? avSp(k) : k;
+  return Object.assign({ k, sp, biome, tod: tod || 'jour', wx: wx || 'clair', o: (S.outfits && S.outfits[k]) || {}, swimmer: ['axo', 'phoque', 'capy'].includes(sp), climber: ['panda', 'lemur', 'paresseux', 'tanuki'].includes(sp), critter: AX_CRIT[biome] || 'herisson' }, extra || {});
+}
+const AX_SKY = { jour: '#bfe6f6', soir: '#fbd2b0', nuit: '#33407a' };
+const AX_GROUND = { foret: '#9ccb78', jungle: '#7cbf6a', mer: '#f2dfae', lac: '#a6d185', montagne: '#a9c98a', neige: '#f6f9fd', desert: '#f6d9a0', ville: '#cfc6b8', quartier: '#cfc6b8', campagne: '#a8d27e' };
+function axGift(id, items, gift) {
+  const A = AX[id] || AX.walk, [x, y] = A.g || [100, 40], its = (items || []).slice(0, 3), n = its.length;
+  if (!n && !gift) return '';
+  let ic = '';
+  try { ic = n ? its.map((it, i) => itemIcon(it).replace('<svg ', `<svg x="${(x - 9 + (i - (n - 1) / 2) * 20).toFixed(1)}" y="${y - 18}" width="18" height="18" `)).join('') : `<path d="${axStar(x, y - 9, 8)}" fill="#ffd95a" ${AXL}/>`; } catch (e) { ic = ''; }
+  return `<g class="gift"><ellipse class="glow" cx="${x}" cy="${y - 9}" rx="${13 + Math.max(0, n - 1) * 10}" ry="13" fill="#fff6c0" opacity=".9"/>${ic}<path class="spk" d="${axStar(x + 12 + n * 6, y - 18, 3)}" fill="#fff"/></g>`;
+}
+function axSVG(id, c, o) {
+  o = o || {};
+  const A = AX[id] || AX.walk;
+  let s = '';
+  try { s = A.draw(c); } catch (e) { console.error('séquence', id, e); s = ''; }
+  if (!o.thumb) s += axGift(A.id, o.items, o.gift);
+  if (c.tod === 'nuit' && !o.thumb && A.id !== 'sleep') s += [30, 150, 176].map((x, i) => `<circle class="ffy" style="animation-delay:${i * 0.5}s" cx="${x}" cy="${60 + i * 14}" r="1.8" fill="#fff6a8"/>`).join('');
+  const bg = o.thumb || o.bg ? `<rect x="-60" y="-10" width="320" height="140" fill="${AX_SKY[c.tod] || AX_SKY.jour}"/><rect x="-60" y="104" width="320" height="30" fill="${AX_GROUND[c.biome] || '#a8d27e'}"/>` : '';
+  const mods = [c.swimmer ? 'swimmer' : '', c.climber ? 'climber' : '', c.o.pieds === 'bottes' ? 'w-bottes' : '', c.wildMood ? 'wm-' + c.wildMood : '', o.cls || ''].join(' ');
+  return `<svg class="axs ax-${A.id} ${mods}" viewBox="0 0 200 120" preserveAspectRatio="${o.thumb || o.bg ? 'xMidYMid slice' : 'xMidYMax meet'}" aria-hidden="true">${bg}${s}</svg>`;
+}
+const axLine = (id, slot) => { const L = (AX[id] || AX.walk).c; return L[(slot || 0) % L.length]; };
+
+// ---------- styles des séquences ----------
+(function axCSS() {
+  const st = document.createElement('style'); st.id = 'axCSS';
+  st.textContent = `
+.axs{display:block;width:100%;height:100%;overflow:visible}
+.axs g,.axs path,.axs circle,.axs ellipse,.axs text,.axs rect{transform-box:fill-box;transform-origin:50% 100%}
+.axs .pet{animation:axBob 1.6s ease-in-out infinite}
+.axs .pet.bob{animation:axWalkB .55s ease-in-out infinite alternate}
+@keyframes axBob{50%{transform:translateY(-2px) scale(1.02,.98)}}
+@keyframes axWalkB{from{transform:translateY(0) rotate(-3deg)}to{transform:translateY(-3px) rotate(3deg)}}
+.axs .dust circle{animation:axDust .9s ease-out infinite}
+@keyframes axDust{from{opacity:.8;transform:translateX(0) scale(.6)}to{opacity:0;transform:translateX(-14px) scale(1.4)}}
+/* grimper */
+.axs .climb{animation:axClimb 3.4s ease-in-out infinite}
+@keyframes axClimb{0%,8%{transform:translate(0,0)}20%{transform:translate(2px,-16px) rotate(-4deg)}32%{transform:translate(-1px,-32px) rotate(4deg)}46%,72%{transform:translate(1px,-56px) rotate(0)}90%,100%{transform:translate(0,0)}}
+.ax-climb:not(.climber) .climb{animation-name:axClimbSlip;animation-duration:3.8s}
+@keyframes axClimbSlip{0%,6%{transform:translate(0,0)}24%{transform:translate(1px,-26px) rotate(-5deg)}32%{transform:translate(0,-10px) rotate(6deg)}54%{transform:translate(1px,-40px) rotate(-4deg)}66%,78%{transform:translate(0,-48px)}100%{transform:translate(0,0)}}
+.axs .crown{animation:axSway 3s ease-in-out infinite alternate;transform-origin:50% 100%}
+@keyframes axSway{from{transform:rotate(-1.5deg)}to{transform:rotate(1.5deg)}}
+.axs .leaf{animation:axLeaf 3.4s ease-in infinite}.axs .leaf.l2{animation-delay:1.5s}
+@keyframes axLeaf{0%{opacity:0;transform:translate(0,0) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translate(-14px,66px) rotate(200deg)}}
+/* nager */
+.axs .swim{animation:axSwim 3.2s ease-in-out infinite}
+@keyframes axSwim{0%,100%{transform:translate(-8px,-2px) rotate(-3deg)}30%{transform:translate(8px,2px) rotate(3deg)}55%{transform:translate(0,0)}68%{transform:translate(2px,26px) rotate(30deg)}82%{transform:translate(0,-6px) rotate(-6deg)}}
+.ax-swim:not(.swimmer) .swim{animation:axFloat 2.4s ease-in-out infinite}
+@keyframes axFloat{0%,100%{transform:translate(-4px,0) rotate(-3deg)}50%{transform:translate(4px,3px) rotate(3deg)}}
+.axs .wave{animation:axWave 2.4s linear infinite}
+@keyframes axWave{from{transform:translateX(0)}to{transform:translateX(-50px)}}
+.axs .bub{animation:axBub 2.2s ease-out infinite}.axs .bub.b2{animation-delay:.7s}.axs .bub.b3{animation-delay:1.4s}
+@keyframes axBub{from{opacity:.9;transform:translateY(0)}to{opacity:0;transform:translateY(-30px)}}
+.axs .splash{opacity:0;animation:axSplash 3.2s ease-out infinite;animation-delay:2.15s}
+.ax-swim:not(.swimmer) .splash{animation:none}
+@keyframes axSplash{0%{opacity:1;transform:scale(.4)}20%{opacity:1;transform:scale(1.2)}35%,100%{opacity:0;transform:scale(1.3)}}
+/* pierres */
+.axs .hop3{animation:axHop3 3.6s ease-in-out infinite}
+@keyframes axHop3{0%{opacity:0;transform:translate(0,0)}5%{opacity:1;transform:translate(0,0)}14%{transform:translate(15px,-18px)}22%,30%{transform:translate(30px,-2px)}38%{transform:translate(48px,-18px)}46%,54%{transform:translate(66px,-2px)}62%{transform:translate(84px,-18px)}70%,76%{transform:translate(102px,-2px)}84%{transform:translate(118px,-16px)}90%{opacity:1;transform:translate(130px,0)}100%{opacity:0;transform:translate(130px,0)}}
+.ax-stones.w-bottes .hop3{animation-name:axWade}
+@keyframes axWade{0%{opacity:0;transform:translate(0,0)}6%{opacity:1}30%{transform:translate(40px,4px) rotate(4deg)}50%{transform:translate(66px,6px) rotate(-4deg)}70%{transform:translate(96px,4px) rotate(4deg)}90%{opacity:1;transform:translate(130px,0)}100%{opacity:0;transform:translate(130px,0)}}
+.axs .splash.s2{animation-delay:1.6s}
+.axs .rip{animation:axWave 3s linear infinite alternate}
+/* pont */
+.axs .cross{animation:axCross 4s ease-in-out infinite}
+@keyframes axCross{0%{opacity:0;transform:translate(0,0)}6%{opacity:1}25%{transform:translate(35px,7px) rotate(-3deg)}45%{transform:translate(62px,10px) rotate(3deg)}52%{transform:translate(78px,-6px)}58%{transform:translate(92px,10px)}78%{transform:translate(118px,6px) rotate(-2deg)}92%{opacity:1;transform:translate(140px,0)}100%{opacity:0;transform:translate(140px,0)}}
+.axs .sway{transform-origin:50% 0;animation:axSway 2s ease-in-out infinite alternate}
+/* creuser */
+.axs .dig{animation:axDig .32s ease-in-out infinite alternate;transform-origin:70% 100%}
+@keyframes axDig{from{transform:rotate(-6deg) translateY(0)}to{transform:rotate(8deg) translateY(-2px)}}
+.axs .dirt circle{animation:axDirt .9s ease-out infinite}.axs .dirt .d1{animation-delay:.3s}.axs .dirt .d2{animation-delay:.6s}
+@keyframes axDirt{from{opacity:1;transform:translate(14px,14px)}to{opacity:0;transform:translate(-10px,-6px)}}
+/* pêche */
+.axs .bobr{animation:axBobr 1.4s ease-in-out infinite}
+@keyframes axBobr{50%{transform:translateY(2px)}80%{transform:translateY(5px)}}
+.axs .rod{transform-origin:0 100%;animation:axRod 3.2s ease-in-out infinite}
+@keyframes axRod{0%,60%,100%{transform:rotate(0)}70%{transform:rotate(-8deg)}}
+.axs .fishj{opacity:0;animation:axFish 3.2s ease-out infinite}
+@keyframes axFish{0%,55%{opacity:0;transform:translate(0,0) rotate(0)}60%{opacity:1}75%{transform:translate(-8px,-26px) rotate(-40deg)}90%{opacity:1;transform:translate(-16px,0) rotate(-120deg)}100%{opacity:0}}
+.axs .idle{animation:axBob 2.2s ease-in-out infinite}
+/* cueillir */
+.axs .fruit{animation:axFruit 3s ease-in infinite}.axs .fruit.f1{animation-delay:1s}.axs .fruit.f2{animation-delay:2s}
+@keyframes axFruit{0%,20%{opacity:1;transform:translate(0,0)}60%{opacity:1;transform:translate(-38px,30px)}70%,100%{opacity:0;transform:translate(-40px,34px)}}
+.axs .bush{animation:axSway 1.5s ease-in-out infinite alternate}
+.axs .hopl{animation:axHopL 1.5s ease-in-out infinite}
+@keyframes axHopL{0%,60%,100%{transform:translateY(0)}75%{transform:translateY(-8px)}}
+/* glisser */
+.axs .slide{animation:axSlide 3s ease-in infinite}
+@keyframes axSlide{0%{opacity:0;transform:translate(0,0) rotate(18deg)}8%{opacity:1}70%{transform:translate(124px,46px) rotate(20deg)}80%{transform:translate(134px,44px) rotate(-6deg)}90%{opacity:1;transform:translate(138px,48px) rotate(0)}100%{opacity:0;transform:translate(138px,48px)}}
+.axs .scarf{transform-origin:100% 50%;animation:axScarf .3s ease-in-out infinite alternate}
+@keyframes axScarf{from{transform:rotate(-10deg)}to{transform:rotate(12deg)}}
+.axs .puff circle{animation:axDust 1s ease-out infinite}
+/* pluie, feuille, flaque */
+.axs .drp{animation:axDrop .8s linear infinite}
+@keyframes axDrop{from{transform:translateY(0)}to{transform:translateY(120px)}}
+.axs .leafu{transform-origin:50% 100%;animation:axSway 1.6s ease-in-out infinite alternate}
+.axs .bnc circle{animation:axBnc .8s ease-out infinite}
+@keyframes axBnc{from{opacity:1;transform:translate(0,0)}to{opacity:0;transform:translate(0,14px)}}
+.axs .jump{animation:axJump 1.4s ease-in-out infinite}
+@keyframes axJump{0%,100%{transform:translateY(0) scale(1.06,.94)}40%{transform:translateY(-22px) scale(.96,1.04)}70%{transform:translateY(0) scale(1.1,.9)}}
+.axs .splash.s3{animation:axSplash 1.4s ease-out infinite;animation-delay:.95s}
+/* goûter, bonjour */
+.axs .cookie{animation:axCookie 3s ease-in-out infinite}
+@keyframes axCookie{0%,15%{transform:translate(-8px,0)}45%,70%{transform:translate(22px,-4px)}100%{transform:translate(-8px,0)}}
+.axs .crit.nod{animation:axHopL 1.2s ease-in-out infinite}
+.axs .hrt{opacity:0;animation:axHeart 2.4s ease-out infinite}.axs .hrt.h2{animation-delay:.8s}.axs .hrt.h3{animation-delay:1.5s}
+@keyframes axHeart{0%{opacity:0;transform:translateY(8px) scale(.4)}25%{opacity:1;transform:translateY(0) scale(1.1)}100%{opacity:0;transform:translateY(-24px) scale(1)}}
+.axs .bubl{animation:axPop 2.6s ease-out infinite}
+@keyframes axPop{0%,10%{opacity:0;transform:scale(.3)}25%,85%{opacity:1;transform:scale(1)}100%{opacity:0}}
+/* photo */
+.axs .flash{opacity:0;animation:axFlash 3.2s linear infinite}
+@keyframes axFlash{0%,38%{opacity:0}41%{opacity:.95}52%,100%{opacity:0}}
+.axs .polar{opacity:0;animation:axPolar 3.2s ease-out infinite}
+@keyframes axPolar{0%,44%{opacity:0;transform:translateY(10px) rotate(0) scale(.5)}60%,92%{opacity:1;transform:translateY(-4px) rotate(8deg) scale(1)}100%{opacity:0}}
+/* perdu, puis trouvé */
+.axs .look{animation:axLook 3.6s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes axLook{0%,20%{transform:scaleX(1)}25%,45%{transform:scaleX(-1)}50%,100%{transform:scaleX(1)}}
+.axs .qm{animation:axQ 3.6s ease-in-out infinite}
+@keyframes axQ{0%{opacity:0;transform:scale(.4)}10%,45%{opacity:1;transform:scale(1)}52%,100%{opacity:0;transform:scale(.4)}}
+.axs .bulb{opacity:0;animation:axBulb 3.6s ease-out infinite}
+@keyframes axBulb{0%,52%{opacity:0;transform:scale(.4)}62%{opacity:1;transform:scale(1.2)}70%,94%{opacity:1;transform:scale(1)}100%{opacity:0}}
+/* dodo */
+.axs .tw{animation:axTw 2s ease-in-out infinite alternate;transform-origin:50% 50%}
+@keyframes axTw{from{opacity:.3}to{opacity:1}}
+.axs .shoot{opacity:0;animation:axShoot 4s ease-out infinite}
+@keyframes axShoot{0%,70%{opacity:0;transform:translate(0,0)}75%{opacity:1}90%,100%{opacity:0;transform:translate(-40px,18px)}}
+.axs .breathe{animation:axBreathe 3s ease-in-out infinite}
+@keyframes axBreathe{50%{transform:scale(1.03,.97)}}
+.axs .z{opacity:0;animation:axZ 3s ease-out infinite}.axs .z2{animation-delay:1s}.axs .z3{animation-delay:2s}
+@keyframes axZ{0%{opacity:0;transform:translate(0,6px)}30%{opacity:1}100%{opacity:0;transform:translate(8px,-10px)}}
+.axs .flm{animation:axFlm .4s ease-in-out infinite alternate}.axs .flm.f2{animation-duration:.3s}
+@keyframes axFlm{from{transform:scale(1,1)}to{transform:scale(.85,1.15)}}
+.axs .ffy{animation:axTw 1.2s ease-in-out infinite alternate}
+/* coffre, nid */
+.axs .rays{transform-origin:50% 50%;animation:axSpin 8s linear infinite}
+@keyframes axSpin{to{transform:rotate(360deg)}}
+.axs .lid{transform-origin:0 100%;animation:axLid 3.2s ease-in-out infinite}
+@keyframes axLid{0%,25%{transform:rotate(0)}40%,85%{transform:rotate(-32deg)}100%{transform:rotate(0)}}
+.axs .spk{transform-origin:50% 50%;animation:axSpk 1.4s ease-in-out infinite}.axs .spk.k2{animation-delay:.7s}
+@keyframes axSpk{0%,100%{opacity:0;transform:scale(.3) rotate(0)}50%{opacity:1;transform:scale(1.2) rotate(45deg)}}
+.axs .egg{animation:axWob 1.6s ease-in-out infinite}
+@keyframes axWob{0%,60%,100%{transform:rotate(0)}70%{transform:rotate(-10deg)}80%{transform:rotate(10deg)}90%{transform:rotate(-5deg)}}
+.axs .halo{transform-origin:50% 50%;animation:axHalo 1.6s ease-in-out infinite alternate}
+@keyframes axHalo{from{opacity:.25;transform:scale(.9)}to{opacity:.75;transform:scale(1.1)}}
+.axs .lean{animation:axLean 2.4s ease-in-out infinite}
+@keyframes axLean{0%,100%{transform:rotate(0)}50%{transform:rotate(6deg) translateX(3px)}}
+/* traces */
+.axs .pr{opacity:0;animation:axPr 3.6s ease-out infinite}
+@keyframes axPr{0%{opacity:0}8%,70%{opacity:1}100%{opacity:0}}
+.axs .sniff{animation:axSniff 3.6s ease-in-out infinite}
+@keyframes axSniff{0%{opacity:0;transform:translate(0,0)}6%{opacity:1}20%{transform:translate(22px,0) rotate(6deg)}30%{transform:translate(30px,-2px) rotate(0)}50%{transform:translate(62px,0) rotate(6deg)}60%{transform:translate(70px,-2px) rotate(0)}85%{opacity:1;transform:translate(110px,0) rotate(6deg)}100%{opacity:0;transform:translate(118px,0)}}
+/* surprise */
+.axs .back{animation:axBack 3s ease-out infinite}
+@keyframes axBack{0%,30%{transform:translate(0,0)}38%{transform:translate(-18px,-20px) rotate(-10deg)}48%,85%{transform:translate(-22px,0) rotate(0)}100%{transform:translate(0,0)}}
+.axs .excl{opacity:0;animation:axQ2 3s ease-out infinite}
+@keyframes axQ2{0%,30%{opacity:0;transform:scale(.3)}36%,80%{opacity:1;transform:scale(1.1)}90%,100%{opacity:0}}
+.axs .popc{animation:axPopc 3s ease-out infinite}
+@keyframes axPopc{0%,20%{transform:translateY(18px)}30%,80%{transform:translateY(-8px)}36%{transform:translateY(-14px)}100%{transform:translateY(18px)}}
+/* chute */
+.axs .tumble{animation:axTumble 3s ease-in-out infinite;transform-origin:50% 60%}
+@keyframes axTumble{0%{transform:translate(-20px,-30px) rotate(-180deg)}25%{transform:translate(0,0) rotate(0)}32%{transform:translate(0,0) scale(1.1,.88)}40%,100%{transform:translate(0,0) scale(1)}}
+.axs .orb{transform-origin:50% 50%;animation:axSpin 1.6s linear infinite}
+/* magie, course, froid, carte */
+.axs .float{animation:axFloat2 2.4s ease-in-out infinite}
+@keyframes axFloat2{50%{transform:translateY(-12px)}}
+.axs .spin{transform-origin:50% 50%;animation:axSpin 4s linear infinite}
+.axs .dash{animation:axDash .3s ease-in-out infinite alternate}
+@keyframes axDash{from{transform:rotate(8deg) translateY(0)}to{transform:rotate(10deg) translateY(-4px)}}
+.axs .spd{animation:axSpd .5s linear infinite}
+@keyframes axSpd{from{transform:translateX(20px);opacity:0}30%{opacity:1}to{transform:translateX(-30px);opacity:0}}
+.axs .shake{animation:axShake .12s linear infinite alternate}
+@keyframes axShake{from{transform:translateX(-1.2px)}to{transform:translateX(1.2px)}}
+.axs .breath circle{animation:axDust 1.6s ease-out infinite}
+.axs .flk{animation:axFlk 3.2s linear infinite}
+@keyframes axFlk{from{transform:translate(0,0)}to{transform:translate(-14px,124px)}}
+.axs .scroll{transform-origin:0 50%;animation:axScroll2 3.2s ease-out infinite}
+@keyframes axScroll2{0%,15%{opacity:0;transform:scaleX(.1) translateY(30px)}40%,90%{opacity:1;transform:scaleX(1) translateY(0)}100%{opacity:0}}
+/* sauvage */
+.axs .wl{animation:axApproach 4.4s ease-in-out infinite}
+@keyframes axApproach{0%{transform:translate(18px,8px)}22%{transform:translate(-28px,0)}30%{transform:translate(-30px,-2px) rotate(-6deg)}36%{transform:translate(-30px,0) rotate(5deg)}44%{transform:translate(-30px,-2px) rotate(-5deg)}56%{transform:translate(4px,4px)}74%{transform:translate(-22px,0)}90%{transform:translate(-22px,-6px)}100%{transform:translate(18px,8px)}}
+.wm-timide .wl{animation-duration:5.6s}
+.wm-joueur .wl{animation-duration:3.2s}
+.axs .wh{opacity:0;animation:axWh 4.4s ease-out infinite}
+@keyframes axWh{0%,80%{opacity:0;transform:scale(.3)}88%{opacity:1;transform:scale(1.2)}100%{opacity:0;transform:translateY(-12px)}}
+.wm-timide .wh{animation-duration:5.6s}.wm-joueur .wh{animation-duration:3.2s}
+.axs .snf{opacity:0;animation:axSnf 4.4s ease-out infinite}
+@keyframes axSnf{0%,26%{opacity:0}30%,46%{opacity:1}52%,100%{opacity:0}}
+.hesit .wl{animation:axShy .35s ease-in-out infinite alternate}
+@keyframes axShy{from{transform:translate(-14px,0) rotate(-5deg)}to{transform:translate(-8px,0) rotate(5deg)}}
+.hesit .wh{display:none}
+.axs .wlv{animation:axHopL 1s ease-in-out infinite}
+.axs .wfl{animation:axFlee 2.4s ease-in forwards}
+@keyframes axFlee{0%{transform:translate(0,0)}30%{transform:translate(-6px,-6px)}100%{opacity:0;transform:translate(90px,0)}}
+/* l'objet trouvé monte en brillant */
+.axs .gift{opacity:0;transform-origin:50% 50%;animation:axGift 3.4s ease-out infinite;animation-delay:.9s}
+@keyframes axGift{0%{opacity:0;transform:translateY(16px) scale(.3)}25%{opacity:1}50%,88%{opacity:1;transform:translateY(-10px) scale(1.25)}100%{opacity:0;transform:translateY(-16px) scale(1.2)}}
+.axs .glow{transform-origin:50% 50%;animation:axHalo .8s ease-in-out infinite alternate}
+@media (prefers-reduced-motion: reduce){
+  .axs *,.axs{animation:none!important}
+  .axs .gift,.axs .polar,.axs .bulb,.axs .hrt,.axs .scroll,.axs .wh{opacity:1}
+  .axs .flash,.axs .qm,.axs .shoot,.axs .fishj,.axs .splash{opacity:0}
+}
+`;
+  document.head.appendChild(st);
+})();
 
 })();
 </script>

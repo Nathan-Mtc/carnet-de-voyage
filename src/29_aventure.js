@@ -444,7 +444,8 @@ function avChoose(t, j, oi, auto) {
   const out = avApply(t, j, res.fx || '', place);
   j.resolved = true; j.choice = oi; j.auto = !!auto; j.ok = ok;
   j.outcome = (auto ? avTxt(`{n} a décidé tout{e} seul{e} : « ${j.steps.map(s => s.a).join(' › ')} ». `, k) : '') + avTxt(res.t, k);
-  j.items = out.items; j.chips = out.chips;
+  j.items = out.items; j.chips = out.chips; j.fx = res.fx || '';
+  try { const fxs = j.fx, last = j.steps.length ? j.steps[j.steps.length - 1].a : ''; j.act = /\bhurt\b/.test(fxs) || (!ok && /time\+|back/.test(fxs)) ? 'fall' : (axActFor(avTxt(res.t, k), '', true) || axActFor(last, '', true) || axActFor('', fxs, true) || 'walk'); } catch (e) { j.act = 'walk'; }
   t.avLog = t.avLog || [];
   t.avLog.push({ a: j.steps.map(s => s.a).join(' › '), t: avTxt(res.t, k), chips: out.chips, place: j.place, auto: !!auto });
   const A = avState(); A.seen[j.sc] = (A.seen[j.sc] || 0) + 1;
@@ -556,22 +557,45 @@ function avGoPlace(id) {
   openSheet('voyage'); drawMarks();
 }
 
-// ---------------- la vue d'exploration ----------------
+// ---------------- la vue d'exploration (v17 : on regarde l'aventure, une seule ligne de texte) ----------------
 let avBusy = 0, avK = null, avSig = '', avStageKey = '', avPick = { src: null, id: null, how: null }, avAnim = null, avLastLen = 0;
+let avPlay = null, avPlayN = 0, avLogOpen = false, avReplayTrip = null;
 const AV_PH = [['aller', 'Aller'], ['sejour', 'Sur place'], ['retour', 'Retour']];
+const AV_SLOT = 9000;
+const avReduce = () => typeof reduceMotion === 'function' && reduceMotion();
+// une seule phrase, courte
+function avOne(s, max) {
+  max = max || 96; s = String(s || '').replace(/\s+/g, ' ').trim();
+  const m = s.match(/^.*?[.!?…](?=\s|$)/); let r = m ? m[0] : s;
+  if (m && r.length < 22 && s.length > r.length) { const m2 = s.slice(r.length).trim().match(/^.*?[.!?…](?=\s|$)/); if (m2 && (r + ' ' + m2[0]).length <= max) r += ' ' + m2[0]; }
+  if (r.length > max) r = r.slice(0, max).replace(/\s+\S*$/, '') + '…';
+  return r;
+}
+const AV_STOP = new Set(['le', 'la', 'les', 'de', 'du', 'des', 'dans', 'au', 'aux', 'à', 'sur', 'un', 'une', 'en', 'et', 'avec', 'pour', 'son', 'sa', 'ses', 'par', 'sous', 'vers', 'd’', 'l’']);
+function avShort(a) { const w = String(a || '').replace(/[«»"]/g, '').trim().split(/\s+/); const r = w.slice(0, 4); while (r.length > 1 && AV_STOP.has(r[r.length - 1].toLowerCase())) r.pop(); return r.join(' '); }
+const avStripAuto = s => String(s || '').replace(/^[^«]*seul\S* : « .*? »\. /, '');
+const AV_KIND_ACT = { trouvaille: 'dig', repas: 'snack', photo: 'photo', merveille: 'photo', pieces: 'dig', tresor: 'map', animal: 'snack', retour: 'walk', depart: 'walk', rencontre: 'hello' };
+function avMoment(t, j) {
+  const act = (['animal', 'merveille'].includes(j.kind) && axActFor(j.text, '', true)) || AV_KIND_ACT[j.kind] || axActFor(j.text, '', true) || 'walk';
+  return { act, line: avOne(j.text), items: j.items, gift: j.kind === 'pieces' };
+}
+function avMomentChoice(t, j) {
+  return { act: j.act || 'walk', line: avOne(avStripAuto(j.outcome), 110), items: j.items, chips: j.chips, gift: (j.chips || []).some(c => ['place', 'rumor', 'rare', 'egg'].includes(c[0])) };
+}
 function avOpen(k) {
   const t = S.trips[k]; if (!t) return;
   if (S.sel !== k) { S.sel = k; S.unseen[k] = 0; plan.dest = null; save(); try { renderComps(); drawMarks(); } catch (e) {} }
   S.unseen[k] = 0;
-  avK = k; avSig = ''; avStageKey = ''; avPick = { src: null, id: null, how: null }; avLastLen = t.journal.length;
+  avK = k; avSig = ''; avStageKey = ''; avPick = { src: null, id: null, how: null }; avLastLen = t.journal.length; avPlay = null; avLogOpen = false;
   let v = $('avView');
   if (!v) { v = document.createElement('div'); v.id = 'avView'; v.className = 'avv'; v.setAttribute('role', 'dialog'); v.setAttribute('aria-modal', 'true'); document.body.appendChild(v); }
-  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-journal="1">Journal complet</button><button class="btn green sm" data-av-close="1">Retour à la carte</button></footer></div>`;
+  v.innerHTML = `<div class="avbox"><header class="avh"></header><div class="avph"></div><div class="avstage"></div><div class="avstory" aria-live="polite"></div><footer class="avf"><button class="btn cream sm" data-av-log="1" aria-pressed="false">Journal</button><button class="btn cream sm" data-av-replay="cur">Revoir l’aventure</button><button class="btn green sm" data-av-close="1">Carte</button></footer></div>`;
   v.hidden = false; document.body.classList.add('avopen');
   avRender(true);
 }
-function avClose() { const v = $('avView'); if (v) { v.hidden = true; v.innerHTML = ''; } avK = null; document.body.classList.remove('avopen'); try { renderAll(); } catch (e) {} }
+function avClose() { const v = $('avView'); if (v) { v.hidden = true; v.innerHTML = ''; } avK = null; avPlay = null; document.body.classList.remove('avopen'); try { renderAll(); } catch (e) {} }
 const avPending = t => t.journal.findIndex(j => j.pending && !j.resolved);
+const AV_CHIP_S = { place: 'Nouveau lieu', rumor: 'Rumeur', friend: 'Nouvel ami', rep: 'Réputation', hurt: 'Fatigué', slow: 'Plus long', fast: 'Raccourci', back: 'Demi-tour', wild: 'Rencontre', egg: 'Un œuf !', rare: 'Objet rare', photo: 'Photo', coins: 'Pièces', give: 'Offert' };
 function avRender(force) {
   const v = $('avView'); if (!v || v.hidden || !avK) return;
   if (avBusy > Date.now()) return;
@@ -584,34 +608,52 @@ function avRender(force) {
   const left = Math.max(0, (t.total - t.elapsed) / (typeof fast !== 'undefined' && fast && k === S.sel ? 30 : 1));
   v.querySelector('.avh').innerHTML = `<img src="${portraitURI(k)}" alt=""><div><b>${esc(CHARS[k].name)} · ${esc(w.name)}</b><span>${esc(AV_BIOME_NAME[biome] || '')} · ${tod === 'nuit' ? 'la nuit' : tod === 'soir' ? 'au crépuscule' : 'en journée'}${wx === 'pluie' ? ' · sous la pluie' : wx === 'neige' ? ' · il neige' : ''} · ${Math.floor(hour)} h ${String(Math.floor((hour % 1) * 60)).padStart(2, '0')} là-bas</span></div><button class="avx" data-av-close="1" aria-label="Fermer">×</button>`;
   v.querySelector('.avph').innerHTML = AV_PH.map(([id, l]) => `<i class="${id === ph ? 'on' : AV_PH.findIndex(x => x[0] === id) < AV_PH.findIndex(x => x[0] === ph) || ph === 'fin' ? 'past' : ''}">${l}</i>`).join('<b>·</b>') + `<span>${t.done ? 'Rentré !' : 'Retour dans ' + fmtDur(left)}</span>`;
-  // décor (reconstruit seulement s'il change, pour ne pas relancer les animations)
-  const moving = !t.done && ph !== 'sejour' && !wild;
-  const skey = [biome, tod, wx, ph, moving, wild ? wild.t : '', tamed.join(','), t.done].join('|');
+  // que montre-t-on ? une séquence qui se joue, la question en cours, la rencontre, ou la vie du voyage
+  const now = Date.now();
+  if (avPlay && avPlay.until <= now) { const nx = avPlay.then; avPlay = nx ? Object.assign({}, nx, { until: now + (nx.dur || 9000), id: ++avPlayN }) : null; }
+  if (t.journal.length > avLastLen) {
+    const fresh = t.journal.slice(avLastLen).filter(j => !j.pending && j.kind !== 'choix' && j.kind !== 'sauvage').pop();
+    if (fresh && !avPlay && !pj) avPlay = Object.assign(avMoment(t, fresh), { until: now + 9000, id: ++avPlayN });
+    avLastLen = t.journal.length;
+  }
+  const moving = !t.done && ph !== 'sejour' && !pj;
+  const c = axCtx(k, biome, tod, wx);
+  let sh;
+  if (avPlay) sh = avPlay;
+  else if (pj && pj.kind === 'choix' && pj.sc && avNode(pj)) { const q = pj.path && pj.path.length ? (pj.q || avTxt(avNode(pj).q, k)) : pj.text; sh = { act: axActFor(q, '', true) || 'tracks', line: avOne(q, 110), key: 'q' + pi + '.' + (pj.path || []).length }; }
+  else if (wild) { const m = avWildMood(wild); sh = { act: 'wild', wild: { sp: wild.sp, genes: wild.genes }, wildMood: m, line: AV_MOODS[m], key: 'w' + pi }; }
+  else if (pj) sh = { act: pj.kind === 'aide' ? 'lost' : pj.kind === 'marchand' ? 'chest' : 'hello', line: avOne(pj.text), key: 'p' + pi };
+  else if (t.done) sh = { act: 'chest', gift: true, line: avTxt('{n} est rentré{e} : le sac est plein à craquer !', k), key: 'done' };
+  else { const slot = Math.floor(now / AV_SLOT), act = axIdle(c, slot, moving); sh = { act, line: axLine(act, Math.floor(slot / 3)), key: 'i' + slot + act }; }
+  if (sh.wild) c.wild = sh.wild;
+  if (sh.wildMood) c.wildMood = sh.wildMood;
+  const walking = moving && !avPlay && sh.act === 'walk';
+  const skey = [biome, tod, wx, ph, walking, tamed.join(','), t.done, sh.id || sh.key, sh.act].join('|');
   if (skey !== avStageKey || force) {
     avStageKey = skey;
-    const D = avDecor(biome, tod, wx), mood = t.done ? 'rire' : wild ? 'curieux' : tod === 'nuit' && ph === 'sejour' ? 'dodo' : 'content';
-    const st = v.querySelector('.avstage');
-    st.className = `avstage b-${biome} t-${tod} ${moving ? 'mv' : 'still'} ${ph === 'retour' ? 'rev' : ''}`;
+    const D = avDecor(biome, tod, wx), st = v.querySelector('.avstage');
+    st.className = `avstage b-${biome} t-${tod} ${walking ? 'mv' : 'still'} ${ph === 'retour' && walking ? 'rev' : ''}`;
     st.innerHTML = `<div class="avl avsky">${avSky(tod, wx)}</div><div class="avl avfar"><div class="avt">${avTile(D.far)}</div></div><div class="avl avgr">${avTile(D.ground).split('</svg>')[0]}</svg></div><div class="avl avmid"><div class="avt">${avTile(D.mid)}</div></div>`
       + tamed.map((id, i) => `<img class="avfol" style="left:${4 + i * 9}%" src="${portraitURI(id, 'content')}" alt="${esc(CHARS[id].name)} suit le groupe">`).join('')
-      + `<img class="avme" src="${portraitURI(k, mood)}" alt="${esc(CHARS[k].name)}">`
-      + (wild ? `<div class="avwild wary" id="avWild"><img src="${nsPortrait(wild.sp, wild.genes, null, 'curieux')}" alt="${esc(spName(wild.sp))} sauvage"><svg class="avbush" viewBox="0 0 100 60" aria-hidden="true"><path d="M4 60 Q0 34 22 34 Q24 14 46 20 Q60 6 76 22 Q100 20 96 60Z" fill="#5fa063" stroke="#3d6b40" stroke-width="2.4"/><circle cx="30" cy="40" r="3" fill="#f08aa6"/><circle cx="70" cy="34" r="3" fill="#f6c445"/></svg><i class="avq">?</i></div>` : '')
+      + `<div class="avl avact">${axSVG(sh.act, c, { items: sh.items, gift: sh.gift, cls: sh.cls })}</div>`
       + `<div class="avl avnear"><div class="avt">${avTile(D.near)}</div></div>`
-      + (wx === 'pluie' || wx === 'neige' ? `<div class="avl avwx ${wx}"></div>` : '');
+      + (wx === 'pluie' || wx === 'neige' ? `<div class="avl avwx ${wx}"></div>` : '')
+      + ((sh.chips || []).length ? `<div class="avbadges">${sh.chips.map(([cc, l], i) => `<em class="avc c-${cc}" style="animation-delay:${0.9 + i * 0.25}s" title="${esc(l)}">${AV_CHIP_IC[cc] || ''} ${esc(AV_CHIP_S[cc] || l)}</em>`).join('')}</div>` : '');
   }
-  // récit
-  const sig = [t.journal.length, pi, pj ? (pj.path || []).length : '', JSON.stringify(avPick), t.done].join('|');
+  // sous-titre (une ligne) + vignettes de choix
+  const sig = [avStageKey, pi, pj ? (pj.path || []).length : '', JSON.stringify(avPick), avLogOpen, t.journal.length, t.done, !!avPlay].join('|');
   if (sig === avSig && !force) return;
   avSig = sig;
+  v.querySelector('.avbox').classList.toggle('asking', !!(pj && !avPlay));
   const box = v.querySelector('.avstory');
-  const past = t.journal.map((j, i) => [j, i]).filter(([j, i]) => i !== pi).slice(-6);
-  let h = past.map(([j, i]) => avLine(t, j, i, i >= avLastLen)).join('');
-  avLastLen = t.journal.length;
-  if (pj) h += avAsk(t, pj, pi);
-  else if (!t.done) h += `<p class="avnext">${esc(avTxt(ph === 'sejour' ? '{n} explore les environs…' : ph === 'retour' ? '{n} reprend le chemin de la maison…' : '{n} marche, le nez au vent…', k))}<span class="avdots"><i></i><i></i><i></i></span></p>`;
-  else h += `<div class="avend"><button class="btn green big" data-av-collect="${k}">Ouvrir son sac</button></div>`;
+  let h = `<p class="avsub" title="${esc(avTxt(sh.line || '', k))}">${esc(avTxt(sh.line || '', k))}</p>`;
+  if (!avPlay) {
+    if (pj) h += avAsk(t, pj, pi, c);
+    else if (t.done) h += `<div class="avend"><button class="btn green big" data-av-collect="${k}">Ouvrir son sac</button></div>`;
+  }
+  if (avLogOpen) h += `<div class="avlog">${t.journal.map((j, i) => [j, i]).filter(([j, i]) => i !== pi).slice(-12).reverse().map(([j, i]) => avLine(t, j, i, false)).join('')}<button class="btn cream sm" data-av-journal="1">Ouvrir le carnet complet</button></div>`;
   box.innerHTML = h;
-  box.scrollTop = box.scrollHeight;
+  const lb = v.querySelector('[data-av-log]'); if (lb) lb.setAttribute('aria-pressed', avLogOpen);
 }
 const AV_CHIP_IC = { place: '★', rumor: '✉', friend: '♥', rep: '☺', hurt: '✚', slow: '⧗', fast: '»', back: '↺', wild: '!', egg: '◒', rare: '◆', photo: '▣', coins: '●', give: '♡' };
 const avChips = cs => (cs || []).length ? `<span class="avchips">${cs.map(([c, l]) => `<em class="avc c-${c}">${AV_CHIP_IC[c] || ''} ${esc(l)}</em>`).join('')}</span>` : '';
@@ -625,38 +667,72 @@ function avLine(t, j, i, fresh) {
   return s + `</div>`;
 }
 function avNeedLabel(opt, k) { return opt.h ? avTxt(opt.h, k) : ''; }
-function avAsk(t, j, i) {
+// icônes de ce qu'une option demande (vêtement, talent, objet) ; cadenas s'il manque
+const AVI = (s) => `<svg viewBox="0 0 24 24" aria-hidden="true">${s}</svg>`, AVL = 'stroke="#5b4636" stroke-width="1.6" stroke-linejoin="round"';
+const AV_IC = {
+  pieds: AVI(`<path d="M8 3h6v11l5 2c2 1 2 5 0 5H6c-1 0-1-2 0-3l2-3Z" fill="#f6c445" ${AVL}/>`),
+  tete: AVI(`<path d="M7 17c0-6 2-10 5-10s5 4 5 10Z" fill="#e2584d" ${AVL}/><path d="M3 17h18" stroke="#5b4636" stroke-width="2.4" stroke-linecap="round"/>`),
+  cou: AVI(`<path d="M4 7h16v5H4Z M13 12v9h4v-9" fill="#e2584d" ${AVL}/>`),
+  dos: AVI(`<rect x="6" y="7" width="12" height="14" rx="3" fill="#d9a868" ${AVL}/><path d="M9 7a3 3 0 0 1 6 0" fill="none" ${AVL}/>`),
+  mains: AVI(`<path d="M7 21v-8c0-6 10-6 10 0v8Z" fill="#7fb6e0" ${AVL}/><ellipse cx="6" cy="14" rx="2" ry="3" fill="#7fb6e0" ${AVL}/>`),
+  swim: AVI(`<path d="M2 12q2.5-3 5 0t5 0t5 0t5 0M2 18q2.5-3 5 0t5 0t5 0t5 0" stroke="#3f8ac0" stroke-width="2.2" fill="none"/>`),
+  climb: AVI(`<rect x="10" y="12" width="4" height="10" fill="#a07850"/><circle cx="12" cy="9" r="7" fill="#6fae5f" ${AVL}/>`),
+  star: AVI(`<path d="M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.6 5.7 21l1.5-7L2 9.3l7-.8Z" fill="#ffd95a" ${AVL}/>`),
+  food: AVI(`<circle cx="12" cy="14" r="7" fill="#e5584f" ${AVL}/><path d="M12 7q1-4 4-4" stroke="#5b8a3a" stroke-width="2" fill="none"/>`),
+  light: AVI(`<circle cx="12" cy="11" r="6" fill="#ffe46a" ${AVL}/><path d="M9 18h6M10 21h4" stroke="#5b4636" stroke-width="2"/>`),
+  friend: AVI(`<path d="M12 20C4 14 3 9 6.5 6.5 9 5 11 6.5 12 8c1-1.5 3-3 5.5-1.5C21 9 20 14 12 20Z" fill="#f06a8e" ${AVL}/>`),
+  coins: AVI(`<circle cx="12" cy="12" r="8" fill="#f6c445" ${AVL}/><circle cx="12" cy="12" r="4.5" fill="none" stroke="#c9952a" stroke-width="1.6"/>`),
+  lock: AVI(`<rect x="5" y="11" width="14" height="10" rx="2" fill="#8a7258"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#8a7258" stroke-width="2.5" fill="none"/>`),
+  paw: AVI(`<ellipse cx="12" cy="15" rx="5" ry="4.5" fill="#f2b8b8" ${AVL}/><circle cx="6.5" cy="9.5" r="2" fill="#f2b8b8" ${AVL}/><circle cx="10" cy="6.5" r="2" fill="#f2b8b8" ${AVL}/><circle cx="14" cy="6.5" r="2" fill="#f2b8b8" ${AVL}/><circle cx="17.5" cy="9.5" r="2" fill="#f2b8b8" ${AVL}/>`),
+  ball: AVI(`<circle cx="12" cy="12" r="8" fill="#7fb6e0" ${AVL}/><path d="M4.5 10q7.5 3 15 0M6 16.5q6 -2.5 12 0" stroke="#fff" stroke-width="2" fill="none"/>`),
+  wait: AVI(`<path d="M6 3h12M6 21h12M7 3q0 6 5 9q-5 3 -5 9M17 3q0 6 -5 9q5 3 5 9" fill="#fdf3dc" ${AVL}/><path d="M9 19q3-3 6 0Z" fill="#e9c46a"/>`),
+};
+function avNeedIcon(need) {
+  const n = (need || [])[0] || '', [ty, a] = n.split(':');
+  if (ty === 'wear') return AV_IC[a] || AV_IC.star;
+  if (ty === 'sp') return /axo|phoque|capy/.test(a) ? AV_IC.swim : AV_IC.climb;
+  if (ty === 'food') return AV_IC.food;
+  if (ty === 'sub') return AV_IC.light;
+  if (ty === 'friend') return AV_IC.friend;
+  if (ty === 'coins') return AV_IC.coins;
+  return AV_IC.star;
+}
+function avAsk(t, j, i, c) {
   const k = t.comp;
   if (j.kind === 'choix' && j.sc) {
     const node = avNode(j); if (!node) return '';
-    let s = `<div class="avask"><p class="avq1">${esc(j.path && j.path.length ? (j.q || avTxt(node.q, k)) : j.text)}</p>`;
-    if (j.steps && j.steps.length) s = `<div class="avask"><p class="avpath">${j.steps.map(x => `« ${esc(x.a)} »`).join(' › ')}</p><p class="avq1">${esc(j.q || avTxt(node.q, k))}</p>`;
-    s += `<div class="avopts">${node.o.map((o, oi) => { const ok = avNeedOk(k, o.need, t), lb = avNeedLabel(o, k); return `<button data-av-ch="${i}" data-o="${oi}" ${ok ? '' : 'disabled'} class="${o.need ? 'sp' : ''}">${esc(avTxt(o.a, k))}${o.need ? `<small>${ok ? '✓ ' + esc(lb) : 'Il faudrait : ' + esc(lb)}</small>` : o.p != null ? `<small>Risqué</small>` : ''}</button>`; }).join('')}</div>`;
-    return s + `<p class="small">Sans réponse, ${esc(CHARS[k].name)} décidera seul${typeof compE === 'function' ? compE(k) : ''} au retour.</p></div>`;
+    c = c || axCtx(k, j.biome || 'campagne', 'jour', 'clair');
+    const n = node.o.length;
+    return `<div class="avopts2" style="grid-template-columns:repeat(${n === 4 ? 2 : n},1fr)">${node.o.map((o, oi) => {
+      const ok = avNeedOk(k, o.need, t), lb = avNeedLabel(o, k), full = avTxt(o.a, k);
+      const tag = o.need ? `<span class="avneed${ok ? ' ok' : ''}" title="${esc(ok ? lb : 'Il faudrait : ' + lb)}">${avNeedIcon(o.need)}${ok ? '' : `<i class="lk">${AV_IC.lock}</i>`}</span>` : o.p != null ? `<span class="avneed risk" title="Risqué">?</span>` : '';
+      return `<button class="avopt${ok ? '' : ' locked'}" data-av-ch="${i}" data-o="${oi}" ${ok ? '' : 'disabled'} aria-label="${esc(full + (o.need ? ' (' + (ok ? '' : 'il faudrait : ') + lb + ')' : o.p != null ? ' (risqué)' : ''))}" title="${esc(full)}"><span class="avth">${axSVG(axOptAct(o, k), c, { thumb: true })}</span><b>${esc(avShort(full))}</b>${tag}</button>`;
+    }).join('')}</div>`;
   }
   if (j.kind === 'sauvage') return avTameHTML(t, j, i);
   // autres événements (rencontre, marchand, aide) : la carte du journal habituelle
   try { return `<div class="avask avold">${journalEntry(t, j, i)}</div>`; } catch (e) { return ''; }
 }
 // ---------------- la rencontre vécue ----------------
-const AV_MOODS = { timide: 'Il se cache à moitié derrière un buisson et tremble un peu.', joueur: 'Il remue la queue et sautille sur place, l’œil pétillant.', gourmand: 'Son ventre gargouille si fort qu’on l’entend d’ici.' };
+const AV_MOODS = { timide: 'Il se cache derrière un buisson et tremble un peu.', joueur: 'Il remue la queue et sautille sur place.', gourmand: 'Son ventre gargouille si fort qu’on l’entend d’ici.' };
 const AV_HOW = [['doux', 'Approcher doucement'], ['jeu', 'Jouer avec lui'], ['attendre', 'Attendre sans bouger']];
+const AV_HOW_S = { doux: 'Doucement', jeu: 'Jouer', attendre: 'Attendre' }, AV_HOW_IC = { doux: 'paw', jeu: 'ball', attendre: 'wait' };
 const AV_HOW_BONUS = { timide: { doux: 0.18, jeu: -0.12, attendre: 0.12 }, joueur: { doux: 0.04, jeu: 0.2, attendre: -0.06 }, gourmand: { doux: 0.06, jeu: 0, attendre: 0.1 } };
 function avWildMood(j) { if (!j.avMood) j.avMood = pick(Object.keys(AV_MOODS)); return j.avMood; }
 function avTameHTML(t, j, i) {
-  const k = t.comp, mood = avWildMood(j), nm = nsLow(j.sp);
-  let s = `<div class="avask avtame"><p class="avq1">${esc(j.text)}</p><p class="avmood">${esc(AV_MOODS[mood])}</p>`;
-  if (!nsRoomFor(j.sp)) return s + `<p class="small">${esc(nsRoomText(j.sp))}</p><div class="avopts"><button data-av-tame="${i}" data-go="leave">Le laisser partir</button></div></div>`;
+  const nm = nsLow(j.sp);
+  if (!nsRoomFor(j.sp)) return `<div class="avask avtame"><p class="small">${esc(nsRoomText(j.sp))}</p><div class="avopts row"><button data-av-tame="${i}" data-go="leave">Le laisser partir</button></div></div>`;
   const offs = nsTameOffers(t, j);
-  s += `<b class="avlbl">1. Que lui offrir ?</b><div class="avopts row">${offs.map(o => `<button data-av-off="${o.src}:${o.it.id}" aria-pressed="${avPick.id === o.it.id}"><span class="avoi">${itemIcon(o.it)}</span>${esc(o.it.name)}<small>${o.src === 'bait' ? 'votre appât' : nsBaitPower(o.it, j.sp) > 0 ? 'il adore ça' : 'à grignoter'}</small></button>`).join('')}<button data-av-off="pet:" aria-pressed="${avPick.src === 'pet'}">Une caresse<small>rien à offrir</small></button></div>`;
-  if (!offs.length) s += `<p class="small">Il aime : ${esc(NS_BAIT_HINT[j.sp] || 'les bonnes choses')}. Emportez un appât la prochaine fois !</p>`;
-  s += `<b class="avlbl">2. Comment approcher ?</b><div class="avopts row">${AV_HOW.map(([id, l]) => `<button data-av-how="${id}" aria-pressed="${avPick.how === id}">${l}</button>`).join('')}</div>`;
-  s += `<div class="avopts"><button class="go" data-av-tame="${i}" data-go="try" ${avPick.src && avPick.how ? '' : 'disabled'}>Tenter l’approche</button><button data-av-tame="${i}" data-go="leave">Laisser le ${esc(nm)} tranquille</button></div></div>`;
+  let s = `<div class="avask avtame"><div class="avrow"><b class="avlbl">Offrir</b>${offs.map(o => `<button class="avtile" data-av-off="${o.src}:${o.it.id}" aria-pressed="${avPick.id === o.it.id}" title="${esc(o.it.name)}"><span class="avoi">${itemIcon(o.it)}</span><small>${o.src === 'bait' ? 'Appât' : nsBaitPower(o.it, j.sp) > 0 ? 'Il adore' : esc(avShort(o.it.name).split(' ')[0])}</small></button>`).join('')}<button class="avtile" data-av-off="pet:" aria-pressed="${avPick.src === 'pet'}" title="Une caresse"><span class="avoi">${AV_IC.paw}</span><small>Caresse</small></button></div>`;
+  s += `<div class="avrow"><b class="avlbl">Approcher</b>${AV_HOW.map(([id, l]) => `<button class="avtile" data-av-how="${id}" aria-pressed="${avPick.how === id}" title="${l}"><span class="avoi">${AV_IC[AV_HOW_IC[id]]}</span><small>${AV_HOW_S[id]}</small></button>`).join('')}</div>`;
+  if (!offs.length) s += `<p class="small">Il aime : ${esc(NS_BAIT_HINT[j.sp] || 'les bonnes choses')}.</p>`;
+  s += `<div class="avopts row"><button class="go" data-av-tame="${i}" data-go="try" ${avPick.src && avPick.how ? '' : 'disabled'}>Tenter !</button><button data-av-tame="${i}" data-go="leave" title="Laisser le ${esc(nm)} tranquille">Le laisser</button></div></div>`;
   return s;
 }
 function avTry(t, i, leave) {
   const j = t.journal[i]; if (!j || j.resolved) return;
-  if (leave) { nsResolveTame(t, j, 'leave', null, false); save(); avRender(true); return; }
+  const wl = { sp: j.sp, genes: j.genes }, now = Date.now();
+  if (leave) { nsResolveTame(t, j, 'leave', null, false); save(); avPlay = { act: 'wildflee', wild: wl, line: avOne(j.outcome || 'Il retourne dans les fourrés.'), until: now + 6000, id: ++avPlayN }; avRender(true); return; }
   const mood = avWildMood(j);
   let bonus = (AV_HOW_BONUS[mood] || {})[avPick.how] || 0;
   const it = avPick.src === 'bag' ? t.bag.find(x => x.id === avPick.id) : avPick.src === 'inv' ? S.inv.find(x => x.id === avPick.id) : avPick.src === 'bait' && t.bait ? t.bait.item : null;
@@ -668,15 +744,41 @@ function avTry(t, i, leave) {
   t.avLog.push({ a: `Rencontre : ${AV_HOW.find(x => x[0] === avPick.how)[1].toLowerCase()}`, t: j.outcome, chips: ok ? [['friend', `${CHARS[j.tamed].name} suit ${CHARS[t.comp].name}`]] : [], place: j.place, tamed: j.tamed || null });
   save();
   avPick = { src: null, id: null, how: null };
-  const w = $('avWild'), reduce = typeof reduceMotion === 'function' && reduceMotion();
-  if (w && !reduce) {
-    avBusy = Date.now() + 2900;
-    w.className = 'avwild hesit';
-    clearTimeout(avAnim);
-    avAnim = setTimeout(() => { w.className = 'avwild ' + (ok ? 'love' : 'flee'); if (ok) w.insertAdjacentHTML('beforeend', '<span class="avhearts"><i>♥</i><i>♥</i><i>♥</i></span>'); const im = w.querySelector('img'); if (im) im.src = nsPortrait(j.sp, j.genes, null, ok ? 'amour' : 'boude'); avAnim = setTimeout(() => { avBusy = 0; avAnim = null; avRender(true); }, 1700); }, 1100);
-    const box = $('avView').querySelector('.avstory'); if (box) box.innerHTML = `<p class="avnext">${esc(avTxt(ok ? '{n} tend la patte… le silence… et…' : '{n} tend la patte… le silence… et…', t.comp))}<span class="avdots"><i></i><i></i><i></i></span></p>`;
-  } else avRender(true);
+  const res = { act: ok ? 'wildlove' : 'wildflee', wild: wl, line: avOne(j.outcome || ''), chips: ok ? [['friend', 'Nouvel ami']] : null };
+  if (avReduce()) avPlay = Object.assign(res, { until: now + 9000, id: ++avPlayN });
+  else { avPlay = { act: 'wild', cls: 'hesit', wild: wl, line: avTxt('{n} tend la patte… silence… et…', t.comp), until: now + 1600, id: ++avPlayN, then: res }; setTimeout(() => avRender(false), 1650); }
+  avRender(true);
 }
+
+// ---------------- « Revoir l'aventure » : une petite bande dessinée animée ----------------
+function avPanels(t) {
+  const k = t.comp, P = [], b0 = avBiome(t.dest.tags, t.dest.lat, t.dest.poi);
+  for (const j of t.journal) {
+    const b = j.biome || avBiome(j.tags || t.dest.tags, j.lat != null ? j.lat : t.dest.lat);
+    if (j.kind === 'choix' && j.resolved && j.sc) P.push(Object.assign(avMomentChoice(t, j), { biome: b, big: 1 }));
+    else if (j.kind === 'sauvage' && j.resolved && j.sp) P.push({ act: j.tamed ? 'wildlove' : 'wildflee', wild: { sp: j.sp, genes: j.genes }, line: avOne(j.outcome || j.text), biome: b, big: 1 });
+    else if (['trouvaille', 'merveille', 'tresor', 'animal', 'repas', 'photo', 'pieces'].includes(j.kind)) P.push(Object.assign(avMoment(t, j), { biome: b }));
+  }
+  let extra = Math.max(0, 7 - P.filter(p => p.big).length);
+  const mid = P.filter(p => p.big || extra-- > 0).slice(-7);
+  const best = (t.bag || []).slice().sort((a, b) => (b.rarity || 0) - (a.rarity || 0)).slice(0, 3);
+  return [{ act: 'walk', line: avTxt(`{n} part pour ${t.dest.name}.`, k), biome: b0 }, ...mid,
+    { act: 'chest', items: best, gift: true, biome: b0, line: t.done || S.trips[k] !== t ? 'Retour à la maison, le sac plein !' : 'La suite au prochain épisode…' }];
+}
+function avPanelHTML(k, p, i) {
+  const tod = p.act === 'sleep' ? 'nuit' : 'jour', D = avDecor(p.biome || 'campagne', tod, 'clair');
+  const c = axCtx(k, p.biome || 'campagne', tod, 'clair', p.wild ? { wild: p.wild } : null);
+  return `<figure class="avpn" style="animation-delay:${(i * 0.3).toFixed(2)}s"><div class="avpnv"><div class="avl">${avSky(tod, 'clair').replace(/avsg/g, 'avsg' + i)}</div><div class="avl"><svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${D.far}${D.ground}${D.mid}</svg></div><div class="avl">${axSVG(p.act, c, { items: p.items, gift: p.gift })}</div><i>${i + 1}</i></div><figcaption>${esc(avTxt(p.line || '', k))}</figcaption></figure>`;
+}
+function avComicOpen(t) {
+  if (!t || !t.journal) return;
+  const k = t.comp, P = avPanels(t);
+  let el = $('avComic');
+  if (!el) { el = document.createElement('div'); el.id = 'avComic'; el.className = 'avcm'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); document.body.appendChild(el); }
+  el.innerHTML = `<div class="avcmb"><header><div><b>${esc(avTxt('L’aventure de {n}', k))}</b><span>${esc(t.dest.name)}</span></div><button class="avx" data-av-cmx="1" aria-label="Fermer">×</button></header><div class="avcmg">${P.map((p, i) => avPanelHTML(k, p, i)).join('')}</div><footer><button class="btn green sm" data-av-cmx="1">Fermer</button></footer></div>`;
+  el.hidden = false;
+}
+function avComicClose() { const el = $('avComic'); if (el) { el.hidden = true; el.innerHTML = ''; } }
 
 // ---------------- clics ----------------
 document.addEventListener('click', ev => {
@@ -697,18 +799,24 @@ document.addEventListener('click', ev => {
   const el = ev.target.closest && ev.target.closest('button'); if (!el || el.disabled) return;
   const d = el.dataset;
   if (d.avOpen) { if (typeof closeSheet === 'function' && tab !== 'carte') closeSheet(); avOpen(d.avOpen); return; }
+  if (d.avCmx) { avComicClose(); return; }
+  if (d.avReplay) { avComicOpen(d.avReplay === 'last' ? avReplayTrip : S.trips[avK]); return; }
   if (!el.closest('#avView')) return;
   const k = avK, t = k && S.trips[k];
   if (d.avClose) return avClose();
+  if (d.avLog) { avLogOpen = !avLogOpen; avRender(true); return; }
   if (d.avJournal) { avClose(); if (typeof liveOpenJournal === 'function') liveOpenJournal(k, true); else openSheet('voyage'); return; }
   if (d.avCollect) { avClose(); S.sel = d.avCollect; collect(); return; }
   if (!t) return;
   if (d.avCh != null) {
-    const j = t.journal[+d.avCh];
-    const r = avChoose(t, j, +d.o, false); S.stats.choices = (S.stats.choices || 0) + 1;
-    avSig = ''; avRender(false);
-    const me = $('avView') && $('avView').querySelector('.avme');
-    if (me && r === 'done' && !(typeof reduceMotion === 'function' && reduceMotion())) { me.src = portraitURI(k, (j.chips || []).some(c => c[0] === 'hurt') ? 'boude' : 'rire'); me.classList.add('hop'); avBusy = Date.now() + 1300; setTimeout(() => { me.classList.remove('hop'); avBusy = 0; avStageKey = ''; avRender(true); }, 1400); }
+    const j = t.journal[+d.avCh], node = j && avNode(j), opt = node && node.o[+d.o]; if (!opt) return;
+    const act1 = axOptAct(opt, k), lbl = avShort(avTxt(opt.a, k));
+    const r = avChoose(t, j, +d.o, false); if (!r) return;
+    S.stats.choices = (S.stats.choices || 0) + 1;
+    const now = Date.now(), res = r === 'done' ? avMomentChoice(t, j) : null;
+    if (avReduce()) avPlay = res ? Object.assign(res, { until: now + 9000, id: ++avPlayN }) : null;
+    else { avPlay = { act: act1, line: `${CHARS[k].name} : ${lbl.charAt(0).toLowerCase() + lbl.slice(1)}…`, until: now + 2800, id: ++avPlayN, then: res }; setTimeout(() => avRender(false), 2850); }
+    avRender(true);
     return;
   }
   if (d.avOff != null) { const [src, id] = d.avOff.split(':'); avPick.src = src; avPick.id = id || null; avRender(); return; }
@@ -717,7 +825,7 @@ document.addEventListener('click', ev => {
   // anciennes cartes (rencontre, marchand, aide) : traitées par 10_ui.js, puis on rafraîchit la scène
   setTimeout(() => avRender(true), 30);
 });
-document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && avK) avClose(); });
+document.addEventListener('keydown', ev => { if (ev.key !== 'Escape') return; const cm = $('avComic'); if (cm && !cm.hidden) { avComicClose(); return; } if (avK) avClose(); });
 setInterval(() => { try { if (avK) { const t = S.trips[avK]; if (!t) return avClose(); avRender(false); } } catch (e) { console.error(e); } }, 1000);
 
 // ---------------- journal (panneau) : scènes en plusieurs temps ----------------
@@ -768,12 +876,14 @@ GAME.on('trip:return', e => {
   } catch (err) { console.error('aventure retour', err); }
 });
 function avRecapHTML(h) {
-  const t = h.trip; if (!t) return '';
-  const log = (t.avLog || []).slice(-6), k = h.comp, n = CHARS[k] ? CHARS[k].name : '';
-  if (!log.length && !t.avHurt) return '';
-  let s = `<div class="avrecap"><h3>Les moments forts du voyage</h3>`;
-  s += log.map(l => `<div class="avrm">${l.tamed && S.comps[l.tamed] ? `<img src="${portraitURI(l.tamed, 'amour')}" alt="">` : ''}<div><b>${esc(l.a)}</b>${l.auto ? ' <small>(décidé tout seul)</small>' : ''}<p>${esc(l.t)}</p>${avChips(l.chips)}${l.tamed && S.comps[l.tamed] ? `<p class="avfollow">${esc(CHARS[l.tamed].name)} a suivi ${esc(n)} jusqu’à la maison et s’installe au refuge !</p>` : ''}</div></div>`).join('');
-  if (t.avHurt) s += `<p class="avhurt"><img src="${portraitURI(k, 'dodo')}" alt="">${esc(avTxt('{n} est rentré{e} un peu fatigué{e} : un pansement, un câlin et au lit !', k))}</p>`;
+  const t = h.trip; if (!t || !t.journal) return '';
+  avReplayTrip = t;
+  const k = h.comp || t.comp, n = CHARS[k] ? CHARS[k].name : '', P = avPanels(t).slice(1, -1), fol = t.journal.filter(j => j.kind === 'sauvage' && j.tamed && S.comps[j.tamed]);
+  if (!P.length && !t.avHurt) return '';
+  let s = `<div class="avrecap"><h3>Les moments forts</h3>`;
+  if (P.length) s += `<div class="avrstrip">${P.slice(0, 4).map(p => `<span class="avrth" title="${esc(avTxt(p.line || '', k))}">${axSVG(p.act, axCtx(k, p.biome || 'campagne', 'jour', 'clair', p.wild ? { wild: p.wild } : null), { thumb: true })}</span>`).join('')}</div><button class="btn green sm" data-av-replay="last">Revoir l’aventure</button>`;
+  s += fol.map(j => `<p class="avfollow"><img src="${portraitURI(j.tamed, 'amour')}" alt="">${esc(CHARS[j.tamed].name)} a suivi ${esc(n)} jusqu’au refuge !</p>`).join('');
+  if (t.avHurt) s += `<p class="avhurt"><img src="${portraitURI(k, 'dodo')}" alt="">${esc(avTxt('{n} est rentré{e} un peu fatigué{e} : un câlin et au lit !', k))}</p>`;
   return s + `</div>`;
 }
 if (typeof showHaul === 'function') showHaul = (orig => function (h) {
@@ -805,7 +915,7 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
 .avph i.on{background:#e6f6e9;border-color:#2f7f6c;color:#2f6f5c}
 .avph b{color:#d8c8ae}
 .avph span{margin-left:auto;color:#6b5440;font-variant-numeric:tabular-nums}
-.avstage{position:relative;height:min(36vh,300px);min-height:200px;overflow:hidden;border-top:3px solid #4a3528;border-bottom:3px solid #4a3528;flex:none;contain:strict}
+.avstage{position:relative;height:min(46vh,400px);min-height:220px;overflow:hidden;border-top:3px solid #4a3528;border-bottom:3px solid #4a3528;flex:none;contain:strict}
 .avl{position:absolute;inset:0}
 .avl svg{display:block;width:100%;height:100%}
 .avt{position:absolute;top:0;left:0;height:100%;width:200%;display:flex;will-change:transform}
@@ -900,13 +1010,63 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
 .avpin .pinb svg path{fill:#fff}
 .avpin .pinl{background:#fff1c9}
 body.avopen #liveBar{visibility:hidden}
-@media (prefers-reduced-motion: reduce){.avt,.avme,.avfol,.avwx,.avtw,.avff{animation:none!important}}
+.avstage.rev .avact{transform:scaleX(-1)}
+.avact{pointer-events:none}
+.avbadges{position:absolute;top:8px;left:8px;right:8px;display:flex;flex-wrap:wrap;gap:5px;pointer-events:none}
+.avbadges .avc{opacity:0;animation:avBadge .5s ease-out forwards;box-shadow:0 2px 0 rgba(74,53,40,.25)}
+@keyframes avBadge{from{opacity:0;transform:translateY(-8px) scale(.7)}to{opacity:1;transform:none}}
+.avstory{gap:8px;padding:10px 12px}
+.avsub{flex:none;margin:0;font-family:var(--hand);font-size:22px;line-height:1.15;color:#3f342c;text-align:center;min-height:1.2em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;animation:avIn .45s ease-out}
+.avopts2{display:grid;gap:8px}
+.avopt{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:5px 5px 7px;background:#fff;border:2.5px solid #4a3528;border-radius:16px;box-shadow:0 4px 0 rgba(74,53,40,.3);cursor:pointer;font:800 14px/1.15 var(--display);color:#4a3528;text-align:center;min-height:44px;transition:transform .12s}
+.avopt:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(74,53,40,.3)}
+.avbox.asking .avstage{height:min(34vh,290px)}
+.avopt .avth{display:block;aspect-ratio:16/9;border-radius:11px;overflow:hidden;border:1.5px solid #eadfca;background:#eaf4f8}
+.avopt .avth svg{width:100%;height:100%;display:block}
+.avopt b{font:inherit;padding:0 2px}
+.avopt.locked{opacity:.6;border-style:dashed;cursor:default;box-shadow:none}
+.avopt.locked .avth{filter:grayscale(.7)}
+.avneed{position:absolute;top:-6px;right:-6px;width:32px;height:32px;border-radius:50%;background:#fff;border:2.5px solid #2f7f6c;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 0 rgba(74,53,40,.25)}
+.avneed svg{width:22px;height:22px}
+.avneed:not(.ok){border-color:#a05a4a}
+.avneed .lk{position:absolute;right:-7px;bottom:-7px;width:18px;height:18px;background:#fff;border-radius:50%;display:flex}
+.avneed .lk svg{width:18px;height:18px}
+.avneed.risk{border-color:#e09a3a;font:800 17px/1 var(--display);color:#e0703a}
+.avrow{display:flex;align-items:center;gap:6px;overflow-x:auto;padding:2px 2px 6px;-webkit-overflow-scrolling:touch}
+.avrow .avlbl{margin:0;flex:none;writing-mode:horizontal-tb;min-width:62px}
+.avtile{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;width:68px;padding:6px 4px;border:2.5px solid #4a3528;border-radius:14px;background:#fff;box-shadow:0 3px 0 rgba(74,53,40,.3);cursor:pointer;font:700 11.5px var(--display);color:#4a3528}
+.avtile .avoi{width:34px;height:34px}
+.avtile small{font:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.avtile[aria-pressed="true"]{background:#ffe3ec;border-color:#d9607e;box-shadow:0 3px 0 #d9607e}
+.avask.avtame{padding:8px 10px}
+.avlog{display:flex;flex-direction:column;gap:8px;padding-top:6px;border-top:2px dashed #eadfca}
+.avf [aria-pressed="true"]{background:#ffe9b8}
+.avrstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0 8px}
+.avrth{display:block;aspect-ratio:5/3;border-radius:10px;overflow:hidden;border:2px solid #e7c27a}
+.avrth svg{width:100%;height:100%;display:block}
+.avfollow{display:flex;align-items:center;gap:6px;margin:8px 0 0;font-size:13.5px}.avfollow img{width:36px;height:40px}
+.avcm{position:fixed;inset:0;z-index:95;background:rgba(58,42,32,.55);display:flex;align-items:center;justify-content:center}
+.avcm[hidden]{display:none}
+.avcmb{width:min(760px,100%);height:min(900px,100%);background:#fff8ea;display:flex;flex-direction:column;border-radius:22px;border:3px solid #4a3528;overflow:hidden}
+@media (max-width:600px){.avcmb{border-radius:0;border:0}}
+.avcmb header{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.avcmb header div{flex:1;display:flex;flex-direction:column}
+.avcmb header b{font:800 19px var(--display);color:#4a3528}.avcmb header span{font-size:12.5px;color:#8a7258}
+.avcmg{flex:1;overflow-y:auto;padding:4px 12px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px;align-content:start;grid-auto-rows:max-content;-webkit-overflow-scrolling:touch}
+.avpn{margin:0;background:#fff;border:3px solid #4a3528;border-radius:14px;overflow:hidden;box-shadow:0 4px 0 rgba(74,53,40,.3);opacity:0;animation:avPanel .5s ease-out forwards}
+@keyframes avPanel{from{opacity:0;transform:translateY(14px) rotate(-1deg)}to{opacity:1;transform:none}}
+.avpnv{position:relative;height:0;padding-bottom:60%;overflow:hidden;border-bottom:3px solid #4a3528}
+.avpnv .avl svg{width:100%;height:100%;display:block}
+.avpnv>i{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid #4a3528;font:800 13px/20px var(--display);text-align:center;font-style:normal;color:#4a3528}
+.avpn figcaption{padding:7px 10px 9px;font-family:var(--hand);font-size:19px;line-height:1.15;color:#3f342c}
+.avcmb footer{display:flex;justify-content:center;padding:8px 12px calc(8px + env(safe-area-inset-bottom));border-top:2px solid #eadfca;background:#fff3dc}
+@media (prefers-reduced-motion: reduce){.avt,.avme,.avfol,.avwx,.avtw,.avff,.avsub,.avbadges .avc{animation:none!important}.avbadges .avc,.avpn{opacity:1;animation:none!important}}
 `;
   document.head.appendChild(st);
 })();
 
 // ---------------- tests ----------------
 window.__av = {
-  open: avOpen, close: avClose, scenes: AV_SCENES, state: avState, force: o => { Object.assign(AV_FORCE, o || {}); avStageKey = ''; avRender(true); },
+  open: avOpen, comic: avComicOpen, panels: avPanels, acts: () => Object.keys(AX), close: avClose, scenes: AV_SCENES, state: avState, force: o => { Object.assign(AV_FORCE, o || {}); avStageKey = ''; avRender(true); },
   choose: avChoose, auto: avAuto, needOk: avNeedOk, biome: avBiome,
 };
