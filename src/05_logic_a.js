@@ -80,7 +80,7 @@ let fast = false;
 // ================= PROGRESSION =================
 const needXP = l => 80 + l * 50;
 // talents de l'espèce du compagnon k (voir TALENTS) ; hasEff(k, 'flair') : k a-t-il débloqué cet effet ?
-const talentsOf = k => TALENTS[typeof spOf === 'function' ? spOf(k) : k] || TALENTS.def;
+let talentsOf = k => TALENTS[typeof spOf === 'function' ? spOf(k) : k] || TALENTS.def;
 const hasTalent = (k, idx) => !!(S.prog[k] && talentsOf(k)[idx] && S.prog[k].lvl >= talentsOf(k)[idx][0]);
 const hasEff = (k, eff) => !!(k && S.prog[k] && talentsOf(k).some(t => t[3] === eff && S.prog[k].lvl >= t[0]));
 const lvlLuck = k => S.prog[k] ? (S.prog[k].lvl - 1) * 0.1 : 0;

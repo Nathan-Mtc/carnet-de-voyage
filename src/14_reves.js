@@ -192,6 +192,19 @@ const DREAMS = [
       { t: 'item', name: 'Chapeau de surf', n: 1, src: 'Sydney', txt: 'Rapporter le Chapeau de surf', short: 'Chapeau' }],
     reward: { coins: 400, item: ['Planche de surf miniature', 'd', 'statue', 3, null, '#58c2b0'] } },
 ];
+// v17 : des récompenses qui font envie (tenue unique, meuble pour le foyer, point de talent, œuf de variante) ; un peu moins de pièces
+const DREAM_DECOS = [['Veilleuse étoilée', 'd', 'lanterne', 2, null, '#f6e08a'], ['Tapis nuage', 'd', 'tapis', 2, null, '#d9ccf5'], ['Plante rêveuse', 'd', 'plante', 2, null, '#8fbf6a'], ['Mappemonde des rêves', 'd', 'mappemonde', 3, null, '#c9a97a'], ['Bocal à souhaits', 'd', 'bocal', 3, null, '#f6b8d0']];
+(function dreamRewardsV17() {
+  const by = {}; let di = 0;
+  DREAMS.forEach(d => (by[d.who] = by[d.who] || []).push(d));
+  Object.values(by).forEach(list => list.forEach((d, i) => {
+    const r = d.reward, last = i === list.length - 1;
+    r.coins = Math.max(30, Math.round(r.coins * 0.6 / 10) * 10);
+    if (i % 2 === 1 || last) r.tal = 1;                                   // un point de talent à placer (32_compagnons.js)
+    if (r.item && r.item[1] !== 'd' && i % 2 === 0) r.deco = DREAM_DECOS[di++ % DREAM_DECOS.length]; // un meuble pour le foyer
+    if (last || i === 3) r.egg = last ? 3 : 1.8;                          // un œuf de son espèce, aux couleurs rares
+  }));
+})();
 const TAG_POIS = { mer: ['plage', 'port', 'phare'], lac: ['etang', 'riviere'], montagne: ['sentier', 'belvedere'], foret: ['foret', 'parc', 'camping'], campagne: ['campagne', 'ferme', 'jardin'], ile: ['plage'] };
 const DREAM_SUBS = { farine: 'Farine', glace: 'Glace' }; // sous-types utilisés en plus des ingrédients de l'atelier
 const DREAM_BUILD_NAMES = { boulangerie: 'la boulangerie', potager: 'le potager', phare: 'le phare', fontaine: 'la fontaine', atelier_couture: 'l’atelier de couture', salon_the: 'le salon de thé', kiosque: 'le kiosque à musique', observatoire: 'l’observatoire', serre: 'la serre', port: 'le petit port', bibliotheque: 'la bibliothèque', glacier: 'le glacier' };
@@ -464,30 +477,65 @@ function dreamGo(k) {
 // ---------- réaliser le rêve ----------
 function claimDream(k) {
   const d = curDream(k); if (!d || !dreamReady(k)) return;
-  const D = S.dreams[k], r = d.reward, p = S.prog[k];
+  const D = S.dreams[k], r = d.reward, p = S.prog[k], nm = CHARS[k].name;
   gainCoins(r.coins);
-  const it = makeItem(r.item, 0, `Rêve de ${CHARS[k].name}`, [], { fixed: r.item[3], special: true });
-  { const nm = CHARS[k].name; it.name = it.name.replace(/ (?:de |d’)(?:Pistache|Mochi|Bulle)$/, ` ${/^[aeiouyéèêh]/i.test(nm) ? 'd’' : 'de '}${nm}`); } // « Bonnet marin de Bulle » devient « … de Perle »
+  const it = makeItem(r.item, 0, `Rêve de ${nm}`, [], { fixed: r.item[3], special: true });
+  it.name = it.name.replace(/ (?:de |d’)(?:Pistache|Mochi|Bulle)$/, ` ${/^[aeiouyéèêh]/i.test(nm) ? 'd’' : 'de '}${nm}`); // « Bonnet marin de Bulle » devient « … de Perle »
   S.inv.push(it); S.dex[it.name] = true;
+  let deco = null, egg = null;
+  if (r.deco) { deco = makeItem(r.deco, 0, `Rêve de ${nm}`, [], { fixed: r.deco[3], special: true }); S.inv.push(deco); S.dex[deco.name] = true; }
+  if (r.tal && typeof cpAddTalentPoint === 'function') cpAddTalentPoint(k, r.tal);
+  if (r.egg && typeof nsGiftEgg === 'function') { try { egg = nsGiftEgg('quete', `Rêve de ${nm}`, { sp: typeof spOf === 'function' ? spOf(k) : null, luck: r.egg }); } catch (e) { console.error(e); } }
   // un niveau de plus, offert par le rêve
   p.lvl++; p.xp = Math.min(p.xp, needXP(p.lvl) - 1);
-  const talent = talentsOf(k).find(x => x[0] === p.lvl);
   D.done.push(d.id); D.at[d.id] = Date.now(); D.prog = {};
   const nx = nextDreamAfter(d); D.cur = nx ? nx.id : null;
   S.stats.dreams = (S.stats.dreams || 0) + 1;
   save();
   GAME.emit('dream:done', { who: k, dream: d });
   renderAll();
-  const card = typeof haulCard === 'function' ? haulCard(it, 0, false) : itemChip(it);
-  const hearts = Array.from({ length: 9 }, (_, i) => `<i style="--x:${(i * 11 + 4) % 96}%;--d:${(i * 0.37).toFixed(2)}s;--s:${0.7 + (i % 3) * 0.25}"></i>`).join('');
-  showModal(`<div class="dcel"><div class="dcel-sky" aria-hidden="true">${hearts}</div><div class="dcel-art">${drawChar(k, S.outfits[k], 'amour', 'dcel')}</div>
-    <span class="dcel-k">Rêve réalisé !</span><h2>${CHARS[k].name} a pu ${esc(d.wish)}</h2><p class="dcel-q">« ${esc(pick(dreamThanks(k)))} »</p>
-    <div class="dcel-rw"><span class="dcel-chip gold">${COIN}<b>+${r.coins}</b> pièces</span><span class="dcel-chip lvl"><b>Niveau ${p.lvl}</b>${talent ? ` · talent ${esc(talent[1])}` : ''}</span>${r.build ? `<span class="dcel-chip bld"><svg viewBox="0 0 30 30" aria-hidden="true"><path d="M5 25 V13 L15 5 L25 13 V25Z" fill="#fff3e2" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="12" y="16" width="6" height="9" fill="#d9604f" stroke="currentColor" stroke-width="1.6"/></svg>Nouveau au village : <b>${esc(dreamBuildName(r.build))}</b></span>` : ''}</div>
-    <div class="haul one">${card}</div>
-    ${nx ? `<p class="dcel-next">Nouveau rêve : <b>${CHARS[k].name} rêve de ${esc(nx.wish)}</b></p>` : `<p class="dcel-next"><b>Tous les rêves de ${CHARS[k].name} sont réalisés !</b></p>`}
+  // l'animation : le compagnon VIT son rêve, au milieu de la scène qu'il imaginait
+  showModal(`<div class="dcel v17" style="--tint:${dreamTint(k)}"><div class="dlive">${dreamScene(d)}<div class="dlive-c">${drawChar(k, S.outfits[k], 'amour', 'dcel')}</div><div class="dlive-r">${itemIcon(it)}</div><span class="dlive-s" aria-hidden="true">${'<i>★</i>'.repeat(7)}</span></div>
+    <span class="dcel-k">Rêve réalisé !</span><h2>${esc(ucfirst(d.wish))}</h2><p class="dcel-q">« ${esc(pick(dreamThanks(k)))} »</p>
+    <div class="dgifts big">${dreamGiftsHTML(k, d, it, deco, egg)}<span class="dgift lvl" style="--d:.9s"><i class="dgi"><b>${p.lvl}</b></i><small>Niveau</small></span></div>
+    ${nx ? `<p class="dcel-next">Prochain rêve : <b>${esc(nx.wish)}</b></p>` : ''}
     <button class="btn green big wide" data-closemodal="1">Merveilleux !</button></div>`);
   if (typeof confetti === 'function') setTimeout(() => confetti(true), 350);
   if (typeof checkAch === 'function') setTimeout(() => { try { checkAch(); } catch (e) {} }, 50);
+}
+// ---------- la scène rêvée (dans la bulle de pensée) ----------
+const DREAM_THEMES = [['douceur', /baguette|tarte|confiture|thé|gâteau|crêpe|cuisin|pain|chocolat|sorbet|glace|pique|fromage|ramen|mandarine|goûter|miel/i], ['mer', /mer|plage|bateau|phare|port|surf|bain|pêche|coquill|vague|île|corail|océan|sydney|baleine|nager/i], ['neige', /neige|ski|givre|aurore|banquise|montagne|sommet|noël|flocon|igloo/i], ['foret', /forêt|parc|feuille|champignon|jardin|fleur|potager|serre|arbre|bambou|orchid|automne|écharpe/i], ['ville', /ville|musée|tour|monument|kiosque|biblioth|livre|château|cinéma|lanterne|kyoto|temple|carnaval/i]];
+const dreamTheme = d => { const s = d.id + ' ' + d.wish; const t = DREAM_THEMES.find(([, re]) => re.test(s)); return t ? t[0] : 'ciel'; };
+function dreamScene(d) {
+  const th = dreamTheme(d), L = '#5b4636';
+  const bg = {
+    douceur: `<rect width="240" height="140" fill="#ffe9cf"/><circle cx="200" cy="30" r="40" fill="#fff3e0"/><rect y="98" width="240" height="42" fill="#f3b6b0"/>${[...Array(12)].map((_, i) => `<rect x="${i * 20}" y="${98 + (i % 2) * 10}" width="10" height="10" fill="#fff" opacity=".7"/><rect x="${i * 20 + 10}" y="${108 - (i % 2) * 10}" width="10" height="10" fill="#fff" opacity=".7"/>`).join('')}<path d="M40 40 q-6 -10 0 -18 q6 -8 0 -16 M58 44 q-6 -10 0 -18" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".8"/>`,
+    mer: `<rect width="240" height="140" fill="#bfe6f6"/><circle cx="196" cy="30" r="16" fill="#fbd76a"/><path d="M0 84 Q30 76 60 84 T120 84 T180 84 T240 84 V140 H0Z" fill="#7cc6e4"/><path d="M0 98 Q30 90 60 98 T120 98 T180 98 T240 98" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M0 124 Q60 108 120 120 T240 116 V140 H0Z" fill="#f3dca8"/><path d="M30 40 q6 -6 12 0 q6 -6 12 0" fill="none" stroke="${L}" stroke-width="1.6"/>`,
+    neige: `<rect width="240" height="140" fill="#dbeaf7"/><path d="M-10 110 L50 40 L90 84 L130 30 L190 96 L250 60 V140 H-10Z" fill="#fff" stroke="#a9c4dc" stroke-width="2"/><path d="M50 40 L62 54 L44 56Z M130 30 L144 46 L118 46Z" fill="#cfe2f2"/>${[[24, 22], [80, 14], [160, 20], [210, 34], [110, 60], [30, 70]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6" fill="#fff" stroke="#a9c4dc"/>`).join('')}`,
+    foret: `<rect width="240" height="140" fill="#d9f0c4"/><rect y="104" width="240" height="36" fill="#a9d68a"/>${[[22, 70, 26], [62, 80, 20], [190, 66, 30], [226, 84, 18]].map(([x, y, r]) => `<rect x="${x - 3}" y="${y}" width="6" height="${110 - y}" fill="#a87a50"/><circle cx="${x}" cy="${y}" r="${r}" fill="#7fbf6a" stroke="${L}" stroke-width="1.6"/>`).join('')}${[[100, 118], [140, 124], [170, 116]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3" fill="#f39ab0"/>`).join('')}`,
+    ville: `<rect width="240" height="140" fill="#f6e3d0"/><circle cx="40" cy="30" r="14" fill="#fbd76a"/><path d="M0 108 V70 H26 V54 H46 V80 H66 V46 L80 34 L94 46 V86 H118 V60 H146 V78 H168 V40 H186 V72 H210 V58 H240 V108Z" fill="#e3c4a8" stroke="${L}" stroke-width="1.6" stroke-linejoin="round"/>${[[32, 76], [74, 56], [132, 68], [176, 50], [176, 62]].map(([x, y]) => `<rect x="${x}" y="${y}" width="6" height="7" fill="#fff3b0"/>`).join('')}<rect y="108" width="240" height="32" fill="#d8c6b4"/>`,
+    ciel: `<rect width="240" height="140" fill="#d9ccf5"/><circle cx="190" cy="34" r="18" fill="#fff8d8"/><circle cx="198" cy="28" r="16" fill="#d9ccf5"/>${[[30, 30], [70, 20], [120, 40], [150, 16], [40, 80], [210, 90]].map(([x, y]) => `<path d="M${x} ${y - 5} l1.5 3.5 3.5 1.5 -3.5 1.5 -1.5 3.5 -1.5 -3.5 -3.5 -1.5 3.5 -1.5Z" fill="#fff"/>`).join('')}<path d="M0 116 Q60 96 120 112 T240 104 V140 H0Z" fill="#fff" opacity=".85"/>`,
+  }[th];
+  return `<svg class="dscene th-${th}" viewBox="0 0 240 140" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${bg}</svg>`;
+}
+// les récompenses, en images
+const DREAM_GIFT_SVG = {
+  tal: '<svg viewBox="0 0 30 30"><circle cx="15" cy="15" r="12" fill="#d9ccf5" stroke="#5b4636" stroke-width="2"/><path d="M15 7 l2.4 5 5.4.7 -4 3.7 1 5.3 -4.8 -2.6 -4.8 2.6 1 -5.3 -4 -3.7 5.4 -.7Z" fill="#f6c445" stroke="#5b4636" stroke-width="1.4" stroke-linejoin="round"/></svg>',
+  egg: '<svg viewBox="0 0 30 30"><path d="M15 3 C21 3 25 12 25 18 C25 24 20.5 27 15 27 C9.5 27 5 24 5 18 C5 12 9 3 15 3Z" fill="#fff3e2" stroke="#5b4636" stroke-width="2"/><circle cx="11" cy="15" r="2.4" fill="#f3aec1"/><circle cx="18.5" cy="11" r="1.8" fill="#9fd1d8"/><circle cx="17.5" cy="20.5" r="2.8" fill="#c9b8ea"/></svg>',
+};
+const dreamDefItem = def => ({ name: def[0], cat: def[1], sub: def[2], rarity: def[3], look: def[4] || null, color: def[5] || null });
+function dreamGiftsHTML(k, d, it, deco, egg) {
+  const r = d.reward, sh = s => esc(String(s).replace(/ (?:de |d’)(?:Pistache|Mochi|Bulle)$/, ''));
+  const out = [];
+  const main = it || dreamDefItem(r.item);
+  out.push(`<span class="dgift main" style="--rc:${RARC[main.rarity] || '#ccc'}"><i class="dgi">${itemIcon(main)}</i><small>${main.cat === 'v' ? 'Tenue unique' : main.cat === 'd' ? 'Meuble' : 'Trésor'}</small><b>${sh(main.name)}</b></span>`);
+  if (r.deco) { const dc = deco || dreamDefItem(r.deco); out.push(`<span class="dgift"><i class="dgi">${itemIcon(dc)}</i><small>Pour le foyer</small><b>${sh(dc.name)}</b></span>`); }
+  if (r.tal) out.push(`<span class="dgift"><i class="dgi">${DREAM_GIFT_SVG.tal}</i><small>Talent</small><b>+${r.tal} point</b></span>`);
+  if (r.egg) out.push(`<span class="dgift"><i class="dgi">${DREAM_GIFT_SVG.egg}</i><small>Variante</small><b>Œuf ${r.egg >= 3 ? 'très rare' : 'rare'}</b></span>`);
+  if (r.build) out.push(`<span class="dgift"><i class="dgi"><svg viewBox="0 0 30 30"><path d="M5 25 V13 L15 5 L25 13 V25Z" fill="#fff3e2" stroke="#5b4636" stroke-width="2" stroke-linejoin="round"/><rect x="12" y="16" width="6" height="9" fill="#d9604f" stroke="#5b4636" stroke-width="1.6"/></svg></i><small>Village</small><b>${esc(ucfirst(dreamBuildName(r.build).replace(/^(la |le |l’)/, '')))}</b></span>`);
+  out.push(`<span class="dgift coin"><i class="dgi">${COIN}</i><small>Pièces</small><b>${r.coins}</b></span>`);
+  void egg; void k;
+  return out.map((h, i) => h.replace('<span class="dgift', `<span style="--d:${(0.15 + i * 0.15).toFixed(2)}s" class="dgift`)).join('');
 }
 
 // ---------- carte de rêve (écran principal, à la place du bandeau d'objectif) ----------
@@ -534,21 +582,23 @@ function renderDreamCard(box) {
 
 // ---------- onglet « Rêves » ----------
 function dreamCompHTML(k) {
-  const ch = CHARS[k], d = curDream(k), list = dreamsOf(k), D = S.dreams[k], p = S.prog[k];
-  const doneN = D.done.length, nx = d ? nextDreamAfter(d) : null;
-  let h = `<article class="rvc ${S.sel === k ? 'sel' : ''} ${d && dreamReady(k) ? 'ready' : ''}" style="--tint:${dreamTint(k)}"><header><img src="${portraitURI(k, d && dreamReady(k) ? 'amour' : 'content')}" alt=""><div><b>${ch.name}</b><span>Niveau ${p.lvl} · ${doneN}/${list.length} rêves réalisés</span><span class="rvbar"><i style="width:${(doneN / list.length * 100).toFixed(0)}%"></i></span></div></header>`;
-  if (!d) return h + `<p class="rvq">Tous les rêves de ${ch.name} sont réalisés. Merci pour tout !</p></article>`;
-  const [col, l1, l2] = goLabel(k);
-  h += `<div class="rvbub"><span class="dk">Rêve ${list.indexOf(d) + 1} · ${ch.name} rêve de…</span><b>${esc(ucfirst(d.wish))}</b><p>« ${esc(d.quote)} »</p></div>`;
-  h += stepChips(k, d, 'full');
-  h += `<div class="rvfoot"><span class="rvrw">${coins(d.reward.coins)}<span>+ 1 niveau</span>${d.reward.build ? `<span class="bld">+ ${esc(dreamBuildName(d.reward.build))}</span>` : ''}</span><button class="btn ${col} sm" data-dream-go="${k}">${l1} ${l2 && col !== 'gold' ? `· ${esc(l2)}` : l2 ? esc(l2) : ''}</button></div>`;
-  if (nx) h += `<div class="rvnext" aria-label="Prochain rêve, encore secret"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2.5" fill="#f2c14e" stroke="currentColor" stroke-width="1.8"/><path d="M8 10 V7.5 a4 4 0 0 1 8 0 V10" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span>Ensuite :</span><b class="blur">${esc(ucfirst(nx.wish))}</b></div>`;
+  const ch = CHARS[k], d = curDream(k), list = dreamsOf(k), D = S.dreams[k];
+  const doneN = D.done.length;
+  if (!d) return `<article class="rvc2 done" style="--tint:${dreamTint(k)}"><div class="rvsc"><div class="rvthink">${dreamScene({ id: 'ciel', wish: '' })}<span class="rvall">♥</span></div><span class="rvwho"><img src="${portraitURI(k, 'amour')}" alt=""></span></div><b class="rvwish">${ch.name} : ${doneN}/${list.length} rêves réalisés !</b></article>`;
+  const [col, l1, l2] = goLabel(k), ready = dreamReady(k), nxt = nextStepIdx(k);
+  const main = dreamDefItem(d.reward.item);
+  let h = `<article class="rvc2 ${S.sel === k ? 'sel' : ''} ${ready ? 'ready' : ''}" style="--tint:${dreamTint(k)}">`;
+  h += `<div class="rvsc" title="${esc(d.quote)}"><div class="rvthink">${dreamScene(d)}<span class="rvrw2" style="--rc:${RARC[main.rarity]}">${itemIcon(main)}</span><span class="rvsp" aria-hidden="true"><i>✦</i><i>✦</i><i>✦</i></span></div><i class="rvb1"></i><i class="rvb2"></i><span class="rvwho"><img src="${portraitURI(k, ready ? 'amour' : 'content')}" alt=""></span><span class="rvnum">${ch.name} · ${list.indexOf(d) + 1}/${list.length}</span></div>`;
+  h += `<b class="rvwish">${esc(ucfirst(d.wish))}</b>`;
+  h += `<ol class="rvsteps">${d.steps.map((st, i) => { const pr = stepProg(k, i), g = stepGoal(st), ok = pr >= g; return `<li class="${ok ? 'ok' : i === nxt ? 'next' : ''}" title="${esc(st.txt)}"><span class="rvsi">${stepIcon(st)}<em>${ok ? '✓' : g > 1 ? `${pr}/${g}` : ''}</em></span><small>${esc(st.short)}</small></li>`; }).join('')}</ol>`;
+  h += `<div class="dgifts">${dreamGiftsHTML(k, d)}</div>`;
+  h += `<button class="btn ${col} rvgo" data-dream-go="${k}">${l1}${l2 && col !== 'gold' ? ` · ${esc(l2)}` : l2 ? ' ' + esc(l2) : ''}</button>`;
   return h + '</article>';
 }
 function renderReves(box) {
   ensureDreams();
   const ks = dreamComps().filter(k => S.dreams[k]), total = ks.reduce((a, k) => a + dreamsOf(k).length, 0), done = ks.reduce((a, k) => a + S.dreams[k].done.length, 0);
-  let html = `<div class="rvhead"><div class="rvhi"><svg viewBox="0 0 30 30" aria-hidden="true">${DREAM_ICON}</svg></div><div><h2>Les rêves de l’équipe</h2><p>Réalisez les rêves de vos compagnons : chacun leur fait gagner un niveau, et certains font grandir le village.</p></div><span class="rvtot"><b>${done}</b>/${total}</span></div>`;
+  let html = `<div class="rvhead"><div class="rvhi"><svg viewBox="0 0 30 30" aria-hidden="true">${DREAM_ICON}</svg></div><div><h2>Les rêves</h2><p>Un rêve réalisé = des cadeaux uniques.</p></div><span class="rvtot"><b>${done}</b>/${total}</span></div>`;
   html += `<div class="rvcomps">${[S.sel, ...ks.filter(k => k !== S.sel)].map(dreamCompHTML).join('')}</div>`;
   // souvenirs
   const mem = [];
@@ -729,6 +779,59 @@ body.sheet-open #goal.goal.dream{display:none} /* comme l'ancien bandeau : le pa
 .rvm i{font:700 10.5px var(--display);font-style:normal;color:#fff;background:var(--pinkD);border-radius:999px;padding:1px 7px}
 .rvempty{margin:0;padding:10px;border:2px dashed var(--line);border-radius:12px;font-size:13.5px;color:var(--ink2)}
 .rvquests .filters{margin-top:0}
+/* v17 : la page des rêves en grandes cartes illustrées */
+.rvc2{position:relative;background:#fff;border:2.5px solid var(--ink);border-radius:20px;padding:10px 10px 12px;box-shadow:0 3px 0 rgba(74,53,40,.3);display:flex;flex-direction:column;gap:8px}
+.rvc2.sel{background:linear-gradient(180deg,var(--tint),#fff 120px)}
+.rvc2.ready{box-shadow:0 0 0 3px var(--gold),0 3px 0 rgba(74,53,40,.3)}
+.rvsc{position:relative;height:178px}
+.rvthink{position:absolute;right:0;top:0;width:calc(100% - 46px);height:150px;overflow:hidden;border:2.5px solid var(--ink);border-radius:46% 54% 44% 56% / 52% 46% 54% 48%;background:#fff;box-shadow:0 3px 0 rgba(74,53,40,.18)}
+.rvthink .dscene{position:absolute;inset:0;width:100%;height:100%}
+.rvrw2{position:absolute;left:50%;top:46%;width:84px;height:84px;margin:-42px 0 0 -42px;border-radius:50%;background:radial-gradient(circle,#fff 0 48%,rgba(255,255,255,0) 70%);display:flex;align-items:center;justify-content:center;animation:rvfloat 3s ease-in-out infinite;filter:drop-shadow(0 0 6px var(--rc))}
+.rvrw2 svg{width:62px;height:62px}
+.rvsp i{position:absolute;font-style:normal;color:#fff;text-shadow:0 0 4px #f6c445;font-size:16px;animation:rvtw 2.2s ease-in-out infinite}
+.rvsp i:nth-child(1){left:28%;top:18%}.rvsp i:nth-child(2){left:68%;top:26%;animation-delay:.7s}.rvsp i:nth-child(3){left:60%;top:66%;animation-delay:1.4s}
+.rvb1,.rvb2{position:absolute;border-radius:50%;background:#fff;border:2px solid var(--ink)}
+.rvb1{left:44px;bottom:30px;width:14px;height:14px}.rvb2{left:34px;bottom:16px;width:8px;height:8px}
+.rvwho img,.rvwho .livep,.rvwho svg{display:block;width:100%;height:100%}
+.rvwho{position:absolute;left:-4px;bottom:-4px;width:58px;height:58px;overflow:hidden;border-radius:50%;border:2.5px solid var(--ink);background:var(--tint);animation:rvdoze 4s ease-in-out infinite}
+.rvnum{position:absolute;right:8px;bottom:0;font:700 11.5px var(--display);color:var(--ink2);background:#fff;border:2px solid var(--ink);border-radius:999px;padding:1px 8px}
+.rvall{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:56px;color:#f08aa6}
+.rvwish{font:800 19px/1.15 var(--display);text-align:center}
+.rvsteps{list-style:none;margin:0;padding:0;display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.rvsteps li{display:flex;flex-direction:column;align-items:center;gap:2px;width:62px;text-align:center}
+.rvsi{position:relative;width:46px;height:46px;border-radius:50%;background:#fff;border:2.5px dashed var(--line);display:flex;align-items:center;justify-content:center}
+.rvsi .dic{width:32px;height:32px;border:none}.rvsi .dic svg{width:22px;height:22px}.rvsi .dic.dit svg{width:28px;height:28px}
+.rvsi em{position:absolute;right:-6px;bottom:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#fff;border:2px solid var(--ink);font:800 10.5px/14px var(--display);font-style:normal;color:var(--ink)}
+.rvsi em:empty{display:none}
+.rvsteps li.ok .rvsi{border:2.5px solid #3a8f5a;background:#e6f6e9}.rvsteps li.ok .rvsi em{background:#5fbf7f;color:#fff;border-color:#3a8f5a}
+.rvsteps li.next .rvsi{border:2.5px solid var(--ink);animation:rvnext 1.4s ease-in-out infinite alternate}
+.rvsteps small{font:700 11px/1.1 var(--display);color:var(--ink2)}
+.dgifts{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none}
+.dgift{flex:none;width:78px;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 4px 6px;border-radius:14px;background:var(--paper);border:2px solid var(--line);text-align:center}
+.dgift.main{width:96px;background:linear-gradient(180deg,#fff8e2,#fff);border-color:var(--rc,var(--gold));box-shadow:0 0 0 2px #fff inset,0 2px 0 rgba(74,53,40,.15)}
+.dgi{width:40px;height:40px;display:flex;align-items:center;justify-content:center}.dgi svg{width:36px;height:36px}.dgift.main .dgi{width:52px;height:52px}.dgift.main .dgi svg{width:48px;height:48px}
+.dgi b{font:800 22px var(--display);color:#3a8f5a}
+.dgift small{font:700 10px var(--display);text-transform:uppercase;letter-spacing:.04em;color:var(--rust)}
+.dgift b{font:700 11.5px/1.1 var(--display);color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dgift.coin{width:62px}.dgift.coin .coin{width:28px;height:28px}
+.rvgo{align-self:center;min-width:60%}
+.dcel.v17 .dlive{position:relative;width:100%;max-width:420px;height:210px;border:2.5px solid var(--ink);border-radius:22px;overflow:hidden;background:var(--tint)}
+.dlive .dscene{position:absolute;inset:0;width:100%;height:100%}
+.dlive-c{position:absolute;left:50%;bottom:-6px;width:150px;margin-left:-95px;animation:dlivej 1s ease-in-out infinite}
+.dlive-c svg{width:100%;height:auto}
+.dlive-r{position:absolute;right:16%;top:16%;width:70px;height:70px;animation:rvfloat 2.4s ease-in-out infinite;filter:drop-shadow(0 0 8px #fff)}
+.dlive-r svg{width:100%;height:100%}
+.dlive-s i{position:absolute;font-style:normal;color:#fff;text-shadow:0 0 6px #f6c445;font-size:20px;animation:rvtw 1.6s ease-in-out infinite}
+${[...Array(7)].map((_, i) => `.dlive-s i:nth-child(${i + 1}){left:${8 + i * 13}%;top:${10 + (i * 37) % 60}%;animation-delay:${(i * .23).toFixed(2)}s}`).join('')}
+.dgifts.big{justify-content:center;flex-wrap:wrap;overflow:visible}
+.dgifts.big .dgift{animation:dgpop .5s cubic-bezier(.3,1.6,.5,1) both;animation-delay:var(--d,0s)}
+@keyframes rvfloat{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-6px) rotate(3deg)}}
+@keyframes rvtw{0%,100%{opacity:.2;transform:scale(.6)}50%{opacity:1;transform:scale(1.15)}}
+@keyframes rvdoze{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg) translateY(-2px)}}
+@keyframes rvnext{to{box-shadow:0 0 0 5px rgba(246,196,69,.45)}}
+@keyframes dlivej{0%,100%{transform:translateY(0)}45%{transform:translateY(-22px) rotate(-4deg)}60%{transform:translateY(-22px) rotate(4deg)}}
+@keyframes dgpop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.rvrw2,.rvwho,.dlive-c,.dlive-r,.rvsp i,.dlive-s i{animation:none}}
 .rec.dwant{box-shadow:0 0 0 3px #b9a6ef,0 3px 0 rgba(74,53,40,.3)}
 .dwant-t{display:inline-block;align-self:flex-start;margin:1px 0 2px;font:700 11.5px var(--display);color:#6d4fc0;background:#ece4fd;border-radius:999px;padding:1px 8px}
 `;

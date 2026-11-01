@@ -355,6 +355,7 @@ function renderWardrobe(k) {
   h += `<div class="wrmid"><div class="wrchar ${joy ? 'joy' : ''}" data-wrchar="${k}">${stCharSVG(k, joy ? 'rire' : 'content', 'wr' + k)}${joy ? `<span class="wrspark" aria-hidden="true">${'<i>★</i>'.repeat(6)}</span>` : ''}</div>${joy && stJoyLine ? `<p class="wrsay">${esc(stJoyLine)}</p>` : ''}<span class="wrplate">${ch.name} <small>${worn} vêtement${worn > 1 ? 's' : ''}</small></span></div>`;
   h += `<div class="wrcol">${ST_RIGHT.map(sl => stSlotBtn(k, sl)).join('')}<button class="wrs wrsave" data-wjump="saved" aria-label="Tenues enregistrées"><span class="wri"><svg viewBox="0 0 40 40"><path d="M10 6 H30 V34 L20 27 L10 34Z" fill="#f4b7c4" stroke="#5b4636" stroke-width="1.8" stroke-linejoin="round"/><path d="M20 11 l1.8 3.6 4 .6 -2.9 2.8.7 4 -3.6-1.9 -3.6 1.9.7-4 -2.9-2.8 4-.6Z" fill="#fff8ea"/></svg></span><b>Tenues</b></button></div>`;
   h += `</div>`;
+  if (typeof cpWearBar === 'function') h += cpWearBar(k); // v17 : ce que la tenue apporte (32_compagnons.js)
   // emplacement choisi
   const it = stWorn(k, stSlot), list = stOwned(k, stSlot), lab = SLOT_LABEL[stSlot];
   h += `<div class="wrpanel"><div class="wrph"><span class="wrpk">${lab}</span><b>${it ? esc(it.name) : 'Rien pour l’instant'}</b>${it ? `<button class="btn cream sm" data-wunwear="${stSlot}">Retirer</button>` : ''}</div>`;
@@ -366,7 +367,7 @@ function renderWardrobe(k) {
     h += `<div class="wrgrid">${list.map(x => {
       const on = !!(it && it.id === x.id), by = on ? k : x.orig ? null : styleWornBy(x.id);
       const prov = x.orig ? 'Tenue de départ' : (typeof rgPill === 'function' && rgPill(x, 'short')) || esc(x.from || '');
-      return `<button class="wrv ${on ? 'on' : ''}" data-wput="${x.id}" style="--rc:${RARC[x.rarity]}" aria-pressed="${on}"><span class="wrvi">${stIcon(x)}</span><b>${esc(x.name)}</b><i style="color:${RARC[x.rarity]}">${RARITY[x.rarity]}${x.edition ? ' · ' + esc(x.edition) : ''}</i><span class="wrvp">${prov}</span>${on ? '<em class="wrtag">Porté</em>' : by && by !== k ? `<em class="wrtag lend">Porté par ${CHARS[by].name}</em>` : ''}</button>`;
+      return `<button class="wrv ${on ? 'on' : ''}" data-wput="${x.id}" style="--rc:${RARC[x.rarity]}" aria-pressed="${on}"><span class="wrvi">${stIcon(x)}</span><b>${esc(x.name)}</b><i style="color:${RARC[x.rarity]}">${RARITY[x.rarity]}${x.edition ? ' · ' + esc(x.edition) : ''}</i><span class="wrvp">${prov}</span>${typeof cpItemBadges === 'function' ? cpItemBadges(x) : ''}${on ? '<em class="wrtag">Porté</em>' : by && by !== k ? `<em class="wrtag lend">Porté par ${CHARS[by].name}</em>` : ''}</button>`;
     }).join('')}</div>`;
   } else h += `<p class="wrempty">Aucun vêtement « ${lab.toLowerCase()} » dans le sac pour l’instant.</p>`;
   if (!it) h += `<div class="wrshop"><svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS.boutique}</svg><span>Trouve des vêtements en voyage ou au magasin.</span><button class="btn gold sm" data-wshop="1">Magasin</button></div>`;

@@ -137,8 +137,8 @@ function nsRoomFor(sp) {
   return NS_HABS.some(h => h.id !== 'prairie' && L.by[h.id].length < nsCap(h.id));
 }
 function nsRoomText(sp) {
-  const h = sp ? NS_HAB[nsHabOf(sp)] : null;
-  return h ? (nsHabLvl(h.id) ? `Plus de place au refuge : agrandissez « ${h.name} » au village.` : `Plus de place au refuge : construisez « ${h.name} » au village.`) : 'Plus de place au refuge : construisez un habitat au village.';
+  const h = sp ? NS_HAB[nsHabOf(sp)] : null, nm = h && typeof FY_ROOM_NAME !== 'undefined' && FY_ROOM_NAME[h.id] ? FY_ROOM_NAME[h.id] : h ? h.name : '';
+  return h ? (nsHabLvl(h.id) ? `Plus de place au foyer : agrandissez « ${nm} ».` : `Plus de place au foyer : ajoutez la pièce « ${nm} ».`) : 'Plus de place au foyer : ajoutez une pièce.';
 }
 
 // ---------------- payer des matériaux (mêmes règles que les bâtiments du village) ----------------
@@ -426,8 +426,8 @@ function nsClaimTier(id) {
 function nsUpgrade(kind) {
   const N = nsState();
   let lv, name, ok = false;
-  if (kind === 'couv') { lv = NS_COUV[N.couv]; if (!lv || !nsPay(lv.cost, lv.coins)) return false; N.couv++; name = `La couveuse (${N.couv} places)`; ok = true; nsCouvFill(); }
-  else if (kind === 'enclos') { lv = NS_ENCLOS[N.enclos + 1]; if (!lv || !nsPay(lv.cost, lv.coins)) return false; N.enclos++; name = N.enclos === 1 ? 'L’enclos des croisements' : 'L’enclos des croisements (plus rapide)'; ok = true; }
+  if (kind === 'couv') { lv = NS_COUV[N.couv]; if (!lv || !nsPay(lv.cost, lv.coins)) return false; N.couv++; name = `Le nid douillet (${N.couv} places)`; ok = true; nsCouvFill(); }
+  else if (kind === 'enclos') { lv = NS_ENCLOS[N.enclos + 1]; if (!lv || !nsPay(lv.cost, lv.coins)) return false; N.enclos++; name = N.enclos === 1 ? 'Le panier double' : 'Le panier double (plus rapide)'; ok = true; }
   else { const H = NS_HAB[kind]; if (!H || kind === 'prairie') return false; const cur = N.hab[kind] || 0; lv = H.lv[cur]; if (!lv || !nsPay(lv.cost, lv.coins)) return false; N.hab[kind] = cur + 1; name = `${H.name} (${lv.cap} places)`; ok = true; }
   if (!ok) return false;
   save();
@@ -489,7 +489,7 @@ function nsEggCard(e) {
   const total = e.ms || nsHatchMs(e.rarity || 0), left = Math.max(0, e.ready - now), f = ok ? 1 : Math.max(0.04, Math.min(0.97, 1 - left / Math.max(total, left + 1)));
   const room = ok ? nsRoomFor(e.known ? e.sp : null) : true;
   let h = `<div class="nsegg${ok ? ' ok' : ''}${inC ? ' inc' : ''}"><span class="nsei">${nsEggArt(e, ok ? 2 : 0, 'ne' + e.id)}</span><div class="nsex"><b>${esc(nsEggLabel(e))}</b><span class="small">${esc(COMP_FROM[e.from && e.from.how] || 'Œuf')}${e.from && e.from.place ? ' · ' + esc(e.from.place) : ''}</span>`;
-  if (ok) h += room ? `<button class="btn gold sm" data-ns-hatch="${e.id}">Faire éclore</button>` : `<span class="nsnote sm">${esc(nsRoomText(e.known ? e.sp : null))}</span><button class="btn cream sm" data-ns-go="habitats">Habitats</button>`;
+  if (ok) h += room ? `<button class="btn gold sm" data-ns-hatch="${e.id}">Faire éclore</button>` : `<span class="nsnote sm">${esc(nsRoomText(e.known ? e.sp : null))}</span><button class="btn cream sm" data-ns-go="habitats">Pièces</button>`;
   else {
     h += `<span class="nsbar"><i style="width:${(f * 100).toFixed(0)}%"></i></span><span class="nstime" data-ns-left="${e.id}">${inC ? 'Au chaud · ' : 'En attente · '}${fmtDur(left)}</span>`;
     if (warm.length) h += `<span class="nswarm">${warm.map(x => `<button class="btn cream sm" data-ns-warm="${e.id}" data-id="${x.it.id}" title="${esc(x.w.txt)}"><span class="nsti">${itemIcon(x.it)}</span>${x.w.f ? 'Réchauffer' : 'Illuminer'}</button>`).join('')}</span>`;
@@ -501,15 +501,15 @@ function nsRenderNurserie(box) {
   const incs = S.eggs.filter(e => e.inc || e.ready <= now), wait = S.eggs.filter(e => !e.inc && e.ready > now);
   let h = `<div class="nshead"><div><h2>La nurserie</h2><p>Les œufs trouvés en voyage, reçus en cadeau ou nés à l’enclos grandissent ici.</p></div></div>`;
   // couveuse
-  h += `<section class="nscard couv"><div class="nsch"><span class="nsart">${NS_COUV_ART(N.couv)}</span><div><span class="nsk">Couveuse · niveau ${N.couv}</span><h3>${C.slots} place${C.slots > 1 ? 's' : ''} au chaud</h3><p>Les œufs y éclosent ${Math.round(1 / C.f * 10) / 10} fois plus vite. Ils y entrent tout seuls dès qu’une place est libre.</p></div></div>`;
+  h += `<section class="nscard couv"><div class="nsch"><span class="nsart">${NS_COUV_ART(N.couv)}</span><div><span class="nsk">Nid douillet · niveau ${N.couv}</span><h3>${C.slots} place${C.slots > 1 ? 's' : ''} au chaud</h3><p>Les œufs y éclosent ${Math.round(1 / C.f * 10) / 10} fois plus vite. Ils y entrent tout seuls dès qu’une place est libre.</p></div></div>`;
   h += `<div class="nsslots">${Array.from({ length: C.slots }, (_, i) => { const e = S.eggs.filter(x => x.inc && x.ready > now).sort((a, b) => a.inc - b.inc)[i]; return e ? '' : `<div class="nsslot"><span>Place libre</span></div>`; }).join('')}</div>`;
   h += incs.length ? `<div class="nseggs">${incs.map(nsEggCard).join('')}</div>` : (wait.length ? '' : `<p class="nsempty">Aucun œuf pour l’instant. Partez en voyage : chaque région cache ses propres œufs ! Plus le voyage est long, plus vous avez de chances, surtout avec un appât.</p>`);
   if (wait.length) h += `<h4 class="nsh4">En attente d’une place <small>${wait.length}</small></h4><div class="nseggs">${wait.map(nsEggCard).join('')}</div>`;
-  if (nx) h += `<div class="nsup"><span><b>Agrandir la couveuse :</b> ${nx.slots} places, encore plus rapide</span>${nsCostHTML(nx.cost, nx.coins)}<button class="btn ${nsCanPay(nx.cost, nx.coins) ? 'green' : 'cream'} sm" data-ns-up="couv" ${nsCanPay(nx.cost, nx.coins) ? '' : 'disabled'}>Agrandir</button></div>`;
+  if (nx) h += `<div class="nsup"><span><b>Agrandir le nid :</b> ${nx.slots} places, encore plus rapide</span>${nsCostHTML(nx.cost, nx.coins)}<button class="btn ${nsCanPay(nx.cost, nx.coins) ? 'green' : 'cream'} sm" data-ns-up="couv" ${nsCanPay(nx.cost, nx.coins) ? '' : 'disabled'}>Agrandir</button></div>`;
   h += `</section>`;
   // enclos des croisements
-  h += `<section class="nscard encl"><div class="nsch"><span class="nsart">${NS_ENCLOS_ART()}</span><div><span class="nsk">Enclos des croisements${N.enclos ? ` · niveau ${N.enclos}` : ''}</span><h3>${N.enclos ? 'Deux compagnons, un œuf' : 'À construire'}</h3><p>Choisissez deux compagnons : leur œuf mélange leurs couleurs. Entre deux espèces différentes, un <b>hybride</b> très rare peut naître ! Les parents restent avec vous.</p></div></div>`;
-  if (!N.enclos) { const E = NS_ENCLOS[1]; h += `<div class="nsup">${nsCostHTML(E.cost, E.coins)}<button class="btn ${nsCanPay(E.cost, E.coins) ? 'green' : 'cream'}" data-ns-up="enclos" ${nsCanPay(E.cost, E.coins) ? '' : 'disabled'}>Construire l’enclos</button></div>`; }
+  h += `<section class="nscard encl"><div class="nsch"><span class="nsart">${NS_ENCLOS_ART()}</span><div><span class="nsk">Panier double${N.enclos ? ` · niveau ${N.enclos}` : ''}</span><h3>${N.enclos ? 'Deux compagnons, un œuf' : 'À construire'}</h3><p>Choisissez deux compagnons : leur œuf mélange leurs couleurs. Entre deux espèces différentes, un <b>hybride</b> très rare peut naître ! Les parents restent avec vous.</p></div></div>`;
+  if (!N.enclos) { const E = NS_ENCLOS[1]; h += `<div class="nsup">${nsCostHTML(E.cost, E.coins)}<button class="btn ${nsCanPay(E.cost, E.coins) ? 'green' : 'cream'}" data-ns-up="enclos" ${nsCanPay(E.cost, E.coins) ? '' : 'disabled'}>Fabriquer le panier</button></div>`; }
   else if (N.cross) {
     const c = N.cross, f = Math.min(1, (now - c.start) / Math.max(1, c.ready - c.start));
     h += `<div class="nscross"><span class="nsp">${S.comps[c.a] ? `<img src="${portraitURI(c.a, 'amour')}" alt="">` : ''}<b>${esc(c.names[0])}</b></span><span class="nsheart">♥</span><span class="nsp">${S.comps[c.b] ? `<img src="${portraitURI(c.b, 'amour')}" alt="">` : ''}<b>${esc(c.names[1])}</b></span></div><span class="nsbar"><i style="width:${(f * 100).toFixed(0)}%"></i></span><p class="small nstime">Un œuf arrive dans <span data-ns-cross="1">${fmtDur(c.ready - now)}</span>.</p>`;
@@ -523,7 +523,7 @@ function nsRenderNurserie(box) {
     }
     if (ids.length < 2) h += `<p class="small">Il faut au moins deux compagnons.</p>`;
     const nx2 = NS_ENCLOS[N.enclos + 1];
-    if (nx2) h += `<div class="nsup"><span><b>Améliorer l’enclos :</b> œuf en ${fmtDur(nx2.delay)}, repos ${fmtDur(nx2.cool)}</span>${nsCostHTML(nx2.cost, nx2.coins)}<button class="btn ${nsCanPay(nx2.cost, nx2.coins) ? 'green' : 'cream'} sm" data-ns-up="enclos" ${nsCanPay(nx2.cost, nx2.coins) ? '' : 'disabled'}>Améliorer</button></div>`;
+    if (nx2) h += `<div class="nsup"><span><b>Améliorer le panier :</b> œuf en ${fmtDur(nx2.delay)}, repos ${fmtDur(nx2.cool)}</span>${nsCostHTML(nx2.cost, nx2.coins)}<button class="btn ${nsCanPay(nx2.cost, nx2.coins) ? 'green' : 'cream'} sm" data-ns-up="enclos" ${nsCanPay(nx2.cost, nx2.coins) ? '' : 'disabled'}>Améliorer</button></div>`;
   }
   h += `</section>`;
   box.innerHTML = h;
