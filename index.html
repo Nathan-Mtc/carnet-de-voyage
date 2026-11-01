@@ -2175,6 +2175,29 @@ Object.assign(LOOT, {
   mairie: [['Formulaire en trois exemplaires', 'm', 'papier', 0, null, '#f4efe2'], ['Tampon officiel', 'm', 'bois', 0, null, '#3b4a7a'], ['Ruban d’inauguration', 'm', 'tissu', 0, null, '#e5584f'], ['Agrafe', 'm', 'metal', 0, null, '#b5bcc2'], ['Ticket d’attente', 'm', 'papier', 0, null, '#f2d48f'], ['Brochure municipale', 'm', 'papier', 0, null, '#bfe1f2'], ['Stylo attaché à sa ficelle', 'm', 'plastique', 0, null, '#4f86c9'], ['Dragée de mariage', 'n', 'sucre', 0, null, '#f6dce4'], ['Confettis de mariage', 'm', 'papier', 0, null, '#f39ab0'], ['Écharpe de cérémonie', 'v', 'cou', 1, 'echarpe', '#5c6b94'], ['Médaille de la ville', 'm', 'medaille', 1, null, '#c9a35a'], ['Nœud papillon de mariage', 'v', 'cou', 1, 'noeud', '#fbf8f0'], ['Clé du beffroi', 'm', 'metal', 2, null, '#7a6a5a'], ['Registre de 1800', 'm', 'papier', 3, null, '#a8754a'], ['Sceau d’or de la commune', 'm', 'medaille', 4, null, '#f2c14e']],
   phare: [['Bout de cordage', 'm', 'tissu', 0, null, '#d9c39a'], ['Écume de mer', 'm', 'sable', 0, null, '#f4f8fc'], ['Plume de goéland', 'm', 'plume', 0, null, '#e9eef0'], ['Coquille de patelle', 'm', 'coquillage', 0, null, '#c9b8a6'], ['Lichen orange', 'm', 'mousse', 0, null, '#f2a03a'], ['Galette du gardien', 'n', 'sucre', 0, null, '#e9b86b'], ['Thé du gardien', 'n', 'boisson', 0, null, '#c98a4f'], ['Ciré de gardien de phare', 'v', 'haut', 0, 'sweat', '#f6d36b'], ['Carnet de bord', 'm', 'papier', 0, null, '#a87a50'], ['Bonnet marin à pompon', 'v', 'tete', 1, 'bonnet', '#3b4a7a'], ['Ampoule du phare', 'm', 'lumiere', 1, null, '#f6e08a'], ['Longue-vue de gardien', 'm', 'metal', 1, null, '#c9a35a'], ['Lentille de Fresnel', 'm', 'verre', 2, null, '#bfe3f6'], ['Rayon de phare en bocal', 'd', 'lanterne', 3, null, '#f6e08a'], ['Lumière qui guide les bateaux', 'm', 'lumiere', 4, null, '#fff3b0']],
 });
+// v19 : plus de variété dans les objets courants de chaque type de lieu (le joueur : « toujours les mêmes »)
+Object.entries({
+  boulangerie: [['Pain de mie', 'n', 'pain', 0, null, '#f2d9a6'], ['Ficelle croustillante', 'n', 'pain', 0, null, '#d9a35a'], ['Chausson aux pommes', 'n', 'pomme', 0, null, '#e3b06b'], ['Pain aux raisins', 'n', 'sucre', 0, null, '#d9a05a'], ['Flan pâtissier', 'n', 'sucre', 0, null, '#f2d06b'], ['Sablé breton', 'n', 'sucre', 0, null, '#e9c48a'], ['Sac en papier kraft', 'm', 'papier', 0, null, '#c99a6a']],
+  cafe: [['Noisette (petit café)', 'n', 'boisson', 0, null, '#a8754a'], ['Citron pressé', 'n', 'agrume', 0, null, '#f6e07a'], ['Spéculoos du café', 'n', 'sucre', 0, null, '#c98a4f'], ['Journal du matin', 'm', 'papier', 0, null, '#efe8dc'], ['Tartine beurrée', 'n', 'pain', 0, null, '#f2d9a6'], ['Soucoupe fleurie', 'd', 'bocal', 1, null, '#bfe1f2'], ['Croissant aux amandes', 'n', 'sucre', 1, null, '#e3b06b']],
+  restaurant: [['Gratin du jour', 'n', 'plat', 0, null, '#e3b06b'], ['Salade composée', 'n', 'legume', 0, null, '#8fbf5a'], ['Carafe d’eau', 'm', 'verre', 0, null, '#cfe8f7'], ['Menu écrit à la craie', 'm', 'papier', 0, null, '#3a3a4a'], ['Rond de serviette', 'm', 'bois', 0, null, '#c99a6a'], ['Bougie de table', 'd', 'lanterne', 1, null, '#f6e08a']],
+  marche: [['Poireaux', 'n', 'legume', 0, null, '#8fbf5a'], ['Barquette de fraises', 'n', 'fruit', 0, null, '#e5584f'], ['Courge butternut', 'n', 'legume', 0, null, '#f2a03a'], ['Poire comice', 'n', 'fruit', 0, null, '#c9d46a'], ['Sachet de noix', 'n', 'fruit', 0, null, '#b07a4f'], ['Cagette en bois', 'm', 'bois', 0, null, '#d9b48a'], ['Panier d’osier du marché', 'v', 'dos', 1, 'sac', '#c99a5a']],
+  epicerie: [['Bocal de cornichons', 'n', 'legume', 0, null, '#7fae4f'], ['Paquet de pâtes', 'n', 'plat', 0, null, '#f2d06b'], ['Boîte de sardines', 'n', 'mer', 0, null, '#7fa9c9'], ['Sachet d’épices', 'n', 'legume', 0, null, '#d9733f'], ['Pot de moutarde', 'n', 'legume', 0, null, '#e3c14a'], ['Tablette de chocolat noir', 'n', 'sucre', 0, null, '#5b3a2a'], ['Huile de noix', 'n', 'fruit', 1, null, '#d9b44a']],
+  fromagerie: [['Comté fruité', 'n', 'fromage', 0, null, '#f2d06b'], ['Tomme de brebis', 'n', 'fromage', 0, null, '#efe2c4'], ['Bûche de chèvre', 'n', 'fromage', 0, null, '#fbf8f0'], ['Yaourt fermier', 'n', 'fromage', 0, null, '#fbf8f0'], ['Fromage blanc', 'n', 'fromage', 0, null, '#ffffff'], ['Papier à fromage', 'm', 'papier', 0, null, '#efe8dc'], ['Couteau à fromage', 'm', 'metal', 1, null, '#c9cdd2']],
+  boucherie: [['Terrine de campagne', 'n', 'plat', 0, null, '#b5703a'], ['Saucisse aux herbes', 'n', 'plat', 0, null, '#c95a5a'], ['Pâté en croûte', 'n', 'plat', 0, null, '#d9a35a']],
+  chocolaterie: [['Mendiant aux fruits secs', 'n', 'sucre', 0, null, '#6b4a32'], ['Rocher praliné', 'n', 'sucre', 0, null, '#8a5a3a'], ['Ourson guimauve', 'n', 'sucre', 0, null, '#c98a4f'], ['Ruban doré', 'm', 'tissu', 0, null, '#f2c14e'], ['Boîte à chocolats', 'd', 'bocal', 1, null, '#c9604f']],
+  glacier: [['Glace menthe-chocolat', 'n', 'glace', 0, null, '#9fe0c4'], ['Cornet gaufré', 'n', 'pain', 0, null, '#e3b06b'], ['Pot de vermicelles', 'n', 'sucre', 0, null, '#f39ab0']],
+  parc: [['Feuille de tilleul', 'm', 'feuille', 0, null, '#9cc06a'], ['Coquille d’escargot du parc', 'm', 'coquillage', 0, null, '#c9a37a'], ['Fleur de magnolia', 'm', 'fleur', 0, null, '#f6c2cf'], ['Bogue de marron', 'm', 'graine', 0, null, '#8fae4f'], ['Plume de merle', 'm', 'plume', 0, null, '#2f2f3a'], ['Ticket de manège', 'm', 'papier', 0, null, '#f39ab0'], ['Gaufre du kiosque à musique', 'n', 'sucre', 0, null, '#e9b86b'], ['Feuille de chêne', 'm', 'feuille', 0, null, '#7fae4f'], ['Bulle de savon figée', 'm', 'verre', 2, null, '#cfe8f7']],
+  rue: [['Prospectus de pizzeria', 'm', 'papier', 0, null, '#e5584f'], ['Bout de craie bleue', 'm', 'pierre', 0, null, '#7fb6d9'], ['Sticker de skate', 'm', 'plastique', 0, null, '#f2a03a'], ['Plume de moineau', 'm', 'plume', 0, null, '#a8805a'], ['Pavé descellé', 'm', 'pierre', 0, null, '#9a948a'], ['Ticket de parcmètre', 'm', 'papier', 0, null, '#f6e07a'], ['Bonnet oublié sur un banc', 'v', 'tete', 0, 'bonnet', '#5f87c9']],
+  musee: [['Crayon de musée', 'm', 'bois', 0, null, '#c9604f'], ['Carte d’un tableau célèbre', 'm', 'papier', 0, null, '#c9a35a'], ['Badge de visiteur', 'm', 'medaille', 0, null, '#7fb6d9'], ['Moulage en plâtre', 'd', 'statue', 1, null, '#f4efe2'], ['Fragment de mosaïque', 'm', 'pierre', 1, null, '#4fb3d9']],
+  patrimoine: [['Feuille de lierre', 'm', 'feuille', 0, null, '#4f8a4f'], ['Cierge parfumé', 'd', 'lanterne', 0, null, '#f6efd2'], ['Dépliant historique', 'm', 'papier', 0, null, '#efe2c4'], ['Éclat d’ardoise', 'm', 'pierre', 0, null, '#5c6b7a'], ['Plume de choucas', 'm', 'plume', 0, null, '#3a3a4a'], ['Clé de la sacristie', 'm', 'metal', 2, null, '#a87a50']],
+  librairie: [['Roman de poche', 'm', 'papier', 0, null, '#5f87c9'], ['Sac en tissu de libraire', 'v', 'dos', 0, 'sac', '#e9dcc0'], ['Carte de fidélité', 'm', 'papier', 0, null, '#f39ab0']],
+  mode: [['Ceinture tressée', 'm', 'tissu', 0, null, '#a87a50'], ['Cintre en bois', 'm', 'bois', 0, null, '#c99a6a'], ['Étiquette brodée', 'm', 'tissu', 0, null, '#f4efe2'], ['Chaussettes à rayures', 'v', 'pieds', 0, 'chaussettes', '#e5584f'], ['Bob en jean', 'v', 'tete', 0, 'chapeau', '#5c7bc4'], ['Gilet en maille', 'v', 'haut', 1, 'pull', '#e9a0b0']],
+  fleuriste: [['Eucalyptus en botte', 'm', 'feuille', 0, null, '#8fb0a0'], ['Ruban de raphia', 'm', 'tissu', 0, null, '#e9d6a0'], ['Petit cactus', 'd', 'plante', 1, null, '#7fae4f']],
+  jardin: [['Feuille de rhubarbe', 'm', 'feuille', 0, null, '#7fae4f'], ['Coccinelle en bois', 'd', 'statue', 1, null, '#e5584f'], ['Plant de basilic', 'm', 'feuille', 0, null, '#4f9f4f']],
+  riviere: [['Galet plat', 'm', 'pierre', 0, null, '#a9b4bc'], ['Feuille de saule', 'm', 'feuille', 0, null, '#a8c45a'], ['Bois flotté de rivière', 'm', 'bois', 0, null, '#c9b8a0']],
+  sentier: [['Brin de myrtille', 'm', 'feuille', 0, null, '#5f7ab8'], ['Pierre à cairn', 'm', 'pierre', 0, null, '#a9a39a'], ['Lichen d’argent', 'm', 'mousse', 0, null, '#c9d2c4']],
+  gare: [['Composteur miniature', 'm', 'metal', 0, null, '#f2a03a'], ['Sandwich du quai', 'n', 'pain', 0, null, '#e3b06b'], ['Étiquette à bagage', 'm', 'papier', 0, null, '#efe2c4']],
+}).forEach(([k, v]) => { if (LOOT[k]) LOOT[k].push(...v.filter(d => !LOOT[k].some(x => x[0] === d[0]))); });
 // Spécialité unique à chaque lieu ({P} = nom du lieu)
 const SPECIALTY = {
   boulangerie: ['Brioche de {P}', 'n', 'sucre', 2, null, '#e9b86b'], cafe: ['Mélange maison de {P}', 'n', 'boisson', 2, null, '#8a5a3a'], restaurant: ['Plat signature de {P}', 'n', 'plat', 2, null, '#d9733f'],
@@ -4207,58 +4230,161 @@ function pickWeather(tags) {
   if (tags.includes('desert')) return 'soleil';
   return pick(['soleil', 'soleil', 'nuages', 'pluie']);
 }
-function postcardSVG(p, uid) {
-  const h = p.hour, night = h < 6 || h >= 21 || p.weather === 'etoile', dusk = (h >= 18 && h < 21) || (h >= 6 && h < 8);
-  const sky = night ? '#2f3d6b' : dusk ? '#f5c1a5' : p.weather === 'pluie' ? '#bcc8d4' : '#bfe1f2';
-  const BASES = ['montagne', 'neige', 'lac', 'mer', 'ile', 'foret', 'ville', 'monument', 'desert', 'campagne'];
-  const t0 = (p.tags || []).find(x => BASES.includes(x)) || 'campagne', L = '#5b4636';
-  let s = `<svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg"><rect width="320" height="200" fill="${sky}"/>`;
-  if (night) for (let i = 0; i < 18; i++) s += `<circle cx="${(i * 53) % 320}" cy="${(i * 29) % 90}" r="${i % 3 ? 1 : 1.6}" fill="#fff" opacity=".8"/>`;
-  if (p.weather === 'etoile') s += `<path d="M40 20 L130 60" stroke="#fff6c9" stroke-width="2.4" stroke-linecap="round"/><path d="${starPath(132, 61, 7)}" fill="#fff6c9"/>`;
-  if (p.weather === 'arc') ['#f29a8a', '#f6c46b', '#f6e08a', '#a6d88f', '#8cc7e8', '#b9a6e6'].forEach((c, i) => { s += `<path d="M30 ${190} A${130 - i * 9} ${130 - i * 9} 0 0 1 ${290 - i * 0} 190" fill="none" stroke="${c}" stroke-width="9" opacity=".75" transform="translate(${i * 9} 0)"/>`; });
-  if (p.weather === 'soleil' || night) s += `<circle cx="262" cy="42" r="${night ? 14 : 20}" fill="${night ? '#f4efd2' : dusk ? '#f7a96b' : '#fbd76a'}"/>`;
-  if (p.weather === 'nuages' || p.weather === 'pluie') s += `<g fill="#fff" opacity=".9"><ellipse cx="80" cy="40" rx="34" ry="13"/><ellipse cx="104" cy="32" rx="24" ry="14"/><ellipse cx="220" cy="54" rx="30" ry="11"/></g>`;
-  switch (t0) {
-    case 'montagne': case 'neige':
-      s += `<path d="M-10 150 L70 60 L120 112 L170 44 L250 130 L290 90 L340 150Z" fill="${t0 === 'neige' ? '#dbe7f2' : '#9aa8bf'}" stroke="${L}" stroke-width="1.5"/><path d="M58 74 L70 60 L82 74 L74 70 L70 76 L64 70Z M157 60 L170 44 L184 60 L176 56 L170 62 L163 56Z" fill="#fff"/><rect y="146" width="320" height="54" fill="${t0 === 'neige' ? '#f4f7fb' : '#a9cf8f'}"/>`;
-      for (let i = 0; i < 6; i++) s += `<path d="M${20 + i * 56} 160 l9 -26 l9 26Z" fill="#5f9a6a" stroke="${L}" stroke-width="1"/>`;
+// v19 : chaque carte postale illustre VRAIMENT le lieu : type de lieu (vitrine, parc, mer, montagne…), monument stylisé des lieux
+// célèbres, couleurs de la région, heure et météo du voyage, nom du lieu et date, et le compagnon. Variation stable par lieu (graine = nom).
+const PC_SHOP = ['boulangerie', 'cafe', 'restaurant', 'glacier', 'chocolaterie', 'epicerie', 'fromagerie', 'boucherie', 'poissonnerie', 'fleuriste', 'librairie', 'mode', 'friperie', 'boutique', 'jouets', 'bricolage', 'pharmacie', 'coiffeur', 'laverie', 'puces', 'caviste', 'hotel', 'poste', 'cinema', 'bibliotheque'];
+const PC_FAM = { marche: 'marche', parc: 'parc', jardin: 'parc', zoo: 'parc', jeux: 'parc', foret: 'foret', camping: 'foret', riviere: 'eau', etang: 'eau', piscine: 'eau', plage: 'plage', port: 'port', phare: 'phare', sentier: 'montagne', belvedere: 'montagne', patrimoine: 'eglise', musee: 'musee', gare: 'gare', ecole: 'civique', mairie: 'civique', sport: 'civique', rue: 'rue', route: 'campagne', ferme: 'ferme', campagne: 'campagne' };
+const PC_LAND = [
+  ['eiffel', /eiffel|^paris$/], ['fourviere', /fourvi|^lyon$|basilique.*lyon/], ['garde', /garde|^marseille$/], ['msm', /saint-michel/], ['colisee', /colis|^rome$/], ['bigben', /big ben|^londres$|westminster/],
+  ['liberte', /libert|new york/], ['opera', /sydney|op[ée]ra de sydney/], ['pyramide', /gizeh|pyramid/], ['torii', /kyoto|torii|sanctuaire|fushimi|temple/], ['tokyo', /^tokyo$|tokyo tower/], ['coupole', /istanbul|marrakech|mosqu/],
+  ['christ', /rio de janeiro|corcovado/], ['menhir', /carnac|menhir/], ['montblanc', /chamonix|mont.blanc|zermatt/], ['canal', /venise|amsterdam/], ['sagrada', /barcelone|sagrada/], ['machu', /machu/],
+];
+function pcRng(seed) { let a = seed >>> 0 || 1; return () => { a ^= a << 13; a ^= a >>> 17; a ^= a << 5; return ((a >>> 0) % 10000) / 10000; }; }
+function pcHash(s) { let h = 2166136261; s = String(s || ''); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+const pcNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+// le monument (dessiné derrière le compagnon, à droite)
+function pcLandmark(id, L, night) {
+  const st = `stroke="${L}" stroke-width="1.4" stroke-linejoin="round"`, win = night ? '#f6d36b' : '#fff8ec';
+  switch (id) {
+    case 'eiffel': return `<path d="M222 150 L246 40 L250 40 L274 150 L262 150 C258 128 238 128 234 150Z" fill="#b98a5a" ${st}/><path d="M232 112 H264 M238 84 H258 M243 60 H253" stroke="${L}" stroke-width="2"/><path d="M248 40 V28" stroke="${L}" stroke-width="2"/>`;
+    case 'fourviere': return `<path d="M150 150 C190 104 290 100 330 150Z" fill="#8fbf7f" ${st}/><rect x="212" y="88" width="64" height="34" fill="#f2ead6" ${st}/><rect x="206" y="72" width="12" height="50" fill="#f2ead6" ${st}/><rect x="270" y="72" width="12" height="50" fill="#f2ead6" ${st}/><path d="M206 72 h12 l-6 -8Z M270 72 h12 l-6 -8Z" fill="#c9a35a" ${st}/><path d="M234 88 l10 -14 l10 14Z" fill="#c9a35a" ${st}/><path d="M244 74 v-8" stroke="#c9a35a" stroke-width="2"/><path d="M190 122 l4 -54 l4 54Z" fill="#9aa4ac" ${st}/>`;
+    case 'garde': return `<path d="M160 150 C200 96 280 92 330 150Z" fill="#c9b48a" ${st}/><rect x="226" y="80" width="40" height="34" fill="#f2ead6" ${st}/><rect x="238" y="50" width="16" height="30" fill="#f2ead6" ${st}/><circle cx="246" cy="44" r="6" fill="#f2c14e" ${st}/>`;
+    case 'msm': return `<path d="M150 152 C190 120 300 120 330 152Z" fill="#c9bfa6" ${st}/><path d="M196 140 L246 74 L296 140Z" fill="#b5ab96" ${st}/><rect x="238" y="58" width="16" height="36" fill="#d9cfb8" ${st}/><path d="M246 30 L254 58 H238Z" fill="#8a8a96" ${st}/>`;
+    case 'colisee': return `<path d="M176 150 V86 Q246 66 316 86 V150Z" fill="#e3c99a" ${st}/>${[0, 1, 2].map(r => [0, 1, 2, 3, 4, 5].map(i => `<path d="M${186 + i * 21} ${142 - r * 20} v-10 a5 5 0 0 1 10 0 v10Z" fill="#b5875a"/>`).join('')).join('')}`;
+    case 'bigben': return `<rect x="234" y="58" width="26" height="92" fill="#d9b46a" ${st}/><path d="M232 58 L247 26 L262 58Z" fill="#5c6b7a" ${st}/><circle cx="247" cy="74" r="8" fill="#fff8ec" ${st}/><path d="M247 74 v-5 M247 74 h4" stroke="${L}" stroke-width="1.4"/><rect x="262" y="104" width="54" height="46" fill="#d9b46a" ${st}/>`;
+    case 'liberte': return `<rect x="232" y="120" width="34" height="30" fill="#9aa4ac" ${st}/><path d="M240 120 L244 70 Q249 60 254 70 L258 120Z" fill="#7fbfa6" ${st}/><circle cx="249" cy="62" r="7" fill="#7fbfa6" ${st}/><path d="M256 70 L266 36" stroke="#7fbfa6" stroke-width="5" stroke-linecap="round"/><path d="M262 34 l4 -10 l4 10Z" fill="#f2c14e"/>`;
+    case 'opera': return `<path d="M170 150 H320 V140 H170Z" fill="#e9e2d6" ${st}/><path d="M184 140 Q200 90 226 140Z M214 140 Q240 76 268 140Z M256 140 Q280 96 304 140Z" fill="#fbf8f0" ${st}/>`;
+    case 'pyramide': return `<path d="M170 150 L230 70 L290 150Z" fill="#e3b56b" ${st}/><path d="M250 150 L290 96 L330 150Z" fill="#d9a35a" ${st}/><path d="M230 70 L246 150" stroke="${L}" stroke-width=".8" opacity=".5"/>`;
+    case 'torii': return `<rect x="208" y="70" width="8" height="80" fill="#d9403f" ${st}/><rect x="270" y="70" width="8" height="80" fill="#d9403f" ${st}/><path d="M196 62 Q243 54 290 62 L288 70 H198Z" fill="#d9403f" ${st}/><rect x="204" y="80" width="78" height="6" fill="#d9403f" ${st}/>`;
+    case 'tokyo': return `<path d="M228 150 L246 50 L264 150Z" fill="#e5584f" ${st}/><path d="M236 110 H256 M240 84 H252" stroke="#fff" stroke-width="3"/><path d="M246 50 V30" stroke="${L}" stroke-width="2"/>${[0, 1, 2].map(i => `<rect x="${280 + i * 14}" y="${96 + i * 8}" width="12" height="${54 - i * 8}" fill="#b8d8f0" ${st}/>`).join('')}`;
+    case 'coupole': return `<rect x="200" y="100" width="90" height="50" fill="#f2ead6" ${st}/><path d="M214 100 Q245 50 276 100Z" fill="#5fa3c9" ${st}/><rect x="186" y="58" width="8" height="92" fill="#f2ead6" ${st}/><path d="M184 58 l6 -14 l6 14Z" fill="#5fa3c9" ${st}/><rect x="296" y="58" width="8" height="92" fill="#f2ead6" ${st}/><path d="M294 58 l6 -14 l6 14Z" fill="#5fa3c9" ${st}/>`;
+    case 'christ': return `<path d="M150 152 L230 60 L330 152Z" fill="#6fae7d" ${st}/><rect x="226" y="34" width="8" height="30" fill="#f4f1ea" ${st}/><rect x="212" y="40" width="36" height="6" fill="#f4f1ea" ${st}/><circle cx="230" cy="31" r="4" fill="#f4f1ea" ${st}/>`;
+    case 'menhir': return [0, 1, 2, 3, 4].map(i => `<path d="M${184 + i * 28} 150 q4 -${34 + (i % 3) * 10} 10 -${36 + (i % 3) * 10} q6 2 8 ${36 + (i % 3) * 10}Z" fill="#a9a39a" ${st}/>`).join('');
+    case 'montblanc': return `<path d="M150 150 L250 34 L330 150Z" fill="#9aa8bf" ${st}/><path d="M226 62 L250 34 L274 62 L262 58 L250 68 L238 58Z" fill="#fff"/>`;
+    case 'canal': return [0, 1, 2, 3].map(i => `<rect x="${186 + i * 30}" y="${74 + (i % 2) * 10}" width="28" height="${76 - (i % 2) * 10}" fill="${['#c9604f', '#e9b9a0', '#7a8a9a', '#d9a05a'][i]}" ${st}/><path d="M${186 + i * 30} ${74 + (i % 2) * 10} l14 -12 l14 12" fill="${['#c9604f', '#e9b9a0', '#7a8a9a', '#d9a05a'][i]}" ${st}/><rect x="${193 + i * 30}" y="${90 + (i % 2) * 10}" width="7" height="9" fill="${win}"/>`).join('');
+    case 'sagrada': return [0, 1, 2, 3].map(i => `<path d="M${206 + i * 20} 150 V${70 - (i % 2) * 14} q6 -18 12 0 V150Z" fill="#d9b48a" ${st}/>`).join('');
+    case 'machu': return `<path d="M150 150 L220 70 L250 96 L276 40 L330 150Z" fill="#6f9a5f" ${st}/><path d="M200 140 h80 M206 130 h70 M212 120 h58" stroke="#a9a39a" stroke-width="5"/>`;
+  }
+  return '';
+}
+// la scène selon le type de lieu (devant : y > 150)
+function pcScene(fam, cat, p, r, L, night, R, sea) {
+  const win = night ? '#f6d36b' : '#fff8ec', st = `stroke="${L}" stroke-width="1.3" stroke-linejoin="round"`, accent = (POI_CATS[cat] || [])[1] || (R ? R.color : '#c9604f');
+  const houses = (n, y0, roof) => { let h = ''; for (let i = 0; i < n; i++) { const w = 30 + r() * 20, hh = 40 + r() * 50, x = i * (320 / n) - 6; h += `<rect x="${x}" y="${y0 - hh}" width="${w}" height="${hh}" fill="${['#e9b9a0', '#d9c6e8', '#f2d48f', '#b8d8f0', '#f6dcc8', '#cfe3c0'][(i + Math.floor(r() * 6)) % 6]}" ${st}/><path d="M${x - 2} ${y0 - hh} L${x + w / 2} ${y0 - hh - 12} L${x + w + 2} ${y0 - hh}Z" fill="${roof}" ${st}/><rect x="${x + 6}" y="${y0 - hh + 10}" width="7" height="8" fill="${win}"/><rect x="${x + w - 13}" y="${y0 - hh + 10}" width="7" height="8" fill="${win}"/>`; } return h; };
+  const tree = (x, y, s, c) => `<rect x="${x - 3 * s}" y="${y - 6 * s}" width="${6 * s}" height="${16 * s}" fill="#8a6448"/><circle cx="${x}" cy="${y - 16 * s}" r="${16 * s}" fill="${c}" ${st}/>`;
+  const leaf = season() === 'automne' ? ['#e0954f', '#d9733f', '#e8b04b'] : season() === 'hiver' ? ['#9cb8a6', '#8fae9a'] : ['#6fae7d', '#7fbf6a', '#5f9a6a'];
+  const roof = R && R.g >= 3 ? '#5c6b7a' : R && ['paca', 'occitanie', 'corse', 'italie', 'iberie', 'mediterranee'].includes(R.id) ? '#d9733f' : '#c9604f';
+  let s = '';
+  switch (fam) {
+    case 'shop': {
+      s += houses(5, 150, roof) + `<rect y="148" width="320" height="52" fill="#cfc6b8"/>`;
+      // la façade de la boutique, à droite, avec son store rayé et sa vitrine
+      s += `<rect x="150" y="56" width="160" height="96" fill="${['#f6e6d0', '#e9dcc8', '#f2ead6'][Math.floor(r() * 3)]}" ${st}/><rect x="150" y="56" width="160" height="22" fill="${accent}" ${st}/><text x="230" y="72" text-anchor="middle" font-family="Baloo 2,sans-serif" font-weight="700" font-size="12" fill="#fff">${esc(((POI_CATS[cat] || [])[0] || 'Boutique').slice(0, 22))}</text>`;
+      for (let i = 0; i < 8; i++) s += `<path d="M${150 + i * 20} 78 h20 v12 q-10 8 -20 0Z" fill="${i % 2 ? '#fff' : accent}" ${st}/>`;
+      s += `<rect x="160" y="96" width="92" height="50" fill="#cfe8f7" ${st}/><rect x="262" y="96" width="38" height="56" fill="#a87a50" ${st}/><circle cx="292" cy="126" r="2" fill="${L}"/>`;
+      const G = { boulangerie: i => `<ellipse cx="${172 + i * 18}" cy="134" rx="8" ry="5" fill="#e3b06b" ${st}/><path d="M${167 + i * 18} 132 l4 3 M${172 + i * 18} 131 l4 3" stroke="${L}"/>`, glacier: i => `<path d="M${168 + i * 18} 128 l5 14 l5 -14Z" fill="#e3b06b" ${st}/><circle cx="${173 + i * 18}" cy="125" r="6" fill="${['#f6a6b8', '#fff8ec', '#9fe0c4', '#6b4a32', '#f6e07a'][i]}" ${st}/>`,
+        fromagerie: i => `<path d="M${164 + i * 18} 142 l14 -12 v12Z" fill="#f2d06b" ${st}/>`, fleuriste: i => `<rect x="${166 + i * 18}" y="134" width="12" height="9" fill="#c9784f" ${st}/><circle cx="${172 + i * 18}" cy="128" r="6" fill="${['#e5587f', '#f2c14e', '#b07ccf', '#f39ab0', '#e5584f'][i]}" ${st}/>`,
+        librairie: i => `<rect x="${166 + i * 16}" y="${118 + (i % 2) * 6}" width="11" height="${24 - (i % 2) * 6}" fill="${['#5f87c9', '#e5584f', '#7fae4f', '#f2a03a', '#b07ccf'][i]}" ${st}/>`, cafe: i => `<path d="M${166 + i * 18} 130 h12 v8 q-6 6 -12 0Z" fill="#fff" ${st}/><path d="M${170 + i * 18} 126 q2 -4 0 -6" stroke="#9aa" fill="none"/>`,
+        chocolaterie: i => `<rect x="${166 + i * 18}" y="128" width="12" height="12" rx="2" fill="#6b4a32" ${st}/>`, poissonnerie: i => `<path d="M${164 + i * 18} 134 q8 -7 14 0 l4 -4 v8 l-4 -4 q-6 7 -14 0Z" fill="#9fc0d8" ${st}/>`,
+        mode: i => `<path d="M${166 + i * 18} 124 l4 -3 h4 l4 3 l-2 3 h-1 v13 h-6 v-13 h-1Z" fill="${BT_PAL[i * 3 % BT_PAL.length]}" ${st}/>`, restaurant: i => `<circle cx="${172 + i * 18}" cy="134" r="7" fill="#fff" ${st}/><circle cx="${172 + i * 18}" cy="134" r="4" fill="${['#d9733f', '#7fae4f', '#e5584f', '#f2d06b', '#c98a4f'][i]}"/>` };
+      const g = G[cat] || G[cat === 'friperie' || cat === 'boutique' ? 'mode' : cat === 'epicerie' || cat === 'caviste' ? 'chocolaterie' : cat === 'bibliotheque' || cat === 'poste' ? 'librairie' : 'restaurant'];
+      for (let i = 0; i < 5; i++) s += g(i);
+      if (cat === 'cafe' || cat === 'restaurant' || cat === 'glacier') s += `<ellipse cx="200" cy="164" rx="18" ry="5" fill="#fff" ${st}/><rect x="198" y="164" width="4" height="18" fill="${L}"/><path d="M186 152 Q200 136 214 152Z" fill="${accent}" ${st}/>`;
       break;
-    case 'lac':
-      s += `<path d="M-10 120 C60 80 120 96 170 84 S270 70 330 104 V130 H-10Z" fill="#9fc79a" stroke="${L}" stroke-width="1.4"/><rect y="124" width="320" height="76" fill="#7fb6d9"/>`;
-      for (let i = 0; i < 6; i++) s += `<path d="M${20 + i * 52} ${140 + (i % 2) * 14} h24" stroke="#fff" stroke-width="2" opacity=".6" stroke-linecap="round"/>`;
+    }
+    case 'marche':
+      s += houses(6, 140, roof) + `<rect y="138" width="320" height="62" fill="#d9cfbf"/>`;
+      for (let i = 0; i < 3; i++) { const x = 120 + i * 66, c = ['#e5584f', '#4f9f78', '#f2a03a'][i]; s += `<rect x="${x}" y="122" width="58" height="30" fill="#c99a6a" ${st}/>`; for (let k = 0; k < 4; k++) s += `<path d="M${x - 2 + k * 15.5} 94 h15.5 v14 q-7.75 7 -15.5 0Z" fill="${k % 2 ? '#fff' : c}" ${st}/>`; s += `<rect x="${x}" y="108" width="3" height="16" fill="${L}"/><rect x="${x + 55}" y="108" width="3" height="16" fill="${L}"/>`; for (let k = 0; k < 5; k++) s += `<circle cx="${x + 8 + k * 10}" cy="120" r="5" fill="${['#e5584f', '#7fae4f', '#f2a03a', '#f2d06b', '#b07ccf'][(k + i) % 5]}" ${st}/>`; }
       break;
-    case 'mer': case 'ile':
-      s += `<rect y="110" width="320" height="46" fill="#5fa3c9"/>`;
-      for (let i = 0; i < 7; i++) s += `<path d="M${10 + i * 46} ${122 + (i % 2) * 12} q8 -6 16 0 q8 6 16 0" fill="none" stroke="#fff" stroke-width="2" opacity=".7"/>`;
-      s += `<path d="M-10 150 C80 140 200 160 330 146 V200 H-10Z" fill="#f2deb0" stroke="${L}" stroke-width="1.4"/>`;
-      if (t0 === 'ile') s += `<path d="M262 160 C258 128 262 104 270 90" stroke="#8a6448" stroke-width="5" fill="none"/><path d="M270 90 c-18 -8 -30 4 -34 10 M270 90 c14 -14 30 -6 34 2 M270 90 c-4 -16 8 -24 16 -24" stroke="#5f9a6a" stroke-width="7" fill="none" stroke-linecap="round"/>`;
+    case 'parc':
+      s += `<rect y="120" width="320" height="80" fill="#9fcf8a"/><path d="M180 200 Q220 150 320 140 V160 Q240 170 220 200Z" fill="#e9dcc0"/>`;
+      for (let i = 0; i < 6; i++) s += tree(14 + i * 58 + r() * 14, 126 + r() * 10, 0.9 + r() * 0.5, leaf[i % leaf.length]);
+      if (cat === 'zoo') s += `<path d="M230 150 q10 -26 20 0" stroke="#f39ab0" stroke-width="5" fill="none"/>`;
+      s += r() < 0.5 ? `<ellipse cx="258" cy="172" rx="34" ry="9" fill="#9fd1e8" ${st}/><rect x="254" y="150" width="8" height="20" fill="#e9e2d6" ${st}/><path d="M258 146 q-10 6 -14 22 M258 146 q10 6 14 22" stroke="#9fd1e8" stroke-width="2" fill="none"/>` : `<rect x="236" y="160" width="50" height="5" fill="#a87a50" ${st}/><rect x="236" y="150" width="50" height="5" fill="#a87a50" ${st}/><path d="M240 165 v10 M282 165 v10" stroke="${L}" stroke-width="2"/>`;
       break;
     case 'foret':
       s += `<rect y="130" width="320" height="70" fill="#8fbf7f"/>`;
-      for (let i = 0; i < 9; i++) { const x = i * 38 - 6, y = 130 - (i % 3) * 8; s += i % 2 ? `<circle cx="${x}" cy="${y - 24}" r="26" fill="${season() === 'automne' ? ['#e0954f', '#d9733f', '#e8b04b'][i % 3] : '#6fae7d'}" stroke="${L}" stroke-width="1.2"/><rect x="${x - 3}" y="${y - 4}" width="6" height="14" fill="#8a6448"/>` : `<path d="M${x} ${y - 60} l22 64 h-44Z" fill="#4f8a5f" stroke="${L}" stroke-width="1.2"/>`; }
+      for (let i = 0; i < 10; i++) { const x = i * 34 - 6 + r() * 8, y = 136 - r() * 14; s += i % 3 ? `<path d="M${x} ${y - 62} l22 66 h-44Z" fill="${['#4f8a5f', '#5f9a6a'][i % 2]}" ${st}/>` : tree(x, y, 1.1, leaf[i % leaf.length]); }
+      if (cat === 'camping') s += `<path d="M220 172 L248 132 L276 172Z" fill="#e9a03a" ${st}/><path d="M248 132 V172" stroke="${L}"/>`;
       break;
-    case 'ville': case 'monument':
-      for (let i = 0; i < 8; i++) { const w = 34 + (i * 7) % 18, hh = 50 + (i * 23) % 50, x = i * 42 - 10; s += `<rect x="${x}" y="${150 - hh}" width="${w}" height="${hh}" fill="${['#e9b9a0', '#d9c6e8', '#f2d48f', '#b8d8f0'][i % 4]}" stroke="${L}" stroke-width="1.2"/><path d="M${x - 2} ${150 - hh} L${x + w / 2} ${138 - hh} L${x + w + 2} ${150 - hh}Z" fill="#c9604f" stroke="${L}" stroke-width="1.2"/>`; for (let r = 0; r < 3; r++) s += `<rect x="${x + 6}" y="${158 - hh + r * 14}" width="7" height="8" fill="${night ? '#f6d36b' : '#fff8ec'}"/><rect x="${x + w - 13}" y="${158 - hh + r * 14}" width="7" height="8" fill="${night ? '#f6d36b' : '#fff8ec'}"/>`; }
-      if (t0 === 'monument') s += `<path d="M120 150 V92 Q160 52 200 92 V150 H184 V104 Q160 80 136 104 V150Z" fill="#e8d6ae" stroke="${L}" stroke-width="1.6"/>`;
-      s += `<rect y="148" width="320" height="52" fill="#cfc6b8"/>`;
+    case 'eau':
+      s += `<path d="M-10 120 C60 88 130 104 180 90 S280 80 330 108 V130 H-10Z" fill="#9fc79a" ${st}/><rect y="124" width="320" height="76" fill="${cat === 'piscine' ? '#7fd0e8' : '#7fb6d9'}"/>`;
+      for (let i = 0; i < 7; i++) s += `<path d="M${16 + i * 46} ${140 + (i % 2) * 16} h24" stroke="#fff" stroke-width="2" opacity=".6" stroke-linecap="round"/>`;
+      for (let i = 0; i < 5; i++) s += `<path d="M${200 + i * 8} 130 q2 -20 ${i % 2 ? 4 : -2} -28" stroke="#5f9a5a" stroke-width="2.5" fill="none"/>`;
+      if (cat === 'etang') s += `<ellipse cx="250" cy="170" rx="12" ry="4" fill="#7fae4f" ${st}/><circle cx="252" cy="167" r="3" fill="#f6c2cf"/>`;
       break;
-    case 'desert':
-      s += `<path d="M-10 150 C60 110 130 120 180 140 S280 112 330 130 V200 H-10Z" fill="#ecc27e" stroke="${L}" stroke-width="1.4"/><path d="M-10 170 C80 150 160 176 330 160 V200 H-10Z" fill="#e3ad62"/>`;
+    case 'plage': case 'port': case 'phare':
+      s += `<rect y="104" width="320" height="56" fill="${sea}"/>`;
+      for (let i = 0; i < 7; i++) s += `<path d="M${10 + i * 46} ${118 + (i % 2) * 14} q8 -6 16 0 q8 6 16 0" fill="none" stroke="#fff" stroke-width="2" opacity=".7"/>`;
+      if (fam === 'port') { s += `<rect y="150" width="320" height="50" fill="#b5ab96"/>`; for (let i = 0; i < 3; i++) { const x = 150 + i * 56; s += `<path d="M${x} 140 h40 l-6 10 h-28Z" fill="${['#e5584f', '#4f88cf', '#f2c14e'][i]}" ${st}/><path d="M${x + 20} 140 V${100 + i * 6}" stroke="${L}" stroke-width="1.6"/><path d="M${x + 21} ${102 + i * 6} l16 30 h-16Z" fill="#fff" ${st}/>`; } }
+      else s += `<path d="M-10 150 C80 140 200 160 330 146 V200 H-10Z" fill="#f2deb0" ${st}/>`;
+      if (fam === 'phare') s += `<path d="M262 150 L268 64 H284 L290 150Z" fill="#fff" ${st}/><path d="M265 120 H287 M267 94 H285" stroke="#e5584f" stroke-width="8"/><rect x="266" y="52" width="20" height="12" fill="${night ? '#f6d36b' : '#cfe8f7'}" ${st}/><path d="M264 52 L276 42 L288 52Z" fill="#e5584f" ${st}/>${night ? '<path d="M276 58 L330 40 V76Z" fill="#f6e08a" opacity=".35"/>' : ''}`;
+      if (fam === 'plage') s += `<path d="M250 176 V128" stroke="${L}" stroke-width="2"/><path d="M222 132 Q250 104 278 132Z" fill="${accent}" ${st}/><rect x="226" y="176" width="40" height="8" rx="3" fill="#f39ab0" ${st}/>`;
       break;
-    default:
-      s += `<path d="M-10 130 C80 112 200 136 330 118 V200 H-10Z" fill="#b7d38a" stroke="${L}" stroke-width="1.4"/>`;
-      for (let i = 0; i < 5; i++) s += `<path d="M-10 ${150 + i * 10} C80 ${140 + i * 10} 200 ${160 + i * 10} 330 ${144 + i * 10}" stroke="${['#e7cd6a', '#9cc06a'][i % 2]}" stroke-width="6" fill="none"/>`;
+    case 'montagne': {
+      const a = 50 + r() * 40, b = 140 + r() * 60;
+      s += `<path d="M-10 150 L${a} ${60 + r() * 20} L${a + 50} 112 L${b} ${36 + r() * 20} L${b + 80} 130 L290 90 L340 150Z" fill="${p.tags && p.tags.includes('neige') ? '#dbe7f2' : '#9aa8bf'}" ${st}/><rect y="146" width="320" height="54" fill="${p.weather === 'neige' ? '#f4f7fb' : '#a9cf8f'}"/>`;
+      for (let i = 0; i < 6; i++) s += `<path d="M${20 + i * 56} 160 l9 -26 l9 26Z" fill="#5f9a6a" ${st}/>`;
+      if (cat === 'belvedere') s += `<rect x="226" y="150" width="60" height="5" fill="#a87a50" ${st}/><path d="M230 155 v20 M282 155 v20 M226 140 h60" stroke="#a87a50" stroke-width="3"/><circle cx="256" cy="134" r="7" fill="#9aa4ac" ${st}/>`;
+      else s += `<path d="M200 200 Q230 170 260 160 T320 150" stroke="#e9dcc0" stroke-width="7" fill="none"/><path d="M262 160 v-24 h22 l-6 6 l6 6 h-22" fill="#f2c14e" ${st}/>`;
+      break;
+    }
+    case 'eglise': s += houses(4, 150, roof) + `<rect y="148" width="320" height="52" fill="#cfc6b8"/><rect x="180" y="80" width="96" height="70" fill="#e9e2d6" ${st}/><path d="M176 80 L228 50 L280 80Z" fill="#7a6a5a" ${st}/><rect x="236" y="30" width="24" height="50" fill="#e9e2d6" ${st}/><path d="M232 30 L248 4 L264 30Z" fill="#5c6b7a" ${st}/><circle cx="228" cy="104" r="12" fill="${night ? '#f6d36b' : '#9fc7e6'}" ${st}/><path d="M218 150 v-22 a10 10 0 0 1 20 0 v22Z" fill="#a87a50" ${st}/>`; break;
+    case 'musee': s += houses(4, 150, roof) + `<rect y="148" width="320" height="52" fill="#cfc6b8"/><path d="M160 70 L240 40 L320 70Z" fill="#e9e2d6" ${st}/><rect x="164" y="70" width="152" height="8" fill="#e9e2d6" ${st}/>${[0, 1, 2, 3, 4].map(i => `<rect x="${172 + i * 30}" y="78" width="10" height="64" fill="#f4f1ea" ${st}/>`).join('')}<rect x="160" y="142" width="160" height="8" fill="#e9e2d6" ${st}/><rect x="196" y="100" width="36" height="22" fill="${accent}" opacity=".8" ${st}/>`; break;
+    case 'gare': s += `<rect y="148" width="320" height="52" fill="#b5ab96"/><path d="M0 170 H320 M0 184 H320" stroke="#7a6a5a" stroke-width="3"/><rect x="150" y="70" width="170" height="80" fill="#e9dcc8" ${st}/><path d="M146 70 L235 44 L324 70Z" fill="#5c6b7a" ${st}/><circle cx="235" cy="88" r="12" fill="#fff" ${st}/><path d="M235 88 v-8 M235 88 h6" stroke="${L}" stroke-width="1.6"/>${[0, 1, 2, 3].map(i => `<path d="M${160 + i * 40} 150 v-28 a12 12 0 0 1 24 0 v28Z" fill="${win}" ${st}/>`).join('')}`; break;
+    case 'civique': s += houses(4, 150, roof) + `<rect y="148" width="320" height="52" fill="${cat === 'sport' ? '#8fcf7f' : '#cfc6b8'}"/><rect x="160" y="74" width="150" height="76" fill="#f2ead6" ${st}/><path d="M156 74 L235 52 L314 74Z" fill="#5c6b7a" ${st}/><rect x="226" y="44" width="18" height="14" fill="#f2ead6" ${st}/><path d="M244 44 v-14 l12 4 l-12 4" fill="#4f88cf" stroke="${L}"/>${[0, 1, 2, 3, 4].map(i => `<rect x="${170 + i * 28}" y="90" width="14" height="18" fill="${win}" ${st}/>`).join('')}<rect x="224" y="120" width="22" height="30" fill="#a87a50" ${st}/>`; break;
+    case 'rue': s += houses(7, 152, roof) + `<path d="M0 150 H320 V200 H0Z" fill="#cfc6b8"/><path d="M120 200 L160 150 H200 L260 200Z" fill="#b5ab96"/>${[0, 1, 2, 3, 4, 5, 6].map(i => `<path d="M${i * 50} 176 h30" stroke="#fff" stroke-width="3" opacity=".7"/>`).join('')}<rect x="290" y="96" width="4" height="56" fill="${L}"/><circle cx="292" cy="94" r="7" fill="${night ? '#f6d36b' : '#fff8ec'}" ${st}/>`; break;
+    case 'ferme': s += `<path d="M-10 130 C80 112 200 136 330 118 V200 H-10Z" fill="#b7d38a" ${st}/>` + [0, 1, 2, 3].map(i => `<path d="M-10 ${150 + i * 12} C80 ${140 + i * 12} 200 ${160 + i * 12} 330 ${144 + i * 12}" stroke="${['#e7cd6a', '#9cc06a'][i % 2]}" stroke-width="6" fill="none"/>`).join('') + `<rect x="210" y="96" width="70" height="50" fill="#c9604f" ${st}/><path d="M204 96 L245 66 L286 96Z" fill="#8a3a3a" ${st}/><path d="M232 146 v-26 h26 v26 M232 120 l26 26 M258 120 l-26 26" stroke="#fff" stroke-width="2" fill="none"/><ellipse cx="300" cy="160" rx="12" ry="7" fill="#fff" ${st}/><circle cx="292" cy="162" r="2" fill="${L}"/>`; break;
+    default: { // campagne, désert, ville, mer… (grands lieux sans type) : le paysage
+      const t0 = cat || 'campagne';
+      if (t0 === 'desert') s += `<path d="M-10 150 C60 110 130 120 180 140 S280 112 330 130 V200 H-10Z" fill="#ecc27e" ${st}/><path d="M-10 170 C80 150 160 176 330 160 V200 H-10Z" fill="#e3ad62"/><path d="M290 160 v-26 m0 10 h-8 v-8 m8 12 h8 v-10" stroke="#5f9a5a" stroke-width="5" stroke-linecap="round" fill="none"/>`;
+      else if (t0 === 'ville' || t0 === 'monument') s += houses(8, 150, roof) + `<rect y="148" width="320" height="52" fill="#cfc6b8"/>`;
+      else if (t0 === 'mer' || t0 === 'ile') { s += `<rect y="110" width="320" height="46" fill="${sea}"/><path d="M-10 150 C80 140 200 160 330 146 V200 H-10Z" fill="#f2deb0" ${st}/>`; if (t0 === 'ile') s += `<path d="M262 160 C258 128 262 104 270 90" stroke="#8a6448" stroke-width="5" fill="none"/><path d="M270 90 c-18 -8 -30 4 -34 10 M270 90 c14 -14 30 -6 34 2" stroke="#5f9a6a" stroke-width="7" fill="none" stroke-linecap="round"/>`; }
+      else if (t0 === 'lac') s += pcScene('eau', 'lac', p, r, L, night, R, sea);
+      else if (t0 === 'montagne' || t0 === 'neige') s += pcScene('montagne', null, p, r, L, night, R, sea);
+      else if (t0 === 'foret') s += pcScene('foret', null, p, r, L, night, R, sea);
+      else { s += `<path d="M-10 130 C80 112 200 136 330 118 V200 H-10Z" fill="#b7d38a" ${st}/>`; for (let i = 0; i < 5; i++) s += `<path d="M-10 ${150 + i * 10} C80 ${140 + i * 10} 200 ${160 + i * 10} 330 ${144 + i * 10}" stroke="${R && R.id === 'paca' ? ['#b9a6e6', '#9cc06a'][i % 2] : ['#e7cd6a', '#9cc06a'][i % 2]}" stroke-width="6" fill="none"/>`; s += tree(270, 128, 1, leaf[0]); }
+    }
   }
-  if (p.weather === 'pluie') for (let i = 0; i < 26; i++) s += `<path d="M${(i * 37) % 320} ${(i * 23) % 140} l-4 10" stroke="#6f8fb0" stroke-width="1.6" opacity=".7"/>`;
-  if (p.weather === 'neige') for (let i = 0; i < 26; i++) s += `<circle cx="${(i * 41) % 320}" cy="${(i * 19) % 150}" r="2" fill="#fff"/>`;
-  if (p.snowman) s += `<circle cx="80" cy="168" r="20" fill="#fff" stroke="${L}" stroke-width="1.4"/><circle cx="80" cy="136" r="14" fill="#fff" stroke="${L}" stroke-width="1.4"/><path d="M80 138 l10 3 l-10 2Z" fill="#f2a05a"/><circle cx="75" cy="132" r="1.6" fill="${L}"/><circle cx="84" cy="132" r="1.6" fill="${L}"/><rect x="69" y="146" width="22" height="5" rx="2" fill="#d96b5f"/>`;
-  const comps = p.comps || [];
-  comps.filter(k => CHARS[k]).forEach((k, i) => {
-    const w = 96, x = comps.length === 1 ? (p.snowman ? 150 : 112) : 70 + i * 92;
-    const o = i === 0 ? (S.outfits[k] || CHARS[k].outfit) : CHARS[k].outfit;
-    s += drawChar(k, o, i === 0 ? 'rire' : 'content', uid + 'c' + i).replace('<svg ', `<svg x="${x}" y="${200 - w * 1.06}" width="${w}" height="${w * 1.1}" `);
+  return s;
+}
+function postcardSVG(p, uid) {
+  p = p || {};
+  const h = p.hour != null ? p.hour : 12, night = h < 6 || h >= 21 || p.weather === 'etoile', dawn = h >= 6 && h < 8, dusk = h >= 18 && h < 21, L = '#5b4636';
+  const tags = p.tags || [], cat = p.cat || (typeof POI_CATS !== 'undefined' && POI_CATS[tags[0]] ? tags[0] : null);
+  let R = null; try { R = p.rg && typeof RG !== 'undefined' ? RG[p.rg] : (isFinite(p.lon) && typeof regionAt === 'function' ? regionAt(p.lon, p.lat) : null); } catch (e) { R = null; }
+  const nm = pcNorm(p.place), lm = (PC_LAND.find(([, rx]) => rx.test(nm) || rx.test(pcNorm(p.title))) || [])[0] || null;
+  const BASES = ['montagne', 'neige', 'desert', 'mer', 'ile', 'lac', 'foret', 'ville', 'monument', 'campagne'];
+  const fam = cat && PC_SHOP.includes(cat) ? 'shop' : cat && PC_FAM[cat] ? PC_FAM[cat] : 'land';
+  const r = pcRng(pcHash(p.place || p.title || 'x')), uidS = String(uid || 'pc').replace(/[^\w-]/g, '');
+  const top = night ? '#1f2a52' : dawn ? '#f6b8a0' : dusk ? '#f08a6a' : p.weather === 'pluie' ? '#9fb0c2' : '#8fc9ea';
+  const bot = night ? '#3b4a7a' : dawn ? '#fde2c4' : dusk ? '#f9d39a' : p.weather === 'pluie' ? '#cfd8e2' : '#d9f0fb';
+  const sea = R && R.g >= 2 && !['arctique', 'canada', 'scandinavie'].includes(R.id) ? '#3fb5c2' : R && ['arctique', 'scandinavie', 'britanniques', 'bretagne', 'normandie'].includes(R.id) ? '#4f7fa8' : '#5fa3c9';
+  let s = `<svg viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sk${uidS}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bot}"/></linearGradient></defs><rect width="320" height="200" fill="url(#sk${uidS})"/>`;
+  if (night) for (let i = 0; i < 22; i++) s += `<circle cx="${(i * 53 + 7) % 320}" cy="${(i * 29) % 100}" r="${i % 3 ? 1 : 1.6}" fill="#fff" opacity=".8"/>`;
+  if (p.weather === 'etoile' && typeof starPath === 'function') s += `<path d="M40 20 L130 60" stroke="#fff6c9" stroke-width="2.4" stroke-linecap="round"/><path d="${starPath(132, 61, 7)}" fill="#fff6c9"/>`;
+  if (p.weather === 'arc') ['#f29a8a', '#f6c46b', '#f6e08a', '#a6d88f', '#8cc7e8', '#b9a6e6'].forEach((c, i) => { s += `<path d="M${30 + i * 9} 190 A${130 - i * 9} ${130 - i * 9} 0 0 1 ${290 - i * 9} 190" fill="none" stroke="${c}" stroke-width="9" opacity=".7"/>`; });
+  if (p.weather === 'soleil' || night || (!p.weather)) s += `<circle cx="${night ? 60 : dawn ? 40 : dusk ? 280 : 150 + r() * 60}" cy="${dawn || dusk ? 70 : 34}" r="${night ? 13 : 18}" fill="${night ? '#f4efd2' : dawn || dusk ? '#f7a96b' : '#fbd76a'}"/>${night ? '<circle cx="66" cy="30" r="11" fill="#1f2a52"/>' : ''}`;
+  if (p.weather === 'nuages' || p.weather === 'pluie' || p.weather === 'neige') s += `<g fill="${p.weather === 'pluie' ? '#e9eef3' : '#fff'}" opacity=".92"><ellipse cx="${60 + r() * 40}" cy="38" rx="34" ry="13"/><ellipse cx="${90 + r() * 40}" cy="30" rx="24" ry="14"/><ellipse cx="${200 + r() * 60}" cy="52" rx="30" ry="11"/></g>`;
+  const scene = pcScene(fam === 'land' ? null : fam, fam === 'land' ? (tags.find(x => BASES.includes(x)) || 'campagne') : cat, p, r, L, night, R, sea);
+  // grand lieu célèbre : le monument passe devant le décor ; lieu du quotidien : il reste au fond
+  if (lm && fam === 'land') s += scene + pcLandmark(lm, L, night); else s += (lm ? pcLandmark(lm, L, night) : '') + scene;
+  if (R && R.id === 'japon' && !night) for (let i = 0; i < 10; i++) s += `<ellipse cx="${(i * 37 + 11) % 320}" cy="${(i * 23 + 20) % 140}" rx="2.6" ry="1.6" fill="#f6c2cf"/>`;
+  if (p.weather === 'pluie') for (let i = 0; i < 26; i++) s += `<path d="M${(i * 37) % 320} ${(i * 23) % 150} l-4 10" stroke="#6f8fb0" stroke-width="1.6" opacity=".7"/>`;
+  if (p.weather === 'neige') for (let i = 0; i < 26; i++) s += `<circle cx="${(i * 41) % 320}" cy="${(i * 19) % 160}" r="2" fill="#fff"/>`;
+  if (night) s += `<rect width="320" height="200" fill="#1f2a52" opacity=".18"/>`;
+  if (p.snowman) s += `<circle cx="96" cy="168" r="20" fill="#fff" stroke="${L}" stroke-width="1.4"/><circle cx="96" cy="136" r="14" fill="#fff" stroke="${L}" stroke-width="1.4"/><path d="M96 138 l10 3 l-10 2Z" fill="#f2a05a"/><rect x="85" y="146" width="22" height="5" rx="2" fill="#d96b5f"/>`;
+  const comps = (p.comps || []).filter(k => typeof CHARS !== 'undefined' && CHARS[k]);
+  comps.forEach((k, i) => {
+    const w = 92, x = comps.length === 1 ? (p.snowman ? 120 : 26) : 12 + i * 78;
+    const o = i === 0 ? ((S.outfits && S.outfits[k]) || CHARS[k].outfit) : CHARS[k].outfit;
+    s += drawChar(k, o, i === 0 ? 'rire' : 'content', uidS + 'c' + i).replace('<svg ', `<svg x="${x}" y="${200 - w * 1.06}" width="${w}" height="${w * 1.1}" `);
   });
-  s += `<rect x="252" y="146" width="56" height="44" fill="#fffaf0" stroke="#c9604f" stroke-width="1.5" stroke-dasharray="3 2"/><text x="280" y="166" text-anchor="middle" font-family="Caveat,cursive" font-size="13" fill="#c9604f">${esc((p.place || '').slice(0, 10))}</text><text x="280" y="181" text-anchor="middle" font-family="Caveat,cursive" font-size="11" fill="#c9604f">${new Date(p.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</text>`;
+  // cadre aux couleurs de la région, bandeau avec le nom du lieu, timbre et date
+  const rc = R ? R.color : '#c9604f', place = String(p.place || '').slice(0, 30), date = p.date ? new Date(p.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  s += `<rect x="3" y="3" width="314" height="194" fill="none" stroke="${rc}" stroke-width="6" rx="6"/><rect x="3" y="3" width="314" height="194" fill="none" stroke="#fffaf0" stroke-width="2" stroke-dasharray="6 4" rx="6"/>`;
+  s += `<rect x="12" y="10" width="${Math.min(220, 26 + place.length * 7.2)}" height="24" rx="12" fill="#fffaf0" stroke="${rc}" stroke-width="2"/><text x="24" y="27" font-family="Baloo 2,sans-serif" font-weight="700" font-size="13" fill="${L}">${esc(place)}</text>`;
+  s += `<g transform="translate(262 12) rotate(4)"><rect width="46" height="54" fill="#fffaf0" stroke="${rc}" stroke-width="1.6" stroke-dasharray="3 2"/><rect x="5" y="5" width="36" height="30" fill="${rc}" opacity=".85"/>${R && typeof rgIcon === 'function' ? '' : ''}<text x="23" y="25" text-anchor="middle" font-family="Baloo 2,sans-serif" font-weight="700" font-size="${R && R.short.length > 9 ? 6.5 : 8.5}" fill="#fff">${esc(R ? R.short.slice(0, 14) : '')}</text><text x="23" y="47" text-anchor="middle" font-family="Caveat,cursive" font-size="8.5" fill="${L}">${esc(date)}</text></g>`;
   return s + `</svg>`;
 }
 
@@ -7655,6 +7781,83 @@ function regionAt(lon, lat) {
   return RG[id];
 }
 
+// ---------------- v19 : zones fines (départements) et « où tombe une spécialité » ----------------
+// Le joueur : « du bleu d'Auvergne récoltable partout alors que je suis à Lyon ». Une région administrative est trop grande :
+// on la découpe en zones (repères = villes ; la plus proche gagne), et chaque spécialité du codex dit OÙ elle se trouve
+// (zones) et DANS QUEL TYPE DE LIEU (fromagerie, marché, sentier…). Les objets de zone eux-mêmes sont dans 30_butin.js (BT_ZONE).
+const RG_ZONES = {
+  lyon: { c: 'Lyon', r: 'ara', n: 'Lyon et Rhône', de: 'de Lyon', pts: '4.84,45.76 4.72,45.99 4.6,45.75 4.88,45.6 4.93,45.85 4.68,45.88 4.87,45.53' },
+  alpes: { c: 'Grenoble', r: 'ara', n: 'Alpes (Savoie, Isère)', de: 'des Alpes', pts: '5.72,45.19 5.92,45.57 6.13,45.9 6.87,45.92 6.39,45.68 6.66,45.2 5.5,45.1 6.48,46.37 6.65,45.5 6.06,45.36 5.79,45.36 6.9,45.4' },
+  auvergne: { c: 'Clermont-Ferrand', r: 'ara', n: 'Auvergne', de: 'd’Auvergne', pts: '3.08,45.78 2.44,44.93 3.88,45.04 3.33,46.57 3.42,46.13 2.6,46.34 3.09,45.03 2.83,45.6 3.55,45.86 3.38,45.3 2.33,45.22 2.75,45.2 3.74,45.55 3.9,46.3' },
+  drome_ardeche: { c: 'Valence', r: 'ara', n: 'Drôme et Ardèche', de: 'de Drôme-Ardèche', pts: '4.89,44.93 4.75,44.56 4.6,44.73 4.39,44.62 5.14,44.36 5.37,44.75 4.43,44.4 5.05,45.04 4.67,45.24 4.7,44.38' },
+  loire: { c: 'Saint-Étienne', r: 'ara', n: 'Loire (Saint-Étienne, Forez)', de: 'de la Loire', pts: '4.39,45.43 4.07,46.04 4.06,45.6 4.27,45.73 4.12,45.14' },
+  ain: { c: 'Bourg-en-Bresse', r: 'ara', n: 'Ain (Bresse, Dombes)', de: 'de l’Ain', pts: '5.23,46.2 5.65,46.26 5.36,45.86 6.06,46.33 5.0,46.0 5.69,45.76 4.97,46.31' },
+  provence: { c: 'Aix-en-Provence', r: 'paca', n: 'Provence', de: 'de Provence', pts: '5.37,43.3 5.45,43.53 4.81,43.95 4.63,43.68 5.93,43.12 5.4,43.88 5.05,44.05 5.07,44.24 4.45,43.45 5.79,43.83' },
+  cote_azur: { c: 'Nice', r: 'paca', n: 'Côte d’Azur', de: 'de la Côte d’Azur', pts: '7.26,43.7 7.0,43.55 6.64,43.27 6.74,43.43 6.92,43.66 7.5,43.78 7.42,43.74' },
+  alpes_sud: { c: 'Gap', r: 'paca', n: 'Alpes du Sud', de: 'des Alpes du Sud', pts: '6.08,44.56 6.24,44.09 6.65,44.39 6.64,44.9 5.94,44.2 6.51,43.85 6.89,43.95' },
+};
+const RG_ZPTS = []; for (const [id, z] of Object.entries(RG_ZONES)) { z.id = id; z.pts.split(' ').forEach(p => { const [lon, lat] = p.split(',').map(Number); RG_ZPTS.push([lon, lat, id]); }); }
+// zone d'un point (seulement dans une région découpée) ; sinon null
+function rgZoneAt(lon, lat) {
+  lon = +lon; lat = +lat; if (!isFinite(lon) || !isFinite(lat)) return null;
+  let R = null; try { R = regionAt(lon, lat); } catch (e) { R = null; }
+  if (!R) return null;
+  let best = null, bd = 1e9; const k = Math.cos(lat * Math.PI / 180);
+  for (const [x, y, id] of RG_ZPTS) { if (RG_ZONES[id].r !== R.id) continue; const dx = (x - lon) * k, dy = y - lat, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = id; } }
+  return best ? RG_ZONES[best] : null;
+}
+// familles de lieux : un lieu du quotidien (cat) ou un grand lieu (tags)
+const RG_K_FOOD = ['boulangerie', 'cafe', 'restaurant', 'glacier', 'chocolaterie', 'epicerie', 'fromagerie', 'boucherie', 'poissonnerie', 'marche', 'caviste'];
+const RG_K_CULT = ['librairie', 'musee', 'bibliotheque', 'cinema', 'patrimoine', 'mairie', 'ecole', 'poste', 'gare', 'rue', 'hotel'];
+const RG_K_SHOP = ['mode', 'friperie', 'boutique', 'jouets', 'bricolage', 'coiffeur', 'laverie', 'pharmacie', 'puces', 'fleuriste'];
+const RG_K_FARM = ['ferme', 'marche', 'jardin', 'campagne', 'route', 'verger'];
+const RG_K_SEA = ['plage', 'port', 'phare', 'poissonnerie'];
+const RG_K_NAT = ['parc', 'foret', 'riviere', 'etang', 'sentier', 'belvedere', 'camping', 'campagne', 'jardin', 'ferme', 'route', 'plage', 'zoo'];
+const RG_K_MONT = ['sentier', 'belvedere', 'camping'];
+// où tombe chaque spécialité du codex : z = zones permises (sinon toute la région), c = types de lieux, t = paysages des grands lieux
+const RG_RES_WHERE = {
+  soie_lyon: { z: ['lyon'], c: ['mode', 'friperie', 'boutique', 'musee', 'patrimoine', 'puces', 'librairie', 'rue', 'coiffeur'], t: ['ville', 'monument'], w: 'boutiques, musées et vieilles rues de Lyon' },
+  bleu_auvergne: { z: ['auvergne'], c: ['fromagerie', 'marche', 'ferme', 'epicerie', 'restaurant'], t: ['campagne', 'montagne'], w: 'fromageries, marchés et fermes d’Auvergne' },
+  noix_grenoble: { z: ['alpes', 'drome_ardeche'], c: ['marche', 'epicerie', 'ferme', 'verger', 'campagne', 'foret', 'boulangerie'], t: ['campagne', 'foret', 'montagne'], w: 'marchés, vergers et fermes de l’Isère et de la Drôme' },
+  pierre_lave: { z: ['auvergne', 'drome_ardeche'], c: ['sentier', 'belvedere', 'campagne', 'route', 'patrimoine', 'rue', 'riviere', 'foret'], t: ['montagne', 'campagne'], w: 'sentiers, volcans et vieilles pierres d’Auvergne et d’Ardèche' },
+  cristal_alpes: { z: ['alpes'], c: ['sentier', 'belvedere', 'camping', 'musee', 'riviere'], t: ['montagne', 'neige'], w: 'sentiers et sommets des Alpes' },
+  lavande: { z: ['provence', 'alpes_sud'], c: ['campagne', 'ferme', 'marche', 'fleuriste', 'route', 'sentier', 'jardin'], t: ['campagne'], w: 'champs, marchés et fermes de Haute-Provence' },
+  savon_marseille: { z: ['provence'], c: ['boutique', 'epicerie', 'marche', 'pharmacie', 'laverie', 'puces'], t: ['ville'], w: 'boutiques et marchés de Provence' },
+  calisson: { z: ['provence'], c: ['chocolaterie', 'boulangerie', 'epicerie', 'cafe', 'marche'], t: ['ville', 'campagne'], w: 'confiseries et pâtisseries de Provence' },
+  ocre_roussillon: { z: ['provence'], c: ['sentier', 'belvedere', 'campagne', 'route', 'boutique'], t: ['campagne', 'montagne'], w: 'sentiers et villages du Luberon' },
+  jasmin_grasse: { z: ['cote_azur'], c: ['fleuriste', 'jardin', 'boutique', 'campagne', 'parc'], t: ['campagne', 'ville'], w: 'fleuristes et jardins de la Côte d’Azur' },
+};
+// sous-types : quelle famille de lieux les vend ou les cache
+const RG_SUB_FOOD = ['fromage', 'fruit', 'legume', 'sucre', 'plat', 'boisson', 'mer', 'pain', 'agrume', 'pomme', 'glace'];
+const RG_SUB_SEA = ['sable', 'coquillage', 'corail', 'perle'];
+const RG_SUB_NAT = ['fleur', 'feuille', 'pierre', 'bois', 'cristal', 'plume', 'graine', 'mousse', 'champignon', 'flocon', 'laine', 'ble'];
+function rgDestCat(dest) { const c = dest && (dest.cat || (dest.tags && POI_CATS[dest.tags[0]] ? dest.tags[0] : null)); return c || null; }
+// la spécialité x peut-elle tomber à cet endroit ?
+function rgResFits(x, dest) {
+  if (!x || !dest) return true;
+  const W = RG_RES_WHERE[x.id], cat = rgDestCat(dest), tags = dest.tags || [];
+  if (W && W.z) { const Z = rgZoneAt(dest.lon, dest.lat); if (!Z || !W.z.includes(Z.id)) return false; }
+  if (W) return cat ? W.c.includes(cat) : tags.some(t => W.t.includes(t));
+  // règle générale (autres régions) : la famille de lieux suit le sous-type
+  if (!cat) { // grand lieu : ville = tout ; nature = produits de nature et de ferme
+    if (tags.includes('ville')) return true;
+    if (RG_SUB_SEA.includes(x.sub)) return tags.some(t => ['mer', 'ile', 'lac'].includes(t));
+    return true;
+  }
+  if (RG_SUB_FOOD.includes(x.sub)) return RG_K_FOOD.includes(cat) || RG_K_FARM.includes(cat) || (x.sub === 'mer' && RG_K_SEA.includes(cat)) || cat === 'hotel' || cat === 'camping';
+  if (RG_SUB_SEA.includes(x.sub)) return RG_K_SEA.includes(cat) || tags.some(t => t === 'mer' || t === 'ile') || cat === 'boutique' || cat === 'puces';
+  if (RG_SUB_NAT.includes(x.sub)) return RG_K_NAT.includes(cat) || cat === 'fleuriste' || (x.sub === 'pierre' && (cat === 'patrimoine' || cat === 'rue')) || (x.sub === 'laine' && (cat === 'mode' || cat === 'friperie' || cat === 'marche'));
+  return RG_K_CULT.includes(cat) || RG_K_SHOP.includes(cat) || cat === 'marche';
+}
+// texte « où la trouver » d'une spécialité du codex
+function rgResWhere(x) {
+  const W = RG_RES_WHERE[x.id]; if (W) return W.w;
+  if (RG_SUB_FOOD.includes(x.sub)) return 'commerces de bouche, marchés et fermes de la région';
+  if (RG_SUB_SEA.includes(x.sub)) return 'plages et ports de la région';
+  if (RG_SUB_NAT.includes(x.sub)) return 'parcs, bois, sentiers et campagne de la région';
+  return 'boutiques, musées et vieilles rues de la région';
+}
+
 // ---------------- état (sauvegarde) ----------------
 function rgState() {
   if (!S.regions || typeof S.regions !== 'object') S.regions = {};
@@ -7721,10 +7924,13 @@ const rgDurF = dur => RG_DUR_F[dur] != null ? RG_DUR_F[dur] : 1;
 function rgDistBonus(km, dur) { return Math.min(0.8, Math.max(0, km) / 7000) * rgDurF(dur); }
 function rgRarityWeights(km, luck, dur) { const b = rgDistBonus(km, dur) + Math.min(0.3, Math.max(0, luck || 0) * 0.08), top = RG_DUR_TOP[dur] != null ? RG_DUR_TOP[dur] : 1; return RG_RAR_W.map((w, r) => w * Math.pow(1 + b, r) * (r >= 3 ? top : 1)); }
 const rgShortTrip = dur => dur === 'eclair' || dur === 'court';
-function rgPickRes(R, km, luck, preferNew, dur, maxRar) {
-  let pool = R.res; if (maxRar != null) { const lo = pool.filter(x => x.rar <= maxRar); if (lo.length) pool = lo; }
+// v19 : dest (facultatif) = seules les spécialités qui ont du sens à cet endroit ; null si aucune
+function rgPickRes(R, km, luck, preferNew, dur, maxRar, dest) {
+  let pool = dest ? R.res.filter(x => rgResFits(x, dest)) : R.res; if (!pool.length) return null;
+  if (maxRar != null) { const lo = pool.filter(x => x.rar <= maxRar); if (lo.length) pool = lo; }
   if (preferNew) { const nf = pool.filter(x => !rgGot(x.id)); if (nf.length) pool = nf; }
-  const W = rgRarityWeights(km, luck, dur), w = pool.map(x => W[x.rar]);
+  const rec = typeof btRecentN === 'function' ? btRecentN : () => 0; // moins de répétitions : ce qui vient de tomber pèse moins
+  const W = rgRarityWeights(km, luck, dur), w = pool.map(x => W[x.rar] / (1 + 1.2 * rec(x.name)));
   let r = Math.random() * w.reduce((a, b) => a + b, 0);
   for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i]; }
   return pool[0];
@@ -7735,7 +7941,7 @@ function rgMakeRes(x, place, tags, origin) {
   return it;
 }
 // probabilités affichées (pour l'aperçu avant de partir)
-function rgResChances(R, km, luck, dur) { const W = rgRarityWeights(km, luck, dur), tot = R.res.reduce((a, x) => a + W[x.rar], 0); return R.res.map(x => ({ x, p: W[x.rar] / tot })); }
+function rgResChances(R, km, luck, dur, dest) { const W = rgRarityWeights(km, luck, dur), pool = dest ? R.res.filter(x => rgResFits(x, dest)) : R.res, tot = pool.reduce((a, x) => a + W[x.rar], 0) || 1; return pool.map(x => ({ x, p: W[x.rar] / tot })); }
 function rgDreamNeeds(k, it) {
   try {
     if (typeof curDream !== 'function' || typeof itemMatches !== 'function') return false;
@@ -7765,17 +7971,29 @@ function rgBeforeCollect(t) {
   const elig = t.bag.map((it, i) => ({ it, i })).filter(({ it }) => it && !it.rid && !it.special && !it.edition && (it.cat === 'm' || it.cat === 'n') && it.rarity <= 1 && !rgDreamNeeds(t.comp, it));
   const maxConv = Math.max(1, Math.ceil(t.bag.length * 0.35)), origin = { place, km };
   const made = [];
-  elig.sort(() => Math.random() - 0.5).forEach(({ i }, n) => { if (made.length < maxConv && (n === 0 || Math.random() < 0.22)) { const x = rgPickRes(R, km, t.luck, false, t.dur), it = rgMakeRes(x, dest.name || place, tags, origin); t.bag[i] = it; made.push(it); } });
-  if (!made.length) { const it = rgMakeRes(rgPickRes(R, km, t.luck, false, t.dur), dest.name || place, tags, origin); t.bag.push(it); made.push(it); }
-  // 3. première visite : une spécialité garantie en plus, de préférence encore inconnue
+  // v19 : seulement les spécialités qui ont du sens ICI (zone + type de lieu) ; sinon un objet local de la zone (30_butin.js)
+  const nFit = R.res.filter(x => rgResFits(x, dest)).length, rec = typeof btRecentN === 'function' ? btRecentN : () => 0;
+  // moins de répétitions : peu de spécialités possibles ici = moins souvent ; une spécialité déjà rapportée récemment laisse sa place
+  const pick = () => { const x = rgPickRes(R, km, t.luck, false, t.dur, null, dest); return x && !(rec(x.name) >= 1 && Math.random() < Math.min(0.85, 0.45 * rec(x.name))) ? x : null; };
+  if (nFit) {
+    const cap = nFit >= 3 ? maxConv : 1, p0 = nFit >= 3 ? 0.85 : 0.45;
+    elig.sort(() => Math.random() - 0.5).forEach(({ i }, n) => { if (made.length < cap && (n === 0 ? Math.random() < p0 : Math.random() < 0.22)) { const x = pick(); if (!x) return; const it = rgMakeRes(x, dest.name || place, tags, origin); t.bag[i] = it; made.push(it); } });
+  }
+  if (!made.length && typeof btZoneGift === 'function' && Math.random() < 0.7) { const it = btZoneGift(dest, t); if (it) { it.origin = { region: R.id, place, km }; t.bag.push(it); } }
+  // 3. première visite : une spécialité garantie en plus, de préférence encore inconnue (ou, à défaut, un objet de la zone)
   let bonus = null;
-  if (isNew) { bonus = rgMakeRes(rgPickRes(R, km, (t.luck || 0) + 1.5, true, t.dur, rgShortTrip(t.dur) ? 1 : null), dest.name || place, tags, origin); t.bag.push(bonus); }
+  if (isNew) {
+    const x = rgPickRes(R, km, (t.luck || 0) + 1.5, true, t.dur, rgShortTrip(t.dur) ? 1 : null, dest);
+    if (x) bonus = rgMakeRes(x, dest.name || place, tags, origin);
+    else if (typeof btZoneGift === 'function') { bonus = btZoneGift(dest, t, 1); if (bonus) bonus.origin = { region: R.id, place, km }; }
+    if (bonus) t.bag.push(bonus);
+  }
   const newRes = [...new Set(t.bag.filter(it => it.rid && !rgGot(it.rid)).map(it => it.rid))];
   // 4. codex
   const s = st.seen[R.id] || (st.seen[R.id] = { trips: 0, first: Date.now() });
   s.trips++; s.last = Date.now();
   t.bag.forEach(it => { if (it.rid) st.got[it.rid] = (st.got[it.rid] || 0) + 1; });
-  rgLastHaul = { R, isNew, made: made.length + (bonus ? 1 : 0), newRes, km, complete: rgComplete(R) && newRes.length > 0 };
+  rgLastHaul = { R, isNew, made: made.length + (bonus && bonus.rid ? 1 : 0), zone: (rgZoneAt(dest.lon, dest.lat) || {}).n || '', newRes, km, complete: rgComplete(R) && newRes.length > 0 };
 }
 if (typeof collect === 'function') collect = (orig => function () {
   const k = S.sel, t = S.trips[k];
@@ -7793,7 +8011,7 @@ function rgHaulBanner(h) {
   const box = m.querySelector('.haul'); if (!box) return;
   const n = REGIONS.filter(R => rgDiscovered(R.id)).length;
   const txt = h.isNew ? `<b>Nouvelle région : ${esc(h.R.name)}</b><small>${n}/${REGIONS.length} régions découvertes · une spécialité offerte !</small>`
-    : `<b>${esc(h.R.name)}</b><small>${h.made} spécialité${h.made > 1 ? 's' : ''} régionale${h.made > 1 ? 's' : ''}${h.newRes.length ? ` · ${h.newRes.length} nouvelle${h.newRes.length > 1 ? 's' : ''} pour le codex` : ''} · ${rgGotCount(h.R)}/${h.R.res.length}</small>`;
+    : `<b>${esc(h.R.name)}${h.zone ? ` · ${esc(h.zone)}` : ''}</b><small>${h.made ? `${h.made} spécialité${h.made > 1 ? 's' : ''} régionale${h.made > 1 ? 's' : ''}` : 'Pas de spécialité du codex dans ce type de lieu'}${h.newRes.length ? ` · ${h.newRes.length} nouvelle${h.newRes.length > 1 ? 's' : ''} pour le codex` : ''} · ${rgGotCount(h.R)}/${h.R.res.length}</small>`;
   box.insertAdjacentHTML('beforebegin', `<button class="rgban${h.isNew ? ' new' : ''}" style="--rg:${h.R.color}" data-rgopen="${h.R.id}">${rgIcon(h.R, 'm')}<span>${txt}</span><em>Codex</em></button>`);
   if (h.complete) box.insertAdjacentHTML('afterend', `<p class="rgdone">Toutes les spécialités ${esc(rgDe(h.R))} sont réunies ! Récompense à récupérer dans Sac & Album › Régions.</p>`);
 }
@@ -7962,10 +8180,10 @@ if (typeof liveFindHTML === 'function') liveFindHTML = (orig => function (d) {
   let h = orig.apply(this, arguments);
   try {
     const R = regionAt(d.lon, d.lat), km = kmBetween(homeObj(), d), dd = DURS.find(x => x.key === plan.dur) || DURS[0];
-    const ch = rgResChances(R, km, dd.luck, dd.key).sort((a, b) => (rgGot(a.x.id) - rgGot(b.x.id)) || b.x.rar - a.x.rar);
+    const ch = rgResChances(R, km, dd.luck, dd.key, d).sort((a, b) => (rgGot(a.x.id) - rgGot(b.x.id)) || b.x.rar - a.x.rar);
     const show = [ch.find(c => !rgGot(c.x.id) && (!rgShortTrip(dd.key) || c.x.rar <= 1)) || ch.find(c => !rgGot(c.x.id)) || ch[0], ch.filter(c => c.x.rar <= 1).sort((a, b) => b.p - a.p)[0]].filter((c, i, a) => c && a.indexOf(c) === i).slice(0, 2);
     const isNew = !rgDiscovered(R.id) || !(rgState().seen[R.id] || {}).trips;
-    const extra = `<div class="cfreg" style="--rg:${R.color}"><div class="cfrh">${rgIcon(R, 'm')}<span><b>${esc(R.name)}</b><small>${isNew ? 'Nouvelle région : une spécialité garantie !' : `${rgGotCount(R)}/${R.res.length} spécialités trouvées`}${km >= 1000 ? (rgShortTrip(dd.key) ? ' · si loin : partez plus longtemps pour les raretés' : km >= 4000 ? ' · si loin : les raretés bien plus fréquentes' : ' · loin : raretés plus fréquentes') : ''}</small></span></div><div class="cfrs">${show.map(c => { const it = { name: c.x.name, cat: c.x.cat, sub: c.x.sub, rarity: c.x.rar, color: c.x.color }, known = rgGot(c.x.id); return `<span style="--rc:${RARC[c.x.rar]}"><span class="cfic">${itemIcon(it)}</span><span class="cfrx"><em>${known ? esc(c.x.name) : esc(c.x.name)}</em><i>${RARITY[c.x.rar]}${known ? '' : ' · nouveau'}</i></span></span>`; }).join('')}</div></div>`;
+    const extra = `<div class="cfreg" style="--rg:${R.color}"><div class="cfrh">${rgIcon(R, 'm')}<span><b>${esc(R.name)}</b><small>${isNew ? 'Nouvelle région : une spécialité garantie !' : `${rgGotCount(R)}/${R.res.length} spécialités trouvées`}${km >= 1000 ? (rgShortTrip(dd.key) ? ' · si loin : partez plus longtemps pour les raretés' : km >= 4000 ? ' · si loin : les raretés bien plus fréquentes' : ' · loin : raretés plus fréquentes') : ''}</small></span></div><div class="cfrs">${show.length ? '' : `<span class="cfnone"><span class="cfrx"><em>Pas de spécialité du codex ici</em><i>${esc((rgZoneAt(d.lon, d.lat) || R).n || R.short)} : objets du coin seulement</i></span></span>`}${show.map(c => { const it = { name: c.x.name, cat: c.x.cat, sub: c.x.sub, rarity: c.x.rar, color: c.x.color }, known = rgGot(c.x.id); return `<span style="--rc:${RARC[c.x.rar]}"><span class="cfic">${itemIcon(it)}</span><span class="cfrx"><em>${known ? esc(c.x.name) : esc(c.x.name)}</em><i>${RARITY[c.x.rar]}${known ? '' : ' · nouveau'}</i></span></span>`; }).join('')}</div></div>`;
     h = h.replace(/<\/div>$/, extra + '</div>');
   } catch (e) { console.error(e); }
   return h;
@@ -8006,7 +8224,7 @@ function rgDetail(R) {
   const km = kmBetween(homeObj(), { lon: R.anchor[0], lat: R.anchor[1] }), home = rgHome().id === R.id;
   let h = `<div class="rgd${disc ? '' : ' lock'}" style="--rg:${R.color}"><div class="rgdh">${rgIcon(R, 'xl', !disc)}<div><span class="rgk">${esc(RG_GROUPS[R.g])}${home ? ' · votre région' : ''}</span><h3>${esc(R.name)}</h3><p>${esc(R.mood)}</p></div></div>`;
   h += `<div class="rgchips"><span>${trips} voyage${trips > 1 ? 's' : ''}</span><span>${got}/${n} spécialités</span><span>${home ? 'À la maison' : km.toLocaleString('fr-FR') + ' km'}</span></div>`;
-  h += `<div class="rgres">${R.res.map(x => { const g = rgGot(x.id), it = { name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color }; return `<div class="rgr ${g ? 'got' : ''}" style="--rc:${RARC[x.rar]}"><span class="rgri">${itemIcon(it)}</span><span class="rgrx"><b>${g ? esc(x.name) : '? ? ?'}</b><i>${RARITY[x.rar]}${g ? ` · ${x.cat === 'n' ? 'nourriture' : 'matériau'}` : ''}</i></span>${g && st.got[x.id] > 1 ? `<em>×${st.got[x.id]}</em>` : ''}</div>`; }).join('')}</div>`;
+  h += `<div class="rgres">${R.res.map(x => { const g = rgGot(x.id), it = { name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color }; return `<div class="rgr ${g ? 'got' : ''}" style="--rc:${RARC[x.rar]}"><span class="rgri">${itemIcon(it)}</span><span class="rgrx"><b>${g ? esc(x.name) : '? ? ?'}</b><i>${RARITY[x.rar]}${g ? ` · ${x.cat === 'n' ? 'nourriture' : 'matériau'}` : ''}</i><small class="rgwh">${esc(rgResWhere(x))}</small></span>${g && st.got[x.id] > 1 ? `<em>×${st.got[x.id]}</em>` : ''}</div>`; }).join('')}</div>`;
   h += `<div class="rgrew ${done ? (claimed ? 'claimed' : 'ready') : ''}"><span class="rgmed">${itemIcon({ name: 'Médaille', cat: 'm', sub: 'medaille', rarity: 3, color: R.color })}</span><span><b>${done ? (claimed ? 'Région complète !' : 'Toutes les spécialités sont réunies !') : 'Récompense de la région'}</b><small>Toutes les spécialités : ${RG_REWARD} pièces et la médaille ${esc(rgDe(R))}</small></span>${done && !claimed ? `<button class="btn gold sm" data-rgclaim="${R.id}">Récupérer</button>` : claimed ? '<span class="tagok">✓</span>' : `<span class="rgcnt">${got}/${n}</span>`}</div>`;
   h += `<button class="btn green big wide" data-rggo="${R.id}" ${S.trips[S.sel] ? 'disabled' : ''}>${S.trips[S.sel] ? `${CHARS[S.sel].name} est en voyage` : `Y aller avec ${CHARS[S.sel].name}`}</button>`;
   return h + `</div>`;
@@ -11153,40 +11371,58 @@ function nsState() {
 
 // ---------------- espèces : où les trouver ----------------
 // reg : poids par région (17_regions.js) ; tags : poids par paysage (tags des lieux)
+// v19 : règle stricte (le joueur : « je les trouve n'importe où »). Une espèce n'apparaît QUE dans ses régions.
+// need : paysages exigés dans cette région (sinon tous les lieux de la région) ; zf : en France, zones ou test de lieu exigés.
 const NS_SP = {
-  panda: { reg: { chine: 3, inde: 2.5, asie_centrale: 1, coree: 1, japon: 0.6, asie_sud_est: 0.6 }, tags: { foret: 1.2, montagne: 1.4 } },
-  capy: { reg: { amerique_sud: 3, mexique_caraibes: 1 }, tags: { lac: 1.4, campagne: 0.7 } },
-  axo: { reg: { mexique_caraibes: 3 }, tags: { lac: 1.6, mer: 0.2 } },
-  renard: { reg: { arctique: 3, scandinavie: 2.5, canada: 2, britanniques: 0.4, usa_est: 0.4, suisse: 0.5 }, tags: { neige: 1.8, montagne: 0.6 } },
-  fennec: { reg: { afrique_nord: 3, moyen_orient: 2.5, asie_centrale: 1, afrique_est: 0.6, usa_ouest: 0.4 }, tags: { desert: 2 } },
-  tanuki: { reg: { japon: 3, coree: 2.5, chine: 1 }, tags: { foret: 1, ville: 0.6, campagne: 0.5 } },
-  paresseux: { reg: { amerique_sud: 3, mexique_caraibes: 2 }, tags: { foret: 0.9, ile: 0.5 } },
-  lemur: { reg: { ocean_indien: 3, afrique_est: 0.8, afrique_sud: 0.6 }, tags: { foret: 0.7, ile: 1 } },
-  phoque: { reg: { arctique: 2.5, grand_large: 2, scandinavie: 1.6, britanniques: 1.2, bretagne: 1.2, normandie: 0.8, canada: 1, pacifique: 0.6 }, tags: { mer: 1.4, neige: 0.8 } },
-  quokka: { reg: { australie: 3, pacifique: 1.6 }, tags: { ile: 1, campagne: 0.5 } },
+  panda: { reg: { chine: 3, inde: 2.5, asie_centrale: 1, coree: 1, japon: 0.6, asie_sud_est: 0.6 }, tags: { foret: 1.2, montagne: 1.4 }, need: { asie_centrale: ['foret', 'montagne'], coree: ['foret', 'montagne'], japon: ['foret', 'montagne'], asie_sud_est: ['montagne'] } },
+  capy: { reg: { amerique_sud: 3, mexique_caraibes: 1 }, tags: { lac: 1.4, campagne: 0.7 }, need: { mexique_caraibes: ['lac', 'campagne', 'foret'] } },
+  axo: { reg: { mexique_caraibes: 3 }, tags: { lac: 1.6, mer: 0.2 }, need: { mexique_caraibes: ['lac', 'ville', 'campagne'] } },
+  renard: { reg: { arctique: 3, scandinavie: 2.5, canada: 2, suisse: 0.6, ara: 0.5, paca: 0.3 }, tags: { neige: 1.8, montagne: 0.6 }, need: { canada: ['neige', 'montagne', 'foret', 'lac'], suisse: ['neige', 'montagne'], ara: ['neige', 'montagne'], paca: ['neige', 'montagne'] }, zf: { ara: ['alpes'], paca: ['alpes_sud'] } },
+  fennec: { reg: { afrique_nord: 3, moyen_orient: 2.5, asie_centrale: 1, usa_ouest: 0.4 }, tags: { desert: 2 }, need: { asie_centrale: ['desert'], usa_ouest: ['desert'], afrique_nord: ['desert', 'campagne', 'ville'] } },
+  tanuki: { reg: { japon: 3, coree: 2.5, chine: 1, europe_est: 0.5, scandinavie: 0.4, allemagne: 0.4, grandest: 0.3 }, tags: { foret: 1, ville: 0.6, campagne: 0.5 }, need: { chine: ['foret', 'campagne'], europe_est: ['foret', 'campagne'], scandinavie: ['foret'], allemagne: ['foret'], grandest: ['foret'] } },
+  paresseux: { reg: { amerique_sud: 3, mexique_caraibes: 2 }, tags: { foret: 0.9, ile: 0.5 }, need: { amerique_sud: ['foret', 'ile', 'campagne'], mexique_caraibes: ['foret', 'ile'] } },
+  lemur: { reg: { ocean_indien: 3, afrique_est: 0.8, afrique_sud: 0.6 }, tags: { foret: 0.7, ile: 1 }, need: { afrique_est: ['foret'], afrique_sud: ['foret'] } },
+  phoque: { reg: { arctique: 2.5, grand_large: 2, scandinavie: 1.6, britanniques: 1.2, bretagne: 1.2, normandie: 0.8, hdf: 0.6, canada: 1, pacifique: 0.6 }, tags: { mer: 1.4, neige: 0.8 }, need: { scandinavie: ['mer'], britanniques: ['mer'], bretagne: ['mer'], normandie: ['mer'], hdf: ['mer'], canada: ['mer'], pacifique: ['mer'], arctique: ['mer', 'neige'] } },
+  quokka: { reg: { australie: 3, pacifique: 1.6 }, tags: { ile: 1, campagne: 0.5 }, need: { pacifique: ['ile'] } },
 };
+const NS_SEA_CATS = ['plage', 'port', 'phare'];
 const NS_PLURAL = { panda: 'les pandas roux', capy: 'les capybaras', axo: 'les axolotls', renard: 'les renards polaires', fennec: 'les fennecs', tanuki: 'les tanukis', paresseux: 'les paresseux', lemur: 'les lémuriens', phoque: 'les phoques', quokka: 'les quokkas' };
 const nsLow = sp => spName(sp).toLowerCase();
-// score d'une espèce pour un lieu : région + paysage ; une espèce hors de chez elle reste possible, mais rare
+// tags d'un lieu, y compris son type (un port compte comme la mer)
+function nsTagsOf(place) { const t = ((place && place.tags) || []).slice(), c = place && place.cat; if (c && NS_SEA_CATS.includes(c)) t.push('mer'); if (c && ['foret', 'parc', 'sentier'].includes(c)) t.push('foret'); return t; }
+// l'espèce vit-elle ici ? (région, paysage exigé, zone en France)
+function nsSpOk(sp, place) {
+  const d = NS_SP[sp]; if (!d || !place) return false;
+  const R = nsRegionOf(place); if (!R || !d.reg[R.id]) return false;
+  const tags = nsTagsOf(place), need = d.need && d.need[R.id];
+  if (need && !tags.some(t => need.includes(t))) return false;
+  const zf = d.zf && d.zf[R.id];
+  if (zf) { const Z = typeof rgZoneAt === 'function' ? rgZoneAt(place.lon, place.lat) : null; if (!Z || !zf.includes(Z.id)) return false; }
+  return true;
+}
 function nsSpScore(sp, regId, tags) {
-  const d = NS_SP[sp]; if (!d) return 0;
+  const d = NS_SP[sp]; if (!d || !d.reg[regId]) return 0;
   const t = (tags || []).reduce((a, x) => a + (d.tags[x] || 0), 0);
-  return 0.05 + (d.reg[regId] || 0) + t * 0.7;
+  return d.reg[regId] + t * 0.7;
 }
 function nsRegionOf(o) { try { if (typeof regionAt === 'function' && o && isFinite(o.lon) && isFinite(o.lat)) return regionAt(o.lon, o.lat); } catch (e) {} return null; }
+// seules les espèces qui vivent ici (poids 0 pour les autres)
 function nsScores(place, baitSps) {
-  const R = nsRegionOf(place), rid = R ? R.id : '', tags = (place && place.tags) || [];
-  return SP_IDS.map(sp => { let w = nsSpScore(sp, rid, tags); if (baitSps && baitSps.includes(sp)) w *= 4; return { sp, w }; });
+  const R = nsRegionOf(place), rid = R ? R.id : '', tags = nsTagsOf(place);
+  return SP_IDS.map(sp => { let w = nsSpOk(sp, place) ? nsSpScore(sp, rid, tags) : 0; if (w && baitSps && baitSps.includes(sp)) w *= 4; return { sp, w }; });
 }
+// null : aucune espèce sauvage ici (pas d'œuf, pas de rencontre)
 function nsPickSp(place, baitSps) {
-  const l = nsScores(place, baitSps), tot = l.reduce((a, b) => a + b.w, 0);
+  const l = nsScores(place, baitSps).filter(x => x.w > 0), tot = l.reduce((a, b) => a + b.w, 0);
+  if (!tot) return null;
   let r = Math.random() * tot; for (const x of l) { r -= x.w; if (r <= 0) return x.sp; }
   return l[0].sp;
 }
 // texte « où le trouver » (Compédium)
 function nsWhere(sp) {
   const d = NS_SP[sp]; if (!d) return '';
-  const regs = Object.entries(d.reg).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id]) => (typeof RG !== 'undefined' && RG[id] ? RG[id].short : id));
+  const zn = (rid) => { const z = d.zf && d.zf[rid]; return z && typeof RG_ZONES !== 'undefined' ? z.map(x => RG_ZONES[x] ? RG_ZONES[x].n : x).join(', ') : null; };
+  const regs = Object.entries(d.reg).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([id]) => zn(id) || (typeof RG !== 'undefined' && RG[id] ? RG[id].short : id));
   const tags = Object.entries(d.tags).sort((a, b) => b[1] - a[1]).filter(x => x[1] >= 0.5).slice(0, 2).map(([t]) => (TAGL[t] || t).toLowerCase());
   return regs.join(', ') + (tags.length ? ` · paysages : ${tags.join(', ')}` : '');
 }
@@ -11383,14 +11619,18 @@ function nsTripEgg(e) {
   if (t.nsFirst) p += 0.15;                  // première visite dans cette région
   if (baitSps && baitSps.length) p += 0.2;   // un appât dans le sac
   p += Math.min(0.25, N.dry * 0.05);         // un peu de chance en plus à chaque voyage sans œuf
+  let sp = nsPickSp(dest, baitSps);
+  // v19 : aucune espèce ici = pas d'œuf (sauf le tout premier, celui du tutoriel : un œuf mystère d'espèce de départ)
+  if (!sp && N.found) return null;
   if (!N.found) p = 1; // le premier œuf est garanti dès le premier retour de voyage
   if (Math.random() >= p) { N.dry++; return null; }
   N.dry = 0; N.found++;
-  const sp = nsPickSp(dest, baitSps), luck = ((DURS.find(x => x.key === t.dur) || {}).luck || 0) * 0.4 + (baitSps && baitSps.includes(sp) ? 0.4 : 0);
+  const first = !sp; if (first) sp = pick(typeof SP_STARTERS !== 'undefined' ? SP_STARTERS : ['panda', 'capy', 'axo']);
+  const luck = ((DURS.find(x => x.key === t.dur) || {}).luck || 0) * 0.4 + (baitSps && baitSps.includes(sp) ? 0.4 : 0);
   const genes = N.found === 1 ? defaultGenes(sp) : rollGenes(sp, luck), rarity = geneRarityOf(genes, sp);
   N.seen[sp] = 1;
   const R = nsRegionOf(dest);
-  return nsAddEgg({ sp, genes, rarity, from: { how: 'oeuf', region: R ? R.id : null, place: dest.name }, ms: nsHatchMs(rarity) });
+  return nsAddEgg({ sp, genes, rarity, known: !first, from: first ? { how: 'depart', place: dest.name } : { how: 'oeuf', region: R ? R.id : null, place: dest.name }, ms: nsHatchMs(rarity) });
 }
 function nsEggFoundHTML(egg) {
   const inC = egg.inc && egg.ready > Date.now(), R = egg.from && egg.from.region && typeof RG !== 'undefined' ? RG[egg.from.region] : null;
@@ -11402,6 +11642,7 @@ function nsEggFoundHTML(egg) {
 // au départ : une chance sur six environ, plus dans le bon habitat ou avec un appât ; l'événement arrive tard dans le voyage
 function nsPlanWild(t) {
   const N = nsState(), sc = nsScores(t.dest, t.bait ? t.bait.sps : null), best = Math.max(...sc.map(x => x.w));
+  if (!(best > 0)) return; // v19 : aucune espèce sauvage ici
   let p = 0.17;
   if (best >= 1) p = 0.24;                       // le lieu est l'habitat d'une espèce
   if (t.bait && t.bait.sps.length) p += 0.12;
@@ -11414,6 +11655,7 @@ function nsPlanWild(t) {
 function nsFireWild(t, e) {
   const N = nsState(), k = t.comp, n = CHARS[k].name, place = eventPlace(t, e), now = Date.now();
   const sp = nsPickSp(t.dest, t.bait ? t.bait.sps : null); // l'espèce de la destination : le voyageur la ramène dans ses souvenirs
+  if (!sp) { t.journal.push({ t: now, place: t.dest.name, kind: 'trace', text: `${n} remarque des traces dans l’herbe… mais aucun animal sauvage de la nurserie ne vit par ici.` }); return; }
   const genes = rollGenes(sp, 0.4), rarity = geneRarityOf(genes, sp);
   N.seen[sp] = 1; N.wild++;
   const pal = rarity >= 2 ? genesText({ sp, genes }) : '';
@@ -11775,7 +12017,7 @@ function nsBaitPanel(dest) {
   if (N.bait && !bag.some(b => b.name === N.bait)) N.bait = '';
   const sel = bag.find(b => b.name === N.bait), sc = nsScores(dest, sel ? sel.sps : null).sort((a, b) => b.w - a.w), tot = sc.reduce((a, b) => a + b.w, 0);
   const top = sc.slice(0, 3).filter(x => x.w / tot >= 0.06);
-  let h = `<div class="nsbait"><div class="nsbh"><b>Œufs et rencontres possibles</b><span class="small">selon la région et le paysage</span></div><div class="nsposs">${top.map(x => { const pc = x.w / tot, lv = pc >= 0.45 ? 3 : pc >= 0.2 ? 2 : 1; return `<span class="nspo${N.own[x.sp] ? '' : ' new'}"><img src="${nsPortrait(x.sp)}" alt=""><b>${esc(spName(x.sp))}</b><i class="nsdots" aria-label="${['', 'rare', 'possible', 'fréquent'][lv]}">${'●'.repeat(lv)}${'○'.repeat(3 - lv)}</i>${N.own[x.sp] ? '' : '<em>Nouveau</em>'}</span>`; }).join('')}</div>`;
+  let h = `<div class="nsbait"><div class="nsbh"><b>Œufs et rencontres possibles</b><span class="small">selon la région et le paysage</span></div><div class="nsposs">${top.length ? '' : '<span class="small">Aucune espèce sauvage ne vit ici : pas d’œuf ni de rencontre. Voyez le Compédium pour savoir où les trouver.</span>'}${top.filter(x => x.w > 0).map(x => { const pc = x.w / tot, lv = pc >= 0.45 ? 3 : pc >= 0.2 ? 2 : 1; return `<span class="nspo${N.own[x.sp] ? '' : ' new'}"><img src="${nsPortrait(x.sp)}" alt=""><b>${esc(spName(x.sp))}</b><i class="nsdots" aria-label="${['', 'rare', 'possible', 'fréquent'][lv]}">${'●'.repeat(lv)}${'○'.repeat(3 - lv)}</i>${N.own[x.sp] ? '' : '<em>Nouveau</em>'}</span>`; }).join('')}</div>`;
   h += `<div class="nsbh"><b>Emporter un appât</b><span class="small">plus de chances d’œuf et de rencontre</span></div>`;
   h += bag.length ? `<div class="nsbl">${bag.slice(0, 6).map(b => `<button class="nsbb${b.name === N.bait ? ' on' : ''}" data-ns-bait="${esc(b.name)}" aria-pressed="${b.name === N.bait}"><span class="nsti">${itemIcon(b.it)}</span><span><b>${esc(b.name)}${b.n > 1 ? ` ×${b.n}` : ''}</b><small>Attire ${esc(b.sps.slice(0, 2).map(sp => NS_PLURAL[sp]).join(' et '))}</small></span></button>`).join('')}</div>` : `<p class="small nsnob">Pas d’appât dans le sac. Les dattes attirent les fennecs, le poisson les phoques, les fruits les lémuriens, le thé les tanukis…</p>`;
   return h + `</div>`;
@@ -18521,7 +18763,7 @@ const BT_ISO_ALIAS = { AUT: 'DEU', LIE: 'CHE', IRL: 'GBR', IMN: 'GBR', SWE: 'NOR
 // ================= DONNÉES : France, région par région =================
 // pain, plat : spécialités des commerces ; ter : terroir (fermes, champs, bois, rivières, chapelles, lavoirs)
 const BT_FR = {
-  ara: { fs: 'à la praline rose|à la noix de Grenoble|à la myrtille des Alpes', fp: 'au saint-marcellin|à la quenelle|au bleu d’Auvergne|aux lentilles du Puy', pain: 'Pogne de Romans|1;Brioche aux pralines|1', plat: 'Gratin dauphinois|0;Truffade|0;Salade lyonnaise|0', ter: 'Miel de châtaignier|sucre|0;Lait d’alpage|boisson|0;Brin de génépi|fleur|1;Lentilles vertes du Puy|legume|0' },
+  ara: { fs: 'à la praline rose|à la noix|à la myrtille', fp: 'au saint-marcellin|à la tomme|aux herbes du coin', pain: 'Brioche aux pralines|1', plat: 'Gratin dauphinois|0', ter: 'Miel de châtaignier|sucre|0' }, // v19 : le détail est par zone (BT_ZONE)
   paca: { fs: 'à la lavande|au calisson|à la fleur de figuier', fp: 'au pistou|à la tapenade|aux herbes de Provence', pain: 'Fougasse|0;Pompe à l’huile|1', plat: 'Bouillabaisse|1;Ratatouille niçoise|0;Socca|0', ter: 'Brin de thym sauvage|feuille|0;Figue de Solliès|fruit|0;Miel de lavande|sucre|1;Cigale en céramique|statue|1' },
   bretagne: { fs: 'au caramel au beurre salé|au sarrasin|à la fraise de Plougastel', fp: 'au beurre salé|à l’andouille|aux algues', pain: 'Kouign-amann|1;Far breton|0', plat: 'Galette complète|0;Cotriade|1', ter: 'Galet de lande|pierre|0;Brin d’ajonc|fleur|0;Bolée de cidre doux|boisson|0;Artichaut de Saint-Pol|legume|0' },
   normandie: { fs: 'à la pomme|au caramel normand|à la crème d’Isigny', fp: 'au camembert|à la crème normande|au cidre doux', pain: 'Fallue|1;Teurgoule|0', plat: 'Moules à la normande|0;Tarte normande|0', ter: 'Lait de vache normande|boisson|0;Pomme d’api|pomme|0;Fleur de pommier|fleur|0' },
@@ -18536,9 +18778,86 @@ const BT_FR = {
   corse: { fs: 'à la châtaigne corse|au brocciu|à la clémentine', fp: 'au figatellu|au brocciu|à la menthe sauvage', pain: 'Fiadone|1;Canistrelli|0', plat: 'Soupe corse|0;Civet de sanglier|1', ter: 'Branche de myrte|feuille|0;Châtaigne corse|fruit|0;Immortelle|fleur|1' },
 };
 
+// ================= v19 : DONNÉES par ZONE (départements) =================
+// Une région, c'est grand : à Lyon on trouve des objets lyonnais, en Auvergne des objets auvergnats (zones : 17_regions.js, RG_ZONES).
+// Même format que BT_PAYS ; les listes vont aux types de lieux par BT_LISTS (boulangerie : pain + sucre ; parc : nature ; boutique : artisan + vet…).
+const BT_ZONE = {
+  lyon: { fs: 'à la praline rose|façon coussin de Lyon|aux bugnes|au chocolat des Pentes', fp: 'à la lyonnaise|aux échalotes|au saint-marcellin|façon mâchon|aux herbes des Monts d’Or|à la cervelle de canut', fn: 'des quais du Rhône|de la Croix-Rousse|de Fourvière|des bords de Saône|du parc de la Tête d’Or',
+    pain: 'Tarte à la praline|0;Brioche aux pralines|0;Bugnes lyonnaises|0;Pain lyonnais au levain|0;Ficelle aux gratons|0;Tarte au sucre lyonnaise|0;Brioche de Saint-Jean|1',
+    sucre: 'Praline rose|0;Coussin de Lyon|1;Papillote lyonnaise|0;Bugne dorée|0;Quenelle en chocolat|1;Cocon de soie en pâte d’amande|1;Guimauve des Halles|0;Chocolat des Pentes|0',
+    boisson: 'Café des Pentes|0;Sirop de cassis du Lyonnais|0;Jus de pomme des Monts du Lyonnais|0;Diabolo grenadine du bouchon|0;Chocolat chaud de la Croix-Rousse|0;Pot de limonade du bouchon|1',
+    plat: 'Quenelle sauce Nantua|0;Salade lyonnaise|0;Saucisson brioché|0;Tablier de sapeur|1;Gratin de cardons|1;Andouillette lyonnaise|0;Gâteau de foies de volaille|1;Gratons lyonnais|0;Œuf en cocotte du mâchon|0;Oreiller de la Belle Aurore|2',
+    prod: 'Saint-marcellin|fromage|0;Cervelle de canut|fromage|0;Rigotte de Condrieu|fromage|1;Saint-félicien|fromage|1;Rosette de Lyon|plat|0;Jésus de Lyon|plat|1;Cerises des Monts du Lyonnais|fruit|0;Cardon du Val de Saône|legume|1;Pomme des coteaux du Lyonnais|pomme|0;Échalotes des Halles|legume|0',
+    nature: 'Feuille de platane des quais|feuille|0;Galet du Rhône|pierre|0;Plume de cygne de la Tête d’Or|plume|0;Rose de la roseraie|fleur|1;Marron d’Inde du parc|graine|0;Feuille de ginkgo du jardin botanique|feuille|1;Brin de buis de Fourvière|feuille|0;Plume de goéland du Rhône|plume|0;Fleur de lotus des grandes serres|fleur|2;Pierre dorée du Beaujolais|pierre|1',
+    artisan: 'Soie des canuts|tissu|1;Marionnette de Guignol|statue|1;Marionnette de Gnafron|statue|2;Lumignon du 8 décembre|lanterne|0;Bobine de soie|tissu|0;Plaque de traboule|metal|1;Ticket de la ficelle|papier|0;Gravure de Fourvière|papier|0;Petit lion de Lyon|statue|1;Mouchoir de canut|tissu|0;Médaille de Fourvière|medaille|1;Pavé de la Croix-Rousse|pierre|0;Carte de la fresque des Lyonnais|papier|0;Navette de métier à tisser|bois|2',
+    vet: 'Foulard de soie lyonnais|cou|foulard|1;Casquette de gone|tete|casquette|0;Tablier à carreaux du bouchon|haut|tshirt|0;Écharpe des canuts|cou|echarpe|1;Bonnet de la Croix-Rousse|tete|bonnet|0;Bicorne de Guignol|tete|chapeau|1' },
+  alpes: { fs: 'à la myrtille des Alpes|à la noix de l’Isère|au miel de montagne|à la chartreuse sans alcool', fp: 'au reblochon|à la tomme de Savoie|au beaufort|au bleu du Vercors|aux diots', fn: 'd’alpage|des cimes|du lac d’Annecy|du Vercors',
+    pain: 'Gâteau de Savoie|0;Pain de seigle des alpages|0;Tarte aux myrtilles|0;Brioche de Saint-Genix|1;Gâteau aux noix|1;Rissole savoyarde|0',
+    sucre: 'Roseau du lac|1;Noix confite|0;Pâte de fruits à la myrtille|0;Bonbon des cimes|0;Galet en chocolat du lac|1',
+    boisson: 'Lait d’alpage|0;Infusion de génépi|1;Jus de pomme de Savoie|0;Chocolat chaud du refuge|0',
+    plat: 'Tartiflette|0;Fondue savoyarde|1;Raclette|0;Gratin dauphinois|0;Ravioles du Dauphiné|0;Croziflette|0;Diots de Savoie|0;Polenta du refuge|0',
+    prod: 'Reblochon|fromage|0;Tomme de Savoie|fromage|0;Beaufort d’alpage|fromage|1;Bleu du Vercors|fromage|1;Abondance|fromage|1;Myrtilles des Alpes|fruit|0;Miel de montagne|sucre|0',
+    nature: 'Brin de génépi|fleur|1;Edelweiss|fleur|2;Pierre de lauze|pierre|0;Pomme de pin d’arolle|graine|0;Plume de chocard|plume|0;Gentiane jaune|fleur|1;Galet du lac d’Annecy|pierre|0;Rhododendron des Alpes|fleur|0',
+    artisan: 'Cloche de vache|metal|0;Cuillère en bois sculptée|bois|0;Marmotte en bois|statue|1;Carte de randonnée|papier|0;Bâton de berger|bois|0;Luge ancienne|bois|1;Chalet miniature|statue|2',
+    vet: 'Bonnet de ski|tete|bonnet|0;Pull à edelweiss|haut|pull|1;Moufles savoyardes|mains|moufles|0;Chaussettes de rando|pieds|chaussettes|0' },
+  auvergne: { fs: 'à la myrtille du Cantal|au miel d’Auvergne|à la verveine du Velay', fp: 'au bleu d’Auvergne|au cantal|au saint-nectaire|aux lentilles du Puy|à la fourme d’Ambert', fn: 'des volcans|des puys|des estives',
+    pain: 'Pompe aux pommes|0;Cornet de Murat|1;Pain de seigle auvergnat|0;Tarte à la myrtille du Cantal|0',
+    sucre: 'Pâte de fruits de Clermont|0;Miel de châtaignier|0;Cornet de Murat|1;Pastille à la verveine|0',
+    boisson: 'Eau de source des volcans|0;Infusion de verveine du Velay|1;Lait des estives|0',
+    plat: 'Truffade|0;Aligot|0;Potée auvergnate|0;Pounti|1;Chou farci|0;Salade de lentilles du Puy|0',
+    prod: 'Cantal entre-deux|fromage|0;Saint-nectaire fermier|fromage|1;Salers|fromage|2;Fourme d’Ambert|fromage|1;Lentilles vertes du Puy|legume|0;Jambon d’Auvergne|plat|0;Myrtilles sauvages du Cantal|fruit|0',
+    nature: 'Pouzzolane rouge|pierre|0;Fleur de gentiane|fleur|0;Brin de bruyère|fleur|0;Plume de milan royal|plume|1;Basalte des orgues|pierre|1;Arnica des montagnes|fleur|1',
+    artisan: 'Dentelle du Puy|tissu|1;Couteau de Thiers miniature|metal|1;Cloche de Salers|metal|0;Statuette de vache Salers|statue|1;Carte des volcans|papier|0',
+    vet: 'Béret auvergnat|tete|beret|0;Gilet de laine des Combrailles|haut|pull|1;Sabots de berger|pieds|bottes|0' },
+  drome_ardeche: { fs: 'à la crème de marrons|au nougat|à l’abricot de la Drôme|à la pogne', fp: 'au picodon|à la caillette|aux ravioles|aux olives de Nyons', fn: 'des gorges|de la lavande de la Drôme|des châtaigneraies',
+    pain: 'Pogne de Romans|0;Suisse de Valence|0;Tarte à la crème de marrons|0;Fougasse aux olives de Nyons|1',
+    sucre: 'Nougat de Montélimar|0;Crème de marrons|0;Marron glacé|1;Abricot confit|0',
+    boisson: 'Jus d’abricot de la Drôme|0;Sirop de châtaigne|0;Limonade des gorges|0',
+    plat: 'Caillette ardéchoise|0;Ravioles de Romans|0;Bombine|1;Crique ardéchoise|0',
+    prod: 'Picodon|fromage|0;Châtaignes d’Ardèche|fruit|0;Abricots de la Drôme|fruit|0;Olives de Nyons|fruit|1;Pêches de la vallée du Rhône|fruit|0;Truffe noire du Tricastin|champignon|2',
+    nature: 'Brin de lavande de la Drôme|fleur|0;Galet de l’Ardèche|pierre|0;Feuille de châtaignier|feuille|0;Bogue de châtaigne|graine|0;Fossile des gorges|pierre|1;Plume de vautour des Baronnies|plume|1',
+    artisan: 'Céramique de Dieulefit|statue|1;Panier en osier|bois|0;Carte des gorges|papier|0;Grotte peinte miniature|statue|2',
+    vet: 'Chapeau de cueilleur d’abricots|tete|chapeau|0;Foulard provençal|cou|foulard|0;Sandales de canoë|pieds|chaussettes|0' },
+  loire: { fs: 'au chocolat stéphanois|à la myrtille du Pilat', fp: 'à la fourme de Montbrison|à la râpée|au sarasson', fn: 'du Pilat|des gorges de la Loire|du Forez',
+    pain: 'Brioche de la Loire|0;Tarte aux myrtilles du Pilat|0', sucre: 'Chocolat stéphanois|0;Barre de pâte de fruits du Forez|0',
+    boisson: 'Eau minérale du Forez|0;Jus de pomme du Roannais|0', plat: 'Râpée stéphanoise|0;Barboton|0',
+    prod: 'Fourme de Montbrison|fromage|1;Sarasson|fromage|0;Myrtilles du Pilat|fruit|0',
+    nature: 'Bruyère du Pilat|fleur|0;Pierre des gorges de la Loire|pierre|0;Plume de héron de la Loire|plume|0',
+    artisan: 'Ruban de Saint-Étienne|tissu|0;Vélo miniature|statue|1;Plaque de mineur|metal|1;Lampe de mineur|lampe|2', vet: 'Écharpe verte du stade|cou|echarpe|0' },
+  ain: { fs: 'à la crème de Bresse|au sucre de la galette bressane', fp: 'à la crème de Bresse|au bleu de Gex|à la volaille de Bresse', fn: 'des Dombes|de la Bresse|du Bugey',
+    pain: 'Galette bressane|0;Tarte au sucre de Bresse|0', sucre: 'Galette bressane|0;Gaufre de Bresse|0',
+    plat: 'Poulet de Bresse à la crème|1;Grenouilles des Dombes|1;Gratin de cardons|0',
+    prod: 'Bleu de Gex|fromage|1;Crème de Bresse|fromage|0;Volaille de Bresse|plat|2',
+    nature: 'Plume de héron des Dombes|plume|0;Roseau des étangs|feuille|0;Nénuphar des Dombes|fleur|0',
+    artisan: 'Émail bressan|medaille|1;Peigne en corne|statue|0', vet: 'Bonnet de pêcheur des Dombes|tete|bonnet|0' },
+  provence: { fs: 'à la lavande|au calisson|à la fleur de figuier', fp: 'au pistou|à la tapenade|aux herbes de Provence', fn: 'des calanques|du Luberon|de la Sainte-Victoire',
+    nature: 'Brin de thym sauvage|feuille|0;Pomme de pin d’Alep|graine|0;Cigale en terre cuite|statue|1;Galet des calanques|pierre|0', artisan: 'Santon de Provence|statue|1;Tissu provençal|tissu|0;Navette de Marseille|sucre|0' },
+  cote_azur: { fs: 'au citron de Menton|à la fleur d’oranger|à la violette', fp: 'à la niçoise|au pistou|à la socca', fn: 'de la Promenade|des caps|de l’Esterel',
+    nature: 'Branche de mimosa|fleur|0;Galet de la baie|pierre|0;Feuille de palmier|feuille|0', prod: 'Citron de Menton|agrume|1;Olives de Nice|fruit|0;Fleur de courgette|legume|0' },
+  alpes_sud: { fs: 'au miel de lavande|à la pomme des Hautes-Alpes', fp: 'aux tourtons|au fromage de chèvre', fn: 'du Queyras|des Écrins',
+    nature: 'Brin de lavande de Valensole|fleur|0;Edelweiss du Queyras|fleur|2;Pierre de l’Ubaye|pierre|0', plat: 'Tourtons du Champsaur|0;Oreilles d’âne|1' },
+};
+// quel produit pour quel commerce, quand la liste est mélangée (une fromagerie vend du fromage, pas des cerises)
+const BT_CAT_SUBS = { fromagerie: ['fromage'], boucherie: ['plat'], poissonnerie: ['mer'], caviste: ['boisson', 'fruit', 'pomme'], fleuriste: ['fleur', 'feuille', 'graine'], glacier: ['glace', 'sucre', 'fruit'], chocolaterie: ['sucre'] };
+
+// ---------------- v19 : moins de répétitions ----------------
+// S.butin.recent : les noms des derniers objets rapportés (60 au plus) ; ce qui vient de tomber pèse moins au prochain tirage
+function btRecentList() { const B = btState(); if (!Array.isArray(B.recent)) B.recent = []; return B.recent; }
+function btRecentN(name) { if (!name) return 0; let n = 0; for (const x of btRecentList()) if (x === name) n++; return n; }
+function btRemember(items) { const L = btRecentList(); (items || []).forEach(it => { if (it && it.name) L.push(it.name); }); if (L.length > 60) L.splice(0, L.length - 60); }
+// tirage pondéré : un objet commun pèse plus qu'un rare, un objet tout juste rapporté pèse moins
+function btFreshPick(defs) {
+  if (!defs || !defs.length) return null;
+  const w = defs.map(d => 1 / (1 + (d[3] || 0) * 1.2) / (1 + 1.6 * btRecentN(d[0])));
+  let r = Math.random() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < defs.length; i++) { r -= w[i]; if (r <= 0) return defs[i]; }
+  return defs[defs.length - 1];
+}
+
 // ================= DONNÉES : spécialités maison, par sous-type =================
 // b : bases (« Nom » ou « Nom|sous-type|forme|cat »), f : qualificatifs propres au type, k : parfums régionaux à mêler (fs, fp, fn)
 const BT_SPEC = {
+  bouchon: { cat: 'restaurant', l: 'bouchon lyonnais', c: 'n', s: 'plat', k: 'fp', b: ['Quenelle', 'Saucisson brioché', 'Tablier de sapeur', 'Salade lyonnaise', 'Cervelle de canut|fromage', 'Gratin de cardons'], f: ['de la Mère', 'à l’ancienne', 'sauce Nantua', 'du mâchon', 'aux échalotes'] },
   pizza: { cat: 'restaurant', l: 'pizzeria', c: 'n', s: 'plat', k: 'fp', b: ['Pizza', 'Calzone', 'Focaccia garnie', 'Pizza blanche'], f: ['au pesto', 'quatre fromages', 'à la truffe', 'margherita', 'aux cèpes', 'à la burrata', 'diavola', 'aux artichauts'] },
   creperie: { cat: 'restaurant', l: 'crêperie', c: 'n', s: 'sucre', k: 'fs', b: ['Crêpe', 'Galette', 'Crêpe dentelle', 'Crêpe flambée'], f: ['au caramel beurre salé', 'au sucre et citron', 'complète', 'aux pommes', 'au chocolat-noisette', 'à la confiture de lait'] },
   japonais: { cat: 'restaurant', l: 'restaurant japonais', c: 'n', s: 'plat', k: 'fp', b: ['Bol de ramen', 'Sushi', 'Onigiri', 'Bento', 'Gyoza'], f: ['au saumon', 'au miso', 'au sésame', 'au shiso', 'au thon', 'à l’anguille grillée'] },
@@ -18624,7 +18943,7 @@ const BT_SIG = {
   shop: ['Mannequin miniature|statue', 'Tapis de l’entrée|tapis', 'Lampe de vitrine|lampe', 'Enseigne miniature|statue'],
   nature: ['Herbier|herbier', 'Plante|plante', 'Lanterne|lanterne', 'Statuette de mousse|statue'],
 };
-const BT_SIG_SUB = { pizza: 'Pelle à pizza gravée|statue', creperie: 'Billig miniature|cheminee', japonais: 'Lanterne rouge|lanterne', chinois: 'Lanterne rouge|lanterne', cafe: 'Moulin à café gravé|statue', the: 'Théière de collection|bocal',
+const BT_SIG_SUB = { bouchon: 'Nappe à carreaux du bouchon|tapis', pizza: 'Pelle à pizza gravée|statue', creperie: 'Billig miniature|cheminee', japonais: 'Lanterne rouge|lanterne', chinois: 'Lanterne rouge|lanterne', cafe: 'Moulin à café gravé|statue', the: 'Théière de collection|bocal',
   boulangerie: 'Four à pain miniature|cheminee', patisserie: 'Pièce montée miniature|statue', librairie: 'Bibliothèque miniature|statue', fleuriste: 'Serre miniature|plante', ferme: 'Grange miniature|statue', foret: 'Herbier des sous-bois|herbier',
   glacier: 'Cornet géant en céramique|statue', fromagerie: 'Cloche à fromage gravée|bocal', poissonnerie: 'Bocal de la marée|bocal', musee: 'Tableau miniature|herbier', phare: 'Lanterne du gardien|lanterne', lavoir: 'Tapis de linge brodé|tapis', moulin: 'Moulin miniature|statue', chapelle: 'Vitrail de la chapelle|lanterne' };
 // accessoire au style du lieu : « Nom|emplacement|forme »
@@ -18634,7 +18953,7 @@ const BT_STY = {
   shop: ['Nœud de vitrine|cou|noeud', 'Sweat de la boutique|haut|sweat', 'Chaussettes à motifs|pieds|chaussettes'],
   nature: ['Chapeau de paille|tete|chapeau', 'Bottes de balade|pieds|bottes', 'Bonnet des champs|tete|bonnet', 'Couronne de fleurs|tete|fleurs'],
 };
-const BT_STY_SUB = { pizza: 'Foulard à carreaux|cou|foulard', creperie: 'Marinière|haut|tshirt', japonais: 'Furoshiki noué|cou|foulard', kebab: 'Casquette du grill|tete|casquette', burger: 'Casquette du diner|tete|casquette', the: 'Chapeau à voilette|tete|chapeau',
+const BT_STY_SUB = { bouchon: 'Tablier à carreaux|haut|tshirt', pizza: 'Foulard à carreaux|cou|foulard', creperie: 'Marinière|haut|tshirt', japonais: 'Furoshiki noué|cou|foulard', kebab: 'Casquette du grill|tete|casquette', burger: 'Casquette du diner|tete|casquette', the: 'Chapeau à voilette|tete|chapeau',
   pub: 'Casquette gavroche|tete|casquette', boulangerie: 'Toque de mitron|tete|chapeau', patisserie: 'Nœud praliné|cou|noeud', glacier: 'Bonnet sorbet|tete|bonnet', ferme: 'Salopette des champs|bas|short', friperie: 'Veste rétro|haut|pull', mode: 'Écharpe de créateur|cou|echarpe' };
 const BT_GROUP = cat => (['boulangerie', 'cafe', 'restaurant', 'glacier', 'chocolaterie', 'epicerie', 'fromagerie', 'boucherie', 'poissonnerie', 'marche', 'caviste'].includes(cat) ? 'food'
   : ['librairie', 'musee', 'bibliotheque', 'cinema', 'patrimoine', 'mairie', 'ecole', 'poste', 'gare'].includes(cat) ? 'culture'
@@ -18665,13 +18984,13 @@ function btCountryData(iso) { return BT_PAYS[iso] || BT_PAYS[BT_ISO_ALIAS[iso]] 
 // ================= ANALYSE D'UN LIEU =================
 // sous-type : p.osm.subclass d'abord, puis le nom
 const BT_SUBRX = [
-  ['pizza', /pizz|napoli|napoletan|forno a legna/], ['creperie', /crep|galette|krampouez|billig/], ['japonais', /sushi|japon|ramen|izakaya|yakitori|bento|udon|tokyo|sakura|maki/], ['chinois', /chin|wok|dim ?sum|pekin|canton|shanghai|panda d/],
+  ['bouchon', /bouchon|machon|\bmere (brazier|lea|cottivet|jean|bourgeois)|cafe comptoir/], ['pizza', /pizz|napoli|napoletan|forno a legna/], ['creperie', /crep|galette|krampouez|billig/], ['japonais', /sushi|japon|ramen|izakaya|yakitori|bento|udon|tokyo|sakura|maki/], ['chinois', /chin|wok|dim ?sum|pekin|canton|shanghai|panda d/],
   ['kebab', /kebab|doner|shawarma|anatoli|grill turc/], ['burger', /burger|diner|fast.?food/], ['indien', /indi|curry|tandoor|bombay|taj |masala|bollywood/], ['libanais', /liban|falafel|mezze|beyrouth/],
   ['mexicain', /mexic|taco|burrito|taqueria|cantina/], ['asiatique', /thai|bangkok|pho |vietnam|saigon|bo bun|asia/], ['italien', /trattoria|osteria|italia|pasta|ristorante|napoli|roma|venezia/],
   ['mer', /huitre|fruits de mer|maree|seafood|crustace|oyster/], ['vege', /vege|vegan|veggie|green/], ['gaufre', /gaufr|waffle/], ['the', /salon de the|tea|the et|teahouse/], ['pub', /\bpub\b|\bbar\b|biergarten|taverne|brasserie/],
   ['patisserie', /patiss|pastry|gateau|cake|douceur/], ['chapelle', /chapelle|oratoire|calvaire/], ['lavoir', /lavoir/], ['moulin', /moulin|mill/], ['verger', /verger|orchard/],
 ];
-const BT_SUBCAT = { pizza: 'restaurant', creperie: 'restaurant', japonais: 'restaurant', chinois: 'restaurant', kebab: 'restaurant', burger: 'restaurant', indien: 'restaurant', libanais: 'restaurant', mexicain: 'restaurant', asiatique: 'restaurant', italien: 'restaurant', mer: 'restaurant', vege: 'restaurant',
+const BT_SUBCAT = { bouchon: 'restaurant', pizza: 'restaurant', creperie: 'restaurant', japonais: 'restaurant', chinois: 'restaurant', kebab: 'restaurant', burger: 'restaurant', indien: 'restaurant', libanais: 'restaurant', mexicain: 'restaurant', asiatique: 'restaurant', italien: 'restaurant', mer: 'restaurant', vege: 'restaurant',
   gaufre: 'cafe', the: 'cafe', pub: 'cafe', patisserie: 'boulangerie', chapelle: 'patrimoine', lavoir: 'riviere', moulin: 'campagne', verger: 'ferme' };
 const BT_OSMSUB = { pastry: 'patisserie', confectionery: 'patisserie', ice_cream: 'glacier', pub: 'pub', bar: 'pub', biergarten: 'pub', tea: 'the', tea_shop: 'the', fast_food: 'burger', seafood: 'mer', chapel: 'chapelle', wayside_shrine: 'chapelle', watermill: 'moulin', windmill: 'moulin', orchard: 'verger', lavoir: 'lavoir', wash_house: 'lavoir' };
 function btSub(p) {
@@ -18693,6 +19012,8 @@ function btHomeInfo() {
   if (k !== _btHomeK) { _btHomeK = k; let iso = null; try { iso = rgCountry(h.lon, h.lat); } catch (e) { iso = null; } _btHome = { h, R: regionAt(h.lon, h.lat), iso: iso || 'FRA' }; }
   return _btHome;
 }
+let _btHZk = '', _btHZ = null;
+function btHomeZone() { const h = homeObj(), k = h.name + h.lon; if (k !== _btHZk) { _btHZk = k; try { _btHZ = typeof rgZoneAt === 'function' ? rgZoneAt(h.lon, h.lat) : null; } catch (e) { _btHZ = null; } } return _btHZ; }
 const _btInfoC = new Map();
 function btInfo(pl) {
   const H = btHomeInfo(), lon = +pl.lon, lat = +pl.lat;
@@ -18709,14 +19030,17 @@ function btInfo(pl) {
   exo = Math.max(0, Math.min(1, exo));
   const cat = pl.cat || (pl.tags && pl.tags[0]) || '';
   const C = iso === 'FRA' ? null : btCountryData(iso), F = R && BT_FR[R.id] ? BT_FR[R.id] : null;
-  const sub = btSub(Object.assign({}, pl, { cat }));
-  const I = { key, R, iso, C, F: iso === 'FRA' || (!iso && F) ? F : null, km, foreign, otherReg, exo, cat, sub, grp: BT_GROUP(BT_SUBCAT[sub] || cat), rural: BT_RURAL.includes(cat) || BT_RURAL.includes(sub) || (!pl.poi && (pl.tags || []).some(t => t === 'campagne' || t === 'foret')) };
+  let sub = btSub(Object.assign({}, pl, { cat }));
+  let Z = null; try { Z = typeof rgZoneAt === 'function' && (iso === 'FRA' || !iso) ? rgZoneAt(lon, lat) : null; } catch (e) { Z = null; }
+  if (sub === 'bouchon' && !(Z && Z.id === 'lyon')) sub = cat === 'restaurant' ? 'restaurant' : '_'; // un vrai bouchon, c'est à Lyon
+  const HZ = btHomeZone(), otherZone = !!(Z && (!HZ || HZ.id !== Z.id));
+  const I = { key, R, iso, C, F: iso === 'FRA' || (!iso && F) ? F : null, Z, ZD: Z && BT_ZONE[Z.id] ? BT_ZONE[Z.id] : null, otherZone, km, foreign, otherReg, exo, cat, sub, grp: BT_GROUP(BT_SUBCAT[sub] || cat), rural: BT_RURAL.includes(cat) || BT_RURAL.includes(sub) || (!pl.poi && (pl.tags || []).some(t => t === 'campagne' || t === 'foret')) };
   if (_btInfoC.size > 3000) _btInfoC.clear();
   _btInfoC.set(ck, I);
   return I;
 }
 // parfums régionaux selon le type (sucré, salé, nature)
-function btLocalFlav(I, k) { const src = I.C || I.F; if (!src || !k) return []; return btFlav(src[k] || (k === 'fn' ? '' : '')); }
+function btLocalFlav(I, k) { if (!k) return []; if (I.ZD && I.ZD[k]) return btFlav(I.ZD[k]); const src = I.C || I.F; if (!src) return []; return btFlav(src[k] || ''); }
 
 // ---------------- carte d'identité (stable) ----------------
 const _btIdC = new Map();
@@ -18789,26 +19113,45 @@ function btLocalDefs(I, cat) {
   const lists = BT_LISTS[cat] || BT_LISTS[BT_SUBCAT[I.sub]] || BT_LISTS._;
   let out = [];
   if (I.C) lists.forEach(l => btSplit(I.C[l]).forEach(s => out.push(btDef(l, s))));
+  else if (I.ZD) { // v19 : la zone d'abord (Lyon, Alpes, Auvergne…), la région seulement pour combler
+    lists.forEach(l => btSplit(I.ZD[l]).forEach(s => out.push(btDef(l, s))));
+    if (!out.length && I.F) lists.forEach(l => { const fl = BT_FRMAP[l]; if (fl !== 'ter') btSplit(I.F[fl]).forEach(s => out.push(btDef(fl, s))); });
+  }
   else if (I.F) lists.forEach(l => { const fl = BT_FRMAP[l]; btSplit(I.F[fl]).forEach(s => out.push(btDef(fl === 'ter' ? 'ter' : fl, s))); });
+  const subs = BT_CAT_SUBS[cat]; if (subs) { const f = out.filter(d => subs.includes(d[2])); if (f.length) out = f; }
   return out;
 }
-function btLocalItem(I, luck, place, tags, catLetter, rural) {
+function btLocalItem(I, luck, place, tags, catLetter, rural, minRar) {
   let defs = btLocalDefs(I, rural ? 'campagne' : I.cat);
   if (catLetter) { const same = defs.filter(d => d[1] === catLetter); if (same.length) defs = same; }
   const maxR = I.exo > 0.6 ? 2 : 1;
   defs = defs.filter(d => d[3] <= maxR + 1);
-  if (!defs.length || (I.R && Math.random() < 0.25 && !I.C)) {
-    // spécialité de la région du monde (codex des régions)
+  if (!defs.length || (I.R && Math.random() < 0.25 && !I.C && !I.ZD)) {
+    // spécialité de la région du monde (codex des régions) : seulement si elle a du sens ICI (zone, type de lieu)
     const R = I.R; if (!R || !R.res) return null;
-    const res = R.res.filter(x => x.rar <= maxR); if (!res.length) return null;
-    const x = res[Math.floor(Math.random() * res.length)];
+    const pl = btResolve(place) || {};
+    const res = R.res.filter(x => x.rar <= maxR && (typeof rgResFits !== 'function' || rgResFits(x, Object.assign({ cat: I.cat }, pl))));
+    if (!res.length) return null;
+    const x = btFreshPick(res.map(r => [r.name, r.cat, r.sub, r.rar, null, r.color, r]))[6];
     return typeof rgMakeRes === 'function' ? rgMakeRes(x, place, tags, { place, km: I.km }) : null;
   }
-  const d = defs[Math.floor(Math.random() * defs.length)];
-  const rar = Math.min(3, d[3] + (I.exo > 0.6 && Math.random() < 0.2 ? 1 : 0));
+  const d = btFreshPick(defs);
+  const rar = Math.max(minRar || 0, Math.min(3, d[3] + (I.exo > 0.6 && Math.random() < 0.2 ? 1 : 0)));
   const it = makeItem(d, luck, place, tags, { fixed: rar });
   return it;
 }
+// v19 : un objet du coin (zone, sinon région ou pays) pour remplacer une spécialité du codex qui n'a pas sa place ici (17_regions.js)
+function btZoneGift(dest, t, minRar) {
+  if (!dest || !isFinite(+dest.lon)) return null;
+  const pl = Object.assign({}, dest, { cat: dest.cat || (dest.tags && POI_CATS[dest.tags[0]] ? dest.tags[0] : null) }), I = btInfo(pl);
+  if (!I.ZD && !I.F && !I.C) return null;
+  const rural = I.rural && !btLocalDefs(I, I.cat).length;
+  const it = btLocalItem(Object.assign({}, I, { R: null }), (t && t.luck) || 0, dest.name, dest.tags || [], null, rural, minRar);
+  if (it) { btTag(it, 'loc', pl, I); if (I.km < 40 && pl.poi) it.near = 1; }
+  return it;
+}
+// le tas d'objets courants d'un lieu (même règle que lootFor)
+function btPoolOf(tags) { tags = tags || []; let pool = []; if (typeof POI_CATS !== 'undefined' && POI_CATS[tags[0]] && LOOT[tags[0]]) pool = LOOT[tags[0]].slice(); else tags.forEach(t => { if (LOOT[t]) pool = pool.concat(LOOT[t]); }); return pool.filter(d => d[1] !== 't'); }
 // enrichit le butin d'un lieu (appelé après lootFor)
 function btEnrich(out, tags, luck, placeArg, comp, n) {
   const pl = btResolve(placeArg);
@@ -18817,11 +19160,15 @@ function btEnrich(out, tags, luck, placeArg, comp, n) {
   const I = btInfo(pl), id = btIdentity(pl, I), mood = btMood(I.key), want = btWanted();
   const pName = typeof placeArg === 'string' ? placeArg : pl.name;
   // 1. produits locaux et noms locaux
-  let pLoc = I.foreign ? 0.18 + 0.5 * I.exo : I.otherReg ? 0.06 + 0.3 * I.exo : 0;
+  let pLoc = I.foreign ? 0.18 + 0.5 * I.exo : I.otherReg ? 0.06 + 0.3 * I.exo : I.ZD ? (I.otherZone ? 0.24 : 0.14) : 0; // v19 : à Lyon, des objets lyonnais
+  const pool0 = btPoolOf(tags);
   if (pLoc && mood.loc) pLoc += mood.loc;
   for (let i = 0; i < out.length; i++) {
     const it = out[i];
     if (!it || it.special || it.edition || it.rid || it.tresor || it.bt || want.has(it.name)) continue;
+    // v19 : un objet courant déjà rapporté plusieurs fois récemment laisse souvent sa place à un autre du même lieu
+    const rn = btRecentN(it.name);
+    if (rn >= 2 && pool0.length > 3 && Math.random() < Math.min(0.9, 0.35 * rn)) { const d = btFreshPick(pool0.filter(x => x[0] !== it.name && x[3] <= it.rarity + 1)); if (d) { const nw = makeItem(d, luck, it.from, tags); out[i] = nw; continue; } }
     if (pLoc && Math.random() < pLoc) { const nw = btLocalItem(I, luck, pName, tags, it.cat === 'v' ? 'v' : null, false); if (nw) { btTag(nw, 'loc', pl, I); out[i] = nw; continue; } }
     if (I.C && I.C.loc) { const j = BT_LOC_KEYS.indexOf(it.name), L = I.C.loc.split('|'); if (j >= 0 && L[j]) { it.fr = it.name; it.name = L[j]; it.bt = { k: 'nom', iso: I.iso }; } }
   }
@@ -18850,7 +19197,7 @@ function btEnrich(out, tags, luck, placeArg, comp, n) {
     const pT = (arrival ? 0.55 : 0.3) + (I.cat === 'ferme' ? 0.15 : 0) + (mood.ter || 0);
     if (Math.random() < pT) {
       let it = null;
-      if (I.F || I.C) it = btLocalItem(Object.assign({}, I, { exo: I.km > 150 ? 0.7 : 0.2 }), luck, pName, tags, null, true);
+      if (I.F || I.C || I.ZD) it = btLocalItem(Object.assign({}, I, { exo: I.km > 150 ? 0.7 : 0.2 }), luck, pName, tags, null, true);
       if (it) { if (I.km > 150 && it.rarity < 1) it.rarity = 1; add(btTag(it, 'ter', pl, I)); }
     }
   }
@@ -18869,6 +19216,13 @@ if (typeof poiDest === 'function') poiDest = (orig => function (p) {
   try { if (p && d) { if (p.id != null) d.pid = String(p.id); if (p.osm) d.osm = { class: p.osm.class, subclass: p.osm.subclass }; } } catch (e) { /* rien */ }
   return d;
 })(poiDest);
+// v19 : on retient ce qui a été rapporté (moins de répétitions aux voyages suivants)
+if (typeof collect === 'function') collect = (orig => function () {
+  const t = S.trips && S.trips[S.sel];
+  const r = orig.apply(this, arguments);
+  try { if (t && t.bag) { btRemember(t.bag); save(); } } catch (e) { console.error('butin', e); }
+  return r;
+})(collect);
 // simulation (tests, aperçu) : le butin d'arrivée d'un lieu
 function btSimulate(pl, times = 1, luck = 0.5) {
   const tags = pl.tags || [pl.cat, (POI_CATS[pl.cat] || [])[3] || 'ville'].filter(Boolean), k = S.sel || Object.keys(S.comps || {})[0];
@@ -18890,6 +19244,7 @@ function btCatalog() {
     ['pain', 'sucre', 'boisson', 'plat', 'prod', 'nature', 'artisan', 'vet'].forEach(l => btSplit(C[l]).forEach(s => add(btDef(l, s), { k: 'pays', v: iso, cats: listCats(l) })));
     if (C.loc) C.loc.split('|').forEach((nm, j) => { const L = M.get(BT_LOC_KEYS[j]); if (nm && L) add([nm, L.def[1], L.def[2], L.def[3], L.def[4], L.def[5]], { k: 'pays', v: iso, cats: L.src.filter(x => x.k === 'cat').map(x => x.v), fr: BT_LOC_KEYS[j] }); });
   });
+  Object.entries(BT_ZONE).forEach(([zid, Z]) => ['pain', 'sucre', 'boisson', 'plat', 'prod', 'nature', 'artisan', 'vet'].forEach(l => btSplit(Z[l]).forEach(s => add(btDef(l, s), { k: 'zone', v: zid, cats: listCats(l) }))));
   Object.entries(BT_FR).forEach(([rid, F]) => ['pain', 'plat', 'ter'].forEach(l => btSplit(F[l]).forEach(s => add(btDef(l, s), { k: 'fr', v: rid, cats: l === 'ter' ? ['ferme', 'campagne', 'foret', 'riviere'] : l === 'pain' ? ['boulangerie'] : ['restaurant'] }))));
   const recs = [].concat(typeof RECIPES !== 'undefined' ? RECIPES : [], typeof ECO_RECIPES !== 'undefined' ? ECO_RECIPES : [], typeof RG_RECIPES !== 'undefined' ? RG_RECIPES : [], typeof BQ_RECIPES !== 'undefined' ? BQ_RECIPES : []);
   recs.forEach(r => { if (r && Array.isArray(r.out)) add(r.out, { k: 'rec', v: r.id }); });
@@ -18920,8 +19275,17 @@ function btSources(itOrName) {
   const hr = btHomeRegion();
   srcs.forEach(s => {
     if (s.k === 'tag') out.push({ txt: btTagLbl(s.v), ico: 'tag', step: { t: 'visit', tag: s.v }, go: 'Y aller', d: 5 });
+    else if (s.k === 'zone') {
+      const Z = typeof RG_ZONES !== 'undefined' ? RG_ZONES[s.v] : null; if (!Z) return;
+      const HZ = btHomeZone(), home = HZ && HZ.id === Z.id, cs = (s.cats || []).filter(c => POI_CATS[c]);
+      const extra = cs.length ? ` · ${cs.slice(0, 3).map(c => btCatL(c).toLowerCase()).join(', ')}` : '';
+      out.push({ txt: home ? `Près de chez vous (${Z.n})${extra}` : `${Z.n}${extra}`, ico: 'reg', step: home ? { t: 'visit', cat: cs.length ? cs : ['marche'] } : { fn: () => btGoZone(Z) }, go: home ? 'Y aller' : 'Voir sur la carte', d: home ? 3 : 300 });
+    }
     else if (s.k === 'reg' || s.k === 'fr') {
       const R = RG[s.v]; if (!R) return;
+      // v19 : une spécialité du codex limitée à certaines zones (bleu d'Auvergne…) : on montre la zone et le type de lieu
+      const W = s.k === 'reg' && it && it.rid && typeof RG_RES_WHERE !== 'undefined' ? RG_RES_WHERE[it.rid] : (s.k === 'reg' && !it && typeof RG_RES !== 'undefined' ? (() => { const x = Object.values(RG_RES).find(r => r.name === name); return x ? RG_RES_WHERE[x.id] : null; })() : null);
+      if (W && W.z) { const HZ = btHomeZone(), hz = HZ && W.z.includes(HZ.id), Z = RG_ZONES[W.z[0]]; out.push({ txt: hz ? `Près de chez vous : ${W.w}` : `${W.w[0].toUpperCase()}${W.w.slice(1)}`, ico: 'reg', step: hz ? { t: 'visit', cat: W.c.filter(c => POI_CATS[c]) } : { fn: () => btGoZone(Z) }, go: hz ? 'Y aller' : 'Voir sur la carte', d: hz ? 3 : 300 }); return; }
       const home = hr && hr.id === R.id;
       const extra = s.cats && s.cats.length ? ` · ${s.cats.slice(0, 3).map(c => btCatL(c).toLowerCase()).join(', ')}` : '';
       out.push({ txt: home ? `Votre région (${R.short})${extra || ' · marché, fermes'}` : `Région : ${R.name}${extra}`, ico: 'reg', step: home ? { t: 'visit', cat: s.cats && s.cats.length ? s.cats : ['marche', 'ferme'] } : { region: R.id }, go: home ? 'Y aller' : 'Voir sur la carte', d: home ? 3 : 500 });
@@ -18980,6 +19344,16 @@ function btGoCountry(iso) {
   const rid = typeof RG_ISO !== 'undefined' ? RG_ISO[iso] : null;
   if (rid && typeof regionGo === 'function') return regionGo(rid);
   openSheet('voyage');
+}
+function btGoZone(Z) {
+  if (!Z) return; if (!btFreeComp()) return;
+  if (typeof closeSheet === 'function') closeSheet();
+  const P = PLACES.filter(x => x.name !== S.home && (typeof rgZoneAt !== 'function' || (rgZoneAt(x.lon, x.lat) || {}).id === Z.id))[0];
+  if (P) return goDreamPlace(P, `Cap sur ${P.name} (${Z.n}) ! Choisissez la durée, puis partez.`);
+  const [lon, lat] = Z.pts.split(' ')[0].split(',').map(Number);
+  const p = { id: null, name: Z.c, country: 'France', lat, lon, tags: ['ville', 'campagne'], special: null };
+  if (typeof choosePlace === 'function') choosePlace(p); else { plan.dest = p; openSheet('voyage'); }
+  if (typeof zoomTo === 'function') { try { zoomTo(lon, lat, 8); } catch (e) {} }
 }
 function btGoSub(sub) {
   if (!btFreeComp()) return;
@@ -21035,6 +21409,144 @@ const axLine = (id, slot) => { const L = (AX[id] || AX.walk).c; return L[(slot |
 `;
   document.head.appendChild(st);
 })();
+
+// ================= MONDE v19 : cartes postales rangées, cartes situées, nids cohérents =================
+// Le joueur : « on fait défiler sans fin, il n'y a aucun tri ». Sac › Cartes : regroupement par région (sections repliables)
+// ou par mois, vignettes compactes, doublons d'un même lieu regroupés (×N), carte en grand au toucher.
+// Utilité, sans nouvelle mécanique : chaque section mène au codex de sa région, et on montre le compteur de régions visitées.
+// Aussi : chaque carte retient où elle a été prise (lon, lat, type de lieu, région) pour que postcardSVG la dessine vraiment,
+// et un nid (29_aventure.js) n'apparaît plus là où aucune espèce sauvage ne vit (21_nurserie.js, nsPickSp).
+
+// ---------------- 1. les cartes retiennent leur lieu ----------------
+function mdStampPhoto(p, pl) {
+  if (!p || !pl || p.rg) return p;
+  try {
+    if (isFinite(+pl.lon) && isFinite(+pl.lat)) { p.lon = +pl.lon; p.lat = +pl.lat; const R = regionAt(p.lon, p.lat); if (R) p.rg = R.id; }
+    const c = pl.cat || (pl.tags && POI_CATS[pl.tags[0]] ? pl.tags[0] : null); if (c && !p.cat) p.cat = c;
+    if (!p.city && pl.city) p.city = pl.city;
+  } catch (e) { /* rien */ }
+  return p;
+}
+// anciennes cartes : on retrouve le lieu par son nom (grands lieux, villes de départ), sans rien casser
+function mdGuessPlace(p) {
+  if (!p) return null;
+  if (isFinite(p.lon) && isFinite(p.lat)) return p;
+  const n = p.place || '';
+  const P = (typeof PLACES !== 'undefined' && PLACES.find(x => x.name === n)) || null;
+  if (P) return { lon: P.lon, lat: P.lat, tags: P.tags };
+  const H = typeof HOMES !== 'undefined' ? HOMES.find(h => h[0] === n) : null;
+  if (H) return { lon: H[2], lat: H[1] };
+  return null;
+}
+function mdRegionOf(p) {
+  if (p.rg && typeof RG !== 'undefined' && RG[p.rg]) return RG[p.rg];
+  const g = mdGuessPlace(p);
+  if (!g) { // ancienne carte d'un lieu du quotidien : la provenance d'un objet rapporté du même endroit
+    const it = (S.inv || []).find(x => x && x.from === p.place && x.origin && x.origin.region);
+    return it && typeof RG !== 'undefined' ? RG[it.origin.region] || null : null;
+  }
+  try { return regionAt(g.lon, g.lat); } catch (e) { return null; }
+}
+if (typeof fireEvent === 'function') fireEvent = (orig => function (t, e) {
+  const n0 = t && t.photos ? t.photos.length : 0;
+  const r = orig.apply(this, arguments);
+  try { if (t && t.photos) for (let i = n0; i < t.photos.length; i++) mdStampPhoto(t.photos[i], (typeof btCtx !== 'undefined' && btCtx && btCtx.name === t.photos[i].place ? btCtx : null) || t.dest); } catch (er) { /* rien */ }
+  return r;
+})(fireEvent);
+if (typeof collect === 'function') collect = (orig => function () {
+  try { const t = S.trips && S.trips[S.sel]; if (t && t.photos) t.photos.forEach(p => mdStampPhoto(p, t.dest)); } catch (e) { /* rien */ }
+  return orig.apply(this, arguments);
+})(collect);
+
+// ---------------- 2. pas de nid là où aucune espèce ne vit ----------------
+if (typeof startTrip === 'function') startTrip = (orig => function () {
+  const k = S.sel, before = S.trips[k];
+  const r = orig.apply(this, arguments);
+  try {
+    const t = S.trips[k];
+    if (t && t !== before && typeof nsPickSp === 'function' && t.events && t.events.some(e => e.type === 'nid' || e.type === 'sauvage')) {
+      if (!nsPickSp(t.dest)) { t.events = t.events.filter(e => e.type !== 'nid' && e.type !== 'sauvage'); save(); }
+    }
+  } catch (e) { console.error('monde départ', e); }
+  return r;
+})(startTrip);
+
+// ---------------- 3. l'album trié ----------------
+let mdSort = 'region', mdOpen = null;
+const mdKey = p => (p.place || p.title || '?');
+function mdGroups() {
+  const all = (S.album || []).map((p, i) => ({ p, i }));
+  // doublons d'un même lieu : une vignette (la plus récente), ×N
+  const byPlace = new Map();
+  for (const x of all) { const k = mdKey(x.p); let g = byPlace.get(k); if (!g) { g = { k, list: [] }; byPlace.set(k, g); } g.list.push(x); }
+  const places = [...byPlace.values()].map(g => { g.list.sort((a, b) => (b.p.date || 0) - (a.p.date || 0)); g.last = g.list[0].p; g.R = mdRegionOf(g.last); return g; });
+  const sec = new Map();
+  if (mdSort === 'region') {
+    for (const g of places) { const R = g.R, k = R ? R.id : '_'; let s = sec.get(k); if (!s) { s = { id: k, R, title: R ? R.name : 'Autres lieux', items: [] }; sec.set(k, s); } s.items.push(g); }
+    const out = [...sec.values()];
+    out.forEach(s => s.items.sort((a, b) => (b.last.date || 0) - (a.last.date || 0)));
+    return out.sort((a, b) => b.items.reduce((m, g) => Math.max(m, g.last.date || 0), 0) - a.items.reduce((m, g) => Math.max(m, g.last.date || 0), 0));
+  }
+  const old = mdSort === 'old';
+  places.sort((a, b) => old ? (a.list[a.list.length - 1].p.date || 0) - (b.list[b.list.length - 1].p.date || 0) : (b.last.date || 0) - (a.last.date || 0));
+  for (const g of places) { const d = new Date((old ? g.list[g.list.length - 1].p.date : g.last.date) || 0), k = d.getFullYear() + '-' + d.getMonth(); let s = sec.get(k); if (!s) { s = { id: k, title: d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }), items: [] }; sec.set(k, s); } s.items.push(g); }
+  return [...sec.values()];
+}
+function mdThumb(g) {
+  const p = g.last, n = g.list.length;
+  return `<button class="mdth" data-mdcard="${esc(g.k)}" aria-label="${esc(g.k)}${n > 1 ? `, ${n} cartes` : ''}"><span class="mdimg">${postcardSVG(p, 'md' + g.list[0].i)}</span>${n > 1 ? `<i class="mdn">×${n}</i>` : ''}<span class="mdcap"><b>${esc(g.k)}</b><small>${p.date ? new Date(p.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''}</small></span></button>`;
+}
+function mdRenderAlbum(box) {
+  const nCards = (S.album || []).length, groups = mdGroups(), nPlaces = groups.reduce((a, s) => a + s.items.length, 0);
+  let nReg = 0, totReg = 0; try { totReg = REGIONS.length; nReg = REGIONS.filter(R => rgDiscovered(R.id)).length; } catch (e) { /* rien */ }
+  let h = phead(null, 'Les cartes postales', `${nCards} carte${nCards > 1 ? 's' : ''} · ${nPlaces} lieu${nPlaces > 1 ? 'x' : ''}. Accrochez vos préférées aux murs de la maison.`);
+  if (totReg) h += `<button class="mdreg" data-mdgo="reg"><b>${nReg}/${totReg}</b><span>régions visitées<small>Chaque voyage compte pour le codex des régions</small></span><em>Codex</em></button>`;
+  if (!nCards) return void (box.innerHTML = h + `<p class="empty">L’album est vide. Chaque voyage rapporte des cartes postales.</p>`);
+  h += `<div class="mdsort" role="group" aria-label="Trier">${[['region', 'Par région'], ['new', 'Récentes'], ['old', 'Anciennes']].map(([k, l]) => `<button class="${mdSort === k ? 'on' : ''}" data-mdsort="${k}" aria-pressed="${mdSort === k}">${l}</button>`).join('')}</div>`;
+  groups.forEach((s, i) => {
+    const n = s.items.reduce((a, g) => a + g.list.length, 0), open = mdOpen ? mdOpen.has(s.id) : i === 0;
+    h += `<details class="mdsec" data-mdsec="${esc(String(s.id))}" ${open ? 'open' : ''} style="--rg:${s.R ? s.R.color : '#b9ad9a'}"><summary>${s.R && typeof rgIcon === 'function' ? rgIcon(s.R, 's') : ''}<b>${esc(s.title)}</b><small>${s.items.length} lieu${s.items.length > 1 ? 'x' : ''} · ${n} carte${n > 1 ? 's' : ''}</small>${s.R ? `<span class="mdcx" data-rgopen="${s.R.id}" role="button">Codex</span>` : ''}</summary><div class="mdgrid">${s.items.map(mdThumb).join('')}</div></details>`;
+  });
+  box.innerHTML = h;
+}
+function mdShowCard(k, idx) {
+  const list = (S.album || []).filter(p => mdKey(p) === k).sort((a, b) => (b.date || 0) - (a.date || 0)); if (!list.length) return;
+  const i = Math.max(0, Math.min(list.length - 1, idx || 0)), p = list[i], R = mdRegionOf(p);
+  showModal(`<div class="mdbig"><figure class="pc">${postcardSVG(p, 'mdb' + i)}</figure><h2>${esc(p.title || p.place || '')}</h2><p class="small">${R ? esc(R.name) + ' · ' : ''}${p.date ? new Date(p.date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : ''}${p.comp && CHARS[p.comp] ? ' · ' + esc(CHARS[p.comp].name) : ''}</p>${list.length > 1 ? `<div class="mdmore">${list.map((x, j) => `<button class="${j === i ? 'on' : ''}" data-mdcard="${esc(k)}" data-mdi="${j}">${new Date(x.date || 0).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</button>`).join('')}</div>` : ''}<button class="btn green big" data-closemodal="1">Fermer</button></div>`);
+}
+if (typeof renderAlbum === 'function') renderAlbum = function (box) { try { return mdRenderAlbum(box); } catch (e) { console.error('album', e); box.innerHTML = '<p class="empty">Album indisponible.</p>'; } };
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-mdsort],[data-mdcard],[data-mdgo]'); if (!el) return;
+  const d = el.dataset;
+  if (d.mdsort) { mdSort = d.mdsort; mdOpen = null; renderPanel(); return; }
+  if (d.mdcard) { mdShowCard(d.mdcard, +d.mdi || 0); return; }
+  if (d.mdgo === 'reg') { sacView = 'reg'; tab = 'sac'; renderPanel(); try { $('panelBody').scrollTop = 0; } catch (e) {} }
+});
+document.addEventListener('toggle', ev => { const el = ev.target; if (!el || !el.matches || !el.matches('details.mdsec')) return; if (!mdOpen) mdOpen = new Set([...document.querySelectorAll('details.mdsec[open]')].map(x => x.dataset.mdsec)); if (el.open) mdOpen.add(el.dataset.mdsec); else mdOpen.delete(el.dataset.mdsec); }, true);
+
+// ---------------- styles ----------------
+(function mdStyle() {
+  if (document.getElementById('md-style')) return;
+  const st = document.createElement('style'); st.id = 'md-style';
+  st.textContent = `.mdreg{display:flex;align-items:center;gap:10px;width:100%;margin:6px 0 10px;padding:8px 12px;border:2px solid #e3d6c0;border-radius:14px;background:#fffaf0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.mdreg b{font-size:1.25rem;color:#4f88cf}.mdreg span{flex:1;display:flex;flex-direction:column;font-weight:700}.mdreg small{font-weight:500;opacity:.75}.mdreg em{font-style:normal;font-weight:700;color:#fff;background:#4f88cf;border-radius:999px;padding:3px 10px}
+.mdsort{display:flex;gap:6px;margin:0 0 10px}.mdsort button{flex:1;padding:7px 4px;border:2px solid #e3d6c0;border-radius:999px;background:#fff;font:inherit;font-weight:700;cursor:pointer}.mdsort button.on{background:#5b4636;color:#fff;border-color:#5b4636}
+.mdsec{margin:0 0 8px;border:2px solid #eadfcd;border-left:6px solid var(--rg);border-radius:14px;background:#fffdf8}
+.mdsec summary{display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;list-style:none}.mdsec summary::-webkit-details-marker{display:none}
+.mdsec summary b{flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mdsec summary small{flex:1;opacity:.7;white-space:nowrap}
+.mdcx{font-size:.8rem;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--rg);color:#fff}
+.mdgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;padding:0 8px 10px}
+.mdth{position:relative;display:flex;flex-direction:column;padding:4px;border:none;border-radius:10px;background:#fff;box-shadow:0 2px 0 #e3d6c0;font:inherit;color:inherit;cursor:pointer;text-align:left;min-width:0}
+.mdimg svg{display:block;width:100%;height:auto;border-radius:6px}.mdn{position:absolute;top:2px;right:2px;font-style:normal;font-weight:800;font-size:.75rem;background:#e5584f;color:#fff;border-radius:999px;padding:1px 7px}
+.mdcap{display:flex;flex-direction:column;padding:3px 2px 0;line-height:1.15;min-width:0}.mdcap b{font-size:.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mdcap small{font-size:.7rem;opacity:.7}
+.mdbig .pc svg{width:100%;height:auto;display:block}.mdbig h2{margin:8px 0 2px}.mdmore{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.mdmore button{padding:4px 10px;border:2px solid #e3d6c0;border-radius:999px;background:#fff;font:inherit;cursor:pointer}.mdmore button.on{background:#5b4636;color:#fff}
+.cfnone{opacity:.8}.rgwh{display:block;font-size:.7rem;opacity:.75;line-height:1.15}
+@media (min-width:900px){.mdgrid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}`;
+  document.head.appendChild(st);
+})();
+window.__monde = { groups: mdGroups, showCard: mdShowCard, stamp: mdStampPhoto,
+  // outils de test (lecture seule, comme window.__butin)
+  api: () => ({ S, POI_CATS, PLACES, lootFor, rgBeforeCollect, btRemember, nsPickSp, nsWhere, rgZoneAt, btWhereShort, postcardSVG, openSheet, renderPanel, setCtx: p => { btCtx = p; }, setSac: v => { sacView = v; } }) };
 
 })();
 </script>

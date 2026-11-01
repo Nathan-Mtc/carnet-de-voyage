@@ -131,7 +131,7 @@ const BT_ISO_ALIAS = { AUT: 'DEU', LIE: 'CHE', IRL: 'GBR', IMN: 'GBR', SWE: 'NOR
 // ================= DONNÉES : France, région par région =================
 // pain, plat : spécialités des commerces ; ter : terroir (fermes, champs, bois, rivières, chapelles, lavoirs)
 const BT_FR = {
-  ara: { fs: 'à la praline rose|à la noix de Grenoble|à la myrtille des Alpes', fp: 'au saint-marcellin|à la quenelle|au bleu d’Auvergne|aux lentilles du Puy', pain: 'Pogne de Romans|1;Brioche aux pralines|1', plat: 'Gratin dauphinois|0;Truffade|0;Salade lyonnaise|0', ter: 'Miel de châtaignier|sucre|0;Lait d’alpage|boisson|0;Brin de génépi|fleur|1;Lentilles vertes du Puy|legume|0' },
+  ara: { fs: 'à la praline rose|à la noix|à la myrtille', fp: 'au saint-marcellin|à la tomme|aux herbes du coin', pain: 'Brioche aux pralines|1', plat: 'Gratin dauphinois|0', ter: 'Miel de châtaignier|sucre|0' }, // v19 : le détail est par zone (BT_ZONE)
   paca: { fs: 'à la lavande|au calisson|à la fleur de figuier', fp: 'au pistou|à la tapenade|aux herbes de Provence', pain: 'Fougasse|0;Pompe à l’huile|1', plat: 'Bouillabaisse|1;Ratatouille niçoise|0;Socca|0', ter: 'Brin de thym sauvage|feuille|0;Figue de Solliès|fruit|0;Miel de lavande|sucre|1;Cigale en céramique|statue|1' },
   bretagne: { fs: 'au caramel au beurre salé|au sarrasin|à la fraise de Plougastel', fp: 'au beurre salé|à l’andouille|aux algues', pain: 'Kouign-amann|1;Far breton|0', plat: 'Galette complète|0;Cotriade|1', ter: 'Galet de lande|pierre|0;Brin d’ajonc|fleur|0;Bolée de cidre doux|boisson|0;Artichaut de Saint-Pol|legume|0' },
   normandie: { fs: 'à la pomme|au caramel normand|à la crème d’Isigny', fp: 'au camembert|à la crème normande|au cidre doux', pain: 'Fallue|1;Teurgoule|0', plat: 'Moules à la normande|0;Tarte normande|0', ter: 'Lait de vache normande|boisson|0;Pomme d’api|pomme|0;Fleur de pommier|fleur|0' },
@@ -146,9 +146,86 @@ const BT_FR = {
   corse: { fs: 'à la châtaigne corse|au brocciu|à la clémentine', fp: 'au figatellu|au brocciu|à la menthe sauvage', pain: 'Fiadone|1;Canistrelli|0', plat: 'Soupe corse|0;Civet de sanglier|1', ter: 'Branche de myrte|feuille|0;Châtaigne corse|fruit|0;Immortelle|fleur|1' },
 };
 
+// ================= v19 : DONNÉES par ZONE (départements) =================
+// Une région, c'est grand : à Lyon on trouve des objets lyonnais, en Auvergne des objets auvergnats (zones : 17_regions.js, RG_ZONES).
+// Même format que BT_PAYS ; les listes vont aux types de lieux par BT_LISTS (boulangerie : pain + sucre ; parc : nature ; boutique : artisan + vet…).
+const BT_ZONE = {
+  lyon: { fs: 'à la praline rose|façon coussin de Lyon|aux bugnes|au chocolat des Pentes', fp: 'à la lyonnaise|aux échalotes|au saint-marcellin|façon mâchon|aux herbes des Monts d’Or|à la cervelle de canut', fn: 'des quais du Rhône|de la Croix-Rousse|de Fourvière|des bords de Saône|du parc de la Tête d’Or',
+    pain: 'Tarte à la praline|0;Brioche aux pralines|0;Bugnes lyonnaises|0;Pain lyonnais au levain|0;Ficelle aux gratons|0;Tarte au sucre lyonnaise|0;Brioche de Saint-Jean|1',
+    sucre: 'Praline rose|0;Coussin de Lyon|1;Papillote lyonnaise|0;Bugne dorée|0;Quenelle en chocolat|1;Cocon de soie en pâte d’amande|1;Guimauve des Halles|0;Chocolat des Pentes|0',
+    boisson: 'Café des Pentes|0;Sirop de cassis du Lyonnais|0;Jus de pomme des Monts du Lyonnais|0;Diabolo grenadine du bouchon|0;Chocolat chaud de la Croix-Rousse|0;Pot de limonade du bouchon|1',
+    plat: 'Quenelle sauce Nantua|0;Salade lyonnaise|0;Saucisson brioché|0;Tablier de sapeur|1;Gratin de cardons|1;Andouillette lyonnaise|0;Gâteau de foies de volaille|1;Gratons lyonnais|0;Œuf en cocotte du mâchon|0;Oreiller de la Belle Aurore|2',
+    prod: 'Saint-marcellin|fromage|0;Cervelle de canut|fromage|0;Rigotte de Condrieu|fromage|1;Saint-félicien|fromage|1;Rosette de Lyon|plat|0;Jésus de Lyon|plat|1;Cerises des Monts du Lyonnais|fruit|0;Cardon du Val de Saône|legume|1;Pomme des coteaux du Lyonnais|pomme|0;Échalotes des Halles|legume|0',
+    nature: 'Feuille de platane des quais|feuille|0;Galet du Rhône|pierre|0;Plume de cygne de la Tête d’Or|plume|0;Rose de la roseraie|fleur|1;Marron d’Inde du parc|graine|0;Feuille de ginkgo du jardin botanique|feuille|1;Brin de buis de Fourvière|feuille|0;Plume de goéland du Rhône|plume|0;Fleur de lotus des grandes serres|fleur|2;Pierre dorée du Beaujolais|pierre|1',
+    artisan: 'Soie des canuts|tissu|1;Marionnette de Guignol|statue|1;Marionnette de Gnafron|statue|2;Lumignon du 8 décembre|lanterne|0;Bobine de soie|tissu|0;Plaque de traboule|metal|1;Ticket de la ficelle|papier|0;Gravure de Fourvière|papier|0;Petit lion de Lyon|statue|1;Mouchoir de canut|tissu|0;Médaille de Fourvière|medaille|1;Pavé de la Croix-Rousse|pierre|0;Carte de la fresque des Lyonnais|papier|0;Navette de métier à tisser|bois|2',
+    vet: 'Foulard de soie lyonnais|cou|foulard|1;Casquette de gone|tete|casquette|0;Tablier à carreaux du bouchon|haut|tshirt|0;Écharpe des canuts|cou|echarpe|1;Bonnet de la Croix-Rousse|tete|bonnet|0;Bicorne de Guignol|tete|chapeau|1' },
+  alpes: { fs: 'à la myrtille des Alpes|à la noix de l’Isère|au miel de montagne|à la chartreuse sans alcool', fp: 'au reblochon|à la tomme de Savoie|au beaufort|au bleu du Vercors|aux diots', fn: 'd’alpage|des cimes|du lac d’Annecy|du Vercors',
+    pain: 'Gâteau de Savoie|0;Pain de seigle des alpages|0;Tarte aux myrtilles|0;Brioche de Saint-Genix|1;Gâteau aux noix|1;Rissole savoyarde|0',
+    sucre: 'Roseau du lac|1;Noix confite|0;Pâte de fruits à la myrtille|0;Bonbon des cimes|0;Galet en chocolat du lac|1',
+    boisson: 'Lait d’alpage|0;Infusion de génépi|1;Jus de pomme de Savoie|0;Chocolat chaud du refuge|0',
+    plat: 'Tartiflette|0;Fondue savoyarde|1;Raclette|0;Gratin dauphinois|0;Ravioles du Dauphiné|0;Croziflette|0;Diots de Savoie|0;Polenta du refuge|0',
+    prod: 'Reblochon|fromage|0;Tomme de Savoie|fromage|0;Beaufort d’alpage|fromage|1;Bleu du Vercors|fromage|1;Abondance|fromage|1;Myrtilles des Alpes|fruit|0;Miel de montagne|sucre|0',
+    nature: 'Brin de génépi|fleur|1;Edelweiss|fleur|2;Pierre de lauze|pierre|0;Pomme de pin d’arolle|graine|0;Plume de chocard|plume|0;Gentiane jaune|fleur|1;Galet du lac d’Annecy|pierre|0;Rhododendron des Alpes|fleur|0',
+    artisan: 'Cloche de vache|metal|0;Cuillère en bois sculptée|bois|0;Marmotte en bois|statue|1;Carte de randonnée|papier|0;Bâton de berger|bois|0;Luge ancienne|bois|1;Chalet miniature|statue|2',
+    vet: 'Bonnet de ski|tete|bonnet|0;Pull à edelweiss|haut|pull|1;Moufles savoyardes|mains|moufles|0;Chaussettes de rando|pieds|chaussettes|0' },
+  auvergne: { fs: 'à la myrtille du Cantal|au miel d’Auvergne|à la verveine du Velay', fp: 'au bleu d’Auvergne|au cantal|au saint-nectaire|aux lentilles du Puy|à la fourme d’Ambert', fn: 'des volcans|des puys|des estives',
+    pain: 'Pompe aux pommes|0;Cornet de Murat|1;Pain de seigle auvergnat|0;Tarte à la myrtille du Cantal|0',
+    sucre: 'Pâte de fruits de Clermont|0;Miel de châtaignier|0;Cornet de Murat|1;Pastille à la verveine|0',
+    boisson: 'Eau de source des volcans|0;Infusion de verveine du Velay|1;Lait des estives|0',
+    plat: 'Truffade|0;Aligot|0;Potée auvergnate|0;Pounti|1;Chou farci|0;Salade de lentilles du Puy|0',
+    prod: 'Cantal entre-deux|fromage|0;Saint-nectaire fermier|fromage|1;Salers|fromage|2;Fourme d’Ambert|fromage|1;Lentilles vertes du Puy|legume|0;Jambon d’Auvergne|plat|0;Myrtilles sauvages du Cantal|fruit|0',
+    nature: 'Pouzzolane rouge|pierre|0;Fleur de gentiane|fleur|0;Brin de bruyère|fleur|0;Plume de milan royal|plume|1;Basalte des orgues|pierre|1;Arnica des montagnes|fleur|1',
+    artisan: 'Dentelle du Puy|tissu|1;Couteau de Thiers miniature|metal|1;Cloche de Salers|metal|0;Statuette de vache Salers|statue|1;Carte des volcans|papier|0',
+    vet: 'Béret auvergnat|tete|beret|0;Gilet de laine des Combrailles|haut|pull|1;Sabots de berger|pieds|bottes|0' },
+  drome_ardeche: { fs: 'à la crème de marrons|au nougat|à l’abricot de la Drôme|à la pogne', fp: 'au picodon|à la caillette|aux ravioles|aux olives de Nyons', fn: 'des gorges|de la lavande de la Drôme|des châtaigneraies',
+    pain: 'Pogne de Romans|0;Suisse de Valence|0;Tarte à la crème de marrons|0;Fougasse aux olives de Nyons|1',
+    sucre: 'Nougat de Montélimar|0;Crème de marrons|0;Marron glacé|1;Abricot confit|0',
+    boisson: 'Jus d’abricot de la Drôme|0;Sirop de châtaigne|0;Limonade des gorges|0',
+    plat: 'Caillette ardéchoise|0;Ravioles de Romans|0;Bombine|1;Crique ardéchoise|0',
+    prod: 'Picodon|fromage|0;Châtaignes d’Ardèche|fruit|0;Abricots de la Drôme|fruit|0;Olives de Nyons|fruit|1;Pêches de la vallée du Rhône|fruit|0;Truffe noire du Tricastin|champignon|2',
+    nature: 'Brin de lavande de la Drôme|fleur|0;Galet de l’Ardèche|pierre|0;Feuille de châtaignier|feuille|0;Bogue de châtaigne|graine|0;Fossile des gorges|pierre|1;Plume de vautour des Baronnies|plume|1',
+    artisan: 'Céramique de Dieulefit|statue|1;Panier en osier|bois|0;Carte des gorges|papier|0;Grotte peinte miniature|statue|2',
+    vet: 'Chapeau de cueilleur d’abricots|tete|chapeau|0;Foulard provençal|cou|foulard|0;Sandales de canoë|pieds|chaussettes|0' },
+  loire: { fs: 'au chocolat stéphanois|à la myrtille du Pilat', fp: 'à la fourme de Montbrison|à la râpée|au sarasson', fn: 'du Pilat|des gorges de la Loire|du Forez',
+    pain: 'Brioche de la Loire|0;Tarte aux myrtilles du Pilat|0', sucre: 'Chocolat stéphanois|0;Barre de pâte de fruits du Forez|0',
+    boisson: 'Eau minérale du Forez|0;Jus de pomme du Roannais|0', plat: 'Râpée stéphanoise|0;Barboton|0',
+    prod: 'Fourme de Montbrison|fromage|1;Sarasson|fromage|0;Myrtilles du Pilat|fruit|0',
+    nature: 'Bruyère du Pilat|fleur|0;Pierre des gorges de la Loire|pierre|0;Plume de héron de la Loire|plume|0',
+    artisan: 'Ruban de Saint-Étienne|tissu|0;Vélo miniature|statue|1;Plaque de mineur|metal|1;Lampe de mineur|lampe|2', vet: 'Écharpe verte du stade|cou|echarpe|0' },
+  ain: { fs: 'à la crème de Bresse|au sucre de la galette bressane', fp: 'à la crème de Bresse|au bleu de Gex|à la volaille de Bresse', fn: 'des Dombes|de la Bresse|du Bugey',
+    pain: 'Galette bressane|0;Tarte au sucre de Bresse|0', sucre: 'Galette bressane|0;Gaufre de Bresse|0',
+    plat: 'Poulet de Bresse à la crème|1;Grenouilles des Dombes|1;Gratin de cardons|0',
+    prod: 'Bleu de Gex|fromage|1;Crème de Bresse|fromage|0;Volaille de Bresse|plat|2',
+    nature: 'Plume de héron des Dombes|plume|0;Roseau des étangs|feuille|0;Nénuphar des Dombes|fleur|0',
+    artisan: 'Émail bressan|medaille|1;Peigne en corne|statue|0', vet: 'Bonnet de pêcheur des Dombes|tete|bonnet|0' },
+  provence: { fs: 'à la lavande|au calisson|à la fleur de figuier', fp: 'au pistou|à la tapenade|aux herbes de Provence', fn: 'des calanques|du Luberon|de la Sainte-Victoire',
+    nature: 'Brin de thym sauvage|feuille|0;Pomme de pin d’Alep|graine|0;Cigale en terre cuite|statue|1;Galet des calanques|pierre|0', artisan: 'Santon de Provence|statue|1;Tissu provençal|tissu|0;Navette de Marseille|sucre|0' },
+  cote_azur: { fs: 'au citron de Menton|à la fleur d’oranger|à la violette', fp: 'à la niçoise|au pistou|à la socca', fn: 'de la Promenade|des caps|de l’Esterel',
+    nature: 'Branche de mimosa|fleur|0;Galet de la baie|pierre|0;Feuille de palmier|feuille|0', prod: 'Citron de Menton|agrume|1;Olives de Nice|fruit|0;Fleur de courgette|legume|0' },
+  alpes_sud: { fs: 'au miel de lavande|à la pomme des Hautes-Alpes', fp: 'aux tourtons|au fromage de chèvre', fn: 'du Queyras|des Écrins',
+    nature: 'Brin de lavande de Valensole|fleur|0;Edelweiss du Queyras|fleur|2;Pierre de l’Ubaye|pierre|0', plat: 'Tourtons du Champsaur|0;Oreilles d’âne|1' },
+};
+// quel produit pour quel commerce, quand la liste est mélangée (une fromagerie vend du fromage, pas des cerises)
+const BT_CAT_SUBS = { fromagerie: ['fromage'], boucherie: ['plat'], poissonnerie: ['mer'], caviste: ['boisson', 'fruit', 'pomme'], fleuriste: ['fleur', 'feuille', 'graine'], glacier: ['glace', 'sucre', 'fruit'], chocolaterie: ['sucre'] };
+
+// ---------------- v19 : moins de répétitions ----------------
+// S.butin.recent : les noms des derniers objets rapportés (60 au plus) ; ce qui vient de tomber pèse moins au prochain tirage
+function btRecentList() { const B = btState(); if (!Array.isArray(B.recent)) B.recent = []; return B.recent; }
+function btRecentN(name) { if (!name) return 0; let n = 0; for (const x of btRecentList()) if (x === name) n++; return n; }
+function btRemember(items) { const L = btRecentList(); (items || []).forEach(it => { if (it && it.name) L.push(it.name); }); if (L.length > 60) L.splice(0, L.length - 60); }
+// tirage pondéré : un objet commun pèse plus qu'un rare, un objet tout juste rapporté pèse moins
+function btFreshPick(defs) {
+  if (!defs || !defs.length) return null;
+  const w = defs.map(d => 1 / (1 + (d[3] || 0) * 1.2) / (1 + 1.6 * btRecentN(d[0])));
+  let r = Math.random() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < defs.length; i++) { r -= w[i]; if (r <= 0) return defs[i]; }
+  return defs[defs.length - 1];
+}
+
 // ================= DONNÉES : spécialités maison, par sous-type =================
 // b : bases (« Nom » ou « Nom|sous-type|forme|cat »), f : qualificatifs propres au type, k : parfums régionaux à mêler (fs, fp, fn)
 const BT_SPEC = {
+  bouchon: { cat: 'restaurant', l: 'bouchon lyonnais', c: 'n', s: 'plat', k: 'fp', b: ['Quenelle', 'Saucisson brioché', 'Tablier de sapeur', 'Salade lyonnaise', 'Cervelle de canut|fromage', 'Gratin de cardons'], f: ['de la Mère', 'à l’ancienne', 'sauce Nantua', 'du mâchon', 'aux échalotes'] },
   pizza: { cat: 'restaurant', l: 'pizzeria', c: 'n', s: 'plat', k: 'fp', b: ['Pizza', 'Calzone', 'Focaccia garnie', 'Pizza blanche'], f: ['au pesto', 'quatre fromages', 'à la truffe', 'margherita', 'aux cèpes', 'à la burrata', 'diavola', 'aux artichauts'] },
   creperie: { cat: 'restaurant', l: 'crêperie', c: 'n', s: 'sucre', k: 'fs', b: ['Crêpe', 'Galette', 'Crêpe dentelle', 'Crêpe flambée'], f: ['au caramel beurre salé', 'au sucre et citron', 'complète', 'aux pommes', 'au chocolat-noisette', 'à la confiture de lait'] },
   japonais: { cat: 'restaurant', l: 'restaurant japonais', c: 'n', s: 'plat', k: 'fp', b: ['Bol de ramen', 'Sushi', 'Onigiri', 'Bento', 'Gyoza'], f: ['au saumon', 'au miso', 'au sésame', 'au shiso', 'au thon', 'à l’anguille grillée'] },
@@ -234,7 +311,7 @@ const BT_SIG = {
   shop: ['Mannequin miniature|statue', 'Tapis de l’entrée|tapis', 'Lampe de vitrine|lampe', 'Enseigne miniature|statue'],
   nature: ['Herbier|herbier', 'Plante|plante', 'Lanterne|lanterne', 'Statuette de mousse|statue'],
 };
-const BT_SIG_SUB = { pizza: 'Pelle à pizza gravée|statue', creperie: 'Billig miniature|cheminee', japonais: 'Lanterne rouge|lanterne', chinois: 'Lanterne rouge|lanterne', cafe: 'Moulin à café gravé|statue', the: 'Théière de collection|bocal',
+const BT_SIG_SUB = { bouchon: 'Nappe à carreaux du bouchon|tapis', pizza: 'Pelle à pizza gravée|statue', creperie: 'Billig miniature|cheminee', japonais: 'Lanterne rouge|lanterne', chinois: 'Lanterne rouge|lanterne', cafe: 'Moulin à café gravé|statue', the: 'Théière de collection|bocal',
   boulangerie: 'Four à pain miniature|cheminee', patisserie: 'Pièce montée miniature|statue', librairie: 'Bibliothèque miniature|statue', fleuriste: 'Serre miniature|plante', ferme: 'Grange miniature|statue', foret: 'Herbier des sous-bois|herbier',
   glacier: 'Cornet géant en céramique|statue', fromagerie: 'Cloche à fromage gravée|bocal', poissonnerie: 'Bocal de la marée|bocal', musee: 'Tableau miniature|herbier', phare: 'Lanterne du gardien|lanterne', lavoir: 'Tapis de linge brodé|tapis', moulin: 'Moulin miniature|statue', chapelle: 'Vitrail de la chapelle|lanterne' };
 // accessoire au style du lieu : « Nom|emplacement|forme »
@@ -244,7 +321,7 @@ const BT_STY = {
   shop: ['Nœud de vitrine|cou|noeud', 'Sweat de la boutique|haut|sweat', 'Chaussettes à motifs|pieds|chaussettes'],
   nature: ['Chapeau de paille|tete|chapeau', 'Bottes de balade|pieds|bottes', 'Bonnet des champs|tete|bonnet', 'Couronne de fleurs|tete|fleurs'],
 };
-const BT_STY_SUB = { pizza: 'Foulard à carreaux|cou|foulard', creperie: 'Marinière|haut|tshirt', japonais: 'Furoshiki noué|cou|foulard', kebab: 'Casquette du grill|tete|casquette', burger: 'Casquette du diner|tete|casquette', the: 'Chapeau à voilette|tete|chapeau',
+const BT_STY_SUB = { bouchon: 'Tablier à carreaux|haut|tshirt', pizza: 'Foulard à carreaux|cou|foulard', creperie: 'Marinière|haut|tshirt', japonais: 'Furoshiki noué|cou|foulard', kebab: 'Casquette du grill|tete|casquette', burger: 'Casquette du diner|tete|casquette', the: 'Chapeau à voilette|tete|chapeau',
   pub: 'Casquette gavroche|tete|casquette', boulangerie: 'Toque de mitron|tete|chapeau', patisserie: 'Nœud praliné|cou|noeud', glacier: 'Bonnet sorbet|tete|bonnet', ferme: 'Salopette des champs|bas|short', friperie: 'Veste rétro|haut|pull', mode: 'Écharpe de créateur|cou|echarpe' };
 const BT_GROUP = cat => (['boulangerie', 'cafe', 'restaurant', 'glacier', 'chocolaterie', 'epicerie', 'fromagerie', 'boucherie', 'poissonnerie', 'marche', 'caviste'].includes(cat) ? 'food'
   : ['librairie', 'musee', 'bibliotheque', 'cinema', 'patrimoine', 'mairie', 'ecole', 'poste', 'gare'].includes(cat) ? 'culture'
@@ -275,13 +352,13 @@ function btCountryData(iso) { return BT_PAYS[iso] || BT_PAYS[BT_ISO_ALIAS[iso]] 
 // ================= ANALYSE D'UN LIEU =================
 // sous-type : p.osm.subclass d'abord, puis le nom
 const BT_SUBRX = [
-  ['pizza', /pizz|napoli|napoletan|forno a legna/], ['creperie', /crep|galette|krampouez|billig/], ['japonais', /sushi|japon|ramen|izakaya|yakitori|bento|udon|tokyo|sakura|maki/], ['chinois', /chin|wok|dim ?sum|pekin|canton|shanghai|panda d/],
+  ['bouchon', /bouchon|machon|\bmere (brazier|lea|cottivet|jean|bourgeois)|cafe comptoir/], ['pizza', /pizz|napoli|napoletan|forno a legna/], ['creperie', /crep|galette|krampouez|billig/], ['japonais', /sushi|japon|ramen|izakaya|yakitori|bento|udon|tokyo|sakura|maki/], ['chinois', /chin|wok|dim ?sum|pekin|canton|shanghai|panda d/],
   ['kebab', /kebab|doner|shawarma|anatoli|grill turc/], ['burger', /burger|diner|fast.?food/], ['indien', /indi|curry|tandoor|bombay|taj |masala|bollywood/], ['libanais', /liban|falafel|mezze|beyrouth/],
   ['mexicain', /mexic|taco|burrito|taqueria|cantina/], ['asiatique', /thai|bangkok|pho |vietnam|saigon|bo bun|asia/], ['italien', /trattoria|osteria|italia|pasta|ristorante|napoli|roma|venezia/],
   ['mer', /huitre|fruits de mer|maree|seafood|crustace|oyster/], ['vege', /vege|vegan|veggie|green/], ['gaufre', /gaufr|waffle/], ['the', /salon de the|tea|the et|teahouse/], ['pub', /\bpub\b|\bbar\b|biergarten|taverne|brasserie/],
   ['patisserie', /patiss|pastry|gateau|cake|douceur/], ['chapelle', /chapelle|oratoire|calvaire/], ['lavoir', /lavoir/], ['moulin', /moulin|mill/], ['verger', /verger|orchard/],
 ];
-const BT_SUBCAT = { pizza: 'restaurant', creperie: 'restaurant', japonais: 'restaurant', chinois: 'restaurant', kebab: 'restaurant', burger: 'restaurant', indien: 'restaurant', libanais: 'restaurant', mexicain: 'restaurant', asiatique: 'restaurant', italien: 'restaurant', mer: 'restaurant', vege: 'restaurant',
+const BT_SUBCAT = { bouchon: 'restaurant', pizza: 'restaurant', creperie: 'restaurant', japonais: 'restaurant', chinois: 'restaurant', kebab: 'restaurant', burger: 'restaurant', indien: 'restaurant', libanais: 'restaurant', mexicain: 'restaurant', asiatique: 'restaurant', italien: 'restaurant', mer: 'restaurant', vege: 'restaurant',
   gaufre: 'cafe', the: 'cafe', pub: 'cafe', patisserie: 'boulangerie', chapelle: 'patrimoine', lavoir: 'riviere', moulin: 'campagne', verger: 'ferme' };
 const BT_OSMSUB = { pastry: 'patisserie', confectionery: 'patisserie', ice_cream: 'glacier', pub: 'pub', bar: 'pub', biergarten: 'pub', tea: 'the', tea_shop: 'the', fast_food: 'burger', seafood: 'mer', chapel: 'chapelle', wayside_shrine: 'chapelle', watermill: 'moulin', windmill: 'moulin', orchard: 'verger', lavoir: 'lavoir', wash_house: 'lavoir' };
 function btSub(p) {
@@ -303,6 +380,8 @@ function btHomeInfo() {
   if (k !== _btHomeK) { _btHomeK = k; let iso = null; try { iso = rgCountry(h.lon, h.lat); } catch (e) { iso = null; } _btHome = { h, R: regionAt(h.lon, h.lat), iso: iso || 'FRA' }; }
   return _btHome;
 }
+let _btHZk = '', _btHZ = null;
+function btHomeZone() { const h = homeObj(), k = h.name + h.lon; if (k !== _btHZk) { _btHZk = k; try { _btHZ = typeof rgZoneAt === 'function' ? rgZoneAt(h.lon, h.lat) : null; } catch (e) { _btHZ = null; } } return _btHZ; }
 const _btInfoC = new Map();
 function btInfo(pl) {
   const H = btHomeInfo(), lon = +pl.lon, lat = +pl.lat;
@@ -319,14 +398,17 @@ function btInfo(pl) {
   exo = Math.max(0, Math.min(1, exo));
   const cat = pl.cat || (pl.tags && pl.tags[0]) || '';
   const C = iso === 'FRA' ? null : btCountryData(iso), F = R && BT_FR[R.id] ? BT_FR[R.id] : null;
-  const sub = btSub(Object.assign({}, pl, { cat }));
-  const I = { key, R, iso, C, F: iso === 'FRA' || (!iso && F) ? F : null, km, foreign, otherReg, exo, cat, sub, grp: BT_GROUP(BT_SUBCAT[sub] || cat), rural: BT_RURAL.includes(cat) || BT_RURAL.includes(sub) || (!pl.poi && (pl.tags || []).some(t => t === 'campagne' || t === 'foret')) };
+  let sub = btSub(Object.assign({}, pl, { cat }));
+  let Z = null; try { Z = typeof rgZoneAt === 'function' && (iso === 'FRA' || !iso) ? rgZoneAt(lon, lat) : null; } catch (e) { Z = null; }
+  if (sub === 'bouchon' && !(Z && Z.id === 'lyon')) sub = cat === 'restaurant' ? 'restaurant' : '_'; // un vrai bouchon, c'est à Lyon
+  const HZ = btHomeZone(), otherZone = !!(Z && (!HZ || HZ.id !== Z.id));
+  const I = { key, R, iso, C, F: iso === 'FRA' || (!iso && F) ? F : null, Z, ZD: Z && BT_ZONE[Z.id] ? BT_ZONE[Z.id] : null, otherZone, km, foreign, otherReg, exo, cat, sub, grp: BT_GROUP(BT_SUBCAT[sub] || cat), rural: BT_RURAL.includes(cat) || BT_RURAL.includes(sub) || (!pl.poi && (pl.tags || []).some(t => t === 'campagne' || t === 'foret')) };
   if (_btInfoC.size > 3000) _btInfoC.clear();
   _btInfoC.set(ck, I);
   return I;
 }
 // parfums régionaux selon le type (sucré, salé, nature)
-function btLocalFlav(I, k) { const src = I.C || I.F; if (!src || !k) return []; return btFlav(src[k] || (k === 'fn' ? '' : '')); }
+function btLocalFlav(I, k) { if (!k) return []; if (I.ZD && I.ZD[k]) return btFlav(I.ZD[k]); const src = I.C || I.F; if (!src) return []; return btFlav(src[k] || ''); }
 
 // ---------------- carte d'identité (stable) ----------------
 const _btIdC = new Map();
@@ -399,26 +481,45 @@ function btLocalDefs(I, cat) {
   const lists = BT_LISTS[cat] || BT_LISTS[BT_SUBCAT[I.sub]] || BT_LISTS._;
   let out = [];
   if (I.C) lists.forEach(l => btSplit(I.C[l]).forEach(s => out.push(btDef(l, s))));
+  else if (I.ZD) { // v19 : la zone d'abord (Lyon, Alpes, Auvergne…), la région seulement pour combler
+    lists.forEach(l => btSplit(I.ZD[l]).forEach(s => out.push(btDef(l, s))));
+    if (!out.length && I.F) lists.forEach(l => { const fl = BT_FRMAP[l]; if (fl !== 'ter') btSplit(I.F[fl]).forEach(s => out.push(btDef(fl, s))); });
+  }
   else if (I.F) lists.forEach(l => { const fl = BT_FRMAP[l]; btSplit(I.F[fl]).forEach(s => out.push(btDef(fl === 'ter' ? 'ter' : fl, s))); });
+  const subs = BT_CAT_SUBS[cat]; if (subs) { const f = out.filter(d => subs.includes(d[2])); if (f.length) out = f; }
   return out;
 }
-function btLocalItem(I, luck, place, tags, catLetter, rural) {
+function btLocalItem(I, luck, place, tags, catLetter, rural, minRar) {
   let defs = btLocalDefs(I, rural ? 'campagne' : I.cat);
   if (catLetter) { const same = defs.filter(d => d[1] === catLetter); if (same.length) defs = same; }
   const maxR = I.exo > 0.6 ? 2 : 1;
   defs = defs.filter(d => d[3] <= maxR + 1);
-  if (!defs.length || (I.R && Math.random() < 0.25 && !I.C)) {
-    // spécialité de la région du monde (codex des régions)
+  if (!defs.length || (I.R && Math.random() < 0.25 && !I.C && !I.ZD)) {
+    // spécialité de la région du monde (codex des régions) : seulement si elle a du sens ICI (zone, type de lieu)
     const R = I.R; if (!R || !R.res) return null;
-    const res = R.res.filter(x => x.rar <= maxR); if (!res.length) return null;
-    const x = res[Math.floor(Math.random() * res.length)];
+    const pl = btResolve(place) || {};
+    const res = R.res.filter(x => x.rar <= maxR && (typeof rgResFits !== 'function' || rgResFits(x, Object.assign({ cat: I.cat }, pl))));
+    if (!res.length) return null;
+    const x = btFreshPick(res.map(r => [r.name, r.cat, r.sub, r.rar, null, r.color, r]))[6];
     return typeof rgMakeRes === 'function' ? rgMakeRes(x, place, tags, { place, km: I.km }) : null;
   }
-  const d = defs[Math.floor(Math.random() * defs.length)];
-  const rar = Math.min(3, d[3] + (I.exo > 0.6 && Math.random() < 0.2 ? 1 : 0));
+  const d = btFreshPick(defs);
+  const rar = Math.max(minRar || 0, Math.min(3, d[3] + (I.exo > 0.6 && Math.random() < 0.2 ? 1 : 0)));
   const it = makeItem(d, luck, place, tags, { fixed: rar });
   return it;
 }
+// v19 : un objet du coin (zone, sinon région ou pays) pour remplacer une spécialité du codex qui n'a pas sa place ici (17_regions.js)
+function btZoneGift(dest, t, minRar) {
+  if (!dest || !isFinite(+dest.lon)) return null;
+  const pl = Object.assign({}, dest, { cat: dest.cat || (dest.tags && POI_CATS[dest.tags[0]] ? dest.tags[0] : null) }), I = btInfo(pl);
+  if (!I.ZD && !I.F && !I.C) return null;
+  const rural = I.rural && !btLocalDefs(I, I.cat).length;
+  const it = btLocalItem(Object.assign({}, I, { R: null }), (t && t.luck) || 0, dest.name, dest.tags || [], null, rural, minRar);
+  if (it) { btTag(it, 'loc', pl, I); if (I.km < 40 && pl.poi) it.near = 1; }
+  return it;
+}
+// le tas d'objets courants d'un lieu (même règle que lootFor)
+function btPoolOf(tags) { tags = tags || []; let pool = []; if (typeof POI_CATS !== 'undefined' && POI_CATS[tags[0]] && LOOT[tags[0]]) pool = LOOT[tags[0]].slice(); else tags.forEach(t => { if (LOOT[t]) pool = pool.concat(LOOT[t]); }); return pool.filter(d => d[1] !== 't'); }
 // enrichit le butin d'un lieu (appelé après lootFor)
 function btEnrich(out, tags, luck, placeArg, comp, n) {
   const pl = btResolve(placeArg);
@@ -427,11 +528,15 @@ function btEnrich(out, tags, luck, placeArg, comp, n) {
   const I = btInfo(pl), id = btIdentity(pl, I), mood = btMood(I.key), want = btWanted();
   const pName = typeof placeArg === 'string' ? placeArg : pl.name;
   // 1. produits locaux et noms locaux
-  let pLoc = I.foreign ? 0.18 + 0.5 * I.exo : I.otherReg ? 0.06 + 0.3 * I.exo : 0;
+  let pLoc = I.foreign ? 0.18 + 0.5 * I.exo : I.otherReg ? 0.06 + 0.3 * I.exo : I.ZD ? (I.otherZone ? 0.24 : 0.14) : 0; // v19 : à Lyon, des objets lyonnais
+  const pool0 = btPoolOf(tags);
   if (pLoc && mood.loc) pLoc += mood.loc;
   for (let i = 0; i < out.length; i++) {
     const it = out[i];
     if (!it || it.special || it.edition || it.rid || it.tresor || it.bt || want.has(it.name)) continue;
+    // v19 : un objet courant déjà rapporté plusieurs fois récemment laisse souvent sa place à un autre du même lieu
+    const rn = btRecentN(it.name);
+    if (rn >= 2 && pool0.length > 3 && Math.random() < Math.min(0.9, 0.35 * rn)) { const d = btFreshPick(pool0.filter(x => x[0] !== it.name && x[3] <= it.rarity + 1)); if (d) { const nw = makeItem(d, luck, it.from, tags); out[i] = nw; continue; } }
     if (pLoc && Math.random() < pLoc) { const nw = btLocalItem(I, luck, pName, tags, it.cat === 'v' ? 'v' : null, false); if (nw) { btTag(nw, 'loc', pl, I); out[i] = nw; continue; } }
     if (I.C && I.C.loc) { const j = BT_LOC_KEYS.indexOf(it.name), L = I.C.loc.split('|'); if (j >= 0 && L[j]) { it.fr = it.name; it.name = L[j]; it.bt = { k: 'nom', iso: I.iso }; } }
   }
@@ -460,7 +565,7 @@ function btEnrich(out, tags, luck, placeArg, comp, n) {
     const pT = (arrival ? 0.55 : 0.3) + (I.cat === 'ferme' ? 0.15 : 0) + (mood.ter || 0);
     if (Math.random() < pT) {
       let it = null;
-      if (I.F || I.C) it = btLocalItem(Object.assign({}, I, { exo: I.km > 150 ? 0.7 : 0.2 }), luck, pName, tags, null, true);
+      if (I.F || I.C || I.ZD) it = btLocalItem(Object.assign({}, I, { exo: I.km > 150 ? 0.7 : 0.2 }), luck, pName, tags, null, true);
       if (it) { if (I.km > 150 && it.rarity < 1) it.rarity = 1; add(btTag(it, 'ter', pl, I)); }
     }
   }
@@ -479,6 +584,13 @@ if (typeof poiDest === 'function') poiDest = (orig => function (p) {
   try { if (p && d) { if (p.id != null) d.pid = String(p.id); if (p.osm) d.osm = { class: p.osm.class, subclass: p.osm.subclass }; } } catch (e) { /* rien */ }
   return d;
 })(poiDest);
+// v19 : on retient ce qui a été rapporté (moins de répétitions aux voyages suivants)
+if (typeof collect === 'function') collect = (orig => function () {
+  const t = S.trips && S.trips[S.sel];
+  const r = orig.apply(this, arguments);
+  try { if (t && t.bag) { btRemember(t.bag); save(); } } catch (e) { console.error('butin', e); }
+  return r;
+})(collect);
 // simulation (tests, aperçu) : le butin d'arrivée d'un lieu
 function btSimulate(pl, times = 1, luck = 0.5) {
   const tags = pl.tags || [pl.cat, (POI_CATS[pl.cat] || [])[3] || 'ville'].filter(Boolean), k = S.sel || Object.keys(S.comps || {})[0];
@@ -500,6 +612,7 @@ function btCatalog() {
     ['pain', 'sucre', 'boisson', 'plat', 'prod', 'nature', 'artisan', 'vet'].forEach(l => btSplit(C[l]).forEach(s => add(btDef(l, s), { k: 'pays', v: iso, cats: listCats(l) })));
     if (C.loc) C.loc.split('|').forEach((nm, j) => { const L = M.get(BT_LOC_KEYS[j]); if (nm && L) add([nm, L.def[1], L.def[2], L.def[3], L.def[4], L.def[5]], { k: 'pays', v: iso, cats: L.src.filter(x => x.k === 'cat').map(x => x.v), fr: BT_LOC_KEYS[j] }); });
   });
+  Object.entries(BT_ZONE).forEach(([zid, Z]) => ['pain', 'sucre', 'boisson', 'plat', 'prod', 'nature', 'artisan', 'vet'].forEach(l => btSplit(Z[l]).forEach(s => add(btDef(l, s), { k: 'zone', v: zid, cats: listCats(l) }))));
   Object.entries(BT_FR).forEach(([rid, F]) => ['pain', 'plat', 'ter'].forEach(l => btSplit(F[l]).forEach(s => add(btDef(l, s), { k: 'fr', v: rid, cats: l === 'ter' ? ['ferme', 'campagne', 'foret', 'riviere'] : l === 'pain' ? ['boulangerie'] : ['restaurant'] }))));
   const recs = [].concat(typeof RECIPES !== 'undefined' ? RECIPES : [], typeof ECO_RECIPES !== 'undefined' ? ECO_RECIPES : [], typeof RG_RECIPES !== 'undefined' ? RG_RECIPES : [], typeof BQ_RECIPES !== 'undefined' ? BQ_RECIPES : []);
   recs.forEach(r => { if (r && Array.isArray(r.out)) add(r.out, { k: 'rec', v: r.id }); });
@@ -530,8 +643,17 @@ function btSources(itOrName) {
   const hr = btHomeRegion();
   srcs.forEach(s => {
     if (s.k === 'tag') out.push({ txt: btTagLbl(s.v), ico: 'tag', step: { t: 'visit', tag: s.v }, go: 'Y aller', d: 5 });
+    else if (s.k === 'zone') {
+      const Z = typeof RG_ZONES !== 'undefined' ? RG_ZONES[s.v] : null; if (!Z) return;
+      const HZ = btHomeZone(), home = HZ && HZ.id === Z.id, cs = (s.cats || []).filter(c => POI_CATS[c]);
+      const extra = cs.length ? ` · ${cs.slice(0, 3).map(c => btCatL(c).toLowerCase()).join(', ')}` : '';
+      out.push({ txt: home ? `Près de chez vous (${Z.n})${extra}` : `${Z.n}${extra}`, ico: 'reg', step: home ? { t: 'visit', cat: cs.length ? cs : ['marche'] } : { fn: () => btGoZone(Z) }, go: home ? 'Y aller' : 'Voir sur la carte', d: home ? 3 : 300 });
+    }
     else if (s.k === 'reg' || s.k === 'fr') {
       const R = RG[s.v]; if (!R) return;
+      // v19 : une spécialité du codex limitée à certaines zones (bleu d'Auvergne…) : on montre la zone et le type de lieu
+      const W = s.k === 'reg' && it && it.rid && typeof RG_RES_WHERE !== 'undefined' ? RG_RES_WHERE[it.rid] : (s.k === 'reg' && !it && typeof RG_RES !== 'undefined' ? (() => { const x = Object.values(RG_RES).find(r => r.name === name); return x ? RG_RES_WHERE[x.id] : null; })() : null);
+      if (W && W.z) { const HZ = btHomeZone(), hz = HZ && W.z.includes(HZ.id), Z = RG_ZONES[W.z[0]]; out.push({ txt: hz ? `Près de chez vous : ${W.w}` : `${W.w[0].toUpperCase()}${W.w.slice(1)}`, ico: 'reg', step: hz ? { t: 'visit', cat: W.c.filter(c => POI_CATS[c]) } : { fn: () => btGoZone(Z) }, go: hz ? 'Y aller' : 'Voir sur la carte', d: hz ? 3 : 300 }); return; }
       const home = hr && hr.id === R.id;
       const extra = s.cats && s.cats.length ? ` · ${s.cats.slice(0, 3).map(c => btCatL(c).toLowerCase()).join(', ')}` : '';
       out.push({ txt: home ? `Votre région (${R.short})${extra || ' · marché, fermes'}` : `Région : ${R.name}${extra}`, ico: 'reg', step: home ? { t: 'visit', cat: s.cats && s.cats.length ? s.cats : ['marche', 'ferme'] } : { region: R.id }, go: home ? 'Y aller' : 'Voir sur la carte', d: home ? 3 : 500 });
@@ -590,6 +712,16 @@ function btGoCountry(iso) {
   const rid = typeof RG_ISO !== 'undefined' ? RG_ISO[iso] : null;
   if (rid && typeof regionGo === 'function') return regionGo(rid);
   openSheet('voyage');
+}
+function btGoZone(Z) {
+  if (!Z) return; if (!btFreeComp()) return;
+  if (typeof closeSheet === 'function') closeSheet();
+  const P = PLACES.filter(x => x.name !== S.home && (typeof rgZoneAt !== 'function' || (rgZoneAt(x.lon, x.lat) || {}).id === Z.id))[0];
+  if (P) return goDreamPlace(P, `Cap sur ${P.name} (${Z.n}) ! Choisissez la durée, puis partez.`);
+  const [lon, lat] = Z.pts.split(' ')[0].split(',').map(Number);
+  const p = { id: null, name: Z.c, country: 'France', lat, lon, tags: ['ville', 'campagne'], special: null };
+  if (typeof choosePlace === 'function') choosePlace(p); else { plan.dest = p; openSheet('voyage'); }
+  if (typeof zoomTo === 'function') { try { zoomTo(lon, lat, 8); } catch (e) {} }
 }
 function btGoSub(sub) {
   if (!btFreeComp()) return;

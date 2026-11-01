@@ -254,6 +254,83 @@ function regionAt(lon, lat) {
   return RG[id];
 }
 
+// ---------------- v19 : zones fines (départements) et « où tombe une spécialité » ----------------
+// Le joueur : « du bleu d'Auvergne récoltable partout alors que je suis à Lyon ». Une région administrative est trop grande :
+// on la découpe en zones (repères = villes ; la plus proche gagne), et chaque spécialité du codex dit OÙ elle se trouve
+// (zones) et DANS QUEL TYPE DE LIEU (fromagerie, marché, sentier…). Les objets de zone eux-mêmes sont dans 30_butin.js (BT_ZONE).
+const RG_ZONES = {
+  lyon: { c: 'Lyon', r: 'ara', n: 'Lyon et Rhône', de: 'de Lyon', pts: '4.84,45.76 4.72,45.99 4.6,45.75 4.88,45.6 4.93,45.85 4.68,45.88 4.87,45.53' },
+  alpes: { c: 'Grenoble', r: 'ara', n: 'Alpes (Savoie, Isère)', de: 'des Alpes', pts: '5.72,45.19 5.92,45.57 6.13,45.9 6.87,45.92 6.39,45.68 6.66,45.2 5.5,45.1 6.48,46.37 6.65,45.5 6.06,45.36 5.79,45.36 6.9,45.4' },
+  auvergne: { c: 'Clermont-Ferrand', r: 'ara', n: 'Auvergne', de: 'd’Auvergne', pts: '3.08,45.78 2.44,44.93 3.88,45.04 3.33,46.57 3.42,46.13 2.6,46.34 3.09,45.03 2.83,45.6 3.55,45.86 3.38,45.3 2.33,45.22 2.75,45.2 3.74,45.55 3.9,46.3' },
+  drome_ardeche: { c: 'Valence', r: 'ara', n: 'Drôme et Ardèche', de: 'de Drôme-Ardèche', pts: '4.89,44.93 4.75,44.56 4.6,44.73 4.39,44.62 5.14,44.36 5.37,44.75 4.43,44.4 5.05,45.04 4.67,45.24 4.7,44.38' },
+  loire: { c: 'Saint-Étienne', r: 'ara', n: 'Loire (Saint-Étienne, Forez)', de: 'de la Loire', pts: '4.39,45.43 4.07,46.04 4.06,45.6 4.27,45.73 4.12,45.14' },
+  ain: { c: 'Bourg-en-Bresse', r: 'ara', n: 'Ain (Bresse, Dombes)', de: 'de l’Ain', pts: '5.23,46.2 5.65,46.26 5.36,45.86 6.06,46.33 5.0,46.0 5.69,45.76 4.97,46.31' },
+  provence: { c: 'Aix-en-Provence', r: 'paca', n: 'Provence', de: 'de Provence', pts: '5.37,43.3 5.45,43.53 4.81,43.95 4.63,43.68 5.93,43.12 5.4,43.88 5.05,44.05 5.07,44.24 4.45,43.45 5.79,43.83' },
+  cote_azur: { c: 'Nice', r: 'paca', n: 'Côte d’Azur', de: 'de la Côte d’Azur', pts: '7.26,43.7 7.0,43.55 6.64,43.27 6.74,43.43 6.92,43.66 7.5,43.78 7.42,43.74' },
+  alpes_sud: { c: 'Gap', r: 'paca', n: 'Alpes du Sud', de: 'des Alpes du Sud', pts: '6.08,44.56 6.24,44.09 6.65,44.39 6.64,44.9 5.94,44.2 6.51,43.85 6.89,43.95' },
+};
+const RG_ZPTS = []; for (const [id, z] of Object.entries(RG_ZONES)) { z.id = id; z.pts.split(' ').forEach(p => { const [lon, lat] = p.split(',').map(Number); RG_ZPTS.push([lon, lat, id]); }); }
+// zone d'un point (seulement dans une région découpée) ; sinon null
+function rgZoneAt(lon, lat) {
+  lon = +lon; lat = +lat; if (!isFinite(lon) || !isFinite(lat)) return null;
+  let R = null; try { R = regionAt(lon, lat); } catch (e) { R = null; }
+  if (!R) return null;
+  let best = null, bd = 1e9; const k = Math.cos(lat * Math.PI / 180);
+  for (const [x, y, id] of RG_ZPTS) { if (RG_ZONES[id].r !== R.id) continue; const dx = (x - lon) * k, dy = y - lat, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = id; } }
+  return best ? RG_ZONES[best] : null;
+}
+// familles de lieux : un lieu du quotidien (cat) ou un grand lieu (tags)
+const RG_K_FOOD = ['boulangerie', 'cafe', 'restaurant', 'glacier', 'chocolaterie', 'epicerie', 'fromagerie', 'boucherie', 'poissonnerie', 'marche', 'caviste'];
+const RG_K_CULT = ['librairie', 'musee', 'bibliotheque', 'cinema', 'patrimoine', 'mairie', 'ecole', 'poste', 'gare', 'rue', 'hotel'];
+const RG_K_SHOP = ['mode', 'friperie', 'boutique', 'jouets', 'bricolage', 'coiffeur', 'laverie', 'pharmacie', 'puces', 'fleuriste'];
+const RG_K_FARM = ['ferme', 'marche', 'jardin', 'campagne', 'route', 'verger'];
+const RG_K_SEA = ['plage', 'port', 'phare', 'poissonnerie'];
+const RG_K_NAT = ['parc', 'foret', 'riviere', 'etang', 'sentier', 'belvedere', 'camping', 'campagne', 'jardin', 'ferme', 'route', 'plage', 'zoo'];
+const RG_K_MONT = ['sentier', 'belvedere', 'camping'];
+// où tombe chaque spécialité du codex : z = zones permises (sinon toute la région), c = types de lieux, t = paysages des grands lieux
+const RG_RES_WHERE = {
+  soie_lyon: { z: ['lyon'], c: ['mode', 'friperie', 'boutique', 'musee', 'patrimoine', 'puces', 'librairie', 'rue', 'coiffeur'], t: ['ville', 'monument'], w: 'boutiques, musées et vieilles rues de Lyon' },
+  bleu_auvergne: { z: ['auvergne'], c: ['fromagerie', 'marche', 'ferme', 'epicerie', 'restaurant'], t: ['campagne', 'montagne'], w: 'fromageries, marchés et fermes d’Auvergne' },
+  noix_grenoble: { z: ['alpes', 'drome_ardeche'], c: ['marche', 'epicerie', 'ferme', 'verger', 'campagne', 'foret', 'boulangerie'], t: ['campagne', 'foret', 'montagne'], w: 'marchés, vergers et fermes de l’Isère et de la Drôme' },
+  pierre_lave: { z: ['auvergne', 'drome_ardeche'], c: ['sentier', 'belvedere', 'campagne', 'route', 'patrimoine', 'rue', 'riviere', 'foret'], t: ['montagne', 'campagne'], w: 'sentiers, volcans et vieilles pierres d’Auvergne et d’Ardèche' },
+  cristal_alpes: { z: ['alpes'], c: ['sentier', 'belvedere', 'camping', 'musee', 'riviere'], t: ['montagne', 'neige'], w: 'sentiers et sommets des Alpes' },
+  lavande: { z: ['provence', 'alpes_sud'], c: ['campagne', 'ferme', 'marche', 'fleuriste', 'route', 'sentier', 'jardin'], t: ['campagne'], w: 'champs, marchés et fermes de Haute-Provence' },
+  savon_marseille: { z: ['provence'], c: ['boutique', 'epicerie', 'marche', 'pharmacie', 'laverie', 'puces'], t: ['ville'], w: 'boutiques et marchés de Provence' },
+  calisson: { z: ['provence'], c: ['chocolaterie', 'boulangerie', 'epicerie', 'cafe', 'marche'], t: ['ville', 'campagne'], w: 'confiseries et pâtisseries de Provence' },
+  ocre_roussillon: { z: ['provence'], c: ['sentier', 'belvedere', 'campagne', 'route', 'boutique'], t: ['campagne', 'montagne'], w: 'sentiers et villages du Luberon' },
+  jasmin_grasse: { z: ['cote_azur'], c: ['fleuriste', 'jardin', 'boutique', 'campagne', 'parc'], t: ['campagne', 'ville'], w: 'fleuristes et jardins de la Côte d’Azur' },
+};
+// sous-types : quelle famille de lieux les vend ou les cache
+const RG_SUB_FOOD = ['fromage', 'fruit', 'legume', 'sucre', 'plat', 'boisson', 'mer', 'pain', 'agrume', 'pomme', 'glace'];
+const RG_SUB_SEA = ['sable', 'coquillage', 'corail', 'perle'];
+const RG_SUB_NAT = ['fleur', 'feuille', 'pierre', 'bois', 'cristal', 'plume', 'graine', 'mousse', 'champignon', 'flocon', 'laine', 'ble'];
+function rgDestCat(dest) { const c = dest && (dest.cat || (dest.tags && POI_CATS[dest.tags[0]] ? dest.tags[0] : null)); return c || null; }
+// la spécialité x peut-elle tomber à cet endroit ?
+function rgResFits(x, dest) {
+  if (!x || !dest) return true;
+  const W = RG_RES_WHERE[x.id], cat = rgDestCat(dest), tags = dest.tags || [];
+  if (W && W.z) { const Z = rgZoneAt(dest.lon, dest.lat); if (!Z || !W.z.includes(Z.id)) return false; }
+  if (W) return cat ? W.c.includes(cat) : tags.some(t => W.t.includes(t));
+  // règle générale (autres régions) : la famille de lieux suit le sous-type
+  if (!cat) { // grand lieu : ville = tout ; nature = produits de nature et de ferme
+    if (tags.includes('ville')) return true;
+    if (RG_SUB_SEA.includes(x.sub)) return tags.some(t => ['mer', 'ile', 'lac'].includes(t));
+    return true;
+  }
+  if (RG_SUB_FOOD.includes(x.sub)) return RG_K_FOOD.includes(cat) || RG_K_FARM.includes(cat) || (x.sub === 'mer' && RG_K_SEA.includes(cat)) || cat === 'hotel' || cat === 'camping';
+  if (RG_SUB_SEA.includes(x.sub)) return RG_K_SEA.includes(cat) || tags.some(t => t === 'mer' || t === 'ile') || cat === 'boutique' || cat === 'puces';
+  if (RG_SUB_NAT.includes(x.sub)) return RG_K_NAT.includes(cat) || cat === 'fleuriste' || (x.sub === 'pierre' && (cat === 'patrimoine' || cat === 'rue')) || (x.sub === 'laine' && (cat === 'mode' || cat === 'friperie' || cat === 'marche'));
+  return RG_K_CULT.includes(cat) || RG_K_SHOP.includes(cat) || cat === 'marche';
+}
+// texte « où la trouver » d'une spécialité du codex
+function rgResWhere(x) {
+  const W = RG_RES_WHERE[x.id]; if (W) return W.w;
+  if (RG_SUB_FOOD.includes(x.sub)) return 'commerces de bouche, marchés et fermes de la région';
+  if (RG_SUB_SEA.includes(x.sub)) return 'plages et ports de la région';
+  if (RG_SUB_NAT.includes(x.sub)) return 'parcs, bois, sentiers et campagne de la région';
+  return 'boutiques, musées et vieilles rues de la région';
+}
+
 // ---------------- état (sauvegarde) ----------------
 function rgState() {
   if (!S.regions || typeof S.regions !== 'object') S.regions = {};
@@ -320,10 +397,13 @@ const rgDurF = dur => RG_DUR_F[dur] != null ? RG_DUR_F[dur] : 1;
 function rgDistBonus(km, dur) { return Math.min(0.8, Math.max(0, km) / 7000) * rgDurF(dur); }
 function rgRarityWeights(km, luck, dur) { const b = rgDistBonus(km, dur) + Math.min(0.3, Math.max(0, luck || 0) * 0.08), top = RG_DUR_TOP[dur] != null ? RG_DUR_TOP[dur] : 1; return RG_RAR_W.map((w, r) => w * Math.pow(1 + b, r) * (r >= 3 ? top : 1)); }
 const rgShortTrip = dur => dur === 'eclair' || dur === 'court';
-function rgPickRes(R, km, luck, preferNew, dur, maxRar) {
-  let pool = R.res; if (maxRar != null) { const lo = pool.filter(x => x.rar <= maxRar); if (lo.length) pool = lo; }
+// v19 : dest (facultatif) = seules les spécialités qui ont du sens à cet endroit ; null si aucune
+function rgPickRes(R, km, luck, preferNew, dur, maxRar, dest) {
+  let pool = dest ? R.res.filter(x => rgResFits(x, dest)) : R.res; if (!pool.length) return null;
+  if (maxRar != null) { const lo = pool.filter(x => x.rar <= maxRar); if (lo.length) pool = lo; }
   if (preferNew) { const nf = pool.filter(x => !rgGot(x.id)); if (nf.length) pool = nf; }
-  const W = rgRarityWeights(km, luck, dur), w = pool.map(x => W[x.rar]);
+  const rec = typeof btRecentN === 'function' ? btRecentN : () => 0; // moins de répétitions : ce qui vient de tomber pèse moins
+  const W = rgRarityWeights(km, luck, dur), w = pool.map(x => W[x.rar] / (1 + 1.2 * rec(x.name)));
   let r = Math.random() * w.reduce((a, b) => a + b, 0);
   for (let i = 0; i < pool.length; i++) { r -= w[i]; if (r <= 0) return pool[i]; }
   return pool[0];
@@ -334,7 +414,7 @@ function rgMakeRes(x, place, tags, origin) {
   return it;
 }
 // probabilités affichées (pour l'aperçu avant de partir)
-function rgResChances(R, km, luck, dur) { const W = rgRarityWeights(km, luck, dur), tot = R.res.reduce((a, x) => a + W[x.rar], 0); return R.res.map(x => ({ x, p: W[x.rar] / tot })); }
+function rgResChances(R, km, luck, dur, dest) { const W = rgRarityWeights(km, luck, dur), pool = dest ? R.res.filter(x => rgResFits(x, dest)) : R.res, tot = pool.reduce((a, x) => a + W[x.rar], 0) || 1; return pool.map(x => ({ x, p: W[x.rar] / tot })); }
 function rgDreamNeeds(k, it) {
   try {
     if (typeof curDream !== 'function' || typeof itemMatches !== 'function') return false;
@@ -364,17 +444,29 @@ function rgBeforeCollect(t) {
   const elig = t.bag.map((it, i) => ({ it, i })).filter(({ it }) => it && !it.rid && !it.special && !it.edition && (it.cat === 'm' || it.cat === 'n') && it.rarity <= 1 && !rgDreamNeeds(t.comp, it));
   const maxConv = Math.max(1, Math.ceil(t.bag.length * 0.35)), origin = { place, km };
   const made = [];
-  elig.sort(() => Math.random() - 0.5).forEach(({ i }, n) => { if (made.length < maxConv && (n === 0 || Math.random() < 0.22)) { const x = rgPickRes(R, km, t.luck, false, t.dur), it = rgMakeRes(x, dest.name || place, tags, origin); t.bag[i] = it; made.push(it); } });
-  if (!made.length) { const it = rgMakeRes(rgPickRes(R, km, t.luck, false, t.dur), dest.name || place, tags, origin); t.bag.push(it); made.push(it); }
-  // 3. première visite : une spécialité garantie en plus, de préférence encore inconnue
+  // v19 : seulement les spécialités qui ont du sens ICI (zone + type de lieu) ; sinon un objet local de la zone (30_butin.js)
+  const nFit = R.res.filter(x => rgResFits(x, dest)).length, rec = typeof btRecentN === 'function' ? btRecentN : () => 0;
+  // moins de répétitions : peu de spécialités possibles ici = moins souvent ; une spécialité déjà rapportée récemment laisse sa place
+  const pick = () => { const x = rgPickRes(R, km, t.luck, false, t.dur, null, dest); return x && !(rec(x.name) >= 1 && Math.random() < Math.min(0.85, 0.45 * rec(x.name))) ? x : null; };
+  if (nFit) {
+    const cap = nFit >= 3 ? maxConv : 1, p0 = nFit >= 3 ? 0.85 : 0.45;
+    elig.sort(() => Math.random() - 0.5).forEach(({ i }, n) => { if (made.length < cap && (n === 0 ? Math.random() < p0 : Math.random() < 0.22)) { const x = pick(); if (!x) return; const it = rgMakeRes(x, dest.name || place, tags, origin); t.bag[i] = it; made.push(it); } });
+  }
+  if (!made.length && typeof btZoneGift === 'function' && Math.random() < 0.7) { const it = btZoneGift(dest, t); if (it) { it.origin = { region: R.id, place, km }; t.bag.push(it); } }
+  // 3. première visite : une spécialité garantie en plus, de préférence encore inconnue (ou, à défaut, un objet de la zone)
   let bonus = null;
-  if (isNew) { bonus = rgMakeRes(rgPickRes(R, km, (t.luck || 0) + 1.5, true, t.dur, rgShortTrip(t.dur) ? 1 : null), dest.name || place, tags, origin); t.bag.push(bonus); }
+  if (isNew) {
+    const x = rgPickRes(R, km, (t.luck || 0) + 1.5, true, t.dur, rgShortTrip(t.dur) ? 1 : null, dest);
+    if (x) bonus = rgMakeRes(x, dest.name || place, tags, origin);
+    else if (typeof btZoneGift === 'function') { bonus = btZoneGift(dest, t, 1); if (bonus) bonus.origin = { region: R.id, place, km }; }
+    if (bonus) t.bag.push(bonus);
+  }
   const newRes = [...new Set(t.bag.filter(it => it.rid && !rgGot(it.rid)).map(it => it.rid))];
   // 4. codex
   const s = st.seen[R.id] || (st.seen[R.id] = { trips: 0, first: Date.now() });
   s.trips++; s.last = Date.now();
   t.bag.forEach(it => { if (it.rid) st.got[it.rid] = (st.got[it.rid] || 0) + 1; });
-  rgLastHaul = { R, isNew, made: made.length + (bonus ? 1 : 0), newRes, km, complete: rgComplete(R) && newRes.length > 0 };
+  rgLastHaul = { R, isNew, made: made.length + (bonus && bonus.rid ? 1 : 0), zone: (rgZoneAt(dest.lon, dest.lat) || {}).n || '', newRes, km, complete: rgComplete(R) && newRes.length > 0 };
 }
 if (typeof collect === 'function') collect = (orig => function () {
   const k = S.sel, t = S.trips[k];
@@ -392,7 +484,7 @@ function rgHaulBanner(h) {
   const box = m.querySelector('.haul'); if (!box) return;
   const n = REGIONS.filter(R => rgDiscovered(R.id)).length;
   const txt = h.isNew ? `<b>Nouvelle région : ${esc(h.R.name)}</b><small>${n}/${REGIONS.length} régions découvertes · une spécialité offerte !</small>`
-    : `<b>${esc(h.R.name)}</b><small>${h.made} spécialité${h.made > 1 ? 's' : ''} régionale${h.made > 1 ? 's' : ''}${h.newRes.length ? ` · ${h.newRes.length} nouvelle${h.newRes.length > 1 ? 's' : ''} pour le codex` : ''} · ${rgGotCount(h.R)}/${h.R.res.length}</small>`;
+    : `<b>${esc(h.R.name)}${h.zone ? ` · ${esc(h.zone)}` : ''}</b><small>${h.made ? `${h.made} spécialité${h.made > 1 ? 's' : ''} régionale${h.made > 1 ? 's' : ''}` : 'Pas de spécialité du codex dans ce type de lieu'}${h.newRes.length ? ` · ${h.newRes.length} nouvelle${h.newRes.length > 1 ? 's' : ''} pour le codex` : ''} · ${rgGotCount(h.R)}/${h.R.res.length}</small>`;
   box.insertAdjacentHTML('beforebegin', `<button class="rgban${h.isNew ? ' new' : ''}" style="--rg:${h.R.color}" data-rgopen="${h.R.id}">${rgIcon(h.R, 'm')}<span>${txt}</span><em>Codex</em></button>`);
   if (h.complete) box.insertAdjacentHTML('afterend', `<p class="rgdone">Toutes les spécialités ${esc(rgDe(h.R))} sont réunies ! Récompense à récupérer dans Sac & Album › Régions.</p>`);
 }
@@ -561,10 +653,10 @@ if (typeof liveFindHTML === 'function') liveFindHTML = (orig => function (d) {
   let h = orig.apply(this, arguments);
   try {
     const R = regionAt(d.lon, d.lat), km = kmBetween(homeObj(), d), dd = DURS.find(x => x.key === plan.dur) || DURS[0];
-    const ch = rgResChances(R, km, dd.luck, dd.key).sort((a, b) => (rgGot(a.x.id) - rgGot(b.x.id)) || b.x.rar - a.x.rar);
+    const ch = rgResChances(R, km, dd.luck, dd.key, d).sort((a, b) => (rgGot(a.x.id) - rgGot(b.x.id)) || b.x.rar - a.x.rar);
     const show = [ch.find(c => !rgGot(c.x.id) && (!rgShortTrip(dd.key) || c.x.rar <= 1)) || ch.find(c => !rgGot(c.x.id)) || ch[0], ch.filter(c => c.x.rar <= 1).sort((a, b) => b.p - a.p)[0]].filter((c, i, a) => c && a.indexOf(c) === i).slice(0, 2);
     const isNew = !rgDiscovered(R.id) || !(rgState().seen[R.id] || {}).trips;
-    const extra = `<div class="cfreg" style="--rg:${R.color}"><div class="cfrh">${rgIcon(R, 'm')}<span><b>${esc(R.name)}</b><small>${isNew ? 'Nouvelle région : une spécialité garantie !' : `${rgGotCount(R)}/${R.res.length} spécialités trouvées`}${km >= 1000 ? (rgShortTrip(dd.key) ? ' · si loin : partez plus longtemps pour les raretés' : km >= 4000 ? ' · si loin : les raretés bien plus fréquentes' : ' · loin : raretés plus fréquentes') : ''}</small></span></div><div class="cfrs">${show.map(c => { const it = { name: c.x.name, cat: c.x.cat, sub: c.x.sub, rarity: c.x.rar, color: c.x.color }, known = rgGot(c.x.id); return `<span style="--rc:${RARC[c.x.rar]}"><span class="cfic">${itemIcon(it)}</span><span class="cfrx"><em>${known ? esc(c.x.name) : esc(c.x.name)}</em><i>${RARITY[c.x.rar]}${known ? '' : ' · nouveau'}</i></span></span>`; }).join('')}</div></div>`;
+    const extra = `<div class="cfreg" style="--rg:${R.color}"><div class="cfrh">${rgIcon(R, 'm')}<span><b>${esc(R.name)}</b><small>${isNew ? 'Nouvelle région : une spécialité garantie !' : `${rgGotCount(R)}/${R.res.length} spécialités trouvées`}${km >= 1000 ? (rgShortTrip(dd.key) ? ' · si loin : partez plus longtemps pour les raretés' : km >= 4000 ? ' · si loin : les raretés bien plus fréquentes' : ' · loin : raretés plus fréquentes') : ''}</small></span></div><div class="cfrs">${show.length ? '' : `<span class="cfnone"><span class="cfrx"><em>Pas de spécialité du codex ici</em><i>${esc((rgZoneAt(d.lon, d.lat) || R).n || R.short)} : objets du coin seulement</i></span></span>`}${show.map(c => { const it = { name: c.x.name, cat: c.x.cat, sub: c.x.sub, rarity: c.x.rar, color: c.x.color }, known = rgGot(c.x.id); return `<span style="--rc:${RARC[c.x.rar]}"><span class="cfic">${itemIcon(it)}</span><span class="cfrx"><em>${known ? esc(c.x.name) : esc(c.x.name)}</em><i>${RARITY[c.x.rar]}${known ? '' : ' · nouveau'}</i></span></span>`; }).join('')}</div></div>`;
     h = h.replace(/<\/div>$/, extra + '</div>');
   } catch (e) { console.error(e); }
   return h;
@@ -605,7 +697,7 @@ function rgDetail(R) {
   const km = kmBetween(homeObj(), { lon: R.anchor[0], lat: R.anchor[1] }), home = rgHome().id === R.id;
   let h = `<div class="rgd${disc ? '' : ' lock'}" style="--rg:${R.color}"><div class="rgdh">${rgIcon(R, 'xl', !disc)}<div><span class="rgk">${esc(RG_GROUPS[R.g])}${home ? ' · votre région' : ''}</span><h3>${esc(R.name)}</h3><p>${esc(R.mood)}</p></div></div>`;
   h += `<div class="rgchips"><span>${trips} voyage${trips > 1 ? 's' : ''}</span><span>${got}/${n} spécialités</span><span>${home ? 'À la maison' : km.toLocaleString('fr-FR') + ' km'}</span></div>`;
-  h += `<div class="rgres">${R.res.map(x => { const g = rgGot(x.id), it = { name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color }; return `<div class="rgr ${g ? 'got' : ''}" style="--rc:${RARC[x.rar]}"><span class="rgri">${itemIcon(it)}</span><span class="rgrx"><b>${g ? esc(x.name) : '? ? ?'}</b><i>${RARITY[x.rar]}${g ? ` · ${x.cat === 'n' ? 'nourriture' : 'matériau'}` : ''}</i></span>${g && st.got[x.id] > 1 ? `<em>×${st.got[x.id]}</em>` : ''}</div>`; }).join('')}</div>`;
+  h += `<div class="rgres">${R.res.map(x => { const g = rgGot(x.id), it = { name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color }; return `<div class="rgr ${g ? 'got' : ''}" style="--rc:${RARC[x.rar]}"><span class="rgri">${itemIcon(it)}</span><span class="rgrx"><b>${g ? esc(x.name) : '? ? ?'}</b><i>${RARITY[x.rar]}${g ? ` · ${x.cat === 'n' ? 'nourriture' : 'matériau'}` : ''}</i><small class="rgwh">${esc(rgResWhere(x))}</small></span>${g && st.got[x.id] > 1 ? `<em>×${st.got[x.id]}</em>` : ''}</div>`; }).join('')}</div>`;
   h += `<div class="rgrew ${done ? (claimed ? 'claimed' : 'ready') : ''}"><span class="rgmed">${itemIcon({ name: 'Médaille', cat: 'm', sub: 'medaille', rarity: 3, color: R.color })}</span><span><b>${done ? (claimed ? 'Région complète !' : 'Toutes les spécialités sont réunies !') : 'Récompense de la région'}</b><small>Toutes les spécialités : ${RG_REWARD} pièces et la médaille ${esc(rgDe(R))}</small></span>${done && !claimed ? `<button class="btn gold sm" data-rgclaim="${R.id}">Récupérer</button>` : claimed ? '<span class="tagok">✓</span>' : `<span class="rgcnt">${got}/${n}</span>`}</div>`;
   h += `<button class="btn green big wide" data-rggo="${R.id}" ${S.trips[S.sel] ? 'disabled' : ''}>${S.trips[S.sel] ? `${CHARS[S.sel].name} est en voyage` : `Y aller avec ${CHARS[S.sel].name}`}</button>`;
   return h + `</div>`;

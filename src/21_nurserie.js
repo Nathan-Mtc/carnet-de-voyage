@@ -28,40 +28,58 @@ function nsState() {
 
 // ---------------- espèces : où les trouver ----------------
 // reg : poids par région (17_regions.js) ; tags : poids par paysage (tags des lieux)
+// v19 : règle stricte (le joueur : « je les trouve n'importe où »). Une espèce n'apparaît QUE dans ses régions.
+// need : paysages exigés dans cette région (sinon tous les lieux de la région) ; zf : en France, zones ou test de lieu exigés.
 const NS_SP = {
-  panda: { reg: { chine: 3, inde: 2.5, asie_centrale: 1, coree: 1, japon: 0.6, asie_sud_est: 0.6 }, tags: { foret: 1.2, montagne: 1.4 } },
-  capy: { reg: { amerique_sud: 3, mexique_caraibes: 1 }, tags: { lac: 1.4, campagne: 0.7 } },
-  axo: { reg: { mexique_caraibes: 3 }, tags: { lac: 1.6, mer: 0.2 } },
-  renard: { reg: { arctique: 3, scandinavie: 2.5, canada: 2, britanniques: 0.4, usa_est: 0.4, suisse: 0.5 }, tags: { neige: 1.8, montagne: 0.6 } },
-  fennec: { reg: { afrique_nord: 3, moyen_orient: 2.5, asie_centrale: 1, afrique_est: 0.6, usa_ouest: 0.4 }, tags: { desert: 2 } },
-  tanuki: { reg: { japon: 3, coree: 2.5, chine: 1 }, tags: { foret: 1, ville: 0.6, campagne: 0.5 } },
-  paresseux: { reg: { amerique_sud: 3, mexique_caraibes: 2 }, tags: { foret: 0.9, ile: 0.5 } },
-  lemur: { reg: { ocean_indien: 3, afrique_est: 0.8, afrique_sud: 0.6 }, tags: { foret: 0.7, ile: 1 } },
-  phoque: { reg: { arctique: 2.5, grand_large: 2, scandinavie: 1.6, britanniques: 1.2, bretagne: 1.2, normandie: 0.8, canada: 1, pacifique: 0.6 }, tags: { mer: 1.4, neige: 0.8 } },
-  quokka: { reg: { australie: 3, pacifique: 1.6 }, tags: { ile: 1, campagne: 0.5 } },
+  panda: { reg: { chine: 3, inde: 2.5, asie_centrale: 1, coree: 1, japon: 0.6, asie_sud_est: 0.6 }, tags: { foret: 1.2, montagne: 1.4 }, need: { asie_centrale: ['foret', 'montagne'], coree: ['foret', 'montagne'], japon: ['foret', 'montagne'], asie_sud_est: ['montagne'] } },
+  capy: { reg: { amerique_sud: 3, mexique_caraibes: 1 }, tags: { lac: 1.4, campagne: 0.7 }, need: { mexique_caraibes: ['lac', 'campagne', 'foret'] } },
+  axo: { reg: { mexique_caraibes: 3 }, tags: { lac: 1.6, mer: 0.2 }, need: { mexique_caraibes: ['lac', 'ville', 'campagne'] } },
+  renard: { reg: { arctique: 3, scandinavie: 2.5, canada: 2, suisse: 0.6, ara: 0.5, paca: 0.3 }, tags: { neige: 1.8, montagne: 0.6 }, need: { canada: ['neige', 'montagne', 'foret', 'lac'], suisse: ['neige', 'montagne'], ara: ['neige', 'montagne'], paca: ['neige', 'montagne'] }, zf: { ara: ['alpes'], paca: ['alpes_sud'] } },
+  fennec: { reg: { afrique_nord: 3, moyen_orient: 2.5, asie_centrale: 1, usa_ouest: 0.4 }, tags: { desert: 2 }, need: { asie_centrale: ['desert'], usa_ouest: ['desert'], afrique_nord: ['desert', 'campagne', 'ville'] } },
+  tanuki: { reg: { japon: 3, coree: 2.5, chine: 1, europe_est: 0.5, scandinavie: 0.4, allemagne: 0.4, grandest: 0.3 }, tags: { foret: 1, ville: 0.6, campagne: 0.5 }, need: { chine: ['foret', 'campagne'], europe_est: ['foret', 'campagne'], scandinavie: ['foret'], allemagne: ['foret'], grandest: ['foret'] } },
+  paresseux: { reg: { amerique_sud: 3, mexique_caraibes: 2 }, tags: { foret: 0.9, ile: 0.5 }, need: { amerique_sud: ['foret', 'ile', 'campagne'], mexique_caraibes: ['foret', 'ile'] } },
+  lemur: { reg: { ocean_indien: 3, afrique_est: 0.8, afrique_sud: 0.6 }, tags: { foret: 0.7, ile: 1 }, need: { afrique_est: ['foret'], afrique_sud: ['foret'] } },
+  phoque: { reg: { arctique: 2.5, grand_large: 2, scandinavie: 1.6, britanniques: 1.2, bretagne: 1.2, normandie: 0.8, hdf: 0.6, canada: 1, pacifique: 0.6 }, tags: { mer: 1.4, neige: 0.8 }, need: { scandinavie: ['mer'], britanniques: ['mer'], bretagne: ['mer'], normandie: ['mer'], hdf: ['mer'], canada: ['mer'], pacifique: ['mer'], arctique: ['mer', 'neige'] } },
+  quokka: { reg: { australie: 3, pacifique: 1.6 }, tags: { ile: 1, campagne: 0.5 }, need: { pacifique: ['ile'] } },
 };
+const NS_SEA_CATS = ['plage', 'port', 'phare'];
 const NS_PLURAL = { panda: 'les pandas roux', capy: 'les capybaras', axo: 'les axolotls', renard: 'les renards polaires', fennec: 'les fennecs', tanuki: 'les tanukis', paresseux: 'les paresseux', lemur: 'les lémuriens', phoque: 'les phoques', quokka: 'les quokkas' };
 const nsLow = sp => spName(sp).toLowerCase();
-// score d'une espèce pour un lieu : région + paysage ; une espèce hors de chez elle reste possible, mais rare
+// tags d'un lieu, y compris son type (un port compte comme la mer)
+function nsTagsOf(place) { const t = ((place && place.tags) || []).slice(), c = place && place.cat; if (c && NS_SEA_CATS.includes(c)) t.push('mer'); if (c && ['foret', 'parc', 'sentier'].includes(c)) t.push('foret'); return t; }
+// l'espèce vit-elle ici ? (région, paysage exigé, zone en France)
+function nsSpOk(sp, place) {
+  const d = NS_SP[sp]; if (!d || !place) return false;
+  const R = nsRegionOf(place); if (!R || !d.reg[R.id]) return false;
+  const tags = nsTagsOf(place), need = d.need && d.need[R.id];
+  if (need && !tags.some(t => need.includes(t))) return false;
+  const zf = d.zf && d.zf[R.id];
+  if (zf) { const Z = typeof rgZoneAt === 'function' ? rgZoneAt(place.lon, place.lat) : null; if (!Z || !zf.includes(Z.id)) return false; }
+  return true;
+}
 function nsSpScore(sp, regId, tags) {
-  const d = NS_SP[sp]; if (!d) return 0;
+  const d = NS_SP[sp]; if (!d || !d.reg[regId]) return 0;
   const t = (tags || []).reduce((a, x) => a + (d.tags[x] || 0), 0);
-  return 0.05 + (d.reg[regId] || 0) + t * 0.7;
+  return d.reg[regId] + t * 0.7;
 }
 function nsRegionOf(o) { try { if (typeof regionAt === 'function' && o && isFinite(o.lon) && isFinite(o.lat)) return regionAt(o.lon, o.lat); } catch (e) {} return null; }
+// seules les espèces qui vivent ici (poids 0 pour les autres)
 function nsScores(place, baitSps) {
-  const R = nsRegionOf(place), rid = R ? R.id : '', tags = (place && place.tags) || [];
-  return SP_IDS.map(sp => { let w = nsSpScore(sp, rid, tags); if (baitSps && baitSps.includes(sp)) w *= 4; return { sp, w }; });
+  const R = nsRegionOf(place), rid = R ? R.id : '', tags = nsTagsOf(place);
+  return SP_IDS.map(sp => { let w = nsSpOk(sp, place) ? nsSpScore(sp, rid, tags) : 0; if (w && baitSps && baitSps.includes(sp)) w *= 4; return { sp, w }; });
 }
+// null : aucune espèce sauvage ici (pas d'œuf, pas de rencontre)
 function nsPickSp(place, baitSps) {
-  const l = nsScores(place, baitSps), tot = l.reduce((a, b) => a + b.w, 0);
+  const l = nsScores(place, baitSps).filter(x => x.w > 0), tot = l.reduce((a, b) => a + b.w, 0);
+  if (!tot) return null;
   let r = Math.random() * tot; for (const x of l) { r -= x.w; if (r <= 0) return x.sp; }
   return l[0].sp;
 }
 // texte « où le trouver » (Compédium)
 function nsWhere(sp) {
   const d = NS_SP[sp]; if (!d) return '';
-  const regs = Object.entries(d.reg).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id]) => (typeof RG !== 'undefined' && RG[id] ? RG[id].short : id));
+  const zn = (rid) => { const z = d.zf && d.zf[rid]; return z && typeof RG_ZONES !== 'undefined' ? z.map(x => RG_ZONES[x] ? RG_ZONES[x].n : x).join(', ') : null; };
+  const regs = Object.entries(d.reg).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([id]) => zn(id) || (typeof RG !== 'undefined' && RG[id] ? RG[id].short : id));
   const tags = Object.entries(d.tags).sort((a, b) => b[1] - a[1]).filter(x => x[1] >= 0.5).slice(0, 2).map(([t]) => (TAGL[t] || t).toLowerCase());
   return regs.join(', ') + (tags.length ? ` · paysages : ${tags.join(', ')}` : '');
 }
@@ -258,14 +276,18 @@ function nsTripEgg(e) {
   if (t.nsFirst) p += 0.15;                  // première visite dans cette région
   if (baitSps && baitSps.length) p += 0.2;   // un appât dans le sac
   p += Math.min(0.25, N.dry * 0.05);         // un peu de chance en plus à chaque voyage sans œuf
+  let sp = nsPickSp(dest, baitSps);
+  // v19 : aucune espèce ici = pas d'œuf (sauf le tout premier, celui du tutoriel : un œuf mystère d'espèce de départ)
+  if (!sp && N.found) return null;
   if (!N.found) p = 1; // le premier œuf est garanti dès le premier retour de voyage
   if (Math.random() >= p) { N.dry++; return null; }
   N.dry = 0; N.found++;
-  const sp = nsPickSp(dest, baitSps), luck = ((DURS.find(x => x.key === t.dur) || {}).luck || 0) * 0.4 + (baitSps && baitSps.includes(sp) ? 0.4 : 0);
+  const first = !sp; if (first) sp = pick(typeof SP_STARTERS !== 'undefined' ? SP_STARTERS : ['panda', 'capy', 'axo']);
+  const luck = ((DURS.find(x => x.key === t.dur) || {}).luck || 0) * 0.4 + (baitSps && baitSps.includes(sp) ? 0.4 : 0);
   const genes = N.found === 1 ? defaultGenes(sp) : rollGenes(sp, luck), rarity = geneRarityOf(genes, sp);
   N.seen[sp] = 1;
   const R = nsRegionOf(dest);
-  return nsAddEgg({ sp, genes, rarity, from: { how: 'oeuf', region: R ? R.id : null, place: dest.name }, ms: nsHatchMs(rarity) });
+  return nsAddEgg({ sp, genes, rarity, known: !first, from: first ? { how: 'depart', place: dest.name } : { how: 'oeuf', region: R ? R.id : null, place: dest.name }, ms: nsHatchMs(rarity) });
 }
 function nsEggFoundHTML(egg) {
   const inC = egg.inc && egg.ready > Date.now(), R = egg.from && egg.from.region && typeof RG !== 'undefined' ? RG[egg.from.region] : null;
@@ -277,6 +299,7 @@ function nsEggFoundHTML(egg) {
 // au départ : une chance sur six environ, plus dans le bon habitat ou avec un appât ; l'événement arrive tard dans le voyage
 function nsPlanWild(t) {
   const N = nsState(), sc = nsScores(t.dest, t.bait ? t.bait.sps : null), best = Math.max(...sc.map(x => x.w));
+  if (!(best > 0)) return; // v19 : aucune espèce sauvage ici
   let p = 0.17;
   if (best >= 1) p = 0.24;                       // le lieu est l'habitat d'une espèce
   if (t.bait && t.bait.sps.length) p += 0.12;
@@ -289,6 +312,7 @@ function nsPlanWild(t) {
 function nsFireWild(t, e) {
   const N = nsState(), k = t.comp, n = CHARS[k].name, place = eventPlace(t, e), now = Date.now();
   const sp = nsPickSp(t.dest, t.bait ? t.bait.sps : null); // l'espèce de la destination : le voyageur la ramène dans ses souvenirs
+  if (!sp) { t.journal.push({ t: now, place: t.dest.name, kind: 'trace', text: `${n} remarque des traces dans l’herbe… mais aucun animal sauvage de la nurserie ne vit par ici.` }); return; }
   const genes = rollGenes(sp, 0.4), rarity = geneRarityOf(genes, sp);
   N.seen[sp] = 1; N.wild++;
   const pal = rarity >= 2 ? genesText({ sp, genes }) : '';
@@ -650,7 +674,7 @@ function nsBaitPanel(dest) {
   if (N.bait && !bag.some(b => b.name === N.bait)) N.bait = '';
   const sel = bag.find(b => b.name === N.bait), sc = nsScores(dest, sel ? sel.sps : null).sort((a, b) => b.w - a.w), tot = sc.reduce((a, b) => a + b.w, 0);
   const top = sc.slice(0, 3).filter(x => x.w / tot >= 0.06);
-  let h = `<div class="nsbait"><div class="nsbh"><b>Œufs et rencontres possibles</b><span class="small">selon la région et le paysage</span></div><div class="nsposs">${top.map(x => { const pc = x.w / tot, lv = pc >= 0.45 ? 3 : pc >= 0.2 ? 2 : 1; return `<span class="nspo${N.own[x.sp] ? '' : ' new'}"><img src="${nsPortrait(x.sp)}" alt=""><b>${esc(spName(x.sp))}</b><i class="nsdots" aria-label="${['', 'rare', 'possible', 'fréquent'][lv]}">${'●'.repeat(lv)}${'○'.repeat(3 - lv)}</i>${N.own[x.sp] ? '' : '<em>Nouveau</em>'}</span>`; }).join('')}</div>`;
+  let h = `<div class="nsbait"><div class="nsbh"><b>Œufs et rencontres possibles</b><span class="small">selon la région et le paysage</span></div><div class="nsposs">${top.length ? '' : '<span class="small">Aucune espèce sauvage ne vit ici : pas d’œuf ni de rencontre. Voyez le Compédium pour savoir où les trouver.</span>'}${top.filter(x => x.w > 0).map(x => { const pc = x.w / tot, lv = pc >= 0.45 ? 3 : pc >= 0.2 ? 2 : 1; return `<span class="nspo${N.own[x.sp] ? '' : ' new'}"><img src="${nsPortrait(x.sp)}" alt=""><b>${esc(spName(x.sp))}</b><i class="nsdots" aria-label="${['', 'rare', 'possible', 'fréquent'][lv]}">${'●'.repeat(lv)}${'○'.repeat(3 - lv)}</i>${N.own[x.sp] ? '' : '<em>Nouveau</em>'}</span>`; }).join('')}</div>`;
   h += `<div class="nsbh"><b>Emporter un appât</b><span class="small">plus de chances d’œuf et de rencontre</span></div>`;
   h += bag.length ? `<div class="nsbl">${bag.slice(0, 6).map(b => `<button class="nsbb${b.name === N.bait ? ' on' : ''}" data-ns-bait="${esc(b.name)}" aria-pressed="${b.name === N.bait}"><span class="nsti">${itemIcon(b.it)}</span><span><b>${esc(b.name)}${b.n > 1 ? ` ×${b.n}` : ''}</b><small>Attire ${esc(b.sps.slice(0, 2).map(sp => NS_PLURAL[sp]).join(' et '))}</small></span></button>`).join('')}</div>` : `<p class="small nsnob">Pas d’appât dans le sac. Les dattes attirent les fennecs, le poisson les phoques, les fruits les lémuriens, le thé les tanukis…</p>`;
   return h + `</div>`;
