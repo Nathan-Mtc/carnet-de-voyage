@@ -207,7 +207,7 @@ function mapDecorInit() {
 #cvAmb .glow{position:absolute;inset:0;opacity:0;transition:opacity 1.6s;mix-blend-mode:screen;background:radial-gradient(60% 40% at 80% 0%,rgba(255,236,190,.35),transparent 70%)}
 #cvAmb[data-ph="gold"] .glow{opacity:1}
 #cvAmb[data-ph="night"] .glow{opacity:.5;background:radial-gradient(40% 30% at 82% 8%,rgba(200,215,255,.35),transparent 70%)}
-#cvAmb .cld{position:absolute;left:0;width:150px;height:60px;opacity:0;transition:opacity 1.2s;animation:cvDrift var(--d) linear infinite;animation-delay:var(--dl);will-change:transform}
+#cvAmb .cld{position:absolute;left:0;translate:var(--ox,0) 0;width:150px;height:60px;opacity:0;transition:opacity 1.2s;animation:cvDrift var(--d) linear infinite;animation-delay:var(--dl);will-change:transform}
 #cvAmb.far .cld{opacity:1}
 #cvAmb:not(.far) .cld{animation-play-state:paused}
 #cvAmb .cld i{position:absolute;border-radius:50%}
@@ -237,12 +237,19 @@ function cvAmbInit() {
   if ($('cvAmb')) return;
   const el = document.createElement('div'); el.id = 'cvAmb'; el.setAttribute('aria-hidden', 'true');
   let html = '<div class="veil"></div><div class="glow"></div>';
-  [[18, 150, -40, 1], [46, 190, -120, 0.8], [72, 130, -75, 1.15]].forEach(([top, d, dl, s]) => { html += `<div class="cld" style="top:${top}%;--d:${d}s;--dl:${dl}s;--s:${s}"><i class="sh"></i><i class="p1"></i><i class="p2"></i><i class="p3"></i></div>`; });
+  [[14, 46, -10, 1], [38, 62, -40, 0.8], [62, 52, -25, 1.15], [82, 70, -55, 0.9]].forEach(([top, d, dl, s]) => { html += `<div class="cld" style="top:${top}%;--d:${d}s;--dl:${dl}s;--s:${s}"><i class="sh"></i><i class="p1"></i><i class="p2"></i><i class="p3"></i></div>`; });
   el.innerHTML = html;
   const cc = map.getCanvasContainer(), cv = map.getCanvas();
   cc.insertBefore(el, cv.nextSibling); // sous les marqueurs HTML et l'overlay #ov
   const upd = () => { el.classList.toggle('far', map.getZoom() < 9); };
   map.on('zoom', upd); upd();
+  // les nuages suivent la carte quand on la fait glisser (ils ne restent plus collés à l'écran)
+  let ox = 0, oy = 0, last = null;
+  map.on('move', () => { const c = map.project(map.getCenter()), p = map.project([0, 0]); const cur = { x: p.x, y: p.y };
+    if (last) { ox += cur.x - last.x; oy += cur.y - last.y; } last = cur;
+    const W = window.innerWidth + 260, H = window.innerHeight;
+    el.style.setProperty('--ox', (((ox % W) + W) % W - 130).toFixed(0) + 'px'); el.style.setProperty('--oy', (((oy % H) + H) % H - H / 2).toFixed(0) * 0 + 'px'); });
+  map.on('zoomstart', () => { last = null; });
   cvAmbTick(); clearInterval(cvT); cvT = setInterval(cvAmbTick, 5 * 60 * 1000);
 }
 function cvAmbTick() {
