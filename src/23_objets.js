@@ -132,7 +132,7 @@ function obInfo(it) {
     if (t !== 'hate') add({ k: 'nourrir', txt: t === 'love' ? `Le plat adoré de ${wn} : beaucoup d’expérience` : `Un repas pour ${wn}`, line: t === 'love' ? `Plat adoré de ${wn}` : `Régale ${wn}`, sub: t === 'love' ? 'Donne beaucoup d’expérience' : 'Donne un peu d’expérience', act: 'Donner', go: 'feed', prio: t === 'love' ? 45 : 12 });
   }
   if (it.cat === 'd') add({ k: 'maison', txt: 'Décore la maison : plus de confort', line: 'Décore la maison', sub: 'Plus de confort, plus d’expérience', act: 'Poser chez moi', go: 'house', prio: 25 });
-  if (it.cat === 't') add({ k: 'tresor', txt: 'Révèle un lieu secret sur la carte', line: 'Révèle un lieu secret', sub: 'Trésors légendaires garantis là-bas', act: 'Déplier', go: 'unroll', prio: 80 });
+  if (it.cat === 't') add({ k: 'tresor', txt: 'Une rumeur sur un trésor unique', line: 'Une rumeur de trésor', sub: 'Elle s’ajoute au carnet des trésors (Sac › Trésors)', act: 'Déplier', go: 'unroll', prio: 80 });
   const rare = it.rarity >= 2 || it.special || it.edition;
   if (rare && !uses.some(u => u.k === 'collection' && !/^Codex/.test(u.line))) add({ k: 'collection', txt: 'Objet de collection : à garder précieusement', line: 'Objet de collection', sub: `${RARITY[it.rarity]} : plus c’est rare, plus ça vaut cher`, act: '', go: '', prio: 9 });
   const val = obSafe(() => value(it), 0);
@@ -342,7 +342,7 @@ const OB_SUM = {
   batiment: n => obPl(n, 'matériau pour le village', 'matériaux pour le village'),
   nourrir: n => obPl(n, 'plat adoré', 'plats adorés'),
   maison: n => obPl(n, 'décoration', 'décorations'),
-  tresor: n => obPl(n, 'carte au trésor', 'cartes au trésor'),
+  tresor: n => obPl(n, 'bout de carte', 'bouts de carte'),
   collection: n => obPl(n, 'objet de collection', 'objets de collection'),
   vendre: n => obPl(n, 'à vendre', 'à vendre'),
   autre: n => obPl(n, 'autre objet', 'autres objets'),

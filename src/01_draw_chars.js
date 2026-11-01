@@ -277,6 +277,26 @@ const SPECIES = {
     egg: { a: '#f7dcc0', b: '#e59a5e', m: 'suns' },
   },
 };
+// v15 : palettes EXCLUSIVES des trésors uniques (27_tresors.js). Marquées `excl` (id du trésor) : randomGenes et mutate
+// ne les tirent jamais ; on ne les obtient qu'avec l'œuf du trésor (ou en croisant un compagnon qui les porte).
+const TREASURE_PALS = {
+  renard: [PAL('aurore_laponie', 'Aurore de Laponie', 4, '#c4efe0', '#5f8fc4', '#fbf2ff', { pc: '#f6a6d8', grad: ['#bff3dc', '#9fd0f4', '#d9b6f2', '#f6c2e0'], x: { line: '#4f5a86' }, fx: 'glint', excl: 'rovaniemi' }),
+    PAL('givre_merdeglace', 'Givre de la Mer de Glace', 4, '#d6eef8', '#4f86b8', '#ffffff', { pc: '#9fd8f0', grad: ['#f2fbff', '#cfe8f7', '#a9d4ef'], x: { line: '#43597a' }, fx: 'glint', excl: 'merdeglace' })],
+  fennec: [PAL('lavande_valensole', 'Lavande de Valensole', 4, '#c9b3ec', '#7f62b8', '#fbf6ff', { pc: '#f6e08a', grad: ['#e2d4fa', '#c3a8ee', '#a88ad8'], x: { line: '#5a4486' }, excl: 'valensole' }),
+    PAL('rose_merzouga', 'Rose des sables de Merzouga', 4, '#f4b88f', '#c0603f', '#fff0e2', { pc: '#f7d7a8', grad: ['#ffd2a6', '#f4a07a', '#e07f62'], x: { line: '#7a3f2c' }, excl: 'merzouga' })],
+  phoque: [PAL('banquise_svalbard', 'Banquise du Svalbard', 4, '#e8f4fb', '#7fa8cc', '#ffffff', { pc: '#bfe3f6', grad: ['#ffffff', '#d6ecf9', '#b4d6f0'], x: { line: '#4f6680' }, fx: 'glint', excl: 'svalbard' }),
+    PAL('ecume_armen', 'Écume d’Ar-Men', 4, '#9fb3c4', '#3f5468', '#eef3f7', { pc: '#ffffff', grad: ['#c6d4df', '#9fb3c4', '#7d93a8'], x: { line: '#2f3f50' }, pat: 'taches', excl: 'armen' })],
+  tanuki: [PAL('sakura_kyoto', 'Sakura de Kyoto', 4, '#f6c6d6', '#a65a78', '#fff4f8', { pc: '#ffffff', grad: ['#ffe1ec', '#f6b3cb', '#e996b4'], x: { line: '#7a3f56' }, pat: 'coeurs', excl: 'kyoto' })],
+  lemur: [PAL('baobab_morondava', 'Baobab de Morondava', 4, '#eeaa6e', '#6a3f2c', '#ffe9cf', { pc: '#f6d36b', grad: ['#f9c784', '#ee8f5a', '#c9684e'], x: { line: '#5a3424' }, excl: 'morondava' })],
+  quokka: [PAL('soleil_rottnest', 'Soleil de Rottnest', 4, '#f6cf7a', '#b9783a', '#fff6dc', { pc: '#7fd0d8', grad: ['#ffe7a0', '#f6c35e', '#f29a5e'], x: { line: '#7a4c22' }, fx: 'glint', excl: 'rottnest' })],
+  axo: [PAL('trajinera_xochimilco', 'Trajinera de Xochimilco', 4, '#ff9ccb', '#1fa3a0', '#fff1d6', { pc: '#ffd94a', grad: ['#ffb3d6', '#ffd36b', '#7fe0d0'], x: { line: '#7a3f5c', gill: '#1fa3a0', frill: '#7fe0d0' }, pat: 'etoiles', excl: 'xochimilco' }),
+    PAL('emeraude_vaucluse', 'Émeraude de Vaucluse', 4, '#6fd0a8', '#1f7a64', '#e6fbf2', { pc: '#bff3e0', grad: ['#a6ecce', '#6fd0a8', '#43b096'], x: { line: '#1f5a4a', gill: '#2f9a80', frill: '#bff3e0' }, fx: 'glint', excl: 'vaucluse' })],
+  capy: [PAL('arcenciel_iguazu', 'Arc-en-ciel d’Iguazú', 4, '#a6dcd2', '#3f8f86', '#f1fbf8', { pc: '#f6c2cf', grad: ['#f9c2cf', '#f6e08a', '#a6dcd2', '#9fc8f0'], x: { line: '#2f5f5a' }, excl: 'iguazu' }),
+    PAL('turquoise_annecy', 'Turquoise d’Annecy', 4, '#7fd0d6', '#2f7f8a', '#effbfb', { pc: '#ffffff', grad: ['#b4ecef', '#7fd0d6', '#5fb4c8'], x: { line: '#2a5a62' }, excl: 'annecy' })],
+  paresseux: [PAL('nuage_monteverde', 'Nuage de Monteverde', 4, '#d3e6cc', '#5f8a6a', '#f7fbf4', { pc: '#ffffff', grad: ['#f2f9ee', '#cfe5c6', '#a6cfb0'], x: { line: '#3f5a46' }, excl: 'monteverde' })],
+  panda: [PAL('drapeaux_taktsang', 'Drapeaux de prière de Taktsang', 4, '#f2a07a', '#6a3a30', '#fff6ea', { pc: '#ffffff', grad: ['#f08a7a', '#f6d36b', '#8fcf7f', '#7fb0e6', '#f4f1ea'], x: { line: '#5a3028' }, excl: 'taktsang' })],
+};
+for (const [sp, pals] of Object.entries(TREASURE_PALS)) if (SPECIES[sp]) SPECIES[sp].palettes.push(...pals);
 for (const [id, s] of Object.entries(SPECIES)) {
   s.id = id;
   const p = s.palettes[0];
@@ -1028,7 +1048,7 @@ function patColFor(pal) {
 function randomGenes(sp, luck = 0) {
   const S0 = SPECIES[sp] || SPECIES.panda;
   luck = Math.max(0, Math.min(5, +luck || 0));
-  const pal = wPick(S0.palettes, p => rarityW(p.r, luck));
+  const pal = wPick(S0.palettes.filter(p => !p.excl), p => rarityW(p.r, luck)); // v15 : jamais une palette exclusive de trésor
   let pattern = pal.pat && Math.random() < 0.5 ? pal.pat : wPick(S0.patterns, id => rarityW(PATTERNS[id].r, luck) * (id === 'uni' ? 2.2 : 1));
   if (!S0.patterns.includes(pattern)) pattern = 'uni';
   const eye = wPick(Object.keys(EYES), id => rarityW(EYES[id].r, luck) * (id === 'def' ? 4 : 1));
@@ -1054,7 +1074,7 @@ function inheritSpecial(gA, gB) {
 function mutate(g, sp, p) {
   if (Math.random() >= p) return g;
   const m = randomGenes(sp, 3), what = pick(['pal', 'pal', 'pattern', 'eye', 'special']);
-  if (what === 'pal') { const pals = SPECIES[sp].palettes.filter(x => x.r >= 2); const q = pick(pals); Object.assign(g, { pal: q.id, base: q.base, accent: q.accent, belly: q.belly, patCol: patColFor(q) }); }
+  if (what === 'pal') { const pals = SPECIES[sp].palettes.filter(x => x.r >= 2 && !x.excl); const q = pick(pals); Object.assign(g, { pal: q.id, base: q.base, accent: q.accent, belly: q.belly, patCol: patColFor(q) }); }
   else if (what === 'pattern') { const pats = SPECIES[sp].patterns.filter(x => PATTERNS[x].r >= 2); g.pattern = pick(pats); g.patCol = m.patCol; }
   else if (what === 'eye') g.eye = pick(['violet', 'rose', 'or', 'vairon']);
   else g.special = pick(['bebe', 'pastel', 'brillant']);

@@ -1,4 +1,4 @@
-// ================= BOUCLE DE JEU : cadeau quotidien, événement du jour, paliers, succès, effets =================
+// ================= BOUCLE DE JEU : cadeau quotidien, bonus du jour (fusionné avec les événements de saison de 28_economie.js), paliers, succès, effets =================
 // Chargé en dernier. Ne modifie pas les autres fichiers : il enveloppe quelques fonctions globales
 // (renderQuests, renderNav, renderVoyage, renderGoal, maybeIntro) et ajoute ses propres éléments d'interface.
 (function injectJeuCSS() {
@@ -221,11 +221,14 @@ const EVENTS = [
 let _evCache = { dk: 0, ev: null };
 function todayEvent() {
   const dk = dayKey(); if (_evCache.dk === dk) return _evCache.ev;
-  const ev = EVENTS[(Math.imul(dk, 2654435761) >>> 0) % EVENTS.length];
+  // v15 bis : pendant un événement de saison (28_economie.js), le bonus du jour EST cet événement
+  let ev = null; try { if (typeof ecoDailyFace === 'function') ev = ecoDailyFace(); } catch (e) { ev = null; }
+  if (!ev) ev = EVENTS[(Math.imul(dk, 2654435761) >>> 0) % EVENTS.length];
   _evCache = { dk, ev }; return ev;
 }
 const evColor = ev => ev.color || (ev.cat && POI_CATS[ev.cat] ? POI_CATS[ev.cat][1] : '#f2c14e');
 function evIcon(ev) {
+  if (ev.season && typeof ecoIconSVG === 'function') return ecoIconSVG(ev.season.E);
   if (ev.cat && POI_CATS[ev.cat]) return `<svg viewBox="0 0 24 24" aria-hidden="true">${POI_GLYPH[POI_CATS[ev.cat][2]] || ''}</svg>`;
   if (ev.coins) return COIN;
   if (ev.luck) return `<svg viewBox="0 0 24 24" aria-hidden="true">${[0, 1, 2, 3].map(i => `<circle cx="${12 + Math.cos(i * 1.571) * 4.6}" cy="${11 + Math.sin(i * 1.571) * 4.6}" r="4.4" fill="#fff"/>`).join('')}<path d="M12 12 Q14 18 17 21" stroke="#fff" stroke-width="2" fill="none"/></svg>`;
@@ -235,17 +238,20 @@ const evApplies = (ev, tags) => !!(ev && ev.tags && tags && tags.some(t => ev.ta
 function goEvent() {
   const ev = todayEvent();
   $('modal').hidden = true;
+  if (ev.season) { const p = typeof ecoNearestPlace === 'function' ? ecoNearestPlace(ev.season) : null; if (p && !S.trips[S.sel]) { goToPlace(p); return; } openSheet('voyage'); return; }
   if (ev.place && !S.trips[S.sel]) { const h = homeObj(), p = PLACES.filter(x => x.name !== S.home && ev.tags.some(t => x.tags.includes(t))).sort((a, b) => kmBetween(h, a) - kmBetween(h, b))[0]; if (p) { goToPlace(p); return; } }
   if (ev.cat && POI_CATS[ev.cat]) { if (tab !== 'carte') closeSheet(); goHome(); setTimeout(() => toast(`Cherchez « ${POI_CATS[ev.cat][0]} » près de chez vous et touchez-le pour récolter.`), 50); return; }
   openSheet('voyage');
 }
 function eventModal() {
   const ev = todayEvent();
-  showModal(`<div class="evi" style="--ec:${evColor(ev)};width:64px;height:64px">${evIcon(ev).replace('<svg ', '<svg style="width:38px;height:38px" ')}</div><h2>${esc(ev.name)}</h2><p>${esc(ev.desc)}</p><p class="small">Un nouvel événement chaque jour. Revenez demain pour découvrir le suivant !</p><div class="row" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn cream" data-closemodal="1">Fermer</button><button class="btn green" data-jeu="goevent">J’y vais !</button></div>`);
+  if (ev.season && typeof ecoOpenEvent === 'function') return ecoOpenEvent();
+  showModal(`<div class="evi" style="--ec:${evColor(ev)};width:64px;height:64px">${evIcon(ev).replace('<svg ', '<svg style="width:38px;height:38px" ')}</div><h2>${esc(ev.name)}</h2><p>${esc(ev.desc)}</p><p class="small">Un nouveau bonus chaque jour, et un grand événement de saison chaque mois. Revenez demain !</p><div class="row" style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center"><button class="btn cream" data-closemodal="1">Fermer</button><button class="btn green" data-jeu="goevent">J’y vais !</button></div>`);
 }
 
 // ================= CADEAU QUOTIDIEN ET SÉRIE =================
-const LOGIN_REWARDS = [{ coins: 30 }, { coins: 50 }, { item: 1 }, { coins: 80 }, { item: 2 }, { coins: 120 }, { coins: 200, item: 3 }];
+// v15 bis (28_economie.js) : jour 3 et 6 = tickets de la machine à souvenirs, jour 7 = l'objet DATÉ du mois (épique)
+const LOGIN_REWARDS = [{ coins: 30 }, { coins: 50 }, { ticket: 1 }, { coins: 80 }, { item: 2 }, { ticket: 2 }, { coins: 120, item: 3, dated: 1 }];
 function giftItem(r) {
   const all = Object.values(LOOT).flat().filter(d => d[1] !== 'n' && d[3] <= r);
   const it = makeItem(pick(all), 0, 'Cadeau du jour', [], { fixed: r });
@@ -268,13 +274,16 @@ function checkLogin() {
   const L = S.login;
   if (!giftPending()) return null;
   const idx = ((L.streak || 1) - 1) % 7, r = LOGIN_REWARDS[idx];
-  const got = { idx, coins: r.coins || 0, item: null };
-  if (r.item != null) got.item = giftItem(r.item);
+  const got = { idx, coins: r.coins || 0, item: null, tickets: 0 };
+  if (r.ticket && typeof ecoAddTickets === 'function') got.tickets = ecoAddTickets(r.ticket, 'login');
+  if (r.dated && typeof ecoMonthGift === 'function') { got.item = ecoMonthGift(); if (!got.item) got.tickets += 3; } // déjà reçu ce mois-ci : 3 tickets à la place
+  else if (r.item != null) got.item = giftItem(r.item);
   L.claimed = L.last;
   save();
   return got;
 }
 function rewardCell(r, i, cls) {
+  if (r.ticket && typeof ECO_TICKET !== 'undefined') return `<div class="dcell ${cls} d${i + 1}"><span>Jour ${i + 1}</span><span class="dic">${ECO_TICKET}</span><span class="dv">${r.ticket} ticket${r.ticket > 1 ? 's' : ''}</span></div>`;
   const ic = r.item != null ? GIFT(RARC[r.item]) : COIN;
   return `<div class="dcell ${cls} d${i + 1}${i === 6 ? ' big' : ''}"><span>Jour ${i + 1}</span><span class="dic">${ic}</span><span class="dv"${r.item != null && !r.coins ? ` style="color:${RARC[r.item]}"` : ''}>${r.coins ? r.coins : RARITY[r.item]}${r.coins && r.item != null ? ` + <span style="color:${RARC[r.item]}">${RARITY[r.item]}</span>` : ''}</span></div>`;
 }
@@ -282,8 +291,8 @@ function loginModal(got) {
   const L = S.login, cur = ((L.streak || 1) - 1) % 7, ev = todayEvent();
   const cells = LOGIN_REWARDS.map((r, i) => rewardCell(r, i, i < cur ? 'past' : i === cur ? 'today' : '')).join('');
   let gotTxt = '';
-  if (got) gotTxt = `<p>Cadeau du jour ${got.idx + 1} : ${got.coins ? `<b>${got.coins} pièces</b>` : ''}${got.coins && got.item ? ' et ' : ''}${got.item ? `<b class="rar r${got.item.rarity}">« ${esc(got.item.name)} »</b> (${RARITY[got.item.rarity]})` : ''}.</p>`;
-  showModal(`<span class="streak">${FLAME} ${L.streak} jour${L.streak > 1 ? 's' : ''} de suite</span><h2>${got ? (L.total > 1 || (S.stats.trips || 0) > 0 ? 'Bon retour !' : 'Cadeau de bienvenue !') : 'Cadeaux quotidiens'}</h2>${gotTxt}<div class="dgrid">${cells}</div><p class="small">Revenez chaque jour : les cadeaux grandissent jusqu’au 7ᵉ jour. Si vous manquez un jour, la série recommence.</p><div class="evcard"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>Aujourd’hui : ${esc(ev.name)}</b><br>${esc(ev.short)}</p></div><button class="btn green big" data-closemodal="1" data-jeu="logindone">${got ? 'Merci !' : 'Fermer'}</button>`);
+  if (got) gotTxt = `<p>Cadeau du jour ${got.idx + 1} : ${[got.coins ? `<b>${got.coins} pièces</b>` : '', got.tickets ? `<b>${got.tickets} ticket${got.tickets > 1 ? 's' : ''}</b>` : '', got.item ? `<b class="rar r${got.item.rarity}">« ${esc(got.item.name)} »</b> (${RARITY[got.item.rarity]})` : ''].filter(Boolean).join(' et ')}.</p>`;
+  showModal(`<span class="streak">${FLAME} ${L.streak} jour${L.streak > 1 ? 's' : ''} de suite</span><h2>${got ? (L.total > 1 || (S.stats.trips || 0) > 0 ? 'Bon retour !' : 'Cadeau de bienvenue !') : 'Cadeaux quotidiens'}</h2>${gotTxt}<div class="dgrid">${cells}</div><p class="small">Revenez chaque jour : les cadeaux grandissent jusqu’au 7ᵉ jour. Si vous manquez un jour, la série recommence.</p><div class="evcard"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>${ev.season ? 'Événement' : 'Bonus du jour'} : ${esc(ev.name)}</b><br>${esc(ev.short)}</p></div><button class="btn green big" data-closemodal="1" data-jeu="logindone">${got ? 'Merci !' : 'Fermer'}</button>`);
   if (got) setTimeout(() => { if (got.coins) { lastPointer = { x: innerWidth / 2, y: innerHeight / 2, t: Date.now() }; coinFX(got.coins); } }, 350);
 }
 function runLogin() { markVisit(); renderJeuBar(); } // plus de fenêtre automatique : un point sur le menu
@@ -291,7 +300,7 @@ function runLogin() { markVisit(); renderJeuBar(); } // plus de fenêtre automat
 function claimGift() {
   const got = checkLogin(); if (!got) return null;
   gainCoins(got.coins); renderTop(); renderJeuBar();
-  toast(`Cadeau du jour : ${got.coins ? `+${got.coins} pièces` : ''}${got.coins && got.item ? ' et ' : ''}${got.item ? `« ${got.item.name} »` : ''} !`);
+  toast(`Cadeau du jour : ${[got.coins ? `+${got.coins} pièces` : '', got.tickets ? `+${got.tickets} ticket${got.tickets > 1 ? 's' : ''}` : '', got.item ? `« ${got.item.name} »` : ''].filter(Boolean).join(' et ')} !`);
   return got;
 }
 // les pièces du cadeau sont ajoutées sans animation immédiate (l'animation part du cadeau)
@@ -356,8 +365,8 @@ const ACH = [
   { id: 'legende', name: 'Légendaire !', desc: 'Trouver un objet légendaire', p: () => [maxRar() >= 4 ? 1 : 0, 1], r: 300 },
   { id: 'souvenir', name: 'Premier souvenir', desc: 'Trouver le souvenir unique d’un lieu célèbre', p: () => [placesN(), 1], r: 60 },
   { id: 'memoire', name: 'Mémoire du monde', desc: 'Trouver 15 souvenirs uniques', p: () => [placesN(), 15], r: 300 },
-  { id: 'carte', name: 'Chasseur de trésors', desc: 'Déplier une carte au trésor', p: () => [S.secrets.length, 1], r: 100 },
-  { id: 'secret', name: 'Lieu secret', desc: 'Visiter un lieu secret', p: () => [SECRETS.filter(s => S.found[s.name]).length, 1], r: 200 },
+  { id: 'carte', name: 'Chasseur de rumeurs', desc: 'Obtenir une rumeur sur un trésor unique', p: () => [typeof tzRumorN === 'function' ? tzRumorN() : 0, 1], r: 100 }, // v15 : trésors uniques (27_tresors.js)
+  { id: 'secret', name: 'Trésor unique', desc: 'Trouver un trésor unique', p: () => [typeof tzFoundN === 'function' ? tzFoundN() : 0, 1], r: 200 },
   { id: 'palier', name: 'Bon début', desc: 'Atteindre 25 % d’une collection de lieu', p: () => [tierCount(1), 1], r: 50 },
   { id: 'paliers', name: 'Collectionneur', desc: 'Atteindre 50 % de 5 collections', p: () => [tierCount(2), 5], r: 200 },
   { id: 'complet', name: 'Collection complète', desc: 'Compléter une collection à 100 %', p: () => [tierCount(3), 1], r: 250 },
@@ -469,13 +478,18 @@ renderQuests = (orig => function (box) {
 renderVoyage = (orig => function (box) {
   orig(box);
   const ev = todayEvent(); if (S.trips[S.sel]) return;
+  if (ev.season && typeof ecoOn === 'function' && !ecoOn()) return; // pas d'événement de saison pendant le tutoriel
   let html = '';
+  if (ev.season) {
+    const o = ev.season, Ev = o.E, near = plan.dest && typeof ecoNearPlace === 'function' ? ecoNearPlace(o, plan.dest) : null, hit = near || (plan.dest && (plan.dest.tags || []).some(t => Ev.tags.includes(t))), dbl = plan.dest && evApplies(ev, plan.dest.tags);
+    html = `<div class="evban" style="background:${Ev.color2};border-color:${Ev.color}"><span class="evi" style="--ec:#fff">${evIcon(ev)}</span><p><b>${esc(o.label)}${hit ? ' !' : ''}</b> ${hit ? `${near ? '×3' : '×2'} ${esc(Ev.res[1])} ici${dbl ? ', et butin doublé' : ''}.` : `${ecoCap(Ev.res[1])} à chaque voyage, ×2 dans ${esc(Ev.where.split(',')[0])}, jusqu’au ${ecoDate(o.e)}.`}</p></div>`;
+  } else
   if (plan.dest && evApplies(ev, plan.dest.tags)) html = `<div class="evban"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>${esc(ev.name)} !</b> Le butin est doublé ici aujourd’hui.</p></div>`;
-  else if (!plan.dest) html = `<div class="evban"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>Aujourd’hui : ${esc(ev.name)}.</b> ${esc(ev.short)}.</p></div>`;
-  else if (ev.luck || ev.coins || ev.xp) html = `<div class="evban"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>${esc(ev.name)} :</b> ${esc(ev.short)}.</p></div>`;
+  else if (!plan.dest) html = `<div class="evban"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>Bonus du jour : ${esc(ev.name)}.</b> ${esc(ev.short)}.</p></div>`;
+  else if (!ev.season && (ev.luck || ev.coins || ev.xp)) html = `<div class="evban"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>${esc(ev.name)} :</b> ${esc(ev.short)}.</p></div>`;
   if (S.firstTripDay !== dayKey()) html += `<div class="evban" style="background:#e6f6e9;border-color:var(--greenD)"><span class="evi" style="--ec:#5fbf7f">${GIFT('#fff').replace('<svg ', '<svg style="width:20px;height:20px" ')}</span><p><b>Premier voyage du jour :</b> un objet peu commun ou mieux en bonus au retour.</p></div>`;
   if (html) box.insertAdjacentHTML('afterbegin', `<div class="evbans">${html}</div>`);
-  if (ev.tags) box.querySelectorAll('[data-goplace]').forEach(b => { const p = PLACES[+b.dataset.goplace]; if (p && evApplies(ev, p.tags)) b.insertAdjacentHTML('beforeend', '<span class="x2" title="Butin doublé aujourd’hui">×2</span>'); });
+  if (ev.tags && !(ev.season && typeof ecoOn === 'function' && !ecoOn())) box.querySelectorAll('[data-goplace]').forEach(b => { const p = PLACES[+b.dataset.goplace]; if (p && evApplies(ev, p.tags)) b.insertAdjacentHTML('beforeend', '<span class="x2" title="Butin doublé aujourd’hui">×2</span>'); });
 })(renderVoyage);
 let _goalMark = null;
 renderGoal = (orig => function () {

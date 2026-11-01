@@ -71,7 +71,6 @@ button:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-
 .tal{display:flex;flex-direction:column;background:#f6f6f2;border:1px dashed #d8d3c6;border-radius:10px;padding:7px 10px}
 .tal b{font:500 14px var(--display);color:#8b8593}.tal span{font-size:13px;color:var(--muted)}
 .tal.on{background:#fff8e2;border:1px solid #ecd59a}.tal.on b{color:#8a5e10}
-.sug.secret{background:#fff8e2;border-color:#ecd59a}
 .je header{display:flex;justify-content:space-between;gap:8px}
 .need{font-style:normal;color:var(--rust);font-weight:700}
 .je.k-marchand{border-color:#d7c3ec;background:#faf6ff}

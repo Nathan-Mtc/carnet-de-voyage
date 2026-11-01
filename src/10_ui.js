@@ -224,7 +224,7 @@ function itemUses(it) {
     if (it.cat === 'v') u.push({ txt: 'À porter par un compagnon', kind: 'usage' });
     else if (it.cat === 'n') u.push({ txt: 'Repas pour un compagnon', kind: 'usage' });
     else if (it.cat === 'd') u.push({ txt: 'Décore la maison', kind: 'usage' });
-    else if (it.cat === 't') u.push({ txt: 'Révèle un lieu secret', kind: 'usage' });
+    else if (it.cat === 't') u.push({ txt: 'Une rumeur pour le carnet des trésors', kind: 'usage' });
     else if (it.rarity >= 2 || it.special || it.edition) u.push({ txt: 'Objet de collection', kind: 'collection' });
     else u.push({ txt: 'À vendre au marché', kind: 'vente' });
   }
@@ -258,12 +258,11 @@ function renderVoyage(box) {
   if (!t) {
     const sug = suggestions(), h = homeObj();
     if (!plan.dest) {
-      let html = phead(k, `Où part ${ch.name} ?`, 'Une idée du jour, un lieu secret, ou n’importe quel endroit de la carte.');
+      let html = phead(k, `Où part ${ch.name} ?`, 'Une idée du jour, ou n’importe quel endroit de la carte.');
       html += `<div class="sugs">` + sug.map((pl, i) => {
         const d = kmBetween(h, pl);
         return `<button class="sug" data-goplace="${pl.id}"><span class="sugk">${['Tout près', 'Un peu plus loin', 'Grande aventure'][i]}</span><span class="sname">${esc(pl.name)} <small>${esc(pl.country)} · ${d.toLocaleString('fr-FR')} km</small></span><span class="tags">${pl.tags.map(tg => `<i style="--tc:${TAGC[tg]}">${TAGL[tg]}</i>`).join('')}</span></button>`;
       }).join('') + `</div>`;
-      if (S.secrets.length) html += `<h3>Lieux secrets découverts</h3><div class="sugs">` + S.secrets.map(key => { const s = SECRETS.find(x => x.key === key); return `<button class="sug secret" data-gosecret="${key}"><span class="sugk">Lieu secret</span><span class="sname">${esc(s.name)} <small>${esc(s.country)}</small></span><span class="hint">Trésors légendaires garantis à l’arrivée.</span></button>`; }).join('') + `</div>`;
       html += `<div class="talents"><h3>Talents de ${ch.name} · niveau ${p.lvl}</h3>${talentsOf(k).map(([l, n, d]) => `<div class="tal ${p.lvl >= l ? 'on' : ''}"><b>${n}</b><span>${p.lvl >= l ? d : `Débloqué au niveau ${l}`}</span></div>`).join('')}</div>`;
       box.innerHTML = html; return;
     }
@@ -272,10 +271,9 @@ function renderVoyage(box) {
     const hints = [...new Map(d.tags.flatMap(tg => (LOOT[tg] || [])).map(x => [x[0], x])).values()].slice(0, 6).map(def => ({ name: def[0], cat: def[1], sub: def[2], rarity: def[3], look: def[4], color: def[5] }));
     if (d.poi) { box.innerHTML = poiSheet(d, k); return; }
     let html = `<figure class="pc hero">${postcardSVG(prev, 'prev')}</figure>`;
-    html += `<div class="dhead"><div><span class="kick">${d.secret ? 'Lieu secret' : esc(d.country || 'Destination')}</span><h2 class="dname">${esc(d.name)}</h2><span class="tags">${d.tags.map(tg => `<i style="--tc:${TAGC[tg]}">${TAGL[tg]}</i>`).join('')}</span></div><div class="dist"><b>${dist.toLocaleString('fr-FR')}</b><span>km</span></div></div>`;
+    html += `<div class="dhead"><div><span class="kick">${d.tz ? 'Trésor unique' : esc(d.country || 'Destination')}</span><h2 class="dname">${esc(d.name)}</h2><span class="tags">${d.tags.map(tg => `<i style="--tc:${TAGC[tg]}">${TAGL[tg]}</i>`).join('')}</span></div><div class="dist"><b>${dist.toLocaleString('fr-FR')}</b><span>km</span></div></div>`;
     html += `<h3>Trésors possibles</h3><div class="loot">${hints.map(it => `<span class="lt" title="${esc(it.name)}" style="--rc:${RARC[it.rarity]}">${itemIcon(it)}</span>`).join('')}${d.special ? `<span class="lt special" title="Souvenir unique">${S.found[d.name] ? itemIcon({ name: d.special[0], cat: d.special[1], sub: d.special[2], rarity: 3, look: d.special[4], color: d.special[5] }) : '<b>?</b>'}</span>` : ''}</div>`;
     if (d.special) html += `<p class="small">Souvenir unique de ce lieu : <b>${S.found[d.name] ? esc(d.special[0]) : 'encore inconnu'}</b>${S.found[d.name] ? '' : '. Le premier à le trouver reçoit l’édition originale.'}</p>`;
-    if (d.secret) html += `<p class="small">Deux trésors légendaires attendent ${ch.name} à l’arrivée.</p>`;
     html += `<h3>Durée du voyage</h3><div class="durs">` + DURS.map(x => `<button class="dur" data-dur="${x.key}" aria-pressed="${plan.dur === x.key}"><b>${x.label}</b><span>${x.hint}</span><em>${'★'.repeat(Math.round(x.luck) + 1)}</em></button>`).join('') + `</div>`;
     const dd = DURS.find(x => x.key === plan.dur);
     html += `<div class="gobar"><img src="${portraitURI(k)}" alt=""><div><b>${ch.name}</b><span>${dd.ev} étapes · ${dd.hint}</span></div><button class="btn green big" id="goBtn">Partir !</button></div>`;
@@ -335,7 +333,7 @@ function journalEntry(t, j, i) {
 // ---- Sac
 function renderBag(box) {
   const k = S.sel, ch = CHARS[k];
-  const cats = [['all', 'Tout'], ['v', 'Vêtements'], ['m', 'Matériaux'], ['n', 'Nourriture'], ['d', 'Déco'], ['t', 'Cartes']];
+  const cats = [['all', 'Tout'], ['v', 'Vêtements'], ['m', 'Matériaux'], ['n', 'Nourriture'], ['d', 'Déco'], ['t', 'Bouts de carte']];
   const list = S.inv.filter(i => bagFilter === 'all' || i.cat === bagFilter).slice().sort((a, b) => b.rarity - a.rarity || b.date - a.date);
   let html = phead(k, 'Le sac', `${S.inv.length} objets. Essayez les vêtements sur ${ch.name}, offrez-lui à manger, ou vendez ce qui ne sert pas.`);
   html += `<div class="filters">${cats.map(([v, l]) => { const n = v === 'all' ? S.inv.length : S.inv.filter(i => i.cat === v).length; return n || v === 'all' ? `<button data-filter="${v}" aria-pressed="${bagFilter === v}">${l} <small>${n}</small></button>` : ''; }).join('')}</div>`;
@@ -581,7 +579,6 @@ document.addEventListener('click', ev => {
   if (el.id === 'zWorld') { zoomTo(10, 30, 1.2); return; }
   if (el.id === 'gear') { if (typeof renderMenu === 'function') { if (tab === 'menu') closeSheet(); else openSheet('menu'); } else $('settings').hidden = !$('settings').hidden; return; }
   if (d.goplace) { const p = PLACES[+d.goplace]; choosePlace(p); zoomTo(p.lon, p.lat, Math.max(zoomT.k, 3)); return; }
-  if (d.gosecret) { const s = SECRETS.find(x => x.key === d.gosecret); chooseSecret(d.gosecret); zoomTo(s.lon, s.lat, Math.max(zoomT.k, 3)); return; }
   if (el.id === 'clearDest') { plan.dest = null; renderPanel(); drawMarks(); return; }
   if (d.dur) { plan.dur = d.dur; renderPanel(); return; }
   if (el.id === 'goBtn') { S.stats.started = (S.stats.started || 0) + 1; if (plan.dest && plan.dest.poi) S.stats.poiStarted = (S.stats.poiStarted || 0) + 1; startTrip(); closeSheet(); const t = S.trips[S.sel]; if (t) zoomTo((t.from.lon + t.dest.lon) / 2, (t.from.lat + t.dest.lat) / 2, (t.dest.poi ? zoomT.k : Math.max(1.5, Math.min(9, 1800 / Math.max(80, t.dist))))); return; }
@@ -613,15 +610,7 @@ document.addEventListener('click', ev => {
     reactionPopup(S.sel, 'rire', o.worn[it.sub] ? `Comment tu me trouves avec « ${it.name} » ?` : 'Hop, rangé !');
     return;
   }
-  if (d.unroll) {
-    const it = S.inv.find(i => i.id === d.unroll); if (!it) return;
-    S.inv.splice(S.inv.indexOf(it), 1);
-    const s = SECRETS.find(x => x.key === it.sub);
-    if (!S.secrets.includes(s.key)) S.secrets.push(s.key);
-    save(); tab = 'carte'; plan.dest = null; renderAll(); zoomTo(s.lon, s.lat, 6);
-    reactionPopup(S.sel, 'surpris', `Un lieu secret : ${s.name} ! Il apparaît sur la carte.`);
-    return;
-  }
+  if (d.unroll) { if (typeof tzUnroll === 'function') tzUnroll(d.unroll); return; } // v15 : bout de carte → rumeur (27_tresors.js)
   if (d.gohouse) { openSheet('maison'); return; }
   if (d.sellq) {
     const id = d.sellq, go = () => {

@@ -146,7 +146,7 @@ function resolveChoice(t, entry, choice, auto) {
     if (hasEff(k, 'zen')) chance = 1;
     if (Math.random() < chance) {
       items = lootFor(entry.tags, t.luck + 1.5, place, 1, k);
-      if (Math.random() < (hasEff(k, 'tresor') ? 0.3 : 0.1)) items.push(treasureMap(place));
+      if (Math.random() < (hasEff(k, 'tresor') ? 0.3 : 0.1)) items.push(treasureMap(place, t.dest));
       text = `Audacieux et récompensé : ${n} revient avec un trésor.`; t.xp += 15;
     } else {
       const lost = Math.min(t.coins + S.coins, 5 + Math.floor(Math.random() * 12));
@@ -169,10 +169,10 @@ function resolveChoice(t, entry, choice, auto) {
   t.bag.push(...items);
   entry.outcome = (auto ? `${n} a décidé tout seul : « ${c.a[choice]} ». ` : '') + text; entry.items = items;
 }
-function treasureMap(place) {
-  const locked = SECRETS.filter(s => !S.secrets.includes(s.key));
-  const s = locked.length ? pick(locked) : pick(SECRETS);
-  return { id: uidGen(), name: `Carte au trésor : ${s.name}`, cat: 't', sub: s.key, rarity: 3, from: place, tags: [], date: Date.now() };
+// v15 : un « bout de carte » = une rumeur sur un trésor unique (27_tresors.js, tzMapPiece). Remplace l'ancienne carte au trésor.
+function treasureMap(place, near) {
+  if (typeof tzMapPiece === 'function') return tzMapPiece(place, near);
+  return { id: uidGen(), name: 'Bout de carte', cat: 't', sub: '', rarity: 2, from: place, tags: [], date: Date.now() };
 }
 function fireEvent(t, e) {
   const k = t.comp, n = CHARS[k].name, place = eventPlace(t, e), pName = place.name, tags = place.tags || ['campagne'], now = Date.now();
@@ -181,13 +181,10 @@ function fireEvent(t, e) {
   switch (e.type) {
     case 'arrivee': {
       const items = lootFor(tags, t.luck + 0.5, pName, place.poi ? 3 : 2, k);
-      if (place.secret) {
-        const s = SECRETS.find(x => x.key === place.secret);
-        s.loot.forEach(d => items.push(makeItem(d, 0, pName, tags, { fixed: 4, special: true, edition: S.found[s.name] ? null : 'Édition originale' })));
-      } else if (place.special && (!S.found[pName] || Math.random() < (place.poi ? 0.08 : 0.3) + t.luck * 0.1)) items.push(poiNear(makeItem(place.special, t.luck, pName, tags, { special: true, edition: S.found[pName] ? null : 'Édition originale' }), place));
+      if (place.special && (!S.found[pName] || Math.random() < (place.poi ? 0.08 : 0.3) + t.luck * 0.1)) items.push(poiNear(makeItem(place.special, t.luck, pName, tags, { special: true, edition: S.found[pName] ? null : 'Édition originale' }), place));
       t.bag.push(...items); t.xp += 20;
       const p = photo([k], pName);
-      J({ kind: 'photo', text: place.secret ? `${n} a trouvé ${pName} ! Personne ne croira ce qu’il a vu.` : pick([`${n} est arrivé à ${pName} ! Regarde-moi cette vue.`, `Bien arrivé à ${pName}. ${n} t’envoie une carte postale.`]), photo: p, items });
+      J({ kind: 'photo', text: pick([`${n} est arrivé à ${pName} ! Regarde-moi cette vue.`, `Bien arrivé à ${pName}. ${n} t’envoie une carte postale.`]), photo: p, items });
       break;
     }
     case 'decouverte': {
@@ -238,7 +235,7 @@ function fireEvent(t, e) {
       break;
     }
     case 'pieces': { const g = 10 + Math.floor(Math.random() * 25 * (1 + t.luck * 0.4)); t.coins += g; J({ kind: 'pieces', text: pick([`${n} trouve ${g} pièces au fond d’une fontaine.`, `${g} pièces brillent dans l’herbe. ${n} les ramasse.`, `${n} vend un dessin à un passant pour ${g} pièces.`]), gain: g }); break; }
-    case 'tresor': { const m = treasureMap(pName); t.bag.push(m); t.xp += 10; J({ kind: 'tresor', text: `Dans une vieille bouteille, ${n} trouve une carte au trésor !`, items: [m] }); break; }
+    case 'tresor': { const m = treasureMap(pName, t.dest); t.bag.push(m); t.xp += 10; J({ kind: 'tresor', text: `Dans une vieille bouteille, ${n} trouve un bout de carte : une rumeur sur un trésor unique !`, items: [m] }); break; }
     case 'pepin': { const items = lootFor(['campagne', 'foret'], t.luck + 0.5, 'Avec Pépin', 1, k); t.bag.push(...items); J({ kind: 'animal', text: `Pépin, le petit oiseau de ${n}, le rejoint et lui apporte un cadeau.`, items }); break; }
   }
 }
@@ -323,7 +320,6 @@ function collect() {
   }
   if (ev && ev.coins && t.coins > 0) { t.coins *= 2; extra.push(`${ev.name} : pièces doublées !`); }
   t.bag.forEach(i => { S.dex[i.name] = true; if (i.special) S.found[i.from] = true; });
-  if (t.dest.secret) S.found[t.dest.name] = true;
   S.inv.push(...t.bag);
   S.album.push(...t.photos.map(p => ({ ...p, comp: k })));
   if (t.coins) gainCoins(t.coins);
@@ -470,5 +466,5 @@ function itemIcon(it) {
   return `<svg viewBox="0 0 40 40">${shapes[map[it.sub] || 'stone']}</svg>`;
 }
 const SLOT_LABEL = { tete: 'Tête', cou: 'Cou', haut: 'Haut', bas: 'Bas', mains: 'Mains', pieds: 'Pieds', dos: 'Dos' };
-const CAT_LABEL = { v: 'Vêtement', m: 'Matériau', n: 'Nourriture', d: 'Décoration', t: 'Carte au trésor' };
+const CAT_LABEL = { v: 'Vêtement', m: 'Matériau', n: 'Nourriture', d: 'Décoration', t: 'Bout de carte' };
 const itemChip = it => `<div class="it" style="--rc:${RARC[it.rarity]}"><div class="ico">${itemIcon(it)}</div><div class="itx"><b>${esc(it.name)}</b><span>${RARITY[it.rarity]}${it.special ? ' · Souvenir unique' : ''}</span></div></div>`;

@@ -189,7 +189,7 @@ function buildOverlay() {
     const el = document.createElement('div'); el.className = 'ovc' + (c.cap ? ' cap' : ''); el.textContent = c.n; ov.appendChild(el); cityEls.push({ el, c });
   }
   for (const p of PLACES) add('p' + p.id, 'pin', pinHTML(p), p.lon, p.lat, { place: p.id });
-  for (const s of SECRETS) add('s' + s.key, 'pin secret', `<div class="pinb gold"><svg viewBox="0 0 24 24"><path d="${starPath(12, 12.5, 9)}" fill="#fff"/></svg></div><span class="pinl">${esc(s.name)}</span>`, s.lon, s.lat, { secret: s.key });
+  // v15 : plus d'épingles « lieu secret » : le trésor suivi a sa zone dorée (27_tresors.js, tzMapUpdate)
   add('home', 'home', `<div class="homeb"><svg viewBox="0 0 60 60"><path d="M40 6 v12 h6 V10Z" fill="#c9604f" stroke="#5b4636" stroke-width="2.4"/><path d="M8 54 V28 L30 10 L52 28 V54Z" fill="#fff6e6" stroke="#5b4636" stroke-width="3" stroke-linejoin="round"/><path d="M4 30 L30 8 L56 30" fill="none" stroke="#d9604f" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><rect x="24" y="36" width="12" height="18" rx="2" fill="#c98a5a" stroke="#5b4636" stroke-width="2.4"/><rect x="12" y="32" width="9" height="9" fill="#bfe1f2" stroke="#5b4636" stroke-width="2"/><rect x="39" y="32" width="9" height="9" fill="#bfe1f2" stroke="#5b4636" stroke-width="2"/></svg></div><span class="pinl home">Chez vous</span>`, 0, 0, { home: 1 });
   add('drop', 'drop', `<svg viewBox="0 0 30 40"><path d="M15 39 C4 24 2 16 2 13 A13 13 0 0 1 28 13 C28 16 26 24 15 39Z" fill="#e0607e" stroke="#4a3528" stroke-width="2.4"/><circle cx="15" cy="13" r="5" fill="#fff"/></svg><span class="pinl"></span>`, 0, 0, {});
   // destination d'un voyage en cours (drapeau) et compagnon en route : créés à la demande pour chaque individu (compOverlay)
@@ -256,17 +256,16 @@ function drawMarks() {
     o.el.classList.toggle('dest', !!(plan.dest && plan.dest.id === p.id));
     o.el.classList.toggle('found', !!S.found[p.name]);
   }
-  for (const s of SECRETS) { const o = ovEls['s' + s.key]; if (o) o.el.hidden = !S.secrets.includes(s.key); }
   Object.assign(ovEls.home, { lon: h.lon, lat: h.lat });
   const d = ovEls.drop;
-  if (plan.dest && plan.dest.id == null && !plan.dest.secret) { d.el.hidden = false; d.lon = plan.dest.lon; d.lat = plan.dest.lat; d.el.querySelector('.pinl').textContent = plan.dest.name; } else d.el.hidden = true;
+  if (plan.dest && plan.dest.id == null) { d.el.hidden = false; d.lon = plan.dest.lon; d.lat = plan.dest.lat; d.el.querySelector('.pinl').textContent = plan.dest.name; } else d.el.hidden = true;
   for (const k of ovComps()) {
     compOverlay(k);
     const o = ovEls['w' + k], t = S.trips[k]; if (!o) continue;
     o.el.hidden = !t;
     if (t) { o.el.classList.toggle('cur', k === S.sel); o.el.classList.toggle('done', !!t.done); const img = o.el.querySelector('img'), u = portraitURI(k); if (img.getAttribute('src') !== u) img.setAttribute('src', u); const pos = tripPos(t); o.lon = pos[0]; o.lat = pos[1]; walkerLabel(o.el, k, t); }
     const td = ovEls['t' + k];
-    if (td) { const show = !!(t && !t.done && t.dest.id == null && !t.dest.secret); td.el.hidden = !show; if (show) { td.lon = t.dest.lon; td.lat = t.dest.lat; const l = td.el.querySelector('.pinl'); if (l.textContent !== t.dest.name) l.textContent = t.dest.name; } }
+    if (td) { const show = !!(t && !t.done && t.dest.id == null); td.el.hidden = !show; if (show) { td.lon = t.dest.lon; td.lat = t.dest.lat; const l = td.el.querySelector('.pinl'); if (l.textContent !== t.dest.name) l.textContent = t.dest.name; } }
   }
   if (mapReady && map.getSource('routes')) {
     const feats = [];
@@ -302,7 +301,6 @@ $('ov').addEventListener('click', ev => {
   ev.stopPropagation();
   if (m.dataset.poi) { const o = ovEls['q' + m.dataset.poi]; if (o) choosePOI(o.poi); return; }
   if (m.dataset.comp) { selectComp(m.dataset.comp); openSheet('voyage'); return; }
-  if (m.dataset.secret) { chooseSecret(m.dataset.secret); return; }
   if (m.dataset.place) { choosePlace(PLACES[+m.dataset.place]); return; }
   if (m.dataset.home) { openSheet('maison'); }
 });
@@ -323,12 +321,6 @@ function pickPoint(lon, lat) {
   openSheet('voyage'); drawMarks();
 }
 function choosePlace(p) { if (S.trips[S.sel]) { openSheet('voyage'); return; } plan.dest = p; openSheet('voyage'); drawMarks(); }
-function chooseSecret(key) {
-  if (S.trips[S.sel]) { openSheet('voyage'); return; }
-  const s = SECRETS.find(x => x.key === key);
-  plan.dest = { id: null, secret: key, name: s.name, country: s.country, lat: s.lat, lon: s.lon, tags: s.tags, special: null };
-  openSheet('voyage'); drawMarks();
-}
 
 // ================= FILTRE DES LIEUX (v14) : un petit bouton dans la colonne de la carte =================
 (function poiFiltCSS() {

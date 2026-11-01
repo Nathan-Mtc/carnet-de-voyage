@@ -241,7 +241,7 @@ function poiMarkerHTML(p) { const c = POI_CATS[p.cat]; return `<div class="poib"
 // Le CHOIX des lieux montrés (priorité, densité, diversité des catégories) est fait ici, au moveend seulement.
 // Priorité : 1 lieux utiles maintenant (commande, rêve, événement du jour : halo doré) ; 3 types encore jamais visités ;
 // 4 le reste ; 5 rues et routes. La destination et les compagnons en route restent des marqueurs HTML et
-// réservent leur place (aucune icône dessous), tout comme la maison, les lieux célèbres et les secrets.
+// réservent leur place (aucune icône dessous), tout comme la maison, les lieux célèbres et le trésor suivi (27_tresors.js).
 const POI_FILTERS = [
   ['utile', 'Utiles maintenant', null],
   ['tout', 'Tout', null],

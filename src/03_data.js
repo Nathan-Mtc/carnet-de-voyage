@@ -57,6 +57,9 @@ const PLACES = [
   ['Allée des baobabs', 'Madagascar', -20.25, 44.42, ['foret', 'campagne'], ['Graine de baobab', 'm', 'graine', 3]],
 ].map(([name, country, lat, lon, tags, special], i) => ({ id: i, name, country, lat, lon, tags, special }));
 
+// v15 : les anciens « lieux secrets » sont ABSORBÉS par les trésors uniques (27_tresors.js, TZ_SECRET_MAP).
+// Cette table ne sert plus qu'à migrer les anciennes sauvegardes (S.secrets, S.found, cartes au trésor du sac) ;
+// elle n'est plus affichée nulle part (ni épingles, ni chapitre, ni collection).
 const SECRETS = [
   { key: 'grotte', name: 'Grotte aux cristaux', country: 'Vercors', lat: 44.93, lon: 5.42, tags: ['montagne'], loot: [['Couronne de cristal', 'v', 'tete', 4, 'couronne', '#cfeaf7'], ['Cœur de cristal', 'm', 'cristal', 4]] },
   { key: 'lucioles', name: 'Village des lucioles', country: 'Brocéliande', lat: 47.96, lon: -2.32, tags: ['foret'], loot: [['Lanterne de lucioles', 'd', 'lanterne', 4, null, '#e8f59a'], ['Cape de nuit étoilée', 'v', 'dos', 4, 'cape', '#33406e']] },
@@ -124,14 +127,14 @@ const DURS = [
 const PLAYERS = [['Lina', 'Tofu', 'mochi'], ['Sacha', 'Praline', 'pistache'], ['Noé', 'Gnocchi', 'bulle'], ['Jade', 'Mistral', 'pistache'], ['Yanis', 'Bigoudi', 'mochi'], ['Chloé', 'Pixel', 'bulle'], ['Maël', 'Biscuit', 'pistache'], ['Inès', 'Nuage', 'bulle'], ['Hugo', 'Caramel', 'mochi'], ['Léa', 'Paprika', 'pistache']];
 
 // talents par ESPÈCE : [niveau, nom, description, effet]. Effets : flair (une trouvaille de plus), audace (choix audacieux réussis),
-// tresor (cartes au trésor ×3), nego (marchands et comptoir), zen (ne rate jamais), oiseau (Pépin), hab2 (trouvailles ×2 dans son habitat),
+// tresor (bouts de carte ×3, 27_tresors.js), nego (marchands et comptoir), zen (ne rate jamais), oiseau (Pépin), hab2 (trouvailles ×2 dans son habitat),
 // chance (merveilles plus fréquentes), habLuck (objets plus rares dans son habitat). Habitat : SP_HAB (20_collection.js).
 const TALENTS = {
-  panda: [[2, 'Flair', 'Une trouvaille de plus à chaque voyage.', 'flair'], [4, 'Grimpeuse', 'Ses choix audacieux réussissent bien plus souvent.', 'audace'], [6, 'Chasseuse de trésors', 'Trouve trois fois plus de cartes au trésor.', 'tresor']],
+  panda: [[2, 'Flair', 'Une trouvaille de plus à chaque voyage.', 'flair'], [4, 'Grimpeuse', 'Ses choix audacieux réussissent bien plus souvent.', 'audace'], [6, 'Chasseuse de trésors', 'Trouve trois fois plus de bouts de carte (rumeurs de trésors).', 'tresor']],
   capy: [[2, 'Négociateur', 'Marchands moins chers, comptoir plus généreux.', 'nego'], [4, 'Zen absolu', 'Ne rate jamais rien et ne perd jamais de pièces.', 'zen'], [6, 'Ami des oiseaux', 'Pépin rapporte un objet à chaque voyage.', 'oiseau']],
   axo: [[2, 'Nageuse', 'Trouvailles doublées près de l’eau.', 'hab2'], [4, 'Porte-bonheur', 'Arcs-en-ciel et étoiles filantes bien plus fréquents.', 'chance'], [6, 'Plongeuse', 'Objets beaucoup plus rares près de l’eau.', 'habLuck']],
   renard: [[2, 'Pisteur des neiges', 'Trouvailles doublées dans la neige et en montagne.', 'hab2'], [4, 'Flair polaire', 'Une trouvaille de plus à chaque voyage.', 'flair'], [6, 'Plongeon dans la neige', 'Objets beaucoup plus rares dans la neige et en montagne.', 'habLuck']],
-  fennec: [[2, 'Grandes oreilles', 'Trouvailles doublées dans le désert.', 'hab2'], [4, 'Marchand des sables', 'Marchands moins chers, comptoir plus généreux.', 'nego'], [6, 'Trésors des dunes', 'Trouve trois fois plus de cartes au trésor.', 'tresor']],
+  fennec: [[2, 'Grandes oreilles', 'Trouvailles doublées dans le désert.', 'hab2'], [4, 'Marchand des sables', 'Marchands moins chers, comptoir plus généreux.', 'nego'], [6, 'Trésors des dunes', 'Trouve trois fois plus de bouts de carte (rumeurs de trésors).', 'tresor']],
   tanuki: [[2, 'Farceur', 'Marchands moins chers, comptoir plus généreux.', 'nego'], [4, 'Fouineur', 'Une trouvaille de plus à chaque voyage.', 'flair'], [6, 'Porte-bonheur', 'Arcs-en-ciel et étoiles filantes bien plus fréquents.', 'chance']],
   paresseux: [[2, 'Zen absolu', 'Ne rate jamais rien et ne perd jamais de pièces.', 'zen'], [4, 'Ami des lianes', 'Trouvailles doublées en forêt et sur les îles.', 'hab2'], [6, 'Rêveur', 'Arcs-en-ciel et étoiles filantes bien plus fréquents.', 'chance']],
   lemur: [[2, 'Acrobate', 'Ses choix audacieux réussissent bien plus souvent.', 'audace'], [4, 'Cueilleur', 'Trouvailles doublées en forêt et sur les îles.', 'hab2'], [6, 'Œil de lune', 'Objets beaucoup plus rares en forêt et sur les îles.', 'habLuck']],

@@ -343,7 +343,7 @@ function mkSellables(cat) {
     const es = (S.eggs || []).map(e => ({ t: 'egg', k: e.id, e }));
     return [...cs, ...es];
   }
-  return S.inv.filter(it => mkCatOf(it) === cat && (cat !== 'res' || !mkRegion || (it.origin && it.origin.region === mkRegion))).slice().sort((a, b) => b.rarity - a.rarity || (b.rid ? 1 : 0) - (a.rid ? 1 : 0)).map(it => ({ t: 'item', k: it.id, it }));
+  return S.inv.filter(it => !it.tresor && mkCatOf(it) === cat && (cat !== 'res' || !mkRegion || (it.origin && it.origin.region === mkRegion))).slice().sort((a, b) => b.rarity - a.rarity || (b.rid ? 1 : 0) - (a.rid ? 1 : 0)).map(it => ({ t: 'item', k: it.id, it }));
 }
 function mkRowSell(x) {
   let ic, ti, sub, fair, extra = '';

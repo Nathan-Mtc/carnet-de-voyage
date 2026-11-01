@@ -406,7 +406,9 @@ function renderCompagnons(box) {
   styleState(); styleSanitize();
   const k = S.sel;
   let h = stSelector();
-  if (compView === 'concours') compView = 'garde'; // concours caché pour l'instant
+  // v15 bis : le concours devient le tournoi hebdomadaire contre des joueurs simulés (renderTournoi, 28_economie.js)
+  if (compView === 'concours') compView = typeof renderTournoi === 'function' ? 'tournoi' : 'garde';
+  if (compView === 'tournoi') { if (typeof renderTournoi === 'function' && CHARS[k]) { box.innerHTML = h + '<div class="trbox" id="trBox"></div>'; renderTournoi(box.querySelector('#trBox'), k); return; } compView = 'garde'; }
   if (compView === 'refuge' && typeof renderRefuge === 'function') { renderRefuge(box); return; }
   if (!CHARS[k]) { box.innerHTML = h + `<p class="empty">Aucun compagnon dans l’équipe.</p>`; return; }
   if (compView === 'reves') { box.innerHTML = h + `<div class="streves" id="stReves"></div>`; const d = box.querySelector('#stReves'); if (typeof renderReves === 'function') renderReves(d); else d.innerHTML = `<p class="empty">Les rêves arrivent bientôt.</p>`; return; }
@@ -416,7 +418,7 @@ function renderCompagnons(box) {
   box.innerHTML = h;
 }
 function openCompagnons(sub) {
-  const m = { garde: 'garde', garderobe: 'garde', 'garde-robe': 'garde', tenues: 'garde', reves: 'reves', quetes: 'reves', succes: 'reves', talents: 'talents', concours: 'garde', refuge: 'refuge', equipe: 'refuge' };
+  const m = { garde: 'garde', garderobe: 'garde', 'garde-robe': 'garde', tenues: 'garde', reves: 'reves', quetes: 'reves', succes: 'reves', talents: 'talents', concours: 'tournoi', tournoi: 'tournoi', refuge: 'refuge', equipe: 'refuge' };
   const was = tab === 'compagnons' && compView;
   if (sub && m[sub]) compView = m[sub];
   openSheet('compagnons', true);
@@ -581,7 +583,7 @@ function stJoyBack() {
 .wrcontest i{font:700 11.5px var(--display);font-style:normal;color:var(--rust);text-transform:uppercase;letter-spacing:.05em}
 .wrcontest b{font:800 16px/1.15 var(--display)}
 .wrcontest em{font:800 12.5px var(--display);font-style:normal;background:#fff;border:2px solid var(--ink);border-radius:999px;padding:1px 8px;white-space:nowrap}
-.streves{display:flex;flex-direction:column;gap:12px}.streves>*{flex-shrink:0}
+.streves,.trbox{display:flex;flex-direction:column;gap:12px}.trbox>*{flex-shrink:0}.trbox h3{margin:4px 0 0}.streves>*{flex-shrink:0}
 .stgm{width:120px}.stgm svg{width:100%;height:auto}
 .stgb{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 /* talents */

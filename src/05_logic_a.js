@@ -37,6 +37,7 @@ const fresh = () => ({
   firstTripDay: 0,  // jour du dernier « premier voyage du jour »
   jeuInit: 0,       // 1 quand les succès/paliers d'une ancienne sauvegarde ont été rattrapés
   regions: { seen: {}, got: {}, claimed: {}, sel: '' }, // codex des régions (17_regions.js)
+  treasures: {},    // v15 : trésors uniques (27_tresors.js) ; complété par tzState(). `secrets` ci-dessus : ancien système, migré
 });
 // complète les sous-objets des anciennes sauvegardes (Object.assign ne fusionne qu'au premier niveau)
 function patchSave(s) {
@@ -143,7 +144,7 @@ const questText = q => QUEST_T.find(t => t.type === q.type).txt(q.tag);
 function collections() {
   const cols = Object.keys(LOOT).map(t => ({ key: t, label: TAGL[t], names: [...new Set(LOOT[t].map(d => d[0]))] }));
   cols.push({ key: 'souvenirs', label: 'Souvenirs du monde', names: PLACES.map(p => p.special[0]), big: true });
-  cols.push({ key: 'secrets', label: 'Trésors des lieux secrets', names: SECRETS.flatMap(s => s.loot.map(d => d[0])), big: true });
+  // v15 : l'ancienne collection « Trésors des lieux secrets » est remplacée par le carnet des trésors (Sac › Trésors, 27_tresors.js)
   return cols;
 }
 function colReward(c) { return c.big ? 400 : 120; }
