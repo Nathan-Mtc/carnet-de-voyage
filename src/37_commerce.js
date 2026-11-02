@@ -4,7 +4,8 @@
 // - environ 1 fois sur 5, un DÉFI RAPIDE facultatif (jauge à arrêter dans la zone verte) donne 2 étoiles de plus ;
 // - les produits prêts vont sur le comptoir (dans le sac, marqués it.mk) ; les clients de la scène les achètent d'un toucher ;
 //   le surplus se vend au marché mondial (catégorie « Objets fabriqués ») ;
-// - commandes spéciales : 3 au maximum, niveaux Facile / Normal / Défi, récompense montrée en image, à accepter ou refuser ;
+// - v29 : plus de commandes spéciales (seule la commande guidée du tutoriel existe encore) ; leurs pierres d'étoile et
+//   objets rares passent aux clients fidèles (42_fideles.js) ;
 // - choix du commerce : ligne de produits, ingrédients clés et leurs lieux, AVANTAGE UNIQUE (CM_ADV, tous branchés) ;
 // - menu : page « Comment ça marche ».
 // Économie : prix = coût des ingrédients au marché (≈ 6 pièces, 15 s'il vient de loin) + un petit gain de travail.
@@ -115,13 +116,13 @@ const CM_ADV = {
   boulangerie: ['Four rapide', 'Préparations 30 % plus courtes'],
   cafe: ['Salon bondé', 'Les clients du comptoir viennent 2 fois plus souvent'],
   restaurant: ['Chef inspiré', 'Défi rapide 2 fois plus souvent : plus d’étoiles'],
-  fleuriste: ['Charme fleuri', '+30 % de réputation (commandes et ventes)'],
+  fleuriste: ['Charme fleuri', '+30 % de réputation à chaque vente'],
   mode: ['Cousu main', 'Chaque vêtement fabriqué ici donne un bonus de chance en voyage quand il est porté'],
   animalerie: ['Ami des bêtes', 'Œufs 20 % moins chers et croisements 2 fois plus rapides'],
-  glacier: ['Pourboires', '+5 pièces par client du comptoir, +10 par commande'],
-  librairie: ['Bouche-à-oreille', 'Les commandes offrent 2 fois plus souvent une recette'],
-  epicerie: ['Réseau lointain', 'Commandes de spécialités lointaines dès le début, mieux payées'],
-  brocante: ['Œil de chineur', 'Souvenirs du monde demandés plus tôt, et bien payés'],
+  glacier: ['Pourboires', '+5 pièces par client du comptoir'],
+  librairie: ['Bouche-à-oreille', 'Les clients fidèles offrent 2 fois plus souvent un cadeau'],
+  epicerie: ['Réseau lointain', 'Produits faits avec un ingrédient venu de loin : +25 % au comptoir'],
+  brocante: ['Œil de chineur', 'Chaque vente rapporte un point d’amitié de plus au client'],
 };
 const CM_MAXO = 3; // commandes spéciales au maximum
 const cmOwn = id => { try { return bqOwned().includes(id); } catch (e) { return false; } };
@@ -161,8 +162,8 @@ const cmCost = R => R.ing.reduce((a, [k, n]) => a + n * (k === 'far' ? 15 : 6), 
 const cmR5 = n => Math.max(5, Math.round(n / 5) * 5);
 // prix de vente : ingrédients au prix du marché + un gain de travail raisonnable (pas de boucle d'argent)
 const cmPrice = (R, st) => cmR5(cmCost(R) * (1 + 0.15 * (st - 1)) + 2 + 3 * st);
-const cmDur = R => Math.max(3, Math.min(10, R.t * (cmT() && cmT().id === 'boulangerie' ? 0.7 : 1)));
-const cmDefiP = () => (cmT() && cmT().id === 'restaurant' ? 0.4 : 0.2);
+const cmDur = R => Math.max(3, Math.min(10, R.t * (cmT() && cmT().id === 'boulangerie' ? 0.7 : 1) * cfDurMul(R))); // cfDurMul : avantages des clients fidèles (42_fideles.js)
+const cmDefiP = () => (cmT() && cmT().id === 'restaurant' ? 0.4 : 0.2) + cfDefiAdd();
 const cmItem = R => bqItemOf(R.def);
 const cmProducts = shop => S.inv.filter(it => it && it.mk && (!shop || it.mk.shop === shop) && !cmWorn().has(it.id));
 
@@ -196,7 +197,7 @@ function cmAnimSVG(kind) {
 let cmForceDefi = false;
 function cmStart(rid) {
   const T = cmT(), R = CM_R[rid], c = cmState(); if (!T || !R || R.shop !== T.id) return;
-  if (!cmUnlocked(R)) { toast(R.x ? 'Recette exclusive : elle s’obtient en récompense d’une commande Défi.' : `Recette débloquée à ${R.rep} points de réputation.`); return; }
+  if (!cmUnlocked(R)) { toast(R.x ? 'Recette exclusive : elle s’obtient en récompense (client fidèle, histoire ou défi).' : `Recette débloquée à ${R.rep} points de réputation.`); return; }
   const i = c.sl.findIndex(x => !x); if (i < 0) { toast('Les 3 places sont occupées : attendez qu’un produit soit prêt.'); return; }
   if (R.egg && c.eggDay === dayKey()) { toast('Un seul œuf du nid douillet par jour : revenez demain !'); return; }
   if (!cmCanIng(R)) { const m = R.ing.find(([k, n]) => cmHave(k) < n); toast(`Il manque : ${cmIngName(m[0]).toLowerCase()} (${cmHave(m[0])}/${m[1]}).`); return; }
@@ -407,7 +408,9 @@ function cmApplyTier(o, tier) {
   if (!o.st) delete o.st;
   return o;
 }
+// v29 : plus de commandes spéciales. Seule la commande guidée du tutoriel (forceEasy) est encore créée.
 if (typeof bqNewOrder === 'function') bqNewOrder = (orig => function (forceEasy) {
+  if (!forceEasy) return null;
   const o = orig.apply(this, arguments); if (!o) return o;
   try {
     if (forceEasy) { o.tier = 'f'; o.rw = { k: 'coins' }; return o; } // tutoriel et premières commandes : simples, déjà acceptées
@@ -427,12 +430,21 @@ if (typeof bqGo === 'function') bqGo = (orig => function (id) {
   try { if (o) { const al = bqAllocate(o), r = o.req.find((q, i) => al[i].have < q.n); if (r && r.k === 'mk') { if (document.getElementById('czScene')) czGo('prep'); toast(`Préparez « ${CM_R[r.rid].def[0]} » et réussissez le défi rapide (3 étoiles).`); return; } } } catch (e) {}
   return orig.apply(this, arguments);
 })(bqGo);
-// 3 commandes au maximum
+// v29 : seule la commande du tutoriel en cours reste ; les anciennes commandes (sauvegardes) sont annulées sans bruit
+function cmPurgeOrders() {
+  try {
+    const s = bqState(), keep = o => !!(o && o.tuto && S.tuto && S.tuto.on && S.tuto.o === o.id), n0 = s.orders.length;
+    s.orders = s.orders.filter(keep);
+    if (s.park && typeof s.park === 'object') for (const k of Object.keys(s.park)) s.park[k] = [];
+    return s.orders.length !== n0;
+  } catch (e) { return false; }
+}
 if (typeof bqTickOrders === 'function') bqTickOrders = (orig => function () {
   let ch = orig.apply(this, arguments);
-  try { const s = bqState(); while (s.orders.length > CM_MAXO) { const i = s.orders.map((o, j) => [o, j]).filter(([o]) => !o.tuto).sort((a, b) => b[0].seq - a[0].seq)[0]; if (!i) break; s.orders.splice(i[1], 1); ch = true; } } catch (e) {}
+  if (cmPurgeOrders()) ch = true;
   return ch;
 })(bqTickOrders);
+try { if (cmPurgeOrders()) save(); } catch (e) {}
 // la récompense est donnée à la livraison
 function cmGrant(o, c) {
   const rw = o.rw; if (!rw) return '';
@@ -493,7 +505,8 @@ function cmOrderCard(o) {
 // qui s'enrichit avec la réputation (czTier : 4 paliers). Les clients entrent par la porte, font la queue avec une bulle
 // (toucher = vendre, data-cmsell / livrer, data-b2ord), puis repartent avec un cœur. Les familiers « Commis » du foyer
 // (ou le familier choisi) travaillent derrière le comptoir ; ce qui est prêt s'aligne dans la vitrine et sur les étagères.
-// En dessous : 3 onglets, Préparer (cuisine, vitrine, recettes), Commandes et Clients (fidèles, réputation).
+// En dessous : 2 onglets, Préparer (cuisine, vitrine, recettes ; la commande guidée du tutoriel s'y affiche) et Clients
+// (v29 : clients fidèles et leurs avantages, 42_fideles.js).
 const CZ_L = '#5b4636';
 const czX = x => (x / 3.6).toFixed(2) + '%', czY = y => (y / 3.8).toFixed(2) + '%';
 const czSW = (w = 1.6) => `stroke="${CZ_L}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
@@ -921,47 +934,43 @@ function cmRecipesHTML() {
   const c = cmState(), free = c.sl.some(x => !x);
   const cards = (CM_LINES[T.id] || []).map(R => {
     const un = cmUnlocked(R), ok = un && cmCanIng(R) && free && !(R.egg && c.eggDay === dayKey());
-    const ings = R.ing.map(([k, n]) => { const h = cmHave(k); return `<span class="cm-ing${h >= n ? ' ok' : ''}" title="${esc(cmIngName(k))}">${cmIngIcon(k)}<i>${Math.min(h, n)}/${n}</i></span>`; }).join('');
+    const ings = R.ing.map(([k, n]) => { const h = cmHave(k); return `<span class="cm-ing${h >= n ? ' ok' : ''}" data-cfing="${k}" data-cfr="${R.id}" title="${esc(cmIngName(k))}">${cmIngIcon(k)}<i>${Math.min(h, n)}/${n}</i></span>`; }).join('');
     const price = R.egg ? `<span class="cm-pr">Œuf · 1 par jour</span>` : `<span class="cm-pr">${coins(cmPrice(R, 1))}<small> → ${cmPrice(R, 3)} ${cmStars(3)}</small></span>`;
     const lock = R.x ? 'Récompense Défi' : `Réputation ${R.rep}`;
     const far = R.ing.some(([k]) => k === 'far');
-    return `<div class="cm-r${un ? '' : ' locked'}${ok ? ' can' : ''}"><i class="cm-rt">⏱ ${Math.round(cmDur(R))} s</i><span class="cm-rp">${cmIcon(R, 'cmr' + R.id)}${far ? '<i class="cm-far">De loin</i>' : ''}</span><b>${esc(R.def[0])}</b><span class="cm-ings">${ings}</span>${price}${un ? `<button class="btn ${ok ? 'green' : 'cream'} sm" data-cmprep="${R.id}" ${ok ? '' : 'aria-disabled="true"'}>Préparer</button>` : `<span class="cm-lock">${CM_LOCK}${esc(lock)}</span>`}</div>`;
+    return `<div class="cm-r${un ? '' : ' locked'}${ok ? ' can' : ''}" data-cfcard="${R.id}"><i class="cm-rt">⏱ ${Math.round(cmDur(R))} s</i><span class="cm-rp">${cmIcon(R, 'cmr' + R.id)}${far ? '<i class="cm-far">De loin</i>' : ''}</span><b>${esc(R.def[0])}</b><span class="cm-ings">${ings}</span>${price}${un ? `<button class="btn ${ok ? 'green' : 'cream'} sm" data-cmprep="${R.id}" ${ok ? '' : 'aria-disabled="true"'}>Préparer</button>` : `<span class="cm-lock">${CM_LOCK}${esc(lock)}</span>`}</div>`;
   }).join('');
   return `<section class="cm-recs"><h3 class="cz-h">${CZ_IC.cmd}<span>Recettes</span></h3><div class="cm-rgrid">${cards}</div></section>`;
 }
 const czPrepHTML = () => cmKitchenHTML() + czStockHTML() + cmRecipesHTML();
+// v29 : plus d'onglet Commandes ; la commande guidée du tutoriel (seule commande restante) s'affiche en haut de « Préparer »
 function cmOrdersHTML() {
-  const s = bqState(), now = Date.now();
-  let h = `<section class="cm-ords"><h3 class="cz-h">${CZ_IC.cmd}<span>Commandes spéciales</span><small>${s.orders.length}/${CM_MAXO}</small></h3><div class="b2cards">${s.orders.slice().sort((a, b) => (a.pend ? 1 : 0) - (b.pend ? 1 : 0) || bqReady(b) - bqReady(a) || a.seq - b.seq).map(cmOrderCard).join('')}`;
-  if (s.orders.length < CM_MAXO) h += `<div class="b2card b2wait"><svg viewBox="0 0 30 30">${BQ_ICONS.comptoir}</svg><span>Prochaine commande</span><b data-bqcd="${s.next}">${fmtDur(s.next - now)}</b></div>`;
-  return h + `</div></section>`;
+  const s = bqState(); if (!s.orders.length) return '';
+  return `<section class="cm-ords"><h3 class="cz-h">${CZ_IC.cmd}<span>Votre premier client</span></h3><div class="b2cards">${s.orders.map(cmOrderCard).join('')}</div></section>`;
 }
 function czTabsHTML() {
-  const s = bqState(), c = cmState();
+  const c = cmState();
   const run = c.sl.filter(x => x).length, defi = c.sl.some(x => x && x.ch && !x.chd);
-  const rd = s.orders.filter(o => !o.pend && bqReady(o)).length, pend = s.orders.filter(o => o.pend).length;
+  let fav = 0; try { fav = cfNewPerks(); } catch (e) {}
   return [['prep', 'Préparer', CZ_IC.prep, defi ? '<i class="cz-n gold">★</i>' : run ? `<i class="cz-n soft">${run}</i>` : ''],
-    ['cmd', 'Commandes', CZ_IC.cmd, rd ? `<i class="cz-n green">${rd}</i>` : pend ? `<i class="cz-n">${pend}</i>` : ''],
-    ['cli', 'Clients', CZ_IC.cli, '']].map(([k, l, ic, b]) => `<button role="tab" data-cztab="${k}" aria-selected="${czTab === k}">${ic}<span>${l}</span>${b}</button>`).join('');
+    ['cli', 'Clients', CZ_IC.cli, fav ? `<i class="cz-n green">${fav}</i>` : '']].map(([k, l, ic, b]) => `<button role="tab" data-cztab="${k}" aria-selected="${czTab === k}">${ic}<span>${l}</span>${b}</button>`).join('');
 }
 function czBodyHTML() {
-  if (czTab === 'cmd') return cmOrdersHTML();
   if (czTab === 'cli') {
-    let f = ''; try { f = b2FidHTML(); } catch (e) {}
-    if (f.indexOf('b2fl') < 0) f = `<div id="b2fid" class="cz-empty">${CZ_IC.cli}<span>Servez vos clients : ils deviendront des habitués, avec cadeaux et secrets.</span></div>`;
+    let f = ''; try { f = cfClientsHTML(); } catch (e) { console.error('fidèles', e); }
     return f + bqRepHTML();
   }
-  return cmT() ? `<div id="cmKit">${czPrepHTML()}</div>` : `<p class="cz-empty">${CZ_IC.prep}<span>Choisissez d’abord votre commerce.</span></p>`;
+  return cmT() ? cmOrdersHTML() + `<div id="cmKit">${czPrepHTML()}</div>` : `<p class="cz-empty">${CZ_IC.prep}<span>Choisissez d’abord votre commerce.</span></p>`;
 }
 function czPaintBody() { const b = $('czBody'), t = $('czTabs'); if (b) b.innerHTML = czBodyHTML(); if (t) t.innerHTML = czTabsHTML(); }
 function czGo(w) {
-  czTab = w === 'cli' ? 'cli' : w === 'cmd' ? 'cmd' : 'prep'; czPaintBody();
+  czTab = w === 'cli' ? 'cli' : 'prep'; czPaintBody();
   const el = w === 'stock' ? $('czStock') : $('czTabs');
   if (el) try { el.scrollIntoView({ behavior: czRM() ? 'auto' : 'smooth', block: w === 'stock' ? 'center' : 'start' }); } catch (e) {}
 }
 function cmComptoir(box) {
   bqState(); bqTickOrders(); try { b2(); } catch (e) {} cmState(); cmTickKitchen(); cmTickBuyers();
-  if (typeof tutoActive === 'function' && tutoActive()) czTab = 'cmd'; else if (!czTab) czTab = 'prep';
+  if ((typeof tutoActive === 'function' && tutoActive()) || czTab !== 'cli') czTab = 'prep';
   const bar = bqShopsBar().replace(/<div class="bq-perkl">[\s\S]*?<\/div>/, '');
   box.innerHTML = bar + czSceneHTML() + `<div class="cz-tabs" id="czTabs" role="tablist" aria-label="Le comptoir">${czTabsHTML()}</div><div class="cz-body" id="czBody">${czBodyHTML()}</div>`;
   czAfter();
@@ -990,16 +999,16 @@ setInterval(() => {
     else document.querySelectorAll('[data-cmleft]').forEach(e => { { const l = Math.ceil((+e.dataset.cmleft - Date.now()) / 1000); e.textContent = l > 0 ? `⏱ ${l} s` : 'Prêt ✔'; } });
   } catch (e) { console.error('commerce', e); }
 }, 500);
-// onglets, zones de la scène, avantage du commerce ; un client de commande pas prête ouvre l'onglet Commandes
+// onglets, zones de la scène, avantage du commerce ; le client du tutoriel (commande pas prête) montre sa carte
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-cztab],[data-czgo],[data-czadv],[data-b2ord]'); if (!el) return;
   const d = el.dataset;
-  if (d.cztab) { czTab = d.cztab; czPaintBody(); return; }
+  if (d.cztab) { czTab = d.cztab === 'cli' ? 'cli' : 'prep'; czPaintBody(); return; }
   if (d.czgo) return czGo(d.czgo);
   if (d.czadv) { const T = cmT(); if (T && CM_ADV[T.id]) toast(`${CM_ADV[T.id][0]} : ${CM_ADV[T.id][1]}`); return; }
-  if (d.b2ord && el.closest('#czScene') && czTab !== 'cmd') {
+  if (d.b2ord && el.closest('#czScene')) {
     const o = bqState().orders.find(x => x.id === d.b2ord); if (!o || bqReady(o)) return;
-    czTab = 'cmd'; czPaintBody();
+    if (czTab !== 'prep') { czTab = 'prep'; czPaintBody(); }
     const card = document.querySelector(`.b2card[data-oid="${o.id}"]`); if (card) { card.scrollIntoView({ behavior: czRM() ? 'auto' : 'smooth', block: 'center' }); card.classList.add('b2flash'); }
   }
 });
@@ -1276,7 +1285,7 @@ document.addEventListener('click', ev => { if (cmGame && ev.target.closest('[dat
 .cz-walk{position:absolute;opacity:0;pointer-events:none;transform-origin:50% 100%;animation:czwalk 20s 2.5s linear infinite}
 .cz-walk img{width:100%;display:block}
 @keyframes czwalk{0%{opacity:0;transform:translate(var(--fx),var(--fy)) scale(.5)}3%{opacity:1}12%{opacity:1;transform:none}48%{opacity:1;transform:none}60%,100%{opacity:0;transform:translate(var(--fx),var(--fy)) scale(.5)}}
-.cz-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px auto 10px;max-width:640px}
+.cz-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:14px auto 10px;max-width:640px}
 .cz-tabs button{position:relative;display:flex;align-items:center;justify-content:center;gap:5px;min-height:42px;padding:6px 4px;border:1.5px solid #8a6446;border-radius:14px;background:linear-gradient(#ecd0a4,#dcb07a);color:#4a3528;font:800 13.5px/1 'Baloo 2',sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 3px 0 #b88a5a;cursor:pointer}
 .cz-tabs button svg{width:20px;height:20px;flex:none}
 .cz-tabs button[aria-selected="true"]{background:#fffaf0;border-color:#5b4636;box-shadow:0 3px 0 #e2cfae,0 6px 14px rgba(91,70,54,.14);transform:translateY(-2px)}
@@ -1391,4 +1400,4 @@ window.__cm = { R: CM_R, LINES: CM_LINES, ADV: CM_ADV, state: () => cmState(), s
   // simulation chiffrée des envies (sans toucher à la sauvegarde) : n clients de suite, chacun achète son envie 25 s plus tard
   cl: shop => { const l = (BQ_SHOP_CLIENTS[shop] || []).filter(x => BQC(x)); return l.length > 1 ? l : BQ_CLIENTS.map(x => x.id); },
   envSim: (shop, n) => { const list = (CM_LINES[shop] || []).filter(R => !R.egg && !R.x), c = { buy: [], envH: [], soldAt: {}, soldN: {} }; let now = Date.now(); const out = [];
-    for (let i = 0; i < n; i++) { const rid = cmEnvieOf(list, c, [], now, null); out.push(rid); c.soldAt[rid] = now; c.soldN[rid] = (c.soldN[rid] || 0) + 1; now += 25e3; } return out; }, tab: t => { czTab = t; czPaintBody(); }, nextTier: t => { cmNextTier = t; }, applyTier: cmApplyTier, newOrder: () => bqNewOrder(false), how: cmHowHTML };
+    for (let i = 0; i < n; i++) { const rid = cmEnvieOf(list, c, [], now, null); out.push(rid); c.soldAt[rid] = now; c.soldN[rid] = (c.soldN[rid] || 0) + 1; now += 25e3; } return out; }, tab: t => { czTab = t === 'cli' ? 'cli' : 'prep'; czPaintBody(); }, nextTier: t => { cmNextTier = t; }, applyTier: cmApplyTier, newOrder: () => bqNewOrder(false), how: cmHowHTML };

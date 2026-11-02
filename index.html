@@ -9438,7 +9438,7 @@ function bqPass() {
 }
 function bqPassBuy(id, el) {
   const P = bqPass(); if (!P) return; const x = P.items.find(y => y.id === id); if (!x || P.sold.includes(id)) return;
-  if (S.coins < x.price) { toast('Pas assez de pièces. Livrez une commande au Comptoir !'); return; }
+  if (S.coins < x.price) { toast('Pas assez de pièces. Vendez vos produits au Comptoir !'); return; }
   S.coins -= x.price; P.sold.push(id);
   const it = makeItem([x.it.name, x.it.cat, x.it.sub, x.it.rarity, null, x.it.color], 0, `${P.c.name}, marchand de passage`, [], { fixed: x.it.rarity });
   it.rid = x.it.rid; it.origin = Object.assign({}, x.it.origin); it.paid = x.price;
@@ -9457,7 +9457,7 @@ function bqBuy(key, el) {
   const s = bqState(), x = bqStock().find(y => y.key === key); if (!x || x.sold || x.locked) return;
   const a = bqStockArticle(x); if (!a) return;
   const art = bqArticle(a);
-  if (S.coins < art.price) { toast('Pas assez de pièces. Livrez une commande au Comptoir !'); return; }
+  if (S.coins < art.price) { toast('Pas assez de pièces. Vendez vos produits au Comptoir !'); return; }
   S.coins -= art.price; x.sold = 1; if (!Array.isArray(s.stock.sold)) s.stock.sold = []; if (!s.stock.sold.includes(key)) s.stock.sold.push(key);
   let msg;
   if (art.egg) { if (typeof addEgg === 'function') { const eid = addEgg({ sp: art.egg.sp || undefined, from: { how: 'magasin', place: 'La boutique' }, hatchMs: 3 * 60e3 }), eg = (S.eggs || []).find(x => x.id === eid); if (eg) eg.paid = art.price; } msg = `${art.name} acheté ! Il éclora au refuge dans 3 minutes.`; }
@@ -11700,7 +11700,7 @@ function renderMenu(box) {
   // bien démarrer
   try {
     const ts = typeof tutoStep === 'function' ? tutoStep() : 0;
-    if (ts) h += `<section class="msec"><header><h3>Bien démarrer</h3></header><ol class="mtuto">${[['Partir en voyage', 'Touchez « Partir » en bas de la carte.'], ['Livrer une commande', 'Les clients de la boutique paient en pièces.'], ['Habiller un compagnon', 'Touchez son portrait en haut, puis la garde-robe.']].map(([t, d], i) => `<li class="${i + 1 < ts ? 'ok' : i + 1 === ts ? 'cur' : ''}"><b>${i + 1 < ts ? '✓ ' : ''}${t}</b><span>${d}</span></li>`).join('')}</ol></section>`;
+    if (ts) h += `<section class="msec"><header><h3>Bien démarrer</h3></header><ol class="mtuto">${[['Partir en voyage', 'Touchez « Partir » en bas de la carte.'], ['Vendre au comptoir', 'Préparez vos recettes et vendez-les aux clients de la boutique.'], ['Habiller un compagnon', 'Touchez son portrait en haut, puis la garde-robe.']].map(([t, d], i) => `<li class="${i + 1 < ts ? 'ok' : i + 1 === ts ? 'cur' : ''}"><b>${i + 1 < ts ? '✓ ' : ''}${t}</b><span>${d}</span></li>`).join('')}</ol></section>`;
   } catch (e) {}
   // réglages
   h += `<section class="msec"><header><h3>Réglages</h3></header><div class="mrow set"><label for="menuHome"><b>Votre ville</b><span>Le point de départ de tous les voyages.</span></label><select id="menuHome">${HOMES.map(x => `<option ${x[0] === S.home ? 'selected' : ''}>${x[0]}</option>`).join('')}</select></div></section>`;
@@ -13135,7 +13135,7 @@ function mkQuick(id) {
 // ---------- acheter ----------
 function mkBuy(id) {
   const m = mkState(), l = m.list.find(x => x.id === id); if (!l) return;
-  if (S.coins < l.price) { toast('Pas assez de pièces. Livrez une commande au comptoir, ou vendez au marché !'); return; }
+  if (S.coins < l.price) { toast('Pas assez de pièces. Vendez vos produits au comptoir, ou au marché !'); return; }
   S.coins -= l.price;
   m.list = m.list.filter(x => x !== l);
   const R = typeof RG !== 'undefined' ? RG[l.seller.region] : null, from = { how: 'marche', place: l.seller.name, region: l.seller.region };
@@ -22917,7 +22917,8 @@ window.__fam = { FAM, famOf, famUseLine, famAction, famTopHTML, jardinHTML, famS
 // - environ 1 fois sur 5, un DÉFI RAPIDE facultatif (jauge à arrêter dans la zone verte) donne 2 étoiles de plus ;
 // - les produits prêts vont sur le comptoir (dans le sac, marqués it.mk) ; les clients de la scène les achètent d'un toucher ;
 //   le surplus se vend au marché mondial (catégorie « Objets fabriqués ») ;
-// - commandes spéciales : 3 au maximum, niveaux Facile / Normal / Défi, récompense montrée en image, à accepter ou refuser ;
+// - v29 : plus de commandes spéciales (seule la commande guidée du tutoriel existe encore) ; leurs pierres d'étoile et
+//   objets rares passent aux clients fidèles (42_fideles.js) ;
 // - choix du commerce : ligne de produits, ingrédients clés et leurs lieux, AVANTAGE UNIQUE (CM_ADV, tous branchés) ;
 // - menu : page « Comment ça marche ».
 // Économie : prix = coût des ingrédients au marché (≈ 6 pièces, 15 s'il vient de loin) + un petit gain de travail.
@@ -23028,13 +23029,13 @@ const CM_ADV = {
   boulangerie: ['Four rapide', 'Préparations 30 % plus courtes'],
   cafe: ['Salon bondé', 'Les clients du comptoir viennent 2 fois plus souvent'],
   restaurant: ['Chef inspiré', 'Défi rapide 2 fois plus souvent : plus d’étoiles'],
-  fleuriste: ['Charme fleuri', '+30 % de réputation (commandes et ventes)'],
+  fleuriste: ['Charme fleuri', '+30 % de réputation à chaque vente'],
   mode: ['Cousu main', 'Chaque vêtement fabriqué ici donne un bonus de chance en voyage quand il est porté'],
   animalerie: ['Ami des bêtes', 'Œufs 20 % moins chers et croisements 2 fois plus rapides'],
-  glacier: ['Pourboires', '+5 pièces par client du comptoir, +10 par commande'],
-  librairie: ['Bouche-à-oreille', 'Les commandes offrent 2 fois plus souvent une recette'],
-  epicerie: ['Réseau lointain', 'Commandes de spécialités lointaines dès le début, mieux payées'],
-  brocante: ['Œil de chineur', 'Souvenirs du monde demandés plus tôt, et bien payés'],
+  glacier: ['Pourboires', '+5 pièces par client du comptoir'],
+  librairie: ['Bouche-à-oreille', 'Les clients fidèles offrent 2 fois plus souvent un cadeau'],
+  epicerie: ['Réseau lointain', 'Produits faits avec un ingrédient venu de loin : +25 % au comptoir'],
+  brocante: ['Œil de chineur', 'Chaque vente rapporte un point d’amitié de plus au client'],
 };
 const CM_MAXO = 3; // commandes spéciales au maximum
 const cmOwn = id => { try { return bqOwned().includes(id); } catch (e) { return false; } };
@@ -23074,8 +23075,8 @@ const cmCost = R => R.ing.reduce((a, [k, n]) => a + n * (k === 'far' ? 15 : 6), 
 const cmR5 = n => Math.max(5, Math.round(n / 5) * 5);
 // prix de vente : ingrédients au prix du marché + un gain de travail raisonnable (pas de boucle d'argent)
 const cmPrice = (R, st) => cmR5(cmCost(R) * (1 + 0.15 * (st - 1)) + 2 + 3 * st);
-const cmDur = R => Math.max(3, Math.min(10, R.t * (cmT() && cmT().id === 'boulangerie' ? 0.7 : 1)));
-const cmDefiP = () => (cmT() && cmT().id === 'restaurant' ? 0.4 : 0.2);
+const cmDur = R => Math.max(3, Math.min(10, R.t * (cmT() && cmT().id === 'boulangerie' ? 0.7 : 1) * cfDurMul(R))); // cfDurMul : avantages des clients fidèles (42_fideles.js)
+const cmDefiP = () => (cmT() && cmT().id === 'restaurant' ? 0.4 : 0.2) + cfDefiAdd();
 const cmItem = R => bqItemOf(R.def);
 const cmProducts = shop => S.inv.filter(it => it && it.mk && (!shop || it.mk.shop === shop) && !cmWorn().has(it.id));
 
@@ -23109,7 +23110,7 @@ function cmAnimSVG(kind) {
 let cmForceDefi = false;
 function cmStart(rid) {
   const T = cmT(), R = CM_R[rid], c = cmState(); if (!T || !R || R.shop !== T.id) return;
-  if (!cmUnlocked(R)) { toast(R.x ? 'Recette exclusive : elle s’obtient en récompense d’une commande Défi.' : `Recette débloquée à ${R.rep} points de réputation.`); return; }
+  if (!cmUnlocked(R)) { toast(R.x ? 'Recette exclusive : elle s’obtient en récompense (client fidèle, histoire ou défi).' : `Recette débloquée à ${R.rep} points de réputation.`); return; }
   const i = c.sl.findIndex(x => !x); if (i < 0) { toast('Les 3 places sont occupées : attendez qu’un produit soit prêt.'); return; }
   if (R.egg && c.eggDay === dayKey()) { toast('Un seul œuf du nid douillet par jour : revenez demain !'); return; }
   if (!cmCanIng(R)) { const m = R.ing.find(([k, n]) => cmHave(k) < n); toast(`Il manque : ${cmIngName(m[0]).toLowerCase()} (${cmHave(m[0])}/${m[1]}).`); return; }
@@ -23320,7 +23321,9 @@ function cmApplyTier(o, tier) {
   if (!o.st) delete o.st;
   return o;
 }
+// v29 : plus de commandes spéciales. Seule la commande guidée du tutoriel (forceEasy) est encore créée.
 if (typeof bqNewOrder === 'function') bqNewOrder = (orig => function (forceEasy) {
+  if (!forceEasy) return null;
   const o = orig.apply(this, arguments); if (!o) return o;
   try {
     if (forceEasy) { o.tier = 'f'; o.rw = { k: 'coins' }; return o; } // tutoriel et premières commandes : simples, déjà acceptées
@@ -23340,12 +23343,21 @@ if (typeof bqGo === 'function') bqGo = (orig => function (id) {
   try { if (o) { const al = bqAllocate(o), r = o.req.find((q, i) => al[i].have < q.n); if (r && r.k === 'mk') { if (document.getElementById('czScene')) czGo('prep'); toast(`Préparez « ${CM_R[r.rid].def[0]} » et réussissez le défi rapide (3 étoiles).`); return; } } } catch (e) {}
   return orig.apply(this, arguments);
 })(bqGo);
-// 3 commandes au maximum
+// v29 : seule la commande du tutoriel en cours reste ; les anciennes commandes (sauvegardes) sont annulées sans bruit
+function cmPurgeOrders() {
+  try {
+    const s = bqState(), keep = o => !!(o && o.tuto && S.tuto && S.tuto.on && S.tuto.o === o.id), n0 = s.orders.length;
+    s.orders = s.orders.filter(keep);
+    if (s.park && typeof s.park === 'object') for (const k of Object.keys(s.park)) s.park[k] = [];
+    return s.orders.length !== n0;
+  } catch (e) { return false; }
+}
 if (typeof bqTickOrders === 'function') bqTickOrders = (orig => function () {
   let ch = orig.apply(this, arguments);
-  try { const s = bqState(); while (s.orders.length > CM_MAXO) { const i = s.orders.map((o, j) => [o, j]).filter(([o]) => !o.tuto).sort((a, b) => b[0].seq - a[0].seq)[0]; if (!i) break; s.orders.splice(i[1], 1); ch = true; } } catch (e) {}
+  if (cmPurgeOrders()) ch = true;
   return ch;
 })(bqTickOrders);
+try { if (cmPurgeOrders()) save(); } catch (e) {}
 // la récompense est donnée à la livraison
 function cmGrant(o, c) {
   const rw = o.rw; if (!rw) return '';
@@ -23406,7 +23418,8 @@ function cmOrderCard(o) {
 // qui s'enrichit avec la réputation (czTier : 4 paliers). Les clients entrent par la porte, font la queue avec une bulle
 // (toucher = vendre, data-cmsell / livrer, data-b2ord), puis repartent avec un cœur. Les familiers « Commis » du foyer
 // (ou le familier choisi) travaillent derrière le comptoir ; ce qui est prêt s'aligne dans la vitrine et sur les étagères.
-// En dessous : 3 onglets, Préparer (cuisine, vitrine, recettes), Commandes et Clients (fidèles, réputation).
+// En dessous : 2 onglets, Préparer (cuisine, vitrine, recettes ; la commande guidée du tutoriel s'y affiche) et Clients
+// (v29 : clients fidèles et leurs avantages, 42_fideles.js).
 const CZ_L = '#5b4636';
 const czX = x => (x / 3.6).toFixed(2) + '%', czY = y => (y / 3.8).toFixed(2) + '%';
 const czSW = (w = 1.6) => `stroke="${CZ_L}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
@@ -23834,47 +23847,43 @@ function cmRecipesHTML() {
   const c = cmState(), free = c.sl.some(x => !x);
   const cards = (CM_LINES[T.id] || []).map(R => {
     const un = cmUnlocked(R), ok = un && cmCanIng(R) && free && !(R.egg && c.eggDay === dayKey());
-    const ings = R.ing.map(([k, n]) => { const h = cmHave(k); return `<span class="cm-ing${h >= n ? ' ok' : ''}" title="${esc(cmIngName(k))}">${cmIngIcon(k)}<i>${Math.min(h, n)}/${n}</i></span>`; }).join('');
+    const ings = R.ing.map(([k, n]) => { const h = cmHave(k); return `<span class="cm-ing${h >= n ? ' ok' : ''}" data-cfing="${k}" data-cfr="${R.id}" title="${esc(cmIngName(k))}">${cmIngIcon(k)}<i>${Math.min(h, n)}/${n}</i></span>`; }).join('');
     const price = R.egg ? `<span class="cm-pr">Œuf · 1 par jour</span>` : `<span class="cm-pr">${coins(cmPrice(R, 1))}<small> → ${cmPrice(R, 3)} ${cmStars(3)}</small></span>`;
     const lock = R.x ? 'Récompense Défi' : `Réputation ${R.rep}`;
     const far = R.ing.some(([k]) => k === 'far');
-    return `<div class="cm-r${un ? '' : ' locked'}${ok ? ' can' : ''}"><i class="cm-rt">⏱ ${Math.round(cmDur(R))} s</i><span class="cm-rp">${cmIcon(R, 'cmr' + R.id)}${far ? '<i class="cm-far">De loin</i>' : ''}</span><b>${esc(R.def[0])}</b><span class="cm-ings">${ings}</span>${price}${un ? `<button class="btn ${ok ? 'green' : 'cream'} sm" data-cmprep="${R.id}" ${ok ? '' : 'aria-disabled="true"'}>Préparer</button>` : `<span class="cm-lock">${CM_LOCK}${esc(lock)}</span>`}</div>`;
+    return `<div class="cm-r${un ? '' : ' locked'}${ok ? ' can' : ''}" data-cfcard="${R.id}"><i class="cm-rt">⏱ ${Math.round(cmDur(R))} s</i><span class="cm-rp">${cmIcon(R, 'cmr' + R.id)}${far ? '<i class="cm-far">De loin</i>' : ''}</span><b>${esc(R.def[0])}</b><span class="cm-ings">${ings}</span>${price}${un ? `<button class="btn ${ok ? 'green' : 'cream'} sm" data-cmprep="${R.id}" ${ok ? '' : 'aria-disabled="true"'}>Préparer</button>` : `<span class="cm-lock">${CM_LOCK}${esc(lock)}</span>`}</div>`;
   }).join('');
   return `<section class="cm-recs"><h3 class="cz-h">${CZ_IC.cmd}<span>Recettes</span></h3><div class="cm-rgrid">${cards}</div></section>`;
 }
 const czPrepHTML = () => cmKitchenHTML() + czStockHTML() + cmRecipesHTML();
+// v29 : plus d'onglet Commandes ; la commande guidée du tutoriel (seule commande restante) s'affiche en haut de « Préparer »
 function cmOrdersHTML() {
-  const s = bqState(), now = Date.now();
-  let h = `<section class="cm-ords"><h3 class="cz-h">${CZ_IC.cmd}<span>Commandes spéciales</span><small>${s.orders.length}/${CM_MAXO}</small></h3><div class="b2cards">${s.orders.slice().sort((a, b) => (a.pend ? 1 : 0) - (b.pend ? 1 : 0) || bqReady(b) - bqReady(a) || a.seq - b.seq).map(cmOrderCard).join('')}`;
-  if (s.orders.length < CM_MAXO) h += `<div class="b2card b2wait"><svg viewBox="0 0 30 30">${BQ_ICONS.comptoir}</svg><span>Prochaine commande</span><b data-bqcd="${s.next}">${fmtDur(s.next - now)}</b></div>`;
-  return h + `</div></section>`;
+  const s = bqState(); if (!s.orders.length) return '';
+  return `<section class="cm-ords"><h3 class="cz-h">${CZ_IC.cmd}<span>Votre premier client</span></h3><div class="b2cards">${s.orders.map(cmOrderCard).join('')}</div></section>`;
 }
 function czTabsHTML() {
-  const s = bqState(), c = cmState();
+  const c = cmState();
   const run = c.sl.filter(x => x).length, defi = c.sl.some(x => x && x.ch && !x.chd);
-  const rd = s.orders.filter(o => !o.pend && bqReady(o)).length, pend = s.orders.filter(o => o.pend).length;
+  let fav = 0; try { fav = cfNewPerks(); } catch (e) {}
   return [['prep', 'Préparer', CZ_IC.prep, defi ? '<i class="cz-n gold">★</i>' : run ? `<i class="cz-n soft">${run}</i>` : ''],
-    ['cmd', 'Commandes', CZ_IC.cmd, rd ? `<i class="cz-n green">${rd}</i>` : pend ? `<i class="cz-n">${pend}</i>` : ''],
-    ['cli', 'Clients', CZ_IC.cli, '']].map(([k, l, ic, b]) => `<button role="tab" data-cztab="${k}" aria-selected="${czTab === k}">${ic}<span>${l}</span>${b}</button>`).join('');
+    ['cli', 'Clients', CZ_IC.cli, fav ? `<i class="cz-n green">${fav}</i>` : '']].map(([k, l, ic, b]) => `<button role="tab" data-cztab="${k}" aria-selected="${czTab === k}">${ic}<span>${l}</span>${b}</button>`).join('');
 }
 function czBodyHTML() {
-  if (czTab === 'cmd') return cmOrdersHTML();
   if (czTab === 'cli') {
-    let f = ''; try { f = b2FidHTML(); } catch (e) {}
-    if (f.indexOf('b2fl') < 0) f = `<div id="b2fid" class="cz-empty">${CZ_IC.cli}<span>Servez vos clients : ils deviendront des habitués, avec cadeaux et secrets.</span></div>`;
+    let f = ''; try { f = cfClientsHTML(); } catch (e) { console.error('fidèles', e); }
     return f + bqRepHTML();
   }
-  return cmT() ? `<div id="cmKit">${czPrepHTML()}</div>` : `<p class="cz-empty">${CZ_IC.prep}<span>Choisissez d’abord votre commerce.</span></p>`;
+  return cmT() ? cmOrdersHTML() + `<div id="cmKit">${czPrepHTML()}</div>` : `<p class="cz-empty">${CZ_IC.prep}<span>Choisissez d’abord votre commerce.</span></p>`;
 }
 function czPaintBody() { const b = $('czBody'), t = $('czTabs'); if (b) b.innerHTML = czBodyHTML(); if (t) t.innerHTML = czTabsHTML(); }
 function czGo(w) {
-  czTab = w === 'cli' ? 'cli' : w === 'cmd' ? 'cmd' : 'prep'; czPaintBody();
+  czTab = w === 'cli' ? 'cli' : 'prep'; czPaintBody();
   const el = w === 'stock' ? $('czStock') : $('czTabs');
   if (el) try { el.scrollIntoView({ behavior: czRM() ? 'auto' : 'smooth', block: w === 'stock' ? 'center' : 'start' }); } catch (e) {}
 }
 function cmComptoir(box) {
   bqState(); bqTickOrders(); try { b2(); } catch (e) {} cmState(); cmTickKitchen(); cmTickBuyers();
-  if (typeof tutoActive === 'function' && tutoActive()) czTab = 'cmd'; else if (!czTab) czTab = 'prep';
+  if ((typeof tutoActive === 'function' && tutoActive()) || czTab !== 'cli') czTab = 'prep';
   const bar = bqShopsBar().replace(/<div class="bq-perkl">[\s\S]*?<\/div>/, '');
   box.innerHTML = bar + czSceneHTML() + `<div class="cz-tabs" id="czTabs" role="tablist" aria-label="Le comptoir">${czTabsHTML()}</div><div class="cz-body" id="czBody">${czBodyHTML()}</div>`;
   czAfter();
@@ -23903,16 +23912,16 @@ setInterval(() => {
     else document.querySelectorAll('[data-cmleft]').forEach(e => { { const l = Math.ceil((+e.dataset.cmleft - Date.now()) / 1000); e.textContent = l > 0 ? `⏱ ${l} s` : 'Prêt ✔'; } });
   } catch (e) { console.error('commerce', e); }
 }, 500);
-// onglets, zones de la scène, avantage du commerce ; un client de commande pas prête ouvre l'onglet Commandes
+// onglets, zones de la scène, avantage du commerce ; le client du tutoriel (commande pas prête) montre sa carte
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-cztab],[data-czgo],[data-czadv],[data-b2ord]'); if (!el) return;
   const d = el.dataset;
-  if (d.cztab) { czTab = d.cztab; czPaintBody(); return; }
+  if (d.cztab) { czTab = d.cztab === 'cli' ? 'cli' : 'prep'; czPaintBody(); return; }
   if (d.czgo) return czGo(d.czgo);
   if (d.czadv) { const T = cmT(); if (T && CM_ADV[T.id]) toast(`${CM_ADV[T.id][0]} : ${CM_ADV[T.id][1]}`); return; }
-  if (d.b2ord && el.closest('#czScene') && czTab !== 'cmd') {
+  if (d.b2ord && el.closest('#czScene')) {
     const o = bqState().orders.find(x => x.id === d.b2ord); if (!o || bqReady(o)) return;
-    czTab = 'cmd'; czPaintBody();
+    if (czTab !== 'prep') { czTab = 'prep'; czPaintBody(); }
     const card = document.querySelector(`.b2card[data-oid="${o.id}"]`); if (card) { card.scrollIntoView({ behavior: czRM() ? 'auto' : 'smooth', block: 'center' }); card.classList.add('b2flash'); }
   }
 });
@@ -24189,7 +24198,7 @@ document.addEventListener('click', ev => { if (cmGame && ev.target.closest('[dat
 .cz-walk{position:absolute;opacity:0;pointer-events:none;transform-origin:50% 100%;animation:czwalk 20s 2.5s linear infinite}
 .cz-walk img{width:100%;display:block}
 @keyframes czwalk{0%{opacity:0;transform:translate(var(--fx),var(--fy)) scale(.5)}3%{opacity:1}12%{opacity:1;transform:none}48%{opacity:1;transform:none}60%,100%{opacity:0;transform:translate(var(--fx),var(--fy)) scale(.5)}}
-.cz-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px auto 10px;max-width:640px}
+.cz-tabs{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:14px auto 10px;max-width:640px}
 .cz-tabs button{position:relative;display:flex;align-items:center;justify-content:center;gap:5px;min-height:42px;padding:6px 4px;border:1.5px solid #8a6446;border-radius:14px;background:linear-gradient(#ecd0a4,#dcb07a);color:#4a3528;font:800 13.5px/1 'Baloo 2',sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 3px 0 #b88a5a;cursor:pointer}
 .cz-tabs button svg{width:20px;height:20px;flex:none}
 .cz-tabs button[aria-selected="true"]{background:#fffaf0;border-color:#5b4636;box-shadow:0 3px 0 #e2cfae,0 6px 14px rgba(91,70,54,.14);transform:translateY(-2px)}
@@ -24304,15 +24313,16 @@ window.__cm = { R: CM_R, LINES: CM_LINES, ADV: CM_ADV, state: () => cmState(), s
   // simulation chiffrée des envies (sans toucher à la sauvegarde) : n clients de suite, chacun achète son envie 25 s plus tard
   cl: shop => { const l = (BQ_SHOP_CLIENTS[shop] || []).filter(x => BQC(x)); return l.length > 1 ? l : BQ_CLIENTS.map(x => x.id); },
   envSim: (shop, n) => { const list = (CM_LINES[shop] || []).filter(R => !R.egg && !R.x), c = { buy: [], envH: [], soldAt: {}, soldN: {} }; let now = Date.now(); const out = [];
-    for (let i = 0; i < n; i++) { const rid = cmEnvieOf(list, c, [], now, null); out.push(rid); c.soldAt[rid] = now; c.soldN[rid] = (c.soldN[rid] || 0) + 1; now += 25e3; } return out; }, tab: t => { czTab = t; czPaintBody(); }, nextTier: t => { cmNextTier = t; }, applyTier: cmApplyTier, newOrder: () => bqNewOrder(false), how: cmHowHTML };
+    for (let i = 0; i < n; i++) { const rid = cmEnvieOf(list, c, [], now, null); out.push(rid); c.soldAt[rid] = now; c.soldN[rid] = (c.soldN[rid] || 0) + 1; now += 25e3; } return out; }, tab: t => { czTab = t === 'cli' ? 'cli' : 'prep'; czPaintBody(); }, nextTier: t => { cmNextTier = t; }, applyTier: cmApplyTier, newOrder: () => bqNewOrder(false), how: cmHowHTML };
 
 // ================= QUÊTES ET LISTE DE COURSES (v21) =================
 // But : « j'ai besoin de ÇA, pour ÇA, et ça se trouve LÀ ».
-// - qtNeeds() rassemble les besoins du joueur (ingrédients des recettes du commerce, commandes, rêves, objectif du jour,
+// - qtNeeds() rassemble les besoins du joueur (ingrédients des recettes du commerce, rêves, objectif du jour,
 //   étape de la quête suivie, clé d'un coffre) et qtLoc() trouve le lieu le plus proche où les obtenir ;
 // - la carte montre ces lieux par de petites épingles « besoin » (8 au plus), avec une flèche au bord de l'écran
-//   quand le lieu est loin ; boutons « Ma liste » et « Quêtes » à gauche de la carte ;
-// - objectif du jour : 3 objets recherchés (proche, région, lointain), sans fenêtre spontanée (point rouge seulement) ;
+//   quand le lieu est loin ; bouton « Quêtes » à gauche de la carte (v29 : « Ma liste » est retirée) ;
+// - objectif du jour : 3 objets recherchés (proche, région, lointain), en tête de la page Quêtes, sans fenêtre spontanée
+//   (point rouge sur le bouton Quêtes seulement) ;
 // - vraies quêtes : 9 histoires en étapes avec un personnage et une récompense unique, et 8 défis difficiles ;
 // - au retour d'un voyage, le butin indique « Pour : … ✔ ».
 // État : S.qt = { st: {quête: {i, b, hit, done}}, df: {défi: 1}, log: {...}, follow, day, seen }.
@@ -24586,7 +24596,7 @@ const qtDot = () => { const D = qtDay(); return qtState().seen !== D.d && D.list
 
 // ---------------- tous les besoins du joueur ----------------
 // besoin : { id, src, ico, it, name, why, gain, step, have, n, match }
-const QT_SRC = { quete: ['Quête suivie', 0], jour: ['Objectif du jour', 1], commande: ['Commande', 2], reve: ['Rêve', 3], recette: ['Recette du commerce', 4], cle: ['Coffre', 5] };
+const QT_SRC = { quete: ['Quête suivie', 0], jour: ['Objectif du jour', 1], reve: ['Rêve', 3], recette: ['Recette du commerce', 4], cle: ['Coffre', 5] };
 let qtNeedC = { t: 0, v: [] };
 function qtNeeds(force) {
   if (!force && Date.now() - qtNeedC.t < 1500) return qtNeedC.v;
@@ -24601,17 +24611,6 @@ function qtNeeds(force) {
   } catch (e) {}
   // objectif du jour
   try { qtDay().list.forEach((o, i) => { if (o.done) return; const m = qtDayMatch(o), h = qtCount(m); if (h >= 1) return; add({ id: 'day:' + i, src: 'jour', it: qtDayIt(o), name: o.name, why: `Objectif du jour (${QT_Z[o.z].toLowerCase()})`, gain: `+${o.pay} pièces${o.egg ? ' + œuf' : ''}`, step: o.step, have: 0, n: 1, match: m }); }); } catch (e) {}
-  // commandes du comptoir (acceptées)
-  try {
-    for (const o of bqState().orders) {
-      if (o.pend) continue;
-      const al = bqAllocate(o), c = BQC(o.client);
-      o.req.forEach((r, j) => {
-        if (al[j].have >= r.n || ['egg', 'comp', 'craft', 'bait', 'mk'].includes(r.k)) return;
-        add({ id: 'ord:' + o.id + ':' + j, src: 'commande', ico: bqReqIcon(r), it: r.k === 'ing' ? qtIngIt(r.key) : r.k === 'reg' && RG_RES[r.rid] ? qtResIt(RG_RES[r.rid]) : r.def ? bqItemOf(r.def) : null, name: bqReqLabel(r), why: `Commande ${o.tier && CM_TIER[o.tier] ? CM_TIER[o.tier][0] : ''} de ${c ? c.name : 'un client'}`, gain: `+${o.coins} pièces${o.rw && o.rw.k !== 'coins' ? ' + cadeau' : ''}`, step: bqStepFor(r), have: al[j].have, n: r.n, match: it => bqMatch(r, it) });
-      });
-    }
-  } catch (e) {}
   // rêves de l'équipe
   try {
     for (const k of teamIds()) {
@@ -24755,33 +24754,18 @@ function qtEdgeUpd() {
   });
 }
 
-// ---------------- « Ma liste » ----------------
-function qtListHTML() {
-  const D = qtDay(), needs = qtNeeds(true);
-  const day = D.list.map((o, i) => {
+// ---------------- objectif du jour (en tête de la page Quêtes, v29 : « Ma liste » est retirée) ----------------
+function qtDayHTML() {
+  const D = qtDay(), left = D.list.filter(o => !o.done).length;
+  const rows = D.list.map((o, i) => {
     const it = qtDayIt(o), h = qtCount(qtDayMatch(o)), F = qtFam(it);
-    return `<div class="qt-day${o.done ? ' done' : ''}"><span class="qt-z z-${o.z}">${QT_Z[o.z]}</span><span class="qt-di" style="--fc:${F ? F.couleur : '#d9604f'}">${qtIco(it)}<i class="qtf"></i></span><b>${esc(o.name)}</b><small>${esc(o.where)}</small><span class="qt-pay">${coins(o.pay)}${o.egg ? ' + œuf' : ''}</span>
-      ${o.done ? '<span class="qt-ok">Rempli ✔</span>' : h ? `<button class="btn green sm" data-qtday="${i}">Livrer</button>` : `<button class="btn gold sm" data-qtneed="day:${i}">Y aller</button>`}</div>`;
+    const act = o.done ? '<span class="qt-ok">✔</span>' : h ? `<button class="btn green sm" data-qtday="${i}">Livrer</button>` : `<button class="btn gold sm" data-qtneed="day:${i}">Y aller</button>`;
+    return `<div class="qt-drow${o.done ? ' done' : ''}"><span class="qt-di" style="--fc:${F ? F.couleur : '#d9604f'}">${qtIco(it)}<i class="qtf"></i></span><div class="qt-nx"><b>${esc(o.name)}</b><span><i class="qt-z z-${o.z}">${QT_Z[o.z]}</i> ${esc(o.where)}</span></div><span class="qt-pay">${coins(o.pay)}${o.egg ? '<small>+ œuf</small>' : ''}</span>${act}</div>`;
   }).join('');
-  // v21b : des onglets au lieu d'une longue liste à faire défiler
-  const tabs = [['jour', 'Objectif', D.list.filter(o => !o.done).length], ...QT_LTABS.map(([k, lab, srcs]) => [k, lab, needs.filter(n => srcs.includes(n.src)).length])];
-  if (!tabs.some(t => t[0] === qtLTab)) qtLTab = 'jour';
-  const cur = QT_LTABS.find(t => t[0] === qtLTab), list = cur ? needs.filter(n => cur[2].includes(n.src)) : [];
-  const rows = list.map(n => {
-    const L = qtLoc(n.step), F = n.it ? qtFam(n.it) : null;
-    return `<div class="qt-need"><span class="qt-di" style="--fc:${qtNeedCol(n)}">${qtNeedIco(n)}<i class="qtf"></i></span><div class="qt-nx"><b>${esc(n.name)}${n.n > 1 || n.have ? ` <small>${Math.min(n.have, n.n)}/${n.n}</small>` : ''}</b><span>Pour : ${esc(n.why)} · <em>${esc(n.gain)}</em></span><span class="qt-w">${F ? `<i style="--fc:${F.couleur}">${F.icone} ${esc(F.nom)}</i> ` : ''}${L ? `${esc(L.label)} · ${fmtDist(qtKm(L))}` : 'Voir où le trouver'}</span></div><button class="btn gold sm" data-qtneed="${esc(n.id)}">Y aller</button></div>`;
-  }).join('');
-  const bar = `<div class="qt-ltabs">${tabs.map(([k, lab, n]) => `<button class="qt-ltab${k === qtLTab ? ' on' : ''}" data-qtltab="${k}">${lab}${n ? `<b>${n}</b>` : ''}</button>`).join('')}</div>`;
-  const body = qtLTab === 'jour'
-    ? `<p class="qt-sub">3 objets recherchés aujourd’hui, très bien payés.</p><div class="qt-days">${day || '<p class="empty">Rien aujourd’hui.</p>'}</div>`
-    : (rows || `<p class="empty">${QT_LEMPTY[qtLTab]}</p>`);
-  return `<div class="qt-page qt-list"><div class="qt-top"><h2>Ma liste</h2><button class="qt-x" data-closemodal="1" aria-label="Fermer">✕</button></div>${bar}${body}
-    <div class="qt-acts"><button class="btn cream" data-qtpage="1">${QT_SCROLL} Quêtes</button><button class="btn green" data-closemodal="1">Fermer</button></div></div>`;
+  return `<section class="qt-today" id="qtToday"><h3 class="qt-h3">Objectif du jour <small>${left ? `${left} objet${left > 1 ? 's' : ''} recherché${left > 1 ? 's' : ''}, très bien payé${left > 1 ? 's' : ''}` : 'tout est rempli, bravo !'}</small></h3>${rows || '<p class="empty">Rien aujourd’hui.</p>'}</section>`;
 }
-let qtLTab = 'jour';
-const QT_LTABS = [['commande', 'Commandes', ['commande']], ['reve', 'Rêves', ['reve']], ['recette', 'Recettes', ['recette']], ['quete', 'Quêtes', ['quete', 'cle']]];
-const QT_LEMPTY = { commande: 'Aucune commande en cours : acceptez-en une au comptoir.', reve: 'Aucun rêve en cours.', recette: 'Rien ne manque pour vos recettes.', quete: 'Suivez une quête pour voir ici sa prochaine étape.' };
-function qtOpenList() { const s = qtState(); s.seen = qtDay().d; save(); showModal(qtListHTML()); qtBtns(); const mb = document.querySelector('#modal .mbox'); if (mb) mb.scrollTop = 0; }
+// anciens appels (bouton du butin…) : la page Quêtes
+function qtOpenList() { qtOpenPage(); }
 
 // ---------------- page Quêtes ----------------
 function qtStoryHTML(q, big) {
@@ -24813,17 +24797,18 @@ function qtDefiHTML(d) {
 function qtPageHTML() {
   const s = qtState(), f = QT_BY[s.follow];
   return `<div class="qt-page"><div class="qt-top"><h2>Quêtes</h2><button class="qt-x" data-closemodal="1" aria-label="Fermer">✕</button></div>
+    ${qtCall(qtDayHTML, '')}
     ${f ? qtStoryHTML(f, true) : '<p class="qt-hint">Choisissez une histoire et touchez « Suivre » : son étape s’affichera sur la carte.</p>'}
     <h3 class="qt-h3">Histoires <small>${qtDoneN()}/${QT_STORIES.length} terminées</small></h3><div class="qt-stories">${QT_STORIES.filter(q => q !== f).map(q => qtStoryHTML(q)).join('')}</div>
     <h3 class="qt-h3">Défis <small>difficiles, grosses récompenses</small></h3><div class="qt-defis">${QT_DEFIS.map(qtDefiHTML).join('')}</div>
-    <div class="qt-acts"><button class="btn cream" data-qtlist="1">${QT_LIST} Ma liste</button><button class="btn green" data-closemodal="1">Fermer</button></div></div>`;
+    <div class="qt-acts"><button class="btn green" data-closemodal="1">Fermer</button></div></div>`;
 }
 let qtPageOn = false;
-function qtOpenPage() { qtPageOn = true; showModal(qtPageHTML()); const mb = document.querySelector('#modal .mbox'); if (mb) mb.scrollTop = 0; }
+function qtOpenPage() { qtPageOn = true; try { const s = qtState(); s.seen = qtDay().d; save(); } catch (e) {} showModal(qtPageHTML()); qtBtns(); const mb = document.querySelector('#modal .mbox'); if (mb) mb.scrollTop = 0; }
 function qtRefreshAll() {
   qtNeedC.t = 0;
   const m = $('modal');
-  if (m && !m.hidden) { if (m.querySelector('.qt-page h2') && qtPageOn && m.querySelector('.qt-stories')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtPageHTML()); mb.scrollTop = y; } else if (m.querySelector('.qt-list')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtListHTML()); mb.scrollTop = y; } }
+  if (m && !m.hidden) { if (m.querySelector('.qt-page h2') && qtPageOn && m.querySelector('.qt-stories')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtPageHTML()); mb.scrollTop = y; } }
   try { renderTripCard(); } catch (e) {}
   qtMapUpdate(); qtBtns();
   try { if (typeof poiStateCheck === 'function') poiStateCheck(); } catch (e) {}
@@ -24835,7 +24820,7 @@ function qtBtns() {
   if (!b) {
     const z = document.querySelector('.zoom'); if (!z) return;
     b = document.createElement('div'); b.id = 'qtBtns';
-    b.innerHTML = `<button class="qt-mb" data-qtlist="1" aria-label="Ma liste">${QT_LIST}<span>Ma liste</span><i class="qt-dot" hidden></i></button><button class="qt-mb" data-qtpage="1" aria-label="Quêtes">${QT_SCROLL}<span>Quêtes</span></button>`;
+    b.innerHTML = `<button class="qt-mb" data-qtpage="1" aria-label="Quêtes">${QT_SCROLL}<span>Quêtes</span><i class="qt-dot" hidden></i></button>`;
     z.parentNode.insertBefore(b, z);
   }
   const d = b.querySelector('.qt-dot'); if (d) d.hidden = !qtCall(qtDot, false);
@@ -24897,7 +24882,7 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
     for (const n of needs) {
       const got = (h.items || []).filter(it => n.match(it)); if (!got.length) continue;
       const have = qtCount(n.match), ok = have >= n.n;
-      hits.push(`<div class="qt-hrow"><span class="qt-di" style="--fc:${qtNeedCol(n)}">${qtIco(got[0])}<i class="qtf"></i></span><span class="qt-hx"><b>${esc(got[0].name)}</b><span>Pour : ${esc(n.why)} ${ok ? '<em class="ok">✔</em>' : `<em>${Math.min(have, n.n)}/${n.n}</em>`}</span></span><button class="btn ${ok ? 'green' : 'cream'} sm" data-qthaul="${esc(n.src)}">${n.src === 'recette' ? 'Préparer' : n.src === 'commande' ? 'Livrer' : n.src === 'reve' ? 'Mon rêve' : n.src === 'cle' ? 'Ouvrir' : n.src === 'quete' ? 'Quête' : 'Ma liste'}</button></div>`);
+      hits.push(`<div class="qt-hrow"><span class="qt-di" style="--fc:${qtNeedCol(n)}">${qtIco(got[0])}<i class="qtf"></i></span><span class="qt-hx"><b>${esc(got[0].name)}</b><span>Pour : ${esc(n.why)} ${ok ? '<em class="ok">✔</em>' : `<em>${Math.min(have, n.n)}/${n.n}</em>`}</span></span><button class="btn ${ok ? 'green' : 'cream'} sm" data-qthaul="${esc(n.src)}">${n.src === 'recette' ? 'Préparer' : n.src === 'reve' ? 'Mon rêve' : n.src === 'cle' ? 'Ouvrir' : 'Quêtes'}</button></div>`);
       if (hits.length >= 4) break;
     }
     if (hits.length) {
@@ -24910,11 +24895,11 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
 })(showHaul);
 // « Sert à… » des fiches d'objet
 try { GAME.addUses(it => qtCall(() => qtNeeds().filter(n => n.match && n.match(it)).slice(0, 2).map(n => ({ txt: `Pour : ${n.why} (${n.gain})`, kind: 'recette' })), [])); } catch (e) {}
-// menu : Quêtes et Ma liste
+// menu : Quêtes (objectif du jour, histoires, défis)
 if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
   const r = orig.apply(this, arguments);
   try {
-    const row = `<section class="msec"><header><h3>Quêtes</h3></header><div class="mrow"><span class="mri">${QT_SCROLL}</span><div><b>Histoires et défis</b><span>${qtDoneN()}/${QT_STORIES.length} histoires · ${Object.keys(qtState().df).length}/${QT_DEFIS.length} défis</span></div><button class="btn cream sm" data-qtpage="1">Voir</button></div><div class="mrow"><span class="mri">${QT_LIST}</span><div><b>Ma liste de courses</b><span>Ce qu’il vous faut, pour quoi, et où</span></div><button class="btn cream sm" data-qtlist="1">Voir</button></div></section>`;
+    const row = `<section class="msec"><header><h3>Quêtes</h3></header><div class="mrow"><span class="mri">${QT_SCROLL}</span><div><b>Objectif du jour, histoires et défis</b><span>${qtDoneN()}/${QT_STORIES.length} histoires · ${Object.keys(qtState().df).length}/${QT_DEFIS.length} défis</span></div><button class="btn cream sm" data-qtpage="1">Voir</button></div></section>`;
     const first = box.querySelector('.msec'); if (first) first.insertAdjacentHTML('afterend', row); else box.insertAdjacentHTML('beforeend', row);
   } catch (e) { console.error('quêtes menu', e); }
   return r;
@@ -24922,11 +24907,9 @@ if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
 
 // ---------------- clics ----------------
 document.addEventListener('click', ev => {
-  const tb = ev.target.closest('[data-qtltab]'); if (tb) { qtLTab = tb.dataset.qtltab; const mb = document.querySelector('#modal .mbox'); showModal(qtListHTML()); if (mb) mb.scrollTop = 0; return; }
-  const el = ev.target.closest('[data-qtlist],[data-qtpage],[data-qtneed],[data-qtday],[data-qtfollow],[data-qtgive],[data-qtdefi],[data-qtshop],[data-qtsac],[data-qtnur],[data-qthaul],[data-qtedge]');
+  const el = ev.target.closest('[data-qtpage],[data-qtneed],[data-qtday],[data-qtfollow],[data-qtgive],[data-qtdefi],[data-qtshop],[data-qtsac],[data-qtnur],[data-qthaul],[data-qtedge]');
   if (!el || el.disabled) return;
   const d = el.dataset;
-  if (d.qtlist) return qtOpenList();
   if (d.qtpage) return qtOpenPage();
   if (d.qtneed) { const n = qtNeeds(true).find(x => x.id === d.qtneed); if (n) qtGo(n); else toast('Ce besoin est déjà comblé !'); return; }
   if (d.qtday) return qtDayGive(+d.qtday);
@@ -24935,18 +24918,18 @@ document.addEventListener('click', ev => {
   if (d.qtdefi) return qtClaimDefi(d.qtdefi);
   if (d.qtedge) { const g = qtPins.find(x => x.k === d.qtedge); if (g) qtGo(g.list[0]); return; }
   $('modal').hidden = true;
-  if (d.qtshop || (d.qthaul === 'recette' || d.qthaul === 'commande')) { try { openBoutique('comptoir'); } catch (e) { openSheet('boutique'); } return; }
+  if (d.qtshop || d.qthaul === 'recette') { try { openBoutique('comptoir'); } catch (e) { openSheet('boutique'); } return; }
   if (d.qtsac || d.qthaul === 'cle') return openSheet('sac');
   if (d.qtnur) return openSheet('compagnons');
   if (d.qthaul === 'reve') return openSheet('reves');
   if (d.qthaul === 'quete') return qtOpenPage();
-  if (d.qthaul) return qtOpenList();
+  if (d.qthaul) return qtOpenPage();
 });
 document.addEventListener('click', ev => { if (ev.target.closest('[data-closemodal]')) qtPageOn = false; }, true);
 // suivi régulier : épingles, point rouge, étapes automatiques
 setInterval(() => { try { if (document.hidden) return; qtState(); qtCheckStories(); qtNeedC.t = 0; qtMapUpdate(); qtBtns(); if (typeof positionOverlay === 'function') positionOverlay(); } catch (e) {} }, 2500);
 setTimeout(() => { try { qtState(); qtBtns(); qtMapUpdate(); } catch (e) {} }, 300);
-window.__qt = { state: qtState, needs: qtNeeds, loc: qtLoc, groups: qtGroups, day: qtDay, dayGive: qtDayGive, start: qtStart, give: qtGive, check: qtCheckStories, claim: qtClaimDefi, list: qtOpenList, page: qtOpenPage, update: qtMapUpdate, STORIES: QT_STORIES, DEFIS: QT_DEFIS };
+window.__qt = { state: qtState, needs: qtNeeds, loc: qtLoc, groups: qtGroups, day: qtDay, dayGive: qtDayGive, start: qtStart, give: qtGive, check: qtCheckStories, claim: qtClaimDefi, list: qtOpenPage, page: qtOpenPage, dayHTML: qtDayHTML, update: qtMapUpdate, STORIES: QT_STORIES, DEFIS: QT_DEFIS };
 
 // ---------------- styles ----------------
 (function qtCSS() {
@@ -25028,6 +25011,10 @@ body.sheet-open #qtBtns,body.firstrun #qtBtns,body.firstrun .qtpin,body.firstrun
 .qt-haul h4{margin:0 0 6px;font:800 14px var(--display);color:#2f6f45;display:flex;align-items:center;gap:6px}.qt-haul h4 svg{width:20px;height:20px}
 .qt-haul .qt-hrow{margin-bottom:4px;border-color:rgba(58,143,90,.4)}
 .qt-hx em{font-style:normal;font-weight:800}.qt-hx em.ok{color:#2f7f3a}
+.qt-today{background:#fff3d6;border:2.5px solid var(--ink);border-radius:16px;padding:2px 8px 4px;margin-bottom:10px}.qt-today .qt-h3{margin:6px 0}
+.qt-drow{display:flex;align-items:center;gap:8px;background:#fffaf0;border:2px solid rgba(74,53,40,.3);border-radius:12px;padding:5px 7px;margin-bottom:5px}.qt-drow.done{opacity:.6}
+.qt-drow .qt-di{width:36px;height:36px}.qt-drow .qt-di svg{width:28px;height:28px}.qt-drow .qt-nx b{font-size:13.5px}.qt-drow .qt-nx span{font-size:11.5px;opacity:.85}
+.qt-drow .qt-z{font-style:normal;margin-right:3px}.qt-drow .qt-pay{display:flex;flex-direction:column;align-items:center;font-size:12px;white-space:nowrap}.qt-drow .qt-pay small{font:700 10px var(--body)}
 @media (max-width:420px){.qt-days{grid-template-columns:1fr}.qt-day{flex-direction:row;flex-wrap:wrap;text-align:left;justify-content:flex-start}.qt-day small{flex-basis:100%}.qt-day .qt-z{position:absolute;right:8px;top:6px}}
 `;
   document.head.appendChild(st);
@@ -26327,6 +26314,352 @@ if (typeof avWhere === 'function') avWhere = (orig => function (t) {
   } catch (e) {}
   return w;
 })(avWhere);
+
+// ================= CLIENTS FIDÈLES : DE VRAIS AVANTAGES (v29) =================
+// Le joueur : « Dans Clients, ça n'apporte rien. Il faut montrer que tel client va nous donner tel avantage. »
+// - chaque client (BQ_CLIENTS) a 2 avantages UNIQUES liés à son personnage, débloqués à 1 ❤ puis à 3 ❤ (CF_PERKS) ;
+//   les cœurs sont ceux de 33_boutique.js (S.shop.v2.fid[id] = { h: points, g: cœurs }) ;
+// - les avantages s'appliquent vraiment : cmDur et cmDefiP (37_commerce.js) appellent cfDurMul et cfDefiAdd ;
+//   cmSell, cmStart, cmComptoir et cmPaint sont enveloppés ; cadeaux du jour et de la semaine donnés à l'ouverture du comptoir ;
+// - les pierres d'étoile et objets rares des anciennes commandes spéciales : une vente à un client fidèle (1 ❤ et plus)
+//   peut rapporter un petit cadeau (pierre d'étoile ou objet rare) ;
+// - ses produits préférés (ingrédients qu'il aime) comptent double pour l'amitié ;
+// - onglet Clients du comptoir : une carte par client (visage, cœurs, avantage actuel, prochain avantage, comment gagner ses cœurs) ;
+// - recette impossible : au toucher (recette ou ingrédient manquant), un encadré DANS la page montre ce qui manque,
+//   « Vous en avez 0/2 », les lieux les plus proches avec leur distance, « Y aller » et, s'il existe, l'achat au magasin ou au marché.
+// État ajouté (anciennes sauvegardes : absent = rien de débloqué) : fid[id].pk (avantages uniques déjà donnés),
+// fid[id].dd (dernier cadeau du jour), fid[id].wk (dernier cadeau de la semaine), fid[id].sn (avantages déjà vus).
+// Expose window.__cf (tests).
+
+// [cœurs, icône, texte, effet]
+// effets : prep (−p du temps, recettes avec keys, toutes si absent), pay3 (+p sur ses achats 3★), pay (+p sur tous ses achats),
+// tip (+n pièces par achat), rep (+n réputation par achat), repAll (+n réputation à chaque vente, tous clients), defi (+p chance du défi rapide),
+// star2 (produits avec keys : 2★ d'office), gift (chance p d'un cadeau rare à chaque achat), day (n objets par jour), coins (n pièces par jour),
+// week (pierres, matériel, objet rare ou ingrédient lointain chaque semaine), once (recette exclusive, lieu secret, matériel : une fois).
+const CF_PERKS = {
+  noisette: [[1, '🌰', '−20 % de temps de préparation sur les recettes aux fruits et fruits secs', { k: 'prep', keys: ['fruit', 'graine', 'pomme'], p: 0.2 }],
+    [3, '🌰', '−35 % de temps de préparation sur les recettes aux fruits et fruits secs', { k: 'prep', keys: ['fruit', 'graine', 'pomme'], p: 0.35 }]],
+  leonie: [[1, '📣', '+3 réputation à chacun de ses achats : tout le monde l’écoute', { k: 'rep', n: 3 }],
+    [3, '📜', 'Vous offre une recette exclusive de votre commerce', { k: 'once', what: 'rec' }]],
+  moustache: [[1, '🪙', 'Pourboire élégant : +8 pièces à chacun de ses achats', { k: 'tip', n: 8 }],
+    [3, '🗺️', 'Vous indique un lieu secret sur la carte', { k: 'once', what: 'secret' }]],
+  pompon: [[1, '🌱', '1 graine rare pour le jardin chaque jour', { k: 'day', what: 'seed', n: 1 }],
+    [3, '🌱', '2 graines rares pour le jardin chaque jour', { k: 'day', what: 'seed', n: 2 }]],
+  roussette: [[1, '⭐', 'Paie +15 % les produits 3★', { k: 'pay3', p: 0.15 }],
+    [3, '⭐', 'Paie +30 % les produits 3★', { k: 'pay3', p: 0.3 }]],
+  pingo: [[1, '💎', '1 pierre d’étoile chaque semaine', { k: 'week', what: 'stones', n: 1 }],
+    [3, '💎', '3 pierres d’étoile chaque semaine', { k: 'week', what: 'stones', n: 3 }]],
+  gaston: [[1, '🧰', 'Vous offre une gourde d’expédition (matériel de base)', { k: 'once', what: 'gear', g: 'gourde' }],
+    [3, '🧰', '1 matériel d’expédition de base chaque semaine', { k: 'week', what: 'gear', n: 1 }]],
+  ondine: [[1, '🐚', '1 coquillage chaque jour', { k: 'day', what: 'ing', ing: 'coquillage', n: 1 }],
+    [3, '🐚', '2 coquillages chaque jour', { k: 'day', what: 'ing', ing: 'coquillage', n: 2 }]],
+  hulotte: [[1, '🦉', 'Défi rapide 10 % plus souvent (plus d’étoiles)', { k: 'defi', p: 0.1 }],
+    [3, '🦉', 'Défi rapide 20 % plus souvent (plus d’étoiles)', { k: 'defi', p: 0.2 }]],
+  bruno: [[1, '🍯', '1 douceur sucrée chaque jour', { k: 'day', what: 'ing', ing: 'sucre', n: 1 }],
+    [3, '🍯', '2 douceurs sucrées chaque jour', { k: 'day', what: 'ing', ing: 'sucre', n: 2 }]],
+  mimi: [[1, '🧀', 'Les produits au fromage sortent à 2★', { k: 'star2', keys: ['fromage'] }],
+    [3, '🧀', 'Les produits au fromage, aux graines ou à la farine sortent à 2★', { k: 'star2', keys: ['fromage', 'graine', 'farine'] }]],
+  filou: [[1, '🎁', '1 chance sur 3 de recevoir un objet rare à chacun de ses achats', { k: 'gift', p: 0.33 }],
+    [3, '🎁', '3 chances sur 5 de recevoir un objet rare à chacun de ses achats', { k: 'gift', p: 0.6 }]],
+  chips: [[1, '⚡', 'Vous donne un coup de main : −10 % de temps sur toutes les recettes', { k: 'prep', p: 0.1 }],
+    [3, '⚡', 'Vous donne un coup de main : −20 % de temps sur toutes les recettes', { k: 'prep', p: 0.2 }]],
+  capucine: [[1, '💬', 'Bavarde : +1 réputation à CHAQUE vente, tous clients confondus', { k: 'repAll', n: 1 }],
+    [3, '💬', 'Bavarde : +2 réputation à CHAQUE vente, tous clients confondus', { k: 'repAll', n: 2 }]],
+  rainette: [[1, '🌸', '1 fleur ou feuille chaque jour', { k: 'day', what: 'ing', ing: 'feuille', n: 1 }],
+    [3, '🌸', '2 fleurs ou feuilles chaque jour', { k: 'day', what: 'ing', ing: 'feuille', n: 2 }]],
+  biscotte: [[1, '🦴', 'Paie +20 % tous ses achats', { k: 'pay', p: 0.2 }],
+    [3, '🦴', 'Paie +40 % tous ses achats', { k: 'pay', p: 0.4 }]],
+  frisette: [[1, '🧶', '1 laine chaque jour', { k: 'day', what: 'ing', ing: 'laine', n: 1 }],
+    [3, '🧶', '2 laines chaque jour', { k: 'day', what: 'ing', ing: 'laine', n: 2 }]],
+  clochette: [[1, '🍀', '1 objet rare chaque semaine (décoration, clé ou pierre précieuse)', { k: 'week', what: 'rare', tier: 'n', n: 1 }],
+    [3, '🍀', '1 objet épique ou légendaire chaque semaine', { k: 'week', what: 'rare', tier: 'd', n: 1 }]],
+  grignote: [[1, '💰', 'Partage ses économies : 20 pièces chaque jour', { k: 'coins', n: 20 }],
+    [3, '💰', 'Partage ses économies : 50 pièces chaque jour', { k: 'coins', n: 50 }]],
+  eucalypso: [[1, '🌍', '1 ingrédient venu de loin chaque semaine', { k: 'week', what: 'far', n: 1 }],
+    [3, '🌍', '1 ingrédient venu de loin chaque jour', { k: 'day', what: 'far', n: 1 }]],
+};
+const cfCall = (f, d) => { try { return f(); } catch (e) { return d; } };
+const cfWeek = () => Math.floor((Date.now() / 864e5 + 3) / 7);
+const CF_SEEDS = [['Graine de tournesol géant', '#e9b949'], ['Graine d’edelweiss', '#e8eef2'], ['Graine de lotus bleu', '#6f9fd8'], ['Graine de pivoine rare', '#f08aa6']];
+function cfFid(id) { const f = b2Fid(id); if (!Array.isArray(f.pk)) f.pk = []; return f; }
+const cfLvl = id => cfCall(() => (b2().fid[id] ? b2().fid[id].g || 0 : 0), 0);
+// avantages actifs d'un client (même genre : seul le plus fort compte)
+function cfActive(id) {
+  const P = CF_PERKS[id], g = cfLvl(id); if (!P || !g) return [];
+  const out = {}; P.forEach(([h, , , e], i) => { if (g >= h) out[e.k === 'once' ? 'once' + i : e.k + (e.what || '')] = e; });
+  return Object.values(out);
+}
+const cfAllActive = k => { const out = []; for (const c of BQ_CLIENTS) for (const e of cfActive(c.id)) if (e.k === k) out.push(e); return out; };
+const cfHasKey = (R, keys) => !keys || R.ing.some(([k]) => keys.includes(k));
+// branchés dans 37_commerce.js
+function cfDurMul(R) { return cfCall(() => cfAllActive('prep').reduce((m, e) => (cfHasKey(R, e.keys) ? m * (1 - e.p) : m), 1), 1); }
+function cfDefiAdd() { return cfCall(() => cfAllActive('defi').reduce((a, e) => a + e.p, 0), 0); }
+
+// ---------------- cadeaux ----------------
+function cfMk(def, from, extra) { const it = makeItem(def, 0, from, [], { fixed: def[3] || 0 }); if (extra) Object.assign(it, extra); S.inv.push(it); S.dex[it.name] = true; return it; }
+function cfIngItem(k, from) { const s = bqSampleIng(k); return cfMk([s.name, s.cat === 'n' ? 'n' : 'm', s.sub, s.rarity || 0, s.look || null, s.color || null], from); }
+function cfFarItem(from) { const x = cmFarRes(); if (!x) return null; const it = cfMk([x.name, x.cat, x.sub, x.rar || 0, null, x.color || null], from); it.rid = x.id; return it; }
+function cfGive(c, e, n) {
+  const from = `Cadeau de ${c.name}`; let txt = '';
+  if (e.what === 'seed') { for (let i = 0; i < n; i++) { const [nm, col] = CF_SEEDS[Math.floor(Math.random() * CF_SEEDS.length)]; cfMk([nm, 'm', 'graine', 2, null, col], from); } txt = `${n} graine${n > 1 ? 's' : ''} rare${n > 1 ? 's' : ''}`; }
+  else if (e.what === 'ing') { let last = null; for (let i = 0; i < n; i++) last = cfIngItem(e.ing, from); txt = n > 1 ? `${n} × ${cmIngName(e.ing).toLowerCase()}` : `« ${last.name} »`; }
+  else if (e.what === 'far') { const it = cfFarItem(from); txt = it ? `« ${it.name} » (venu de loin)` : ''; }
+  else if (e.what === 'stones') { const s = gainStones(n); txt = s ? stonesWord(s) : ''; }
+  else if (e.what === 'gear' && typeof xpGearDef === 'function') { const g = e.g || XP_GEAR.filter(x => x[0] !== 'lampe')[Math.floor(Math.random() * 5)][0]; const it = cfMk(xpGearDef(g, 1), from); txt = `« ${it.name} »`; }
+  else if (e.what === 'rare') { const r = cmRareItem(e.tier || 'n'); if (r) { const it = cfMk(r.def, from); txt = `« ${it.name} »`; } }
+  return txt;
+}
+// cadeaux du jour, de la semaine et avantages uniques (une fois) : donnés à l'ouverture du comptoir et après une vente
+function cfPayouts(quiet) {
+  const dk = dayKey(), wk = cfWeek(), got = [];
+  for (const c of BQ_CLIENTS) {
+    const P = CF_PERKS[c.id], g = cfLvl(c.id); if (!P || !g) continue;
+    const f = cfFid(c.id), parts = [];
+    P.forEach(([h, , , e]) => {
+      if (g < h || e.k !== 'once' || f.pk.includes(h)) return;
+      if (e.what === 'rec') {
+        const T = cmT(); if (!T) return; const st = cmState(), R = (CM_LINES[T.id] || []).find(x => x.x && !st.unl.includes(x.id));
+        if (R) { st.unl.push(R.id); parts.push(`la recette exclusive « ${R.def[0]} »`); } else { gainCoins(300); parts.push('300 pièces (vous avez déjà toutes les recettes exclusives)'); }
+      } else if (e.what === 'secret') {
+        const h0 = bqHome(), r = typeof tzGiveRumor === 'function' ? tzGiveRumor(null, c.name, h0 ? { lon: h0.anchor[0], lat: h0.anchor[1] } : null) : null;
+        if (r) { parts.push('un lieu secret (regardez la carte)'); setTimeout(() => { try { tzRumorToast(c.name + ' vous indique un lieu secret', r); } catch (er) {} }, 1800); } else { gainCoins(150); parts.push('150 pièces'); }
+      } else if (e.what === 'gear') { const t = cfGive(c, e, 1); if (t) parts.push(t); }
+      f.pk.push(h);
+    });
+    for (const e of cfActive(c.id)) {
+      if ((e.k === 'day' || e.k === 'coins') && f.dd !== dk) {
+        if (e.k === 'coins') { gainCoins(e.n); parts.push(`${e.n} pièces`); } else { const t = cfGive(c, e, e.n); if (t) parts.push(t); }
+      }
+      if (e.k === 'week' && f.wk !== wk) { const t = cfGive(c, e, e.n); if (t) parts.push(t); }
+    }
+    if (cfActive(c.id).some(e => e.k === 'day' || e.k === 'coins')) f.dd = dk;
+    if (cfActive(c.id).some(e => e.k === 'week')) f.wk = wk;
+    if (parts.length) got.push(`${c.name} : ${parts.join(', ')}`);
+  }
+  if (got.length) { save(); try { renderTop(); } catch (e) {} if (!quiet) setTimeout(() => toast(`Cadeaux de vos fidèles — ${got.join(' · ')}`), 700); }
+  return got;
+}
+
+// ---------------- la vente : avantages appliqués ----------------
+let cfLast = null;
+function cfOnSale(b, it) {
+  const c = BQC(b.cid), T = BQS(b.shop), R = CM_R[it.mk.rid]; if (!c || !R) return;
+  const s = bqState(), p = it.mk.p, parts = []; let extra = 0, rep = 0;
+  for (const e of cfActive(c.id)) {
+    if (e.k === 'tip') { extra += e.n; parts.push(`pourboire +${e.n}`); }
+    if (e.k === 'pay3' && it.mk.st >= 3) { const x = Math.round(p * e.p); extra += x; parts.push(`produit 3★ +${x}`); }
+    if (e.k === 'pay') { const x = Math.round(p * e.p); extra += x; parts.push(`+${x} pièces`); }
+    if (e.k === 'rep') rep += e.n;
+  }
+  for (const e of cfAllActive('repAll')) rep += e.n;
+  if (T && T.id === 'epicerie' && R.ing.some(([k]) => k === 'far')) { const x = Math.round(p * 0.25); extra += x; parts.push(`venu de loin +${x}`); }
+  // amitié : produit préféré (ingrédient aimé) et brocante = un point de plus
+  const liked = R.ing.some(([k]) => (c.likes || []).includes(k));
+  if (liked) cfCall(() => b2Heart(c.id, 1), 0);
+  if (T && T.id === 'brocante') cfCall(() => b2Heart(c.id, 1), 0);
+  // petit cadeau d'un client fidèle (remplace les récompenses des commandes spéciales)
+  const g = cfLvl(c.id); let gift = '';
+  if (g >= 1) {
+    let ch = (g >= 3 ? 0.2 : 0.12) * (T && T.id === 'librairie' ? 2 : 1); const ge = cfActive(c.id).find(e => e.k === 'gift'); if (ge) ch = Math.max(ch, ge.p);
+    if (Math.random() < ch) {
+      if (!ge && Math.random() < 0.5) { const n = gainStones(g >= 3 ? 2 : 1); if (n) gift = stonesWord(n); }
+      else { const r = cmRareItem(g >= 3 || ge ? 'n' : 'f'); if (r) gift = `« ${cfMk(r.def, `Cadeau de ${c.name}`).name} »`; }
+    }
+  }
+  if (extra) { gainCoins(extra); s.earned += extra; }
+  if (rep) { s.rep += rep; const lv0 = s.lvl; s.lvl = bqLevelOf(s.rep); if (s.lvl > lv0) cfCall(() => bqLevelUp(s.lvl), 0); }
+  cfLast = { cid: c.id, base: p, extra, rep, gift, liked };
+  cfPayouts(true);
+  save();
+  const msg = [extra || rep ? `${parts.join(', ')}${rep ? `${parts.length ? ', ' : ''}+${rep} réputation` : ''}` : '', gift ? `cadeau : ${gift}` : '', liked ? 'son produit préféré : amitié ×2' : ''].filter(Boolean).join(' · ');
+  if (msg) setTimeout(() => toast(`${c.name} — ${msg}`), 1300);
+  cfCall(() => renderTop(), 0);
+}
+if (typeof cmSell === 'function') cmSell = (orig => function (bid) {
+  const c = cmState(), b = c.buy.find(x => x.id === bid);
+  const it = b ? cmProducts(b.shop).filter(x => x.mk.rid === b.rid).sort((a, z) => z.mk.st - a.mk.st)[0] : null;
+  const r = orig.apply(this, arguments);
+  try { if (b && it && !S.inv.includes(it) && !cmState().buy.includes(b)) { cfOnSale(b, it); if (cmOnComptoir()) { const t = $('czTabs'); if (t) t.innerHTML = czTabsHTML(); } } } catch (e) { console.error('fidèles vente', e); }
+  return r;
+})(cmSell);
+// produits « 2★ d'office » (Mimi)
+if (typeof cmStart === 'function') cmStart = (orig => function (rid) {
+  const before = cfCall(() => cmState().sl.map(x => x), []);
+  const r = orig.apply(this, arguments);
+  try {
+    const R = CM_R[rid], keys = new Set(); cfAllActive('star2').forEach(e => e.keys.forEach(k => keys.add(k)));
+    if (R && keys.size && R.ing.some(([k]) => keys.has(k))) cmState().sl.forEach((x, i) => { if (x && !before[i] && x.rid === rid && x.st < 2) { x.st = 2; save(); } });
+  } catch (e) {}
+  return r;
+})(cmStart);
+if (typeof cmComptoir === 'function') { const o = cmComptoir; cmComptoir = function (box) { cfCall(() => cfPayouts(), 0); return o.apply(this, arguments); }; if (typeof renderComptoir === 'function') renderComptoir = cmComptoir; }
+
+// ---------------- onglet Clients ----------------
+const CF_HEART = '<svg viewBox="0 0 20 18" aria-hidden="true"><path d="M10 17 C3 11.5 1 8.6 1 5.6 A4.4 4.4 0 0 1 10 3.6 A4.4 4.4 0 0 1 19 5.6 C19 8.6 17 11.5 10 17Z"/></svg>';
+function cfNewPerks() { let n = 0; for (const c of BQ_CLIENTS) { const P = CF_PERKS[c.id], g = cfLvl(c.id); if (!P || !g) continue; const f = b2().fid[c.id]; n += P.filter(([h]) => g >= h).length > ((f && f.sn) || 0) ? 1 : 0; } return n; }
+function cfCardHTML(c) {
+  const P = CF_PERKS[c.id] || [], f = b2().fid[c.id] || { h: 0, g: 0 }, g = f.g || 0, nx = B2_HEART[g], prev = g ? B2_HEART[g - 1] : 0;
+  const pc = nx ? Math.round(Math.max(0, Math.min(1, (f.h - prev) / (nx - prev))) * 100) : 100, left = nx ? nx - f.h : 0;
+  const hearts = Array.from({ length: 4 }, (_, i) => `<i class="${i < g ? 'on' : ''}">${CF_HEART}</i>`).join('');
+  const now = P.filter(([h]) => g >= h), next = P.find(([h]) => g < h);
+  const cur = now.length ? now.slice(P[1] && now.length > 1 && P[0][3].k === P[1][3].k ? -1 : 0).map(([h, ic, t, e]) => `<div class="cf-now"><span class="cf-ic">${ic}</span><span><em>Avantage actuel</em>${esc(t)}${e.k === 'once' ? ' <b class="cf-done">✔ reçu</b>' : ''}</span></div>`).join('')
+    : `<div class="cf-now off"><span class="cf-ic">${P[0] ? P[0][1] : '❤'}</span><span><em>Pas encore d’avantage</em>À 1 ❤ : ${esc(P[0] ? P[0][2] : '')}</span></div>`;
+  const nxt = now.length && next ? `<div class="cf-next">À ${next[0]} ${CF_HEART} : <b>${esc(next[2])}</b></div>` : !next && now.length ? '<div class="cf-next">Tous ses avantages sont débloqués.</div>' : P[1] ? `<div class="cf-next">Puis à ${P[1][0]} ${CF_HEART} : <b>${esc(P[1][2])}</b></div>` : '';
+  const T = cmT(), fav = T ? (CM_LINES[T.id] || []).filter(R => !R.egg && R.ing.some(([k]) => (c.likes || []).includes(k))) : [];
+  const how = fav.length ? `Vendez-lui ses produits préférés (amitié ×2) : <span class="cf-fav">${fav.slice(0, 4).map(R => `<i title="${esc(R.def[0])}">${cmIcon(R, 'cff' + c.id + R.id)}</i>`).join('')}</span>`
+    : `Vendez-lui vos produits. Ses goûts : ${(c.likes || []).map(k => esc(cmIngName(k).toLowerCase())).join(', ')}.`;
+  return `<article class="cf-card${g ? ' fid' : ''}" data-cfcli="${c.id}"><img class="cf-face" src="${cfCall(() => czURI(c, g ? 'joie' : 'content'), '')}" alt=""><div class="cf-main">
+    <div class="cf-top"><b>${esc(c.name)}</b><small>${esc(c.label || '')}</small><span class="cf-hs" aria-label="${g} cœur${g > 1 ? 's' : ''} sur 4">${hearts}</span></div>
+    <div class="cf-bar"><i style="width:${pc}%"></i></div><small class="cf-to">${nx ? `Encore ${left} point${left > 1 ? 's' : ''} d’amitié pour le prochain cœur (1 vente = 1 point)` : 'Amitié au maximum !'}</small>
+    ${cur}${nxt}<div class="cf-how">${how}</div></div></article>`;
+}
+function cfClientsHTML() {
+  const T = cmT(), v = b2(), ids = new Set((T && BQ_SHOP_CLIENTS[T.id]) || []);
+  Object.entries(v.fid).forEach(([id, f]) => { if (f && f.h > 0 && BQC(id)) ids.add(id); });
+  const list = [...ids].map(id => BQC(id)).filter(Boolean).sort((a, b) => ((v.fid[b.id] || {}).h || 0) - ((v.fid[a.id] || {}).h || 0));
+  // les avantages affichés sont « vus » (pastille de l'onglet)
+  list.forEach(c => { const f = v.fid[c.id], P = CF_PERKS[c.id]; if (f && P) f.sn = P.filter(([h]) => (f.g || 0) >= h).length; });
+  return `<section class="cf-list" id="b2fid"><h3 class="cz-h">${CZ_IC.cli}<span>Vos clients et leurs avantages</span></h3>
+    <p class="cf-intro">Chaque client a <b>son avantage</b>, débloqué par ses cœurs. Une vente = 1 point d’amitié (2 pour son produit préféré). Les fidèles offrent parfois une <b>pierre d’étoile</b> ou un <b>objet rare</b>.</p>
+    ${list.map(cfCardHTML).join('')}</section>`;
+}
+
+// ---------------- recette impossible : ce qui manque, où le trouver ----------------
+let cfOpen = null, CF_GO = [];
+const cfScore = (c, subs) => { const l = LOOT[c] || []; const tot = l.reduce((a, d) => a + 1 / (1 + d[3] * 1.6), 0); return l.filter(d => (d[1] === 'm' || d[1] === 'n') && subs.includes(d[2])).reduce((a, d) => a + 1 / (1 + d[3] * 1.6), 0) / (tot || 1); };
+function cfLocs(k) {
+  const h = homeObj(), out = [];
+  if (k === 'far') {
+    const R0 = cfCall(() => regionAt(h.lon, h.lat), null);
+    REGIONS.filter(R => R.anchor && R.res && R.res.length && R.id !== (R0 && R0.id) && R.id !== 'grand_large').map(R => ({ R, d: kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] }) })).sort((a, b) => a.d - b.d).slice(0, 3)
+      .forEach(({ R, d }) => out.push({ label: R.short || R.name, sub: 'Spécialités de la région', km: d, step: { region: R.id } }));
+    return out;
+  }
+  const subs = ING[k] ? ING[k][0] : [], T = cmT();
+  const cats = [...new Set([...((T && T.cats) || []), ...BQ_NEAR_CATS])].filter(c => cfCall(() => bqPoiOK(c), !!LOOT[c])).map(c => ({ c, s: cfScore(c, subs) })).filter(x => x.s >= 0.12).sort((a, b) => b.s - a.s).slice(0, 6);
+  const seen = new Set();
+  for (const { c } of cats) {
+    const step = { t: 'visit', cat: [c] }, L = qtLoc(step); if (!L || seen.has(L.label)) continue; seen.add(L.label);
+    out.push({ label: L.label, sub: POI_CATS[c] ? POI_CATS[c][0] : c, km: qtKm(L), step });
+  }
+  out.sort((a, b) => a.km - b.km);
+  // moins de 3 lieux chargés autour de la maison : on complète avec les pistes de « Où le trouver » (30_butin.js)
+  if (out.length < 3) {
+    const nm = cfCall(() => bqSampleIng(k).name, ''), have = new Set(out.map(o => JSON.stringify(o.step)));
+    cfCall(() => btSources(nm), []).filter(s => (s.go === 'Y aller' || s.go === 'Voir sur la carte') && !have.has(JSON.stringify(s.step))).slice(0, 3 - out.length)
+      .forEach(s => { const L = s.step && !s.step.fn ? qtLoc(s.step) : null; out.push({ label: L ? L.label : s.txt, sub: L ? s.txt : 'Où le trouver', km: L ? qtKm(L) : null, step: s.step }); });
+    if (!out.length && cats[0]) out.push({ label: POI_CATS[cats[0].c] ? POI_CATS[cats[0].c][0] : cats[0].c, sub: 'Le plus proche de chez vous', km: null, step: { t: 'visit', cat: [cats[0].c] } });
+  }
+  return out.slice(0, 3);
+}
+// un raccourci d'achat : magasin de la boutique (articles du jour) ou marché mondial ; le moins cher
+function cfShop(k) {
+  const subs = ING[k] ? ING[k][0] : [], ok = it => !!it && !it.mk && (k === 'far' ? cmIsFar(it) && it.cat !== 'v' : subs.includes(it.sub) && (it.cat === 'm' || it.cat === 'n'));
+  let best = null; const cand = o => { if (!best || o.price < best.price) best = o; };
+  try { bqStock().forEach(x => { if (x.sold || x.locked) return; const a = bqStockArticle(x); if (!a) return; const art = bqArticle(a); if (art && !art.egg && !art.rec && ok(art.it)) cand({ kind: 'shop', key: x.key, price: art.price, name: art.it.name, where: 'au magasin' }); }); } catch (e) {}
+  try { mkState().list.forEach(l => { if (l && l.kind === 'item' && ok(l.data)) cand({ kind: 'mk', key: l.id, price: l.price, name: l.data.name, where: 'au marché' }); }); } catch (e) {}
+  return best;
+}
+function cfMissHTML(rid, only) {
+  const R = CM_R[rid]; if (!R) return '';
+  const miss = R.ing.filter(([k, n]) => cmHave(k) < n && (!only || k === only));
+  if (!miss.length) return '';
+  if (CF_GO.length > 200) CF_GO = [];
+  const rows = miss.map(([k, n]) => {
+    const h = cmHave(k), locs = cfLocs(k), buy = cfShop(k), nm = cmIngName(k);
+    const lr = locs.map(L => { const i = CF_GO.push({ step: L.step, name: nm, why: R.def[0] }) - 1; return `<div class="cf-loc"><span class="cf-pin">${typeof btIco === 'function' ? btIco(L.step.region ? 'reg' : 'lieu') : ''}</span><span class="cf-lx"><b>${esc(L.label)}</b><small>${esc(L.sub || '')}${L.km != null ? `${L.sub ? ' · ' : ''}${fmtDist(L.km)}` : ''}</small></span><button class="btn gold sm" data-cfgo="${i}">Y aller</button></div>`; }).join('');
+    return `<div class="cf-mi"><div class="cf-mih"><span class="cf-ii">${cmIngIcon(k)}</span><span class="cf-mx"><b>${esc(nm)}</b><span>Vous en avez <b class="cf-cnt">${h}/${n}</b></span></span></div>
+      ${lr ? `<div class="cf-locs"><small class="cf-lt">Où le trouver, au plus près :</small>${lr}</div>` : '<p class="cf-lt">En voyage : événements, marchands ambulants et marché mondial.</p>'}
+      ${buy ? `<button class="btn cream sm cf-buy" data-cfbuy="${buy.kind}:${esc(buy.key)}">Acheter ${buy.where} (≈ ${buy.price} pièces)</button>` : ''}</div>`;
+  }).join('');
+  return `<div class="cf-miss" id="cfMiss" data-rid="${rid}"><div class="cf-mh"><b>Il manque pour « ${esc(R.def[0])} »</b><button class="cf-x" data-cfx="1" aria-label="Fermer">✕</button></div>${rows}</div>`;
+}
+function cfPlace() {
+  const old = $('cfMiss'); if (old) old.remove();
+  if (!cfOpen) return null;
+  const card = document.querySelector(`#czBody [data-cfcard="${cfOpen.rid}"]`); if (!card) return null;
+  const html = cfMissHTML(cfOpen.rid, cfOpen.k); if (!html) { cfOpen = null; return null; }
+  card.insertAdjacentHTML('afterend', html); card.classList.add('cf-sel');
+  return $('cfMiss');
+}
+function cfShowMiss(rid, k) {
+  document.querySelectorAll('#czBody .cf-sel').forEach(e => e.classList.remove('cf-sel'));
+  if (cfOpen && cfOpen.rid === rid && cfOpen.k === (k || null) && $('cfMiss')) { cfOpen = null; cfPlace(); return; }
+  cfOpen = { rid, k: k || null };
+  const box = cfPlace();
+  if (box) try { box.scrollIntoView({ behavior: cfCall(() => czRM(), false) ? 'auto' : 'smooth', block: 'nearest' }); } catch (e) {}
+}
+// le comptoir se redessine (ventes, préparations) : l'encadré reste ouvert
+if (typeof cmPaint === 'function') cmPaint = (orig => function () { const r = orig.apply(this, arguments); try { if (cfOpen && !$('cfMiss')) cfPlace(); } catch (e) {} return r; })(cmPaint);
+if (typeof czPaintBody === 'function') czPaintBody = (orig => function () { const r = orig.apply(this, arguments); try { if (czTab !== 'prep') cfOpen = null; else if (cfOpen) cfPlace(); } catch (e) {} return r; })(czPaintBody);
+// au toucher : recette impossible ou ingrédient manquant (avant cmStart, qui ne montrerait qu'un message)
+document.addEventListener('click', ev => {
+  const el = ev.target.closest && ev.target.closest('[data-cmprep],[data-cfing]'); if (!el || !el.closest('#czBody')) return;
+  const rid = el.dataset.cmprep || el.dataset.cfr, R = CM_R[rid]; if (!R || !cfCall(() => cmUnlocked(R), false)) return;
+  const k = el.dataset.cfing || null;
+  if (k ? cmHave(k) >= (R.ing.find(x => x[0] === k) || [0, 0])[1] : cmCanIng(R)) return;
+  ev.stopPropagation(); ev.preventDefault();
+  cfShowMiss(rid, k);
+}, true);
+document.addEventListener('click', ev => {
+  const el = ev.target.closest && ev.target.closest('[data-cfgo],[data-cfx],[data-cfbuy]'); if (!el) return;
+  const d = el.dataset;
+  if (d.cfx) { cfOpen = null; cfPlace(); document.querySelectorAll('#czBody .cf-sel').forEach(e => e.classList.remove('cf-sel')); return; }
+  if (d.cfgo) { const g = CF_GO[+d.cfgo]; if (!g) return; cfOpen = null; qtGo({ step: g.step, name: g.name, why: g.why }); return; }
+  if (d.cfbuy) {
+    const i = d.cfbuy.indexOf(':'), kind = d.cfbuy.slice(0, i), key = d.cfbuy.slice(i + 1), v0 = bView;
+    try { if (kind === 'shop') bqBuy(key, el); else mkBuy(key); } catch (e) { console.error('fidèles achat', e); }
+    try { bView = v0; save(); renderTop(); cmPaint(true); } catch (e) {}
+  }
+});
+
+// ---------------- textes : plus de commandes spéciales ----------------
+try {
+  BQ_SHOPS.forEach(T => { if (!Array.isArray(T.perks)) return; T.perks = T.perks.filter(p => !/commande/i.test(p)); if (CM_ADV[T.id] && !T.perks.includes(CM_ADV[T.id][1])) T.perks.push(CM_ADV[T.id][1]); });
+  BQ_LEVELS.forEach(L => { if (Array.isArray(L.perks)) L.perks = L.perks.filter(p => !/commande/i.test(p)); });
+} catch (e) {}
+setTimeout(() => { try { if (S && !S.firstRun) cfPayouts(true); } catch (e) {} }, 1500);
+
+try { if (window.__cm) { window.__cm.sell = cmSell; window.__cm.start = cmStart; } } catch (e) {} // les tests passent par les versions enveloppées
+window.__cf = { PERKS: CF_PERKS, active: cfActive, dur: R => cmDur(typeof R === 'string' ? CM_R[R] : R), durMul: cfDurMul, defiAdd: cfDefiAdd, payouts: cfPayouts, last: () => cfLast,
+  setHearts: (id, g) => { const f = cfFid(id); f.g = g; f.h = g ? B2_HEART[g - 1] : 0; save(); }, miss: cfMissHTML, locs: cfLocs, shop: cfShop,
+  env: () => ({ tab, plan, bView, S }), clientsHTML: () => cfClientsHTML() };
+
+(function cfCSS() {
+  const st = document.createElement('style'); st.id = 'cfCSS';
+  st.textContent = `
+.cf-intro{margin:0 2px 10px;font:600 12.5px/1.35 var(--body);color:#6b5546}
+.cf-card{display:flex;gap:10px;align-items:flex-start;background:#fffaf0;border:1.5px solid #dcc29c;border-radius:16px;box-shadow:0 3px 0 #ecdcbf;padding:9px;margin-bottom:9px}
+.cf-card.fid{border-color:#e0a52a;background:#fff8e6}
+.cf-face{width:56px;height:56px;flex:none;border-radius:50%;background:#f6ead6;border:2px solid #5b4636;object-fit:cover;object-position:top}
+.cf-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.cf-top{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.cf-top b{font:800 15px/1.1 var(--display)}.cf-top small{font:600 11.5px var(--body);opacity:.7}
+.cf-hs{margin-left:auto;display:flex;gap:2px}.cf-hs i{width:16px;height:15px;display:block}.cf-hs svg{width:100%;height:100%;fill:#eadfcd;stroke:#b79c7c;stroke-width:1.3}.cf-hs i.on svg{fill:#e5487a;stroke:#9c2f52}
+.cf-bar{height:6px;border-radius:4px;background:#eadfcd;overflow:hidden}.cf-bar i{display:block;height:100%;background:#e5487a}
+.cf-to{font:600 11px var(--body);opacity:.7}
+.cf-now{display:flex;gap:7px;align-items:center;background:#e9f7ee;border:1.5px solid #3a8f5a;border-radius:11px;padding:5px 7px;font:700 12.5px/1.25 var(--body)}
+.cf-now.off{background:#f4efe6;border-color:#cbb89c;color:#7a6455}
+.cf-now em{display:block;font:800 10.5px var(--display);font-style:normal;text-transform:uppercase;letter-spacing:.04em;color:#2f7f3a}.cf-now.off em{color:#9a8574}
+.cf-ic{font-size:20px;line-height:1;flex:none}.cf-done{color:#2f7f3a;font-weight:800}
+.cf-next{font:600 12px/1.3 var(--body);color:#7a5a20}.cf-next svg{width:12px;height:11px;fill:#e5487a;vertical-align:-1px}
+.cf-how{font:600 11.5px/1.3 var(--body);color:#6b5546;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.cf-fav{display:inline-flex;gap:3px}.cf-fav i{width:24px;height:24px;display:inline-block;background:#fff;border:1.3px solid #dcc29c;border-radius:7px;padding:1px;box-sizing:border-box}.cf-fav svg{width:100%;height:100%}
+.cm-r.cf-sel{outline:3px solid #e0a52a;outline-offset:1px}
+.cm-ing[data-cfing]:not(.ok){cursor:pointer}
+.cf-miss{grid-column:1/-1;background:#fff3d6;border:2.5px solid #5b4636;border-radius:16px;padding:8px 9px;text-align:left;box-shadow:0 3px 0 rgba(91,70,54,.25);animation:b2pop .25s ease-out}
+.cf-mh{display:flex;align-items:center;gap:8px;margin-bottom:6px}.cf-mh b{flex:1;font:800 14px/1.2 var(--display)}
+.cf-x{width:30px;height:30px;flex:none;border-radius:50%;border:2px solid #5b4636;background:#fffaf0;font:800 14px/1 system-ui;color:#5b4636;cursor:pointer}
+.cf-mi{background:#fffaf0;border-radius:12px;padding:6px 7px;margin-bottom:6px;display:flex;flex-direction:column;gap:5px}
+.cf-mih{display:flex;align-items:center;gap:9px}.cf-ii{width:44px;height:44px;flex:none;border:2px solid #d9604f;border-radius:12px;background:#fff;padding:3px;box-sizing:border-box}.cf-ii svg{width:100%;height:100%}
+.cf-mx{display:flex;flex-direction:column;font:600 12.5px var(--body)}.cf-mx>b{font:800 14px var(--display)}.cf-cnt{color:#c0392b}
+.cf-lt{font:700 11px var(--body);opacity:.75;margin:0}
+.cf-locs{display:flex;flex-direction:column;gap:4px}
+.cf-loc{display:flex;align-items:center;gap:7px;border:1.5px solid #e5d3b5;border-radius:10px;padding:4px 6px;background:#fff}
+.cf-pin svg{width:22px;height:22px;display:block;color:#5b4636}.cf-lx{flex:1;min-width:0;display:flex;flex-direction:column;font:600 11.5px/1.25 var(--body)}.cf-lx b{font:800 13px/1.2 var(--display);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cf-buy{align-self:flex-start}
+`;
+  document.head.appendChild(st);
+})();
 
 })();
 </script>

@@ -1,10 +1,11 @@
 // ================= QUÊTES ET LISTE DE COURSES (v21) =================
 // But : « j'ai besoin de ÇA, pour ÇA, et ça se trouve LÀ ».
-// - qtNeeds() rassemble les besoins du joueur (ingrédients des recettes du commerce, commandes, rêves, objectif du jour,
+// - qtNeeds() rassemble les besoins du joueur (ingrédients des recettes du commerce, rêves, objectif du jour,
 //   étape de la quête suivie, clé d'un coffre) et qtLoc() trouve le lieu le plus proche où les obtenir ;
 // - la carte montre ces lieux par de petites épingles « besoin » (8 au plus), avec une flèche au bord de l'écran
-//   quand le lieu est loin ; boutons « Ma liste » et « Quêtes » à gauche de la carte ;
-// - objectif du jour : 3 objets recherchés (proche, région, lointain), sans fenêtre spontanée (point rouge seulement) ;
+//   quand le lieu est loin ; bouton « Quêtes » à gauche de la carte (v29 : « Ma liste » est retirée) ;
+// - objectif du jour : 3 objets recherchés (proche, région, lointain), en tête de la page Quêtes, sans fenêtre spontanée
+//   (point rouge sur le bouton Quêtes seulement) ;
 // - vraies quêtes : 9 histoires en étapes avec un personnage et une récompense unique, et 8 défis difficiles ;
 // - au retour d'un voyage, le butin indique « Pour : … ✔ ».
 // État : S.qt = { st: {quête: {i, b, hit, done}}, df: {défi: 1}, log: {...}, follow, day, seen }.
@@ -278,7 +279,7 @@ const qtDot = () => { const D = qtDay(); return qtState().seen !== D.d && D.list
 
 // ---------------- tous les besoins du joueur ----------------
 // besoin : { id, src, ico, it, name, why, gain, step, have, n, match }
-const QT_SRC = { quete: ['Quête suivie', 0], jour: ['Objectif du jour', 1], commande: ['Commande', 2], reve: ['Rêve', 3], recette: ['Recette du commerce', 4], cle: ['Coffre', 5] };
+const QT_SRC = { quete: ['Quête suivie', 0], jour: ['Objectif du jour', 1], reve: ['Rêve', 3], recette: ['Recette du commerce', 4], cle: ['Coffre', 5] };
 let qtNeedC = { t: 0, v: [] };
 function qtNeeds(force) {
   if (!force && Date.now() - qtNeedC.t < 1500) return qtNeedC.v;
@@ -293,17 +294,6 @@ function qtNeeds(force) {
   } catch (e) {}
   // objectif du jour
   try { qtDay().list.forEach((o, i) => { if (o.done) return; const m = qtDayMatch(o), h = qtCount(m); if (h >= 1) return; add({ id: 'day:' + i, src: 'jour', it: qtDayIt(o), name: o.name, why: `Objectif du jour (${QT_Z[o.z].toLowerCase()})`, gain: `+${o.pay} pièces${o.egg ? ' + œuf' : ''}`, step: o.step, have: 0, n: 1, match: m }); }); } catch (e) {}
-  // commandes du comptoir (acceptées)
-  try {
-    for (const o of bqState().orders) {
-      if (o.pend) continue;
-      const al = bqAllocate(o), c = BQC(o.client);
-      o.req.forEach((r, j) => {
-        if (al[j].have >= r.n || ['egg', 'comp', 'craft', 'bait', 'mk'].includes(r.k)) return;
-        add({ id: 'ord:' + o.id + ':' + j, src: 'commande', ico: bqReqIcon(r), it: r.k === 'ing' ? qtIngIt(r.key) : r.k === 'reg' && RG_RES[r.rid] ? qtResIt(RG_RES[r.rid]) : r.def ? bqItemOf(r.def) : null, name: bqReqLabel(r), why: `Commande ${o.tier && CM_TIER[o.tier] ? CM_TIER[o.tier][0] : ''} de ${c ? c.name : 'un client'}`, gain: `+${o.coins} pièces${o.rw && o.rw.k !== 'coins' ? ' + cadeau' : ''}`, step: bqStepFor(r), have: al[j].have, n: r.n, match: it => bqMatch(r, it) });
-      });
-    }
-  } catch (e) {}
   // rêves de l'équipe
   try {
     for (const k of teamIds()) {
@@ -447,33 +437,18 @@ function qtEdgeUpd() {
   });
 }
 
-// ---------------- « Ma liste » ----------------
-function qtListHTML() {
-  const D = qtDay(), needs = qtNeeds(true);
-  const day = D.list.map((o, i) => {
+// ---------------- objectif du jour (en tête de la page Quêtes, v29 : « Ma liste » est retirée) ----------------
+function qtDayHTML() {
+  const D = qtDay(), left = D.list.filter(o => !o.done).length;
+  const rows = D.list.map((o, i) => {
     const it = qtDayIt(o), h = qtCount(qtDayMatch(o)), F = qtFam(it);
-    return `<div class="qt-day${o.done ? ' done' : ''}"><span class="qt-z z-${o.z}">${QT_Z[o.z]}</span><span class="qt-di" style="--fc:${F ? F.couleur : '#d9604f'}">${qtIco(it)}<i class="qtf"></i></span><b>${esc(o.name)}</b><small>${esc(o.where)}</small><span class="qt-pay">${coins(o.pay)}${o.egg ? ' + œuf' : ''}</span>
-      ${o.done ? '<span class="qt-ok">Rempli ✔</span>' : h ? `<button class="btn green sm" data-qtday="${i}">Livrer</button>` : `<button class="btn gold sm" data-qtneed="day:${i}">Y aller</button>`}</div>`;
+    const act = o.done ? '<span class="qt-ok">✔</span>' : h ? `<button class="btn green sm" data-qtday="${i}">Livrer</button>` : `<button class="btn gold sm" data-qtneed="day:${i}">Y aller</button>`;
+    return `<div class="qt-drow${o.done ? ' done' : ''}"><span class="qt-di" style="--fc:${F ? F.couleur : '#d9604f'}">${qtIco(it)}<i class="qtf"></i></span><div class="qt-nx"><b>${esc(o.name)}</b><span><i class="qt-z z-${o.z}">${QT_Z[o.z]}</i> ${esc(o.where)}</span></div><span class="qt-pay">${coins(o.pay)}${o.egg ? '<small>+ œuf</small>' : ''}</span>${act}</div>`;
   }).join('');
-  // v21b : des onglets au lieu d'une longue liste à faire défiler
-  const tabs = [['jour', 'Objectif', D.list.filter(o => !o.done).length], ...QT_LTABS.map(([k, lab, srcs]) => [k, lab, needs.filter(n => srcs.includes(n.src)).length])];
-  if (!tabs.some(t => t[0] === qtLTab)) qtLTab = 'jour';
-  const cur = QT_LTABS.find(t => t[0] === qtLTab), list = cur ? needs.filter(n => cur[2].includes(n.src)) : [];
-  const rows = list.map(n => {
-    const L = qtLoc(n.step), F = n.it ? qtFam(n.it) : null;
-    return `<div class="qt-need"><span class="qt-di" style="--fc:${qtNeedCol(n)}">${qtNeedIco(n)}<i class="qtf"></i></span><div class="qt-nx"><b>${esc(n.name)}${n.n > 1 || n.have ? ` <small>${Math.min(n.have, n.n)}/${n.n}</small>` : ''}</b><span>Pour : ${esc(n.why)} · <em>${esc(n.gain)}</em></span><span class="qt-w">${F ? `<i style="--fc:${F.couleur}">${F.icone} ${esc(F.nom)}</i> ` : ''}${L ? `${esc(L.label)} · ${fmtDist(qtKm(L))}` : 'Voir où le trouver'}</span></div><button class="btn gold sm" data-qtneed="${esc(n.id)}">Y aller</button></div>`;
-  }).join('');
-  const bar = `<div class="qt-ltabs">${tabs.map(([k, lab, n]) => `<button class="qt-ltab${k === qtLTab ? ' on' : ''}" data-qtltab="${k}">${lab}${n ? `<b>${n}</b>` : ''}</button>`).join('')}</div>`;
-  const body = qtLTab === 'jour'
-    ? `<p class="qt-sub">3 objets recherchés aujourd’hui, très bien payés.</p><div class="qt-days">${day || '<p class="empty">Rien aujourd’hui.</p>'}</div>`
-    : (rows || `<p class="empty">${QT_LEMPTY[qtLTab]}</p>`);
-  return `<div class="qt-page qt-list"><div class="qt-top"><h2>Ma liste</h2><button class="qt-x" data-closemodal="1" aria-label="Fermer">✕</button></div>${bar}${body}
-    <div class="qt-acts"><button class="btn cream" data-qtpage="1">${QT_SCROLL} Quêtes</button><button class="btn green" data-closemodal="1">Fermer</button></div></div>`;
+  return `<section class="qt-today" id="qtToday"><h3 class="qt-h3">Objectif du jour <small>${left ? `${left} objet${left > 1 ? 's' : ''} recherché${left > 1 ? 's' : ''}, très bien payé${left > 1 ? 's' : ''}` : 'tout est rempli, bravo !'}</small></h3>${rows || '<p class="empty">Rien aujourd’hui.</p>'}</section>`;
 }
-let qtLTab = 'jour';
-const QT_LTABS = [['commande', 'Commandes', ['commande']], ['reve', 'Rêves', ['reve']], ['recette', 'Recettes', ['recette']], ['quete', 'Quêtes', ['quete', 'cle']]];
-const QT_LEMPTY = { commande: 'Aucune commande en cours : acceptez-en une au comptoir.', reve: 'Aucun rêve en cours.', recette: 'Rien ne manque pour vos recettes.', quete: 'Suivez une quête pour voir ici sa prochaine étape.' };
-function qtOpenList() { const s = qtState(); s.seen = qtDay().d; save(); showModal(qtListHTML()); qtBtns(); const mb = document.querySelector('#modal .mbox'); if (mb) mb.scrollTop = 0; }
+// anciens appels (bouton du butin…) : la page Quêtes
+function qtOpenList() { qtOpenPage(); }
 
 // ---------------- page Quêtes ----------------
 function qtStoryHTML(q, big) {
@@ -505,17 +480,18 @@ function qtDefiHTML(d) {
 function qtPageHTML() {
   const s = qtState(), f = QT_BY[s.follow];
   return `<div class="qt-page"><div class="qt-top"><h2>Quêtes</h2><button class="qt-x" data-closemodal="1" aria-label="Fermer">✕</button></div>
+    ${qtCall(qtDayHTML, '')}
     ${f ? qtStoryHTML(f, true) : '<p class="qt-hint">Choisissez une histoire et touchez « Suivre » : son étape s’affichera sur la carte.</p>'}
     <h3 class="qt-h3">Histoires <small>${qtDoneN()}/${QT_STORIES.length} terminées</small></h3><div class="qt-stories">${QT_STORIES.filter(q => q !== f).map(q => qtStoryHTML(q)).join('')}</div>
     <h3 class="qt-h3">Défis <small>difficiles, grosses récompenses</small></h3><div class="qt-defis">${QT_DEFIS.map(qtDefiHTML).join('')}</div>
-    <div class="qt-acts"><button class="btn cream" data-qtlist="1">${QT_LIST} Ma liste</button><button class="btn green" data-closemodal="1">Fermer</button></div></div>`;
+    <div class="qt-acts"><button class="btn green" data-closemodal="1">Fermer</button></div></div>`;
 }
 let qtPageOn = false;
-function qtOpenPage() { qtPageOn = true; showModal(qtPageHTML()); const mb = document.querySelector('#modal .mbox'); if (mb) mb.scrollTop = 0; }
+function qtOpenPage() { qtPageOn = true; try { const s = qtState(); s.seen = qtDay().d; save(); } catch (e) {} showModal(qtPageHTML()); qtBtns(); const mb = document.querySelector('#modal .mbox'); if (mb) mb.scrollTop = 0; }
 function qtRefreshAll() {
   qtNeedC.t = 0;
   const m = $('modal');
-  if (m && !m.hidden) { if (m.querySelector('.qt-page h2') && qtPageOn && m.querySelector('.qt-stories')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtPageHTML()); mb.scrollTop = y; } else if (m.querySelector('.qt-list')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtListHTML()); mb.scrollTop = y; } }
+  if (m && !m.hidden) { if (m.querySelector('.qt-page h2') && qtPageOn && m.querySelector('.qt-stories')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtPageHTML()); mb.scrollTop = y; } }
   try { renderTripCard(); } catch (e) {}
   qtMapUpdate(); qtBtns();
   try { if (typeof poiStateCheck === 'function') poiStateCheck(); } catch (e) {}
@@ -527,7 +503,7 @@ function qtBtns() {
   if (!b) {
     const z = document.querySelector('.zoom'); if (!z) return;
     b = document.createElement('div'); b.id = 'qtBtns';
-    b.innerHTML = `<button class="qt-mb" data-qtlist="1" aria-label="Ma liste">${QT_LIST}<span>Ma liste</span><i class="qt-dot" hidden></i></button><button class="qt-mb" data-qtpage="1" aria-label="Quêtes">${QT_SCROLL}<span>Quêtes</span></button>`;
+    b.innerHTML = `<button class="qt-mb" data-qtpage="1" aria-label="Quêtes">${QT_SCROLL}<span>Quêtes</span><i class="qt-dot" hidden></i></button>`;
     z.parentNode.insertBefore(b, z);
   }
   const d = b.querySelector('.qt-dot'); if (d) d.hidden = !qtCall(qtDot, false);
@@ -589,7 +565,7 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
     for (const n of needs) {
       const got = (h.items || []).filter(it => n.match(it)); if (!got.length) continue;
       const have = qtCount(n.match), ok = have >= n.n;
-      hits.push(`<div class="qt-hrow"><span class="qt-di" style="--fc:${qtNeedCol(n)}">${qtIco(got[0])}<i class="qtf"></i></span><span class="qt-hx"><b>${esc(got[0].name)}</b><span>Pour : ${esc(n.why)} ${ok ? '<em class="ok">✔</em>' : `<em>${Math.min(have, n.n)}/${n.n}</em>`}</span></span><button class="btn ${ok ? 'green' : 'cream'} sm" data-qthaul="${esc(n.src)}">${n.src === 'recette' ? 'Préparer' : n.src === 'commande' ? 'Livrer' : n.src === 'reve' ? 'Mon rêve' : n.src === 'cle' ? 'Ouvrir' : n.src === 'quete' ? 'Quête' : 'Ma liste'}</button></div>`);
+      hits.push(`<div class="qt-hrow"><span class="qt-di" style="--fc:${qtNeedCol(n)}">${qtIco(got[0])}<i class="qtf"></i></span><span class="qt-hx"><b>${esc(got[0].name)}</b><span>Pour : ${esc(n.why)} ${ok ? '<em class="ok">✔</em>' : `<em>${Math.min(have, n.n)}/${n.n}</em>`}</span></span><button class="btn ${ok ? 'green' : 'cream'} sm" data-qthaul="${esc(n.src)}">${n.src === 'recette' ? 'Préparer' : n.src === 'reve' ? 'Mon rêve' : n.src === 'cle' ? 'Ouvrir' : 'Quêtes'}</button></div>`);
       if (hits.length >= 4) break;
     }
     if (hits.length) {
@@ -602,11 +578,11 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
 })(showHaul);
 // « Sert à… » des fiches d'objet
 try { GAME.addUses(it => qtCall(() => qtNeeds().filter(n => n.match && n.match(it)).slice(0, 2).map(n => ({ txt: `Pour : ${n.why} (${n.gain})`, kind: 'recette' })), [])); } catch (e) {}
-// menu : Quêtes et Ma liste
+// menu : Quêtes (objectif du jour, histoires, défis)
 if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
   const r = orig.apply(this, arguments);
   try {
-    const row = `<section class="msec"><header><h3>Quêtes</h3></header><div class="mrow"><span class="mri">${QT_SCROLL}</span><div><b>Histoires et défis</b><span>${qtDoneN()}/${QT_STORIES.length} histoires · ${Object.keys(qtState().df).length}/${QT_DEFIS.length} défis</span></div><button class="btn cream sm" data-qtpage="1">Voir</button></div><div class="mrow"><span class="mri">${QT_LIST}</span><div><b>Ma liste de courses</b><span>Ce qu’il vous faut, pour quoi, et où</span></div><button class="btn cream sm" data-qtlist="1">Voir</button></div></section>`;
+    const row = `<section class="msec"><header><h3>Quêtes</h3></header><div class="mrow"><span class="mri">${QT_SCROLL}</span><div><b>Objectif du jour, histoires et défis</b><span>${qtDoneN()}/${QT_STORIES.length} histoires · ${Object.keys(qtState().df).length}/${QT_DEFIS.length} défis</span></div><button class="btn cream sm" data-qtpage="1">Voir</button></div></section>`;
     const first = box.querySelector('.msec'); if (first) first.insertAdjacentHTML('afterend', row); else box.insertAdjacentHTML('beforeend', row);
   } catch (e) { console.error('quêtes menu', e); }
   return r;
@@ -614,11 +590,9 @@ if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
 
 // ---------------- clics ----------------
 document.addEventListener('click', ev => {
-  const tb = ev.target.closest('[data-qtltab]'); if (tb) { qtLTab = tb.dataset.qtltab; const mb = document.querySelector('#modal .mbox'); showModal(qtListHTML()); if (mb) mb.scrollTop = 0; return; }
-  const el = ev.target.closest('[data-qtlist],[data-qtpage],[data-qtneed],[data-qtday],[data-qtfollow],[data-qtgive],[data-qtdefi],[data-qtshop],[data-qtsac],[data-qtnur],[data-qthaul],[data-qtedge]');
+  const el = ev.target.closest('[data-qtpage],[data-qtneed],[data-qtday],[data-qtfollow],[data-qtgive],[data-qtdefi],[data-qtshop],[data-qtsac],[data-qtnur],[data-qthaul],[data-qtedge]');
   if (!el || el.disabled) return;
   const d = el.dataset;
-  if (d.qtlist) return qtOpenList();
   if (d.qtpage) return qtOpenPage();
   if (d.qtneed) { const n = qtNeeds(true).find(x => x.id === d.qtneed); if (n) qtGo(n); else toast('Ce besoin est déjà comblé !'); return; }
   if (d.qtday) return qtDayGive(+d.qtday);
@@ -627,18 +601,18 @@ document.addEventListener('click', ev => {
   if (d.qtdefi) return qtClaimDefi(d.qtdefi);
   if (d.qtedge) { const g = qtPins.find(x => x.k === d.qtedge); if (g) qtGo(g.list[0]); return; }
   $('modal').hidden = true;
-  if (d.qtshop || (d.qthaul === 'recette' || d.qthaul === 'commande')) { try { openBoutique('comptoir'); } catch (e) { openSheet('boutique'); } return; }
+  if (d.qtshop || d.qthaul === 'recette') { try { openBoutique('comptoir'); } catch (e) { openSheet('boutique'); } return; }
   if (d.qtsac || d.qthaul === 'cle') return openSheet('sac');
   if (d.qtnur) return openSheet('compagnons');
   if (d.qthaul === 'reve') return openSheet('reves');
   if (d.qthaul === 'quete') return qtOpenPage();
-  if (d.qthaul) return qtOpenList();
+  if (d.qthaul) return qtOpenPage();
 });
 document.addEventListener('click', ev => { if (ev.target.closest('[data-closemodal]')) qtPageOn = false; }, true);
 // suivi régulier : épingles, point rouge, étapes automatiques
 setInterval(() => { try { if (document.hidden) return; qtState(); qtCheckStories(); qtNeedC.t = 0; qtMapUpdate(); qtBtns(); if (typeof positionOverlay === 'function') positionOverlay(); } catch (e) {} }, 2500);
 setTimeout(() => { try { qtState(); qtBtns(); qtMapUpdate(); } catch (e) {} }, 300);
-window.__qt = { state: qtState, needs: qtNeeds, loc: qtLoc, groups: qtGroups, day: qtDay, dayGive: qtDayGive, start: qtStart, give: qtGive, check: qtCheckStories, claim: qtClaimDefi, list: qtOpenList, page: qtOpenPage, update: qtMapUpdate, STORIES: QT_STORIES, DEFIS: QT_DEFIS };
+window.__qt = { state: qtState, needs: qtNeeds, loc: qtLoc, groups: qtGroups, day: qtDay, dayGive: qtDayGive, start: qtStart, give: qtGive, check: qtCheckStories, claim: qtClaimDefi, list: qtOpenPage, page: qtOpenPage, dayHTML: qtDayHTML, update: qtMapUpdate, STORIES: QT_STORIES, DEFIS: QT_DEFIS };
 
 // ---------------- styles ----------------
 (function qtCSS() {
@@ -720,6 +694,10 @@ body.sheet-open #qtBtns,body.firstrun #qtBtns,body.firstrun .qtpin,body.firstrun
 .qt-haul h4{margin:0 0 6px;font:800 14px var(--display);color:#2f6f45;display:flex;align-items:center;gap:6px}.qt-haul h4 svg{width:20px;height:20px}
 .qt-haul .qt-hrow{margin-bottom:4px;border-color:rgba(58,143,90,.4)}
 .qt-hx em{font-style:normal;font-weight:800}.qt-hx em.ok{color:#2f7f3a}
+.qt-today{background:#fff3d6;border:2.5px solid var(--ink);border-radius:16px;padding:2px 8px 4px;margin-bottom:10px}.qt-today .qt-h3{margin:6px 0}
+.qt-drow{display:flex;align-items:center;gap:8px;background:#fffaf0;border:2px solid rgba(74,53,40,.3);border-radius:12px;padding:5px 7px;margin-bottom:5px}.qt-drow.done{opacity:.6}
+.qt-drow .qt-di{width:36px;height:36px}.qt-drow .qt-di svg{width:28px;height:28px}.qt-drow .qt-nx b{font-size:13.5px}.qt-drow .qt-nx span{font-size:11.5px;opacity:.85}
+.qt-drow .qt-z{font-style:normal;margin-right:3px}.qt-drow .qt-pay{display:flex;flex-direction:column;align-items:center;font-size:12px;white-space:nowrap}.qt-drow .qt-pay small{font:700 10px var(--body)}
 @media (max-width:420px){.qt-days{grid-template-columns:1fr}.qt-day{flex-direction:row;flex-wrap:wrap;text-align:left;justify-content:flex-start}.qt-day small{flex-basis:100%}.qt-day .qt-z{position:absolute;right:8px;top:6px}}
 `;
   document.head.appendChild(st);

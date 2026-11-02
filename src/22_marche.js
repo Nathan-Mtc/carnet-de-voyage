@@ -260,7 +260,7 @@ function mkQuick(id) {
 // ---------- acheter ----------
 function mkBuy(id) {
   const m = mkState(), l = m.list.find(x => x.id === id); if (!l) return;
-  if (S.coins < l.price) { toast('Pas assez de pièces. Livrez une commande au comptoir, ou vendez au marché !'); return; }
+  if (S.coins < l.price) { toast('Pas assez de pièces. Vendez vos produits au comptoir, ou au marché !'); return; }
   S.coins -= l.price;
   m.list = m.list.filter(x => x !== l);
   const R = typeof RG !== 'undefined' ? RG[l.seller.region] : null, from = { how: 'marche', place: l.seller.name, region: l.seller.region };

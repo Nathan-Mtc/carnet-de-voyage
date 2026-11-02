@@ -822,7 +822,7 @@ function bqPass() {
 }
 function bqPassBuy(id, el) {
   const P = bqPass(); if (!P) return; const x = P.items.find(y => y.id === id); if (!x || P.sold.includes(id)) return;
-  if (S.coins < x.price) { toast('Pas assez de pièces. Livrez une commande au Comptoir !'); return; }
+  if (S.coins < x.price) { toast('Pas assez de pièces. Vendez vos produits au Comptoir !'); return; }
   S.coins -= x.price; P.sold.push(id);
   const it = makeItem([x.it.name, x.it.cat, x.it.sub, x.it.rarity, null, x.it.color], 0, `${P.c.name}, marchand de passage`, [], { fixed: x.it.rarity });
   it.rid = x.it.rid; it.origin = Object.assign({}, x.it.origin); it.paid = x.price;
@@ -841,7 +841,7 @@ function bqBuy(key, el) {
   const s = bqState(), x = bqStock().find(y => y.key === key); if (!x || x.sold || x.locked) return;
   const a = bqStockArticle(x); if (!a) return;
   const art = bqArticle(a);
-  if (S.coins < art.price) { toast('Pas assez de pièces. Livrez une commande au Comptoir !'); return; }
+  if (S.coins < art.price) { toast('Pas assez de pièces. Vendez vos produits au Comptoir !'); return; }
   S.coins -= art.price; x.sold = 1; if (!Array.isArray(s.stock.sold)) s.stock.sold = []; if (!s.stock.sold.includes(key)) s.stock.sold.push(key);
   let msg;
   if (art.egg) { if (typeof addEgg === 'function') { const eid = addEgg({ sp: art.egg.sp || undefined, from: { how: 'magasin', place: 'La boutique' }, hatchMs: 3 * 60e3 }), eg = (S.eggs || []).find(x => x.id === eid); if (eg) eg.paid = art.price; } msg = `${art.name} acheté ! Il éclora au refuge dans 3 minutes.`; }

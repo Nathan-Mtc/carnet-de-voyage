@@ -520,7 +520,7 @@ function renderMenu(box) {
   // bien démarrer
   try {
     const ts = typeof tutoStep === 'function' ? tutoStep() : 0;
-    if (ts) h += `<section class="msec"><header><h3>Bien démarrer</h3></header><ol class="mtuto">${[['Partir en voyage', 'Touchez « Partir » en bas de la carte.'], ['Livrer une commande', 'Les clients de la boutique paient en pièces.'], ['Habiller un compagnon', 'Touchez son portrait en haut, puis la garde-robe.']].map(([t, d], i) => `<li class="${i + 1 < ts ? 'ok' : i + 1 === ts ? 'cur' : ''}"><b>${i + 1 < ts ? '✓ ' : ''}${t}</b><span>${d}</span></li>`).join('')}</ol></section>`;
+    if (ts) h += `<section class="msec"><header><h3>Bien démarrer</h3></header><ol class="mtuto">${[['Partir en voyage', 'Touchez « Partir » en bas de la carte.'], ['Vendre au comptoir', 'Préparez vos recettes et vendez-les aux clients de la boutique.'], ['Habiller un compagnon', 'Touchez son portrait en haut, puis la garde-robe.']].map(([t, d], i) => `<li class="${i + 1 < ts ? 'ok' : i + 1 === ts ? 'cur' : ''}"><b>${i + 1 < ts ? '✓ ' : ''}${t}</b><span>${d}</span></li>`).join('')}</ol></section>`;
   } catch (e) {}
   // réglages
   h += `<section class="msec"><header><h3>Réglages</h3></header><div class="mrow set"><label for="menuHome"><b>Votre ville</b><span>Le point de départ de tous les voyages.</span></label><select id="menuHome">${HOMES.map(x => `<option ${x[0] === S.home ? 'selected' : ''}>${x[0]}</option>`).join('')}</select></div></section>`;
