@@ -458,7 +458,7 @@ function qtListHTML() {
   const body = qtLTab === 'jour'
     ? `<p class="qt-sub">3 objets recherchés aujourd’hui, très bien payés.</p><div class="qt-days">${day || '<p class="empty">Rien aujourd’hui.</p>'}</div>`
     : (rows || `<p class="empty">${QT_LEMPTY[qtLTab]}</p>`);
-  return `<div class="qt-page qt-list"><h2>Ma liste</h2>${bar}${body}
+  return `<div class="qt-page qt-list"><div class="qt-top"><h2>Ma liste</h2><button class="qt-x" data-closemodal="1" aria-label="Fermer">✕</button></div>${bar}${body}
     <div class="qt-acts"><button class="btn cream" data-qtpage="1">${QT_SCROLL} Quêtes</button><button class="btn green" data-closemodal="1">Fermer</button></div></div>`;
 }
 let qtLTab = 'jour';
@@ -495,7 +495,7 @@ function qtDefiHTML(d) {
 }
 function qtPageHTML() {
   const s = qtState(), f = QT_BY[s.follow];
-  return `<div class="qt-page"><h2>Quêtes</h2>
+  return `<div class="qt-page"><div class="qt-top"><h2>Quêtes</h2><button class="qt-x" data-closemodal="1" aria-label="Fermer">✕</button></div>
     ${f ? qtStoryHTML(f, true) : '<p class="qt-hint">Choisissez une histoire et touchez « Suivre » : son étape s’affichera sur la carte.</p>'}
     <h3 class="qt-h3">Histoires <small>${qtDoneN()}/${QT_STORIES.length} terminées</small></h3><div class="qt-stories">${QT_STORIES.filter(q => q !== f).map(q => qtStoryHTML(q)).join('')}</div>
     <h3 class="qt-h3">Défis <small>difficiles, grosses récompenses</small></h3><div class="qt-defis">${QT_DEFIS.map(qtDefiHTML).join('')}</div>
@@ -667,6 +667,7 @@ body.sheet-open #qtBtns,body.firstrun #qtBtns,body.firstrun .qtpin,body.firstrun
 .qt-tcx{flex:1;min-width:0;font:600 12.5px/1.25 var(--body);display:flex;flex-direction:column}
 .qt-tcx b{font:800 12.5px/1.2 var(--display);color:#b0482f}
 .qt-page{text-align:left}.qt-page h2,.qt-page>.bqc-kick{text-align:center;display:block}.qt-page h2{margin:0 0 8px}
+.qt-top{position:sticky;top:-18px;z-index:5;display:flex;align-items:center;justify-content:center;margin:-18px -20px 8px;padding:12px 52px 8px;background:var(--paper);border-bottom:2.5px solid var(--ink);border-radius:21px 21px 0 0}.qt-top h2{margin:0}.qt-x{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:2.5px solid #5b4636;background:#fffaf0;font:800 18px/1 system-ui;color:#5b4636;box-shadow:0 2px 0 #5b4636;cursor:pointer}
 .qt-ltabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:6px 0 12px}.qt-list{max-width:100%;overflow-x:hidden}.qt-ltab{flex:none;display:flex;align-items:center;gap:5px;padding:6px 10px;border:2px solid #5b4636;border-radius:999px;background:#fffaf0;font:800 13px var(--body);color:#5b4636;cursor:pointer}.qt-ltab.on{background:#5b4636;color:#fff}.qt-ltab b{min-width:18px;height:18px;border-radius:9px;background:#e0607e;color:#fff;font-size:11px;display:grid;place-items:center;padding:0 4px}.qt-sub{margin:0 0 8px;font-size:13px;opacity:.75}
 .qt-h3{font:800 15px var(--display);margin:14px 0 6px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.qt-h3 small{font:600 12px var(--body);opacity:.7}
 .qt-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}

@@ -398,21 +398,54 @@ function renderMarche(box) {
     let list = m.list.filter(l => l.cat === mkCat);
     if (mkCat === 'res' && mkRegion) list = list.filter(l => l.region === mkRegion);
     if (mkCat === 'comp' && mkSp) { const f = list.filter(l => l.data.sp === mkSp); list = f.length ? f : list; if (!f.length) h += `<p class="small">Aucun ${esc(spName(mkSp).toLowerCase())} en vente pour l’instant : revenez dans quelques minutes, le stock tourne.</p>`; }
+    h += mkSubBar(mkCat, list.map(l => mkSubKey(mkCat, l.kind, l.data))); if (mkFsub) list = list.filter(l => mkSubKey(mkCat, l.kind, l.data) === mkFsub);
     list.sort((a, b) => (a.kind === 'egg') - (b.kind === 'egg') || (b.data.rarity || 0) - (a.data.rarity || 0) || a.price - b.price);
     h += list.length ? `<div class="mk-list">${list.map(mkRowBuy).join('')}</div>` : `<p class="empty">Pas d’annonce ici pour l’instant. De nouvelles arrivent toutes les minutes.</p>`;
     h += `<p class="small">Vous avez ${coins(S.coins)}. Les prix suivent la rareté et la provenance : une spécialité lointaine coûte plus cher. ↑ prix en hausse, ↓ en baisse.</p>`;
   } else if (mkView === 'vendre') {
-    const xs = mkSellables(mkCat);
+    let xs = mkSellables(mkCat);
+    h += mkSubBar(mkCat, xs.map(x => mkSubKey(mkCat, x.t, x.it))); if (mkFsub) xs = xs.filter(x => mkSubKey(mkCat, x.t, x.it) === mkFsub);
     h += `<p class="small mk-help">${mkCat === 'comp' ? 'Proposez un compagnon ou un œuf : un joueur du monde l’adoptera. Un compagnon en voyage, ou votre dernier compagnon, ne peut pas être vendu.' : 'Vente immédiate à un passant, ou annonce au marché mondial : plus cher, mais il faut attendre un acheteur. Plus le prix est juste, plus la vente est rapide.'}</p>`;
     h += xs.length ? `<div class="mk-list">${xs.map(mkRowSell).join('')}</div>` : `<p class="empty">Rien à vendre dans cette catégorie. Vos compagnons rapportent de quoi vendre à chaque voyage !</p>`;
   } else {
-    const all = m.mine.slice().sort((a, b) => (a.sold ? 1 : 0) - (b.sold ? 1 : 0) || b.at - a.at);
+    const cats = MK_CATS.filter(([k]) => m.mine.some(l => l.cat === k));
+    if (mkAnnCat && !cats.some(([k]) => k === mkAnnCat)) mkAnnCat = '';
+    if (cats.length > 1) h += `<div class="mk-subs mk-anncats"><button data-mkann="" aria-pressed="${!mkAnnCat}">Toutes</button>${cats.map(([k, l]) => `<button data-mkann="${k}" aria-pressed="${mkAnnCat === k}">${l}</button>`).join('')}</div>`;
+    let src = mkAnnCat ? m.mine.filter(l => l.cat === mkAnnCat) : m.mine;
+    if (mkAnnCat) { h += mkSubBar(mkAnnCat, src.map(l => mkSubKey(mkAnnCat, l.kind, l.data))); if (mkFsub) src = src.filter(l => mkSubKey(mkAnnCat, l.kind, l.data) === mkFsub); }
+    const all = src.slice().sort((a, b) => (a.sold ? 1 : 0) - (b.sold ? 1 : 0) || b.at - a.at);
     h += all.length ? `<div class="mk-list">${all.map(mkRowMine).join('')}</div>` : `<p class="empty">Aucune annonce. Touchez « Vendre » pour proposer un objet, un œuf ou un compagnon.</p>`;
     h += `<p class="small">${m.sold} vente${m.sold > 1 ? 's' : ''} au total · ${coins(m.earned)} gagnées au marché mondial.</p>`;
   }
   box.innerHTML = mkViewsBar() + h;
 }
 // v19 : la barre des vues reste collée en bas du panneau (Place et Quêtes viennent de 33_boutique.js)
+// v22 : filtres dans chaque catégorie (Acheter, Vendre, Mes annonces)
+let mkFsub = '', mkAnnCat = '';
+const MK_SLOTS = { tete: 'Tête', cou: 'Cou', haut: 'Hauts', bas: 'Bas', mains: 'Mains', pieds: 'Pieds', dos: 'Dos' };
+function mkSubKey(cat, kind, it) {
+  if (cat === 'comp') return kind === 'egg' ? 'egg' : 'comp';
+  if (!it) return '';
+  if (cat === 'mode') return MK_SLOTS[it.sub] ? it.sub : 'autre';
+  try { return famOf(it) || ''; } catch (e) { return ''; }
+}
+function mkSubLabel(cat, k) {
+  if (cat === 'comp') return k === 'egg' ? 'Œufs' : 'Compagnons';
+  if (cat === 'mode') return MK_SLOTS[k] || 'Autres';
+  const F = typeof FAM !== 'undefined' && FAM[k]; return F ? `${F.icone} ${esc(F.nom)}` : 'Autres';
+}
+function mkSubBar(cat, keys) {
+  let ks = [...new Set(keys.filter(Boolean))];
+  if (cat === 'mode') ks = Object.keys(MK_SLOTS).concat('autre').filter(k => ks.includes(k));
+  if (mkFsub && !ks.includes(mkFsub)) mkFsub = '';
+  if (ks.length < 2) return '';
+  return `<div class="mk-subs">${[['', 'Tout'], ...ks.map(k => [k, mkSubLabel(cat, k)])].map(([k, l]) => `<button data-mksub="${k}" aria-pressed="${mkFsub === k}">${l}</button>`).join('')}</div>`;
+}
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-mksub],[data-mkann]'); if (!b) return;
+  if (b.dataset.mkann !== undefined) { mkAnnCat = b.dataset.mkann; mkFsub = ''; } else mkFsub = b.dataset.mksub;
+  mkOpenRow = null; renderPanel();
+});
 function mkViewsBar() {
   const m = mkState(), mine = m.mine.filter(l => !l.sold).length, b2 = typeof b2MarcheHTML === 'function';
   const v = [['place', 'Place'], ['acheter', 'Acheter'], ['vendre', 'Vendre'], ['annonces', 'Mes annonces'], ['quetes', 'Quêtes']].filter(([k]) => b2 || (k !== 'place' && k !== 'quetes'));
@@ -453,7 +486,7 @@ document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-mkview],[data-mkcat],[data-mkbuy],[data-mkopen],[data-mkprice],[data-mkquick],[data-mkun],[data-mklow],[data-mkclr]'); if (!el || el.disabled) return;
   const d = el.dataset, body = $('panelBody'), top = body ? body.scrollTop : 0;
   if (d.mkview) { mkView = d.mkview; mkOpenRow = null; renderPanel(); if (body) body.scrollTop = 0; return; }
-  if (d.mkcat) { mkCat = d.mkcat; mkOpenRow = null; if (d.mkcat !== 'comp') mkSp = ''; renderPanel(); return; }
+  if (d.mkcat) { mkCat = d.mkcat; mkFsub = ''; mkOpenRow = null; if (d.mkcat !== 'comp') mkSp = ''; renderPanel(); return; }
   if (d.mkclr) { mkSp = ''; renderPanel(); return; }
   if (d.mkbuy) { mkBuy(d.mkbuy); if (body) body.scrollTop = top; return; }
   if (d.mkopen) { mkOpenRow = mkOpenRow === d.mkopen ? null : d.mkopen; renderPanel(); if (body) body.scrollTop = top; return; }
@@ -505,6 +538,7 @@ setInterval(mkTick, 5000);
 .mk-ban b{font:800 16.5px/1.2 var(--display)}.mk-ban b span{font:700 13px var(--display);color:var(--teal)}
 .mk-ban small{font-size:12px;color:var(--ink2)}
 .mk-views{position:sticky;top:-16px;z-index:4;margin:-16px -16px 12px;padding:10px 10px 8px;display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,1fr));gap:5px;background:var(--paper);border-bottom:2.5px solid var(--ink);box-shadow:0 4px 10px rgba(74,53,40,.12)}
+.mk-subs{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 10px}.mk-subs button{padding:5px 10px;border:2px solid var(--ink);border-radius:999px;background:#fffaf0;font:800 12.5px 'Baloo 2',sans-serif;color:var(--ink);cursor:pointer}.mk-subs button[aria-pressed=true]{background:var(--ink);color:#fff}.mk-subs svg{width:15px;height:15px;vertical-align:-3px}
 .mk-views button{position:relative;padding:6px 2px 4px;font-size:12.5px;line-height:1.05;text-align:center;min-height:38px;white-space:normal}
 .mk-dot,.mk-ndot{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--rust,#d9604f);border:2px solid #fff;box-shadow:0 0 0 1.5px var(--ink)}
 .mk-dot{top:-5px;right:-5px}

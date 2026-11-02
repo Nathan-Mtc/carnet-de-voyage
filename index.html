@@ -12906,21 +12906,54 @@ function renderMarche(box) {
     let list = m.list.filter(l => l.cat === mkCat);
     if (mkCat === 'res' && mkRegion) list = list.filter(l => l.region === mkRegion);
     if (mkCat === 'comp' && mkSp) { const f = list.filter(l => l.data.sp === mkSp); list = f.length ? f : list; if (!f.length) h += `<p class="small">Aucun ${esc(spName(mkSp).toLowerCase())} en vente pour l’instant : revenez dans quelques minutes, le stock tourne.</p>`; }
+    h += mkSubBar(mkCat, list.map(l => mkSubKey(mkCat, l.kind, l.data))); if (mkFsub) list = list.filter(l => mkSubKey(mkCat, l.kind, l.data) === mkFsub);
     list.sort((a, b) => (a.kind === 'egg') - (b.kind === 'egg') || (b.data.rarity || 0) - (a.data.rarity || 0) || a.price - b.price);
     h += list.length ? `<div class="mk-list">${list.map(mkRowBuy).join('')}</div>` : `<p class="empty">Pas d’annonce ici pour l’instant. De nouvelles arrivent toutes les minutes.</p>`;
     h += `<p class="small">Vous avez ${coins(S.coins)}. Les prix suivent la rareté et la provenance : une spécialité lointaine coûte plus cher. ↑ prix en hausse, ↓ en baisse.</p>`;
   } else if (mkView === 'vendre') {
-    const xs = mkSellables(mkCat);
+    let xs = mkSellables(mkCat);
+    h += mkSubBar(mkCat, xs.map(x => mkSubKey(mkCat, x.t, x.it))); if (mkFsub) xs = xs.filter(x => mkSubKey(mkCat, x.t, x.it) === mkFsub);
     h += `<p class="small mk-help">${mkCat === 'comp' ? 'Proposez un compagnon ou un œuf : un joueur du monde l’adoptera. Un compagnon en voyage, ou votre dernier compagnon, ne peut pas être vendu.' : 'Vente immédiate à un passant, ou annonce au marché mondial : plus cher, mais il faut attendre un acheteur. Plus le prix est juste, plus la vente est rapide.'}</p>`;
     h += xs.length ? `<div class="mk-list">${xs.map(mkRowSell).join('')}</div>` : `<p class="empty">Rien à vendre dans cette catégorie. Vos compagnons rapportent de quoi vendre à chaque voyage !</p>`;
   } else {
-    const all = m.mine.slice().sort((a, b) => (a.sold ? 1 : 0) - (b.sold ? 1 : 0) || b.at - a.at);
+    const cats = MK_CATS.filter(([k]) => m.mine.some(l => l.cat === k));
+    if (mkAnnCat && !cats.some(([k]) => k === mkAnnCat)) mkAnnCat = '';
+    if (cats.length > 1) h += `<div class="mk-subs mk-anncats"><button data-mkann="" aria-pressed="${!mkAnnCat}">Toutes</button>${cats.map(([k, l]) => `<button data-mkann="${k}" aria-pressed="${mkAnnCat === k}">${l}</button>`).join('')}</div>`;
+    let src = mkAnnCat ? m.mine.filter(l => l.cat === mkAnnCat) : m.mine;
+    if (mkAnnCat) { h += mkSubBar(mkAnnCat, src.map(l => mkSubKey(mkAnnCat, l.kind, l.data))); if (mkFsub) src = src.filter(l => mkSubKey(mkAnnCat, l.kind, l.data) === mkFsub); }
+    const all = src.slice().sort((a, b) => (a.sold ? 1 : 0) - (b.sold ? 1 : 0) || b.at - a.at);
     h += all.length ? `<div class="mk-list">${all.map(mkRowMine).join('')}</div>` : `<p class="empty">Aucune annonce. Touchez « Vendre » pour proposer un objet, un œuf ou un compagnon.</p>`;
     h += `<p class="small">${m.sold} vente${m.sold > 1 ? 's' : ''} au total · ${coins(m.earned)} gagnées au marché mondial.</p>`;
   }
   box.innerHTML = mkViewsBar() + h;
 }
 // v19 : la barre des vues reste collée en bas du panneau (Place et Quêtes viennent de 33_boutique.js)
+// v22 : filtres dans chaque catégorie (Acheter, Vendre, Mes annonces)
+let mkFsub = '', mkAnnCat = '';
+const MK_SLOTS = { tete: 'Tête', cou: 'Cou', haut: 'Hauts', bas: 'Bas', mains: 'Mains', pieds: 'Pieds', dos: 'Dos' };
+function mkSubKey(cat, kind, it) {
+  if (cat === 'comp') return kind === 'egg' ? 'egg' : 'comp';
+  if (!it) return '';
+  if (cat === 'mode') return MK_SLOTS[it.sub] ? it.sub : 'autre';
+  try { return famOf(it) || ''; } catch (e) { return ''; }
+}
+function mkSubLabel(cat, k) {
+  if (cat === 'comp') return k === 'egg' ? 'Œufs' : 'Compagnons';
+  if (cat === 'mode') return MK_SLOTS[k] || 'Autres';
+  const F = typeof FAM !== 'undefined' && FAM[k]; return F ? `${F.icone} ${esc(F.nom)}` : 'Autres';
+}
+function mkSubBar(cat, keys) {
+  let ks = [...new Set(keys.filter(Boolean))];
+  if (cat === 'mode') ks = Object.keys(MK_SLOTS).concat('autre').filter(k => ks.includes(k));
+  if (mkFsub && !ks.includes(mkFsub)) mkFsub = '';
+  if (ks.length < 2) return '';
+  return `<div class="mk-subs">${[['', 'Tout'], ...ks.map(k => [k, mkSubLabel(cat, k)])].map(([k, l]) => `<button data-mksub="${k}" aria-pressed="${mkFsub === k}">${l}</button>`).join('')}</div>`;
+}
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-mksub],[data-mkann]'); if (!b) return;
+  if (b.dataset.mkann !== undefined) { mkAnnCat = b.dataset.mkann; mkFsub = ''; } else mkFsub = b.dataset.mksub;
+  mkOpenRow = null; renderPanel();
+});
 function mkViewsBar() {
   const m = mkState(), mine = m.mine.filter(l => !l.sold).length, b2 = typeof b2MarcheHTML === 'function';
   const v = [['place', 'Place'], ['acheter', 'Acheter'], ['vendre', 'Vendre'], ['annonces', 'Mes annonces'], ['quetes', 'Quêtes']].filter(([k]) => b2 || (k !== 'place' && k !== 'quetes'));
@@ -12961,7 +12994,7 @@ document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-mkview],[data-mkcat],[data-mkbuy],[data-mkopen],[data-mkprice],[data-mkquick],[data-mkun],[data-mklow],[data-mkclr]'); if (!el || el.disabled) return;
   const d = el.dataset, body = $('panelBody'), top = body ? body.scrollTop : 0;
   if (d.mkview) { mkView = d.mkview; mkOpenRow = null; renderPanel(); if (body) body.scrollTop = 0; return; }
-  if (d.mkcat) { mkCat = d.mkcat; mkOpenRow = null; if (d.mkcat !== 'comp') mkSp = ''; renderPanel(); return; }
+  if (d.mkcat) { mkCat = d.mkcat; mkFsub = ''; mkOpenRow = null; if (d.mkcat !== 'comp') mkSp = ''; renderPanel(); return; }
   if (d.mkclr) { mkSp = ''; renderPanel(); return; }
   if (d.mkbuy) { mkBuy(d.mkbuy); if (body) body.scrollTop = top; return; }
   if (d.mkopen) { mkOpenRow = mkOpenRow === d.mkopen ? null : d.mkopen; renderPanel(); if (body) body.scrollTop = top; return; }
@@ -13013,6 +13046,7 @@ setInterval(mkTick, 5000);
 .mk-ban b{font:800 16.5px/1.2 var(--display)}.mk-ban b span{font:700 13px var(--display);color:var(--teal)}
 .mk-ban small{font-size:12px;color:var(--ink2)}
 .mk-views{position:sticky;top:-16px;z-index:4;margin:-16px -16px 12px;padding:10px 10px 8px;display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,1fr));gap:5px;background:var(--paper);border-bottom:2.5px solid var(--ink);box-shadow:0 4px 10px rgba(74,53,40,.12)}
+.mk-subs{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 10px}.mk-subs button{padding:5px 10px;border:2px solid var(--ink);border-radius:999px;background:#fffaf0;font:800 12.5px 'Baloo 2',sans-serif;color:var(--ink);cursor:pointer}.mk-subs button[aria-pressed=true]{background:var(--ink);color:#fff}.mk-subs svg{width:15px;height:15px;vertical-align:-3px}
 .mk-views button{position:relative;padding:6px 2px 4px;font-size:12.5px;line-height:1.05;text-align:center;min-height:38px;white-space:normal}
 .mk-dot,.mk-ndot{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--rust,#d9604f);border:2px solid #fff;box-shadow:0 0 0 1.5px var(--ink)}
 .mk-dot{top:-5px;right:-5px}
@@ -22961,9 +22995,9 @@ function cmKitchenHTML() {
     if (!x) return `<div class="cm-slot empty"><span class="cm-plus">+</span><small>Place libre</small></div>`;
     const R = CM_R[x.rid], left = Math.max(0, x.end - now), el = x.dur - left;
     const defi = x.ch && !x.chd ? `<button class="btn gold sm cm-defib" data-cmdefi="${i}">Défi !</button>` : x.chd === 1 ? `<span class="cm-ok">Défi réussi</span>` : '';
-    return `<div class="cm-slot on${x.pause ? ' paused' : ''}"><span class="cm-an">${cmAnimSVG(CM_ANIM[x.shop] || 'pot')}</span><span class="cm-sp">${cmIcon(R, 'cms' + i)}</span>${cmStars(x.st)}<span class="cm-bar"><i style="animation-duration:${(x.dur / 1000).toFixed(2)}s;animation-delay:-${(el / 1000).toFixed(2)}s"></i></span><small data-cmleft="${x.end}">${Math.ceil(left / 1000)} s</small>${defi}</div>`;
+    return `<div class="cm-slot on${x.pause ? ' paused' : ''}"><span class="cm-an">${cmAnimSVG(CM_ANIM[x.shop] || 'pot')}</span><span class="cm-sp">${cmIcon(R, 'cms' + i)}</span>${cmStars(x.st)}<span class="cm-bar"><i style="animation-duration:${(x.dur / 1000).toFixed(2)}s;animation-delay:-${(el / 1000).toFixed(2)}s"></i></span><small class="cm-left" data-cmleft="${x.end}">${left > 0 ? `⏱ ${Math.ceil(left / 1000)} s` : 'Prêt ✔'}</small>${defi}</div>`;
   }).join('');
-  return `<section class="cm-kit" id="cmKitchen"><h3 class="bq-h3">${lab} <small>3 places · 3 à 10 secondes</small></h3><div class="cm-slots">${slots}</div></section>`;
+  return `<section class="cm-kit" id="cmKitchen"><h3 class="bq-h3">${lab} <small>${c.sl.length} places · 3 à 10 secondes</small></h3><div class="cm-slots">${slots}</div></section>`;
 }
 function cmRecipesHTML() {
   const T = cmT(); if (!T) return '';
@@ -22974,7 +23008,7 @@ function cmRecipesHTML() {
     const price = R.egg ? `<span class="cm-pr">Œuf · 1 par jour</span>` : `<span class="cm-pr">${coins(cmPrice(R, 1))}<small> → ${cmPrice(R, 3)} ${cmStars(3)}</small></span>`;
     const lock = R.x ? 'Récompense d’une commande Défi' : `Réputation ${R.rep}`;
     const far = R.ing.some(([k]) => k === 'far');
-    return `<div class="cm-r${un ? '' : ' locked'}${ok ? ' can' : ''}"><span class="cm-rp">${cmIcon(R, 'cmr' + R.id)}<i class="cm-rt">${cmDur(R)} s</i>${far ? '<i class="cm-far">De loin</i>' : ''}</span><b>${esc(R.def[0])}</b><span class="cm-ings">${ings}</span>${price}${un ? `<button class="btn ${ok ? 'green' : 'cream'} sm" data-cmprep="${R.id}" ${ok ? '' : 'aria-disabled="true"'}>Préparer</button>` : `<span class="cm-lock">${CM_LOCK}${esc(lock)}</span>`}</div>`;
+    return `<div class="cm-r${un ? '' : ' locked'}${ok ? ' can' : ''}"><i class="cm-rt">⏱ ${Math.round(cmDur(R))} s</i><span class="cm-rp">${cmIcon(R, 'cmr' + R.id)}${far ? '<i class="cm-far">De loin</i>' : ''}</span><b>${esc(R.def[0])}</b><span class="cm-ings">${ings}</span>${price}${un ? `<button class="btn ${ok ? 'green' : 'cream'} sm" data-cmprep="${R.id}" ${ok ? '' : 'aria-disabled="true"'}>Préparer</button>` : `<span class="cm-lock">${CM_LOCK}${esc(lock)}</span>`}</div>`;
   }).join('');
   const surplus = cmProducts(T.id).length;
   return `<section class="cm-recs"><h3 class="bq-h3">Recettes ${(typeof famOf === 'function' && typeof FAM !== 'undefined') ? '' : ''}<small>ingrédients possédés / demandés · prix de vente</small></h3><div class="cm-rgrid">${cards}</div>
@@ -23015,7 +23049,7 @@ setInterval(() => {
   try {
     const d = cmTickKitchen(), bch = cmTickBuyers();
     if (d || bch) { save(); cmPaint(); }
-    else document.querySelectorAll('[data-cmleft]').forEach(e => { e.textContent = Math.max(0, Math.ceil((+e.dataset.cmleft - Date.now()) / 1000)) + ' s'; });
+    else document.querySelectorAll('[data-cmleft]').forEach(e => { { const l = Math.ceil((+e.dataset.cmleft - Date.now()) / 1000); e.textContent = l > 0 ? `⏱ ${l} s` : 'Prêt ✔'; } });
   } catch (e) { console.error('commerce', e); }
 }, 500);
 
@@ -23138,7 +23172,7 @@ document.addEventListener('click', ev => { if (cmGame && ev.target.closest('[dat
 .cm-bar{width:90%;height:8px;border:1.5px solid var(--ink);border-radius:5px;background:#efe2c4;overflow:hidden}.cm-bar i{display:block;height:100%;background:#5fbf7f;width:0;animation:cmfill linear forwards}
 .cm-slot.paused .cm-bar i{animation-play-state:paused}
 @keyframes cmfill{to{width:100%}}
-.cm-slot small{font:800 11px 'Baloo 2',sans-serif}.cm-defib{animation:cmpulse 1s ease-in-out infinite}.cm-ok{font:800 10.5px 'Baloo 2',sans-serif;color:#2f7f6c}
+.cm-slot small{font:800 11px 'Baloo 2',sans-serif}.cm-slot .cm-left{position:absolute;top:4px;left:4px;z-index:2;background:#5b4636;color:#fff;border-radius:9px;padding:1px 7px;font:800 11.5px 'Baloo 2',sans-serif;line-height:1.4}.cm-slot.on{padding-top:22px}.cm-defib{animation:cmpulse 1s ease-in-out infinite}.cm-ok{font:800 10.5px 'Baloo 2',sans-serif;color:#2f7f6c}
 @keyframes cmpulse{50%{transform:scale(1.08)}}
 .cm-st{display:inline-flex;gap:0;font-size:12px;line-height:1}.cm-st i{font-style:normal;color:#d8cdb8;-webkit-text-stroke:.6px #5b4636}.cm-st i.on{color:#f6c445}
 .cm-steam path{animation:cmsteam 1.4s ease-out infinite;opacity:.9}.cm-steam path:nth-child(2){animation-delay:.4s}.cm-steam path:nth-child(3){animation-delay:.8s}
@@ -23156,7 +23190,7 @@ document.addEventListener('click', ev => { if (cmGame && ev.target.closest('[dat
 .cm-r.can{background:#effaf2;border-color:#3a8f5a}.cm-r.locked{opacity:.62;background:#f4efe6}
 .cm-r>b{font:700 12.5px/1.1 'Baloo 2',sans-serif}
 .cm-rp{position:relative;width:54px;height:54px;background:#fff;border:2px solid #e7d6b8;border-radius:14px;padding:4px;box-sizing:border-box}.cm-rp svg{width:100%;height:100%}
-.cm-rt{position:absolute;bottom:-6px;left:-8px;font:800 10px/1 'Baloo 2',sans-serif;font-style:normal;background:#fff;border:1.2px solid var(--ink);border-radius:8px;padding:2px 4px}
+.cm-r{position:relative}.cm-r .cm-rt{position:absolute;top:5px;left:5px;right:auto;width:auto!important;height:auto;display:inline-block;z-index:2;font:800 11px/1.3 'Baloo 2',sans-serif;font-style:normal;white-space:nowrap;background:#5b4636;color:#fff;border-radius:9px;padding:1px 7px}
 .cm-far{position:absolute;top:-6px;right:-14px;font:800 9px/1 'Baloo 2',sans-serif;font-style:normal;background:#9fd1e8;border:1.2px solid var(--ink);border-radius:8px;padding:2px 4px}
 .cm-ings{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}
 .cm-ing{position:relative;width:30px;height:30px;border:1.5px solid #d9604f;border-radius:9px;background:#fff;padding:2px;box-sizing:border-box}.cm-ing.ok{border-color:#3a8f5a}.cm-ing svg{width:100%;height:100%}
@@ -23666,7 +23700,7 @@ function qtListHTML() {
   const body = qtLTab === 'jour'
     ? `<p class="qt-sub">3 objets recherchés aujourd’hui, très bien payés.</p><div class="qt-days">${day || '<p class="empty">Rien aujourd’hui.</p>'}</div>`
     : (rows || `<p class="empty">${QT_LEMPTY[qtLTab]}</p>`);
-  return `<div class="qt-page qt-list"><h2>Ma liste</h2>${bar}${body}
+  return `<div class="qt-page qt-list"><div class="qt-top"><h2>Ma liste</h2><button class="qt-x" data-closemodal="1" aria-label="Fermer">✕</button></div>${bar}${body}
     <div class="qt-acts"><button class="btn cream" data-qtpage="1">${QT_SCROLL} Quêtes</button><button class="btn green" data-closemodal="1">Fermer</button></div></div>`;
 }
 let qtLTab = 'jour';
@@ -23703,7 +23737,7 @@ function qtDefiHTML(d) {
 }
 function qtPageHTML() {
   const s = qtState(), f = QT_BY[s.follow];
-  return `<div class="qt-page"><h2>Quêtes</h2>
+  return `<div class="qt-page"><div class="qt-top"><h2>Quêtes</h2><button class="qt-x" data-closemodal="1" aria-label="Fermer">✕</button></div>
     ${f ? qtStoryHTML(f, true) : '<p class="qt-hint">Choisissez une histoire et touchez « Suivre » : son étape s’affichera sur la carte.</p>'}
     <h3 class="qt-h3">Histoires <small>${qtDoneN()}/${QT_STORIES.length} terminées</small></h3><div class="qt-stories">${QT_STORIES.filter(q => q !== f).map(q => qtStoryHTML(q)).join('')}</div>
     <h3 class="qt-h3">Défis <small>difficiles, grosses récompenses</small></h3><div class="qt-defis">${QT_DEFIS.map(qtDefiHTML).join('')}</div>
@@ -23875,6 +23909,7 @@ body.sheet-open #qtBtns,body.firstrun #qtBtns,body.firstrun .qtpin,body.firstrun
 .qt-tcx{flex:1;min-width:0;font:600 12.5px/1.25 var(--body);display:flex;flex-direction:column}
 .qt-tcx b{font:800 12.5px/1.2 var(--display);color:#b0482f}
 .qt-page{text-align:left}.qt-page h2,.qt-page>.bqc-kick{text-align:center;display:block}.qt-page h2{margin:0 0 8px}
+.qt-top{position:sticky;top:-18px;z-index:5;display:flex;align-items:center;justify-content:center;margin:-18px -20px 8px;padding:12px 52px 8px;background:var(--paper);border-bottom:2.5px solid var(--ink);border-radius:21px 21px 0 0}.qt-top h2{margin:0}.qt-x{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:2.5px solid #5b4636;background:#fffaf0;font:800 18px/1 system-ui;color:#5b4636;box-shadow:0 2px 0 #5b4636;cursor:pointer}
 .qt-ltabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:6px 0 12px}.qt-list{max-width:100%;overflow-x:hidden}.qt-ltab{flex:none;display:flex;align-items:center;gap:5px;padding:6px 10px;border:2px solid #5b4636;border-radius:999px;background:#fffaf0;font:800 13px var(--body);color:#5b4636;cursor:pointer}.qt-ltab.on{background:#5b4636;color:#fff}.qt-ltab b{min-width:18px;height:18px;border-radius:9px;background:#e0607e;color:#fff;font-size:11px;display:grid;place-items:center;padding:0 4px}.qt-sub{margin:0 0 8px;font-size:13px;opacity:.75}
 .qt-h3{font:800 15px var(--display);margin:14px 0 6px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.qt-h3 small{font:600 12px var(--body);opacity:.7}
 .qt-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}

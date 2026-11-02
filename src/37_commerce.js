@@ -457,9 +457,9 @@ function cmKitchenHTML() {
     if (!x) return `<div class="cm-slot empty"><span class="cm-plus">+</span><small>Place libre</small></div>`;
     const R = CM_R[x.rid], left = Math.max(0, x.end - now), el = x.dur - left;
     const defi = x.ch && !x.chd ? `<button class="btn gold sm cm-defib" data-cmdefi="${i}">Défi !</button>` : x.chd === 1 ? `<span class="cm-ok">Défi réussi</span>` : '';
-    return `<div class="cm-slot on${x.pause ? ' paused' : ''}"><span class="cm-an">${cmAnimSVG(CM_ANIM[x.shop] || 'pot')}</span><span class="cm-sp">${cmIcon(R, 'cms' + i)}</span>${cmStars(x.st)}<span class="cm-bar"><i style="animation-duration:${(x.dur / 1000).toFixed(2)}s;animation-delay:-${(el / 1000).toFixed(2)}s"></i></span><small data-cmleft="${x.end}">${Math.ceil(left / 1000)} s</small>${defi}</div>`;
+    return `<div class="cm-slot on${x.pause ? ' paused' : ''}"><span class="cm-an">${cmAnimSVG(CM_ANIM[x.shop] || 'pot')}</span><span class="cm-sp">${cmIcon(R, 'cms' + i)}</span>${cmStars(x.st)}<span class="cm-bar"><i style="animation-duration:${(x.dur / 1000).toFixed(2)}s;animation-delay:-${(el / 1000).toFixed(2)}s"></i></span><small class="cm-left" data-cmleft="${x.end}">${left > 0 ? `⏱ ${Math.ceil(left / 1000)} s` : 'Prêt ✔'}</small>${defi}</div>`;
   }).join('');
-  return `<section class="cm-kit" id="cmKitchen"><h3 class="bq-h3">${lab} <small>3 places · 3 à 10 secondes</small></h3><div class="cm-slots">${slots}</div></section>`;
+  return `<section class="cm-kit" id="cmKitchen"><h3 class="bq-h3">${lab} <small>${c.sl.length} places · 3 à 10 secondes</small></h3><div class="cm-slots">${slots}</div></section>`;
 }
 function cmRecipesHTML() {
   const T = cmT(); if (!T) return '';
@@ -470,7 +470,7 @@ function cmRecipesHTML() {
     const price = R.egg ? `<span class="cm-pr">Œuf · 1 par jour</span>` : `<span class="cm-pr">${coins(cmPrice(R, 1))}<small> → ${cmPrice(R, 3)} ${cmStars(3)}</small></span>`;
     const lock = R.x ? 'Récompense d’une commande Défi' : `Réputation ${R.rep}`;
     const far = R.ing.some(([k]) => k === 'far');
-    return `<div class="cm-r${un ? '' : ' locked'}${ok ? ' can' : ''}"><span class="cm-rp">${cmIcon(R, 'cmr' + R.id)}<i class="cm-rt">${cmDur(R)} s</i>${far ? '<i class="cm-far">De loin</i>' : ''}</span><b>${esc(R.def[0])}</b><span class="cm-ings">${ings}</span>${price}${un ? `<button class="btn ${ok ? 'green' : 'cream'} sm" data-cmprep="${R.id}" ${ok ? '' : 'aria-disabled="true"'}>Préparer</button>` : `<span class="cm-lock">${CM_LOCK}${esc(lock)}</span>`}</div>`;
+    return `<div class="cm-r${un ? '' : ' locked'}${ok ? ' can' : ''}"><i class="cm-rt">⏱ ${Math.round(cmDur(R))} s</i><span class="cm-rp">${cmIcon(R, 'cmr' + R.id)}${far ? '<i class="cm-far">De loin</i>' : ''}</span><b>${esc(R.def[0])}</b><span class="cm-ings">${ings}</span>${price}${un ? `<button class="btn ${ok ? 'green' : 'cream'} sm" data-cmprep="${R.id}" ${ok ? '' : 'aria-disabled="true"'}>Préparer</button>` : `<span class="cm-lock">${CM_LOCK}${esc(lock)}</span>`}</div>`;
   }).join('');
   const surplus = cmProducts(T.id).length;
   return `<section class="cm-recs"><h3 class="bq-h3">Recettes ${(typeof famOf === 'function' && typeof FAM !== 'undefined') ? '' : ''}<small>ingrédients possédés / demandés · prix de vente</small></h3><div class="cm-rgrid">${cards}</div>
@@ -511,7 +511,7 @@ setInterval(() => {
   try {
     const d = cmTickKitchen(), bch = cmTickBuyers();
     if (d || bch) { save(); cmPaint(); }
-    else document.querySelectorAll('[data-cmleft]').forEach(e => { e.textContent = Math.max(0, Math.ceil((+e.dataset.cmleft - Date.now()) / 1000)) + ' s'; });
+    else document.querySelectorAll('[data-cmleft]').forEach(e => { { const l = Math.ceil((+e.dataset.cmleft - Date.now()) / 1000); e.textContent = l > 0 ? `⏱ ${l} s` : 'Prêt ✔'; } });
   } catch (e) { console.error('commerce', e); }
 }, 500);
 
@@ -634,7 +634,7 @@ document.addEventListener('click', ev => { if (cmGame && ev.target.closest('[dat
 .cm-bar{width:90%;height:8px;border:1.5px solid var(--ink);border-radius:5px;background:#efe2c4;overflow:hidden}.cm-bar i{display:block;height:100%;background:#5fbf7f;width:0;animation:cmfill linear forwards}
 .cm-slot.paused .cm-bar i{animation-play-state:paused}
 @keyframes cmfill{to{width:100%}}
-.cm-slot small{font:800 11px 'Baloo 2',sans-serif}.cm-defib{animation:cmpulse 1s ease-in-out infinite}.cm-ok{font:800 10.5px 'Baloo 2',sans-serif;color:#2f7f6c}
+.cm-slot small{font:800 11px 'Baloo 2',sans-serif}.cm-slot .cm-left{position:absolute;top:4px;left:4px;z-index:2;background:#5b4636;color:#fff;border-radius:9px;padding:1px 7px;font:800 11.5px 'Baloo 2',sans-serif;line-height:1.4}.cm-slot.on{padding-top:22px}.cm-defib{animation:cmpulse 1s ease-in-out infinite}.cm-ok{font:800 10.5px 'Baloo 2',sans-serif;color:#2f7f6c}
 @keyframes cmpulse{50%{transform:scale(1.08)}}
 .cm-st{display:inline-flex;gap:0;font-size:12px;line-height:1}.cm-st i{font-style:normal;color:#d8cdb8;-webkit-text-stroke:.6px #5b4636}.cm-st i.on{color:#f6c445}
 .cm-steam path{animation:cmsteam 1.4s ease-out infinite;opacity:.9}.cm-steam path:nth-child(2){animation-delay:.4s}.cm-steam path:nth-child(3){animation-delay:.8s}
@@ -652,7 +652,7 @@ document.addEventListener('click', ev => { if (cmGame && ev.target.closest('[dat
 .cm-r.can{background:#effaf2;border-color:#3a8f5a}.cm-r.locked{opacity:.62;background:#f4efe6}
 .cm-r>b{font:700 12.5px/1.1 'Baloo 2',sans-serif}
 .cm-rp{position:relative;width:54px;height:54px;background:#fff;border:2px solid #e7d6b8;border-radius:14px;padding:4px;box-sizing:border-box}.cm-rp svg{width:100%;height:100%}
-.cm-rt{position:absolute;bottom:-6px;left:-8px;font:800 10px/1 'Baloo 2',sans-serif;font-style:normal;background:#fff;border:1.2px solid var(--ink);border-radius:8px;padding:2px 4px}
+.cm-r{position:relative}.cm-r .cm-rt{position:absolute;top:5px;left:5px;right:auto;width:auto!important;height:auto;display:inline-block;z-index:2;font:800 11px/1.3 'Baloo 2',sans-serif;font-style:normal;white-space:nowrap;background:#5b4636;color:#fff;border-radius:9px;padding:1px 7px}
 .cm-far{position:absolute;top:-6px;right:-14px;font:800 9px/1 'Baloo 2',sans-serif;font-style:normal;background:#9fd1e8;border:1.2px solid var(--ink);border-radius:8px;padding:2px 4px}
 .cm-ings{display:flex;gap:4px;justify-content:center;flex-wrap:wrap}
 .cm-ing{position:relative;width:30px;height:30px;border:1.5px solid #d9604f;border-radius:9px;background:#fff;padding:2px;box-sizing:border-box}.cm-ing.ok{border-color:#3a8f5a}.cm-ing svg{width:100%;height:100%}
