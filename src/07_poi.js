@@ -385,6 +385,7 @@ function poiUsefulNow(force) {
     }
   } catch (e) {}
   try { const ev = typeof todayEvent === 'function' ? todayEvent() : null; if (ev && ev.tags) ev.tags.forEach(add('evenement')); } catch (e) {}
+  try { if (typeof qtNeedCats === 'function') qtNeedCats().forEach(add('besoin')); } catch (e) {} // liste de courses (38_quetes.js)
   return (poiUsefulCache = { t: now, v: { cats, why } }).v;
 }
 // type de lieu encore jamais visité : aucun objet de sa table de butin dans le carnet
@@ -547,12 +548,14 @@ function poiPick(cands, z) {
   const tiles = mapMode === 'tiles', lblZ = tiles ? 16 : 14.8, allZ = tiles ? 17 : 15.4;
   const f = poiFilter(), only = (POI_FILTERS.find(x => x[0] === f) || [])[2];
   const U = poiUsefulNow(), dk = poiDestKeys();
+  const nk = typeof qtPinKeys === 'function' ? qtPinKeys() : null; // lieux déjà marqués d'une épingle « besoin »
   const size = z < 11 ? 0.74 : z < 14 ? 0.74 + (z - 11) * 0.027 : z < 15.5 ? 0.82 + (z - 14) * 0.067 : z < 16.5 ? 0.92 + (z - 15.5) * 0.08 : 1;
   const items = [];
   for (const p of cands) {
     if (!p.cat || !POI_CATS[p.cat]) continue;
     if (only && !only.includes(p.cat)) continue;
     if (dk.size && dk.has(poiKey(p))) continue; // la destination a déjà son marqueur
+    if (nk && nk.size && nk.has(poiKey(p))) continue;
     const pt = map.project([p.lon, p.lat]);
     if (pt.x < 8 || pt.y < 8 || pt.x > W - 8 || pt.y > H - 8) continue;
     const minor = p.cat === 'rue' || p.cat === 'route', useful = !minor && U.cats.has(p.cat), fresh = !useful && !minor && poiNewCat(p.cat);

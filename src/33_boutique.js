@@ -308,7 +308,7 @@ if (typeof renderMarche === 'function') {
     const m = mkState();
     if (m.unseen && mkAuto !== m.sold) return orig.apply(this, arguments); // des ventes conclues : « Mes annonces » d'abord
     if (mkView === 'place') box.innerHTML = b2MarcheHTML();
-    else if (mkView === 'quetes') box.innerHTML = b2QuetesHTML();
+    else if (mkView === 'quetes') { mkView = 'place'; box.innerHTML = b2MarcheHTML(); if (typeof qtOpenPage === 'function') setTimeout(qtOpenPage, 0); else box.innerHTML = b2QuetesHTML(); } // v21 : les vraies quêtes (38_quetes.js)
     else orig.apply(this, arguments);
   })(renderMarche);
 }

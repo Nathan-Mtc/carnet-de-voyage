@@ -285,6 +285,7 @@ async function buildMap() {
   map.on('error', e => { if (mapMode === 'tiles' && !mapReady) { /* tuiles inaccessibles : on garde la carte intégrée */ } });
   map.on('load', () => { routeLayers(); try { mapDecorInit(); } catch (e) { console.error(e); } mapReady = true; if (typeof liveOnMapLoad === 'function') { try { liveOnMapLoad(); } catch (e) { console.error(e); } } try { poiLayerInit(); } catch (e) { console.error(e); } setTimeout(() => refreshPOIs(true), 50); const n = $('mapNote'); n.hidden = mapMode === 'tiles'; if (!n.hidden) setTimeout(() => n.classList.add('gone'), 9000); drawMarks(); });
   map.on('move', positionOverlay);
+  map.on('move', () => { if (typeof qtEdgeUpd === 'function') qtEdgeUpd(); });
   map.on('zoom', () => { lodOverlay(); });
   map.on('moveend', refreshPOIs);
   let autoTilt = true;
@@ -401,6 +402,7 @@ function drawMarks() {
     if (plan.dest && !S.trips[S.sel]) feats.push({ type: 'Feature', properties: { c: '#2f7f6c', w: 4.5 }, geometry: { type: 'LineString', coordinates: arcCoords(h, plan.dest) } });
     map.getSource('routes').setData({ type: 'FeatureCollection', features: feats });
   }
+  if (typeof qtMapUpdate === 'function') { try { qtMapUpdate(); } catch (e) { console.error(e); } } // épingles « besoin » (38_quetes.js)
   lodOverlay(); positionOverlay();
   if (typeof poiStateCheck === 'function') poiStateCheck();
 }
@@ -427,6 +429,7 @@ function portraitURI(k, mood = 'content') {
 $('ov').addEventListener('click', ev => {
   const m = ev.target.closest('.ovm'); if (!m) return;
   ev.stopPropagation();
+  if (m.dataset.need) { if (typeof qtPinTap === 'function') qtPinTap(m, ev); return; }
   if (m.dataset.poi) { const o = ovEls['q' + m.dataset.poi]; if (o) choosePOI(o.poi); return; }
   if (m.dataset.comp) { selectComp(m.dataset.comp); openSheet('voyage'); return; }
   if (m.dataset.place) { choosePlace(PLACES[+m.dataset.place]); return; }
