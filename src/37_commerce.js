@@ -317,7 +317,7 @@ function cmRareDef(T) {
 }
 function cmFarRes() {
   if (typeof REGIONS === 'undefined') return null;
-  const h = cmHome(), pool = []; REGIONS.forEach(R => { if (R.id !== h && R.id !== 'grand_large') R.res.forEach(x => { if (x.rar <= 1) pool.push(x); }); });
+  const h = cmHome(), pool = []; REGIONS.forEach(R => { if (R.id !== h && R.id !== 'grand_large') R.res.forEach(x => { if (x.rar <= 1 && (typeof bqRegSense !== 'function' || bqRegSense(x))) pool.push(x); }); });
   return bqPick(pool);
 }
 function cmRewardFor(tier, T, c) {

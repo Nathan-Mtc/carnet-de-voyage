@@ -285,7 +285,7 @@ async function buildMap() {
   map.on('error', e => { if (mapMode === 'tiles' && !mapReady) { /* tuiles inaccessibles : on garde la carte intégrée */ } });
   map.on('load', () => { routeLayers(); try { mapDecorInit(); } catch (e) { console.error(e); } mapReady = true; if (typeof liveOnMapLoad === 'function') { try { liveOnMapLoad(); } catch (e) { console.error(e); } } try { poiLayerInit(); } catch (e) { console.error(e); } setTimeout(() => refreshPOIs(true), 50); const n = $('mapNote'); n.hidden = mapMode === 'tiles'; if (!n.hidden) setTimeout(() => n.classList.add('gone'), 9000); drawMarks(); });
   map.on('move', positionOverlay);
-  map.on('move', () => { if (typeof qtEdgeUpd === 'function') qtEdgeUpd(); });
+  map.on('zoomend', () => { if (typeof qtMapUpdate === 'function') { try { qtMapUpdate(); } catch (e) {} } });
   map.on('zoom', () => { lodOverlay(); });
   map.on('moveend', refreshPOIs);
   let autoTilt = true;

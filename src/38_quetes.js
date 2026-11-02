@@ -231,7 +231,7 @@ function qtClaimDefi(id) {
 // ---------------- objectif du jour ----------------
 function qtDay() {
   const s = qtState(), dk = dayKey(), h = qtHome();
-  if (s.day && s.day.d === dk && s.day.h === S.home && !s.day.list.some(o => o.step && o.step.fn)) return s.day;
+  if (s.day && s.day.v === 2 && s.day.d === dk && s.day.h === S.home && !s.day.list.some(o => o.step && o.step.fn)) return s.day;
   const r = qtRnd('qtday' + dk + S.home), pick = a => a[Math.floor(r() * a.length)], list = [];
   try { // 1. proche : un objet d'un type de lieu du quotidien
     const cats = (typeof BQ_NEAR_CATS !== 'undefined' ? BQ_NEAR_CATS : ['marche', 'parc', 'boulangerie']).filter(c => POI_CATS[c] && LOOT[c] && c !== 'rue' && c !== 'route');
@@ -248,13 +248,13 @@ function qtDay() {
   } catch (e) {}
   try { // 3. lointain : une spécialité d'une région à plus de 800 km
     const far = REGIONS.filter(R => R.id !== (R0 && R0.id) && R.anchor && R.res && R.res.length && kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] }) > 800);
-    const R = pick(far.length ? far : REGIONS.filter(R => R.res && R.res.length)), x = pick(R.res.filter(x => (x.rar || 0) <= 2)) || R.res[0];
+    const R = pick(far.length ? far : REGIONS.filter(R => R.res && R.res.length)), x = pick(R.res.filter(x => (x.rar || 0) >= 1 && (x.rar || 0) <= 3 && x.cat !== 'n')) || pick(R.res.filter(x => (x.rar || 0) >= 1)) || R.res[0];
     list.push({ z: 'far', name: x.name, rid: x.id, step: { region: R.id }, where: `${R.name} (${Math.round(kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] })).toLocaleString('fr-FR')} km)`, pay: 400, egg: 1 });
   } catch (e) {}
-  s.day = { d: dk, h: S.home, list }; save();
+  s.day = { v: 2, d: dk, h: S.home, list }; save();
   return s.day;
 }
-const QT_Z = { near: 'Tout près', reg: 'Dans la région', far: 'Au loin' };
+const QT_Z = { near: 'Tout près', reg: 'Dans la région', far: 'Grand voyage' };
 function qtDayIt(o) { if (o.rid && typeof RG_RES !== 'undefined' && RG_RES[o.rid]) return qtResIt(RG_RES[o.rid]); return o.def ? bqItemOf(o.def) : { name: o.name, cat: 'm', sub: 'pierre', rarity: 1 }; }
 const qtDayMatch = o => it => !!(it && !it.mk && (o.rid ? it.rid === o.rid || it.name === o.name : it.name === o.name));
 function qtDayGive(i) {
@@ -386,8 +386,8 @@ function qtNeedCats() { const c = []; for (const n of qtNeeds()) if (n.step && n
 function qtLine(n) { return `<span class="qt-ln"><b>${esc(n.name)}</b> → ${esc(n.why)}${n.gain ? ` <em>(${esc(n.gain)})</em>` : ''}</span>`; }
 function qtMapUpdate() {
   if (typeof map === 'undefined' || !map || typeof ovEls === 'undefined' || !$('ov')) return;
-  const on = tab === 'carte' && !document.body.classList.contains('firstrun');
-  const gs = on ? qtGroups() : [];
+  const on = tab === 'carte' && !document.body.classList.contains('firstrun') && map.getZoom() >= QT_PIN_ZOOM;
+  const gs = on ? qtGroups().filter(g => qtKm(g.L) < 60).slice(0, 5) : [];
   const sig = gs.map(g => g.k + ':' + g.list.map(n => n.id + n.gain).join('+')).join(';') + '|' + qtOpenPin;
   const ov = $('ov'), alive = gs.every((g, i) => ovEls['qn' + i] && ovEls['qn' + i].el.isConnected);
   qtPins = gs;
@@ -412,8 +412,10 @@ function qtPinTap(el, ev) {
   if (lab && ov) { const r = lab.getBoundingClientRect(), o = ov.getBoundingClientRect(); let dx = 0; if (r.left < o.left + 8) dx = o.left + 8 - r.left; else if (r.right > o.right - 8) dx = o.right - 8 - r.right; lab.style.marginLeft = dx.toFixed(0) + 'px'; }
 }
 // flèches au bord de l'écran vers les besoins hors de vue (3 au plus)
+const QT_PIN_ZOOM = 13.5; // v21b : épingles visibles seulement quand on zoome
 let qtEdgeRaf = 0;
 function qtEdgeUpd() {
+  { const b = $('qtEdge'); if (b) b.remove(); return; } // v21b : flèches de bord retirées (surcharge)
   if (qtEdgeRaf) return;
   qtEdgeRaf = requestAnimationFrame(() => {
     qtEdgeRaf = 0;
@@ -444,17 +446,24 @@ function qtListHTML() {
     return `<div class="qt-day${o.done ? ' done' : ''}"><span class="qt-z z-${o.z}">${QT_Z[o.z]}</span><span class="qt-di" style="--fc:${F ? F.couleur : '#d9604f'}">${qtIco(it)}<i class="qtf"></i></span><b>${esc(o.name)}</b><small>${esc(o.where)}</small><span class="qt-pay">${coins(o.pay)}${o.egg ? ' + œuf' : ''}</span>
       ${o.done ? '<span class="qt-ok">Rempli ✔</span>' : h ? `<button class="btn green sm" data-qtday="${i}">Livrer</button>` : `<button class="btn gold sm" data-qtneed="day:${i}">Y aller</button>`}</div>`;
   }).join('');
-  const groups = {};
-  needs.filter(n => n.src !== 'jour').forEach(n => (groups[n.src] = groups[n.src] || []).push(n));
-  const rows = Object.keys(groups).sort((a, b) => QT_SRC[a][1] - QT_SRC[b][1]).map(src => `<h3 class="qt-h3">${QT_SRC[src][0]}${groups[src].length > 1 ? 's' : ''}</h3>` + groups[src].map(n => {
+  // v21b : des onglets au lieu d'une longue liste à faire défiler
+  const tabs = [['jour', 'Objectif', D.list.filter(o => !o.done).length], ...QT_LTABS.map(([k, lab, srcs]) => [k, lab, needs.filter(n => srcs.includes(n.src)).length])];
+  if (!tabs.some(t => t[0] === qtLTab)) qtLTab = 'jour';
+  const cur = QT_LTABS.find(t => t[0] === qtLTab), list = cur ? needs.filter(n => cur[2].includes(n.src)) : [];
+  const rows = list.map(n => {
     const L = qtLoc(n.step), F = n.it ? qtFam(n.it) : null;
     return `<div class="qt-need"><span class="qt-di" style="--fc:${qtNeedCol(n)}">${qtNeedIco(n)}<i class="qtf"></i></span><div class="qt-nx"><b>${esc(n.name)}${n.n > 1 || n.have ? ` <small>${Math.min(n.have, n.n)}/${n.n}</small>` : ''}</b><span>Pour : ${esc(n.why)} · <em>${esc(n.gain)}</em></span><span class="qt-w">${F ? `<i style="--fc:${F.couleur}">${F.icone} ${esc(F.nom)}</i> ` : ''}${L ? `${esc(L.label)} · ${fmtDist(qtKm(L))}` : 'Voir où le trouver'}</span></div><button class="btn gold sm" data-qtneed="${esc(n.id)}">Y aller</button></div>`;
-  }).join('')).join('');
-  return `<div class="qt-page"><span class="bqc-kick">Ma liste de courses</span><h2>Ce dont vous avez besoin</h2>
-    <h3 class="qt-h3">Objectif du jour <small>3 objets recherchés, très bien payés</small></h3><div class="qt-days">${day || '<p class="empty">Rien aujourd’hui.</p>'}</div>
-    ${rows || '<p class="empty">Aucun besoin pour l’instant : acceptez une commande, suivez une quête ou ouvrez votre commerce.</p>'}
+  }).join('');
+  const bar = `<div class="qt-ltabs">${tabs.map(([k, lab, n]) => `<button class="qt-ltab${k === qtLTab ? ' on' : ''}" data-qtltab="${k}">${lab}${n ? `<b>${n}</b>` : ''}</button>`).join('')}</div>`;
+  const body = qtLTab === 'jour'
+    ? `<p class="qt-sub">3 objets recherchés aujourd’hui, très bien payés.</p><div class="qt-days">${day || '<p class="empty">Rien aujourd’hui.</p>'}</div>`
+    : (rows || `<p class="empty">${QT_LEMPTY[qtLTab]}</p>`);
+  return `<div class="qt-page qt-list"><h2>Ma liste</h2>${bar}${body}
     <div class="qt-acts"><button class="btn cream" data-qtpage="1">${QT_SCROLL} Quêtes</button><button class="btn green" data-closemodal="1">Fermer</button></div></div>`;
 }
+let qtLTab = 'jour';
+const QT_LTABS = [['commande', 'Commandes', ['commande']], ['reve', 'Rêves', ['reve']], ['recette', 'Recettes', ['recette']], ['quete', 'Quêtes', ['quete', 'cle']]];
+const QT_LEMPTY = { commande: 'Aucune commande en cours : acceptez-en une au comptoir.', reve: 'Aucun rêve en cours.', recette: 'Rien ne manque pour vos recettes.', quete: 'Suivez une quête pour voir ici sa prochaine étape.' };
 function qtOpenList() { const s = qtState(); s.seen = qtDay().d; save(); showModal(qtListHTML()); qtBtns(); const mb = document.querySelector('#modal .mbox'); if (mb) mb.scrollTop = 0; }
 
 // ---------------- page Quêtes ----------------
@@ -497,7 +506,7 @@ function qtOpenPage() { qtPageOn = true; showModal(qtPageHTML()); const mb = doc
 function qtRefreshAll() {
   qtNeedC.t = 0;
   const m = $('modal');
-  if (m && !m.hidden) { if (m.querySelector('.qt-page h2') && qtPageOn && m.querySelector('.qt-stories')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtPageHTML()); mb.scrollTop = y; } else if (m.querySelector('.qt-days')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtListHTML()); mb.scrollTop = y; } }
+  if (m && !m.hidden) { if (m.querySelector('.qt-page h2') && qtPageOn && m.querySelector('.qt-stories')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtPageHTML()); mb.scrollTop = y; } else if (m.querySelector('.qt-list')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtListHTML()); mb.scrollTop = y; } }
   try { renderTripCard(); } catch (e) {}
   qtMapUpdate(); qtBtns();
   try { if (typeof poiStateCheck === 'function') poiStateCheck(); } catch (e) {}
@@ -596,6 +605,7 @@ if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
 
 // ---------------- clics ----------------
 document.addEventListener('click', ev => {
+  const tb = ev.target.closest('[data-qtltab]'); if (tb) { qtLTab = tb.dataset.qtltab; const mb = document.querySelector('#modal .mbox'); showModal(qtListHTML()); if (mb) mb.scrollTop = 0; return; }
   const el = ev.target.closest('[data-qtlist],[data-qtpage],[data-qtneed],[data-qtday],[data-qtfollow],[data-qtgive],[data-qtdefi],[data-qtshop],[data-qtsac],[data-qtnur],[data-qthaul],[data-qtedge]');
   if (!el || el.disabled) return;
   const d = el.dataset;
@@ -657,6 +667,7 @@ body.sheet-open #qtBtns,body.firstrun #qtBtns,body.firstrun .qtpin,body.firstrun
 .qt-tcx{flex:1;min-width:0;font:600 12.5px/1.25 var(--body);display:flex;flex-direction:column}
 .qt-tcx b{font:800 12.5px/1.2 var(--display);color:#b0482f}
 .qt-page{text-align:left}.qt-page h2,.qt-page>.bqc-kick{text-align:center;display:block}.qt-page h2{margin:0 0 8px}
+.qt-ltabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:6px 0 12px}.qt-list{max-width:100%;overflow-x:hidden}.qt-ltab{flex:none;display:flex;align-items:center;gap:5px;padding:6px 10px;border:2px solid #5b4636;border-radius:999px;background:#fffaf0;font:800 13px var(--body);color:#5b4636;cursor:pointer}.qt-ltab.on{background:#5b4636;color:#fff}.qt-ltab b{min-width:18px;height:18px;border-radius:9px;background:#e0607e;color:#fff;font-size:11px;display:grid;place-items:center;padding:0 4px}.qt-sub{margin:0 0 8px;font-size:13px;opacity:.75}
 .qt-h3{font:800 15px var(--display);margin:14px 0 6px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.qt-h3 small{font:600 12px var(--body);opacity:.7}
 .qt-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .qt-day{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:3px;background:#fffaf0;border:2.5px solid var(--ink);border-radius:16px;padding:8px 8px 9px}

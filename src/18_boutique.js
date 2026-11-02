@@ -363,7 +363,7 @@ const BQ_GEN = {
     const regs = bqRegionsFor(L); if (!regs.length) return null;
     const maxR = [0, 0, 1, 1, 2, 3][L] || 0;
     const pool = [];
-    regs.forEach(R => R.res.forEach(x => { if (x.rar <= maxR) pool.push(x); }));
+    regs.forEach(R => R.res.forEach(x => { if (x.rar <= maxR && bqRegSense(x)) pool.push(x); }));
     const x = bqPick(pool, x => (c.likes.some(k => ING[k] && ING[k][0].includes(x.sub)) ? 3 : 1) * (x.rar ? 0.6 : 1)); if (!x) return null;
     return { k: 'reg', rid: x.id, name: x.name, n: x.rar === 0 && L >= 2 && Math.random() < 0.5 ? 2 : 1, src: { region: x.region } };
   },
@@ -447,7 +447,7 @@ const BQ_GEN_SHOP = {
   reg(T, c, L) {
     const regs = bqRegionsFor(Math.min(5, L + (T.reach || 0))); if (!regs.length) return null;
     const subs = bqShopSubs(T), maxR = [0, 0, 1, 1, 2, 3][L] || 0, pool = [];
-    regs.forEach(R => R.res.forEach(x => { if (x.rar <= maxR && bqFitDef(T, [x.name, x.cat, x.sub, x.rar])) pool.push(x); }));
+    regs.forEach(R => R.res.forEach(x => { if (x.rar <= maxR && bqRegSense(x) && bqFitDef(T, [x.name, x.cat, x.sub, x.rar])) pool.push(x); }));
     const x = bqPick(pool, x => (subs.has(x.sub) ? 3 : 1) * (x.rar ? 0.6 : 1)); if (!x) return null;
     return { k: 'reg', rid: x.id, name: x.name, n: 1, src: { region: x.region } };
   },
@@ -1483,3 +1483,7 @@ window.__boutique = {
   newOrder(easy) { const o = bqNewOrder(!!easy); if (o) { bqState().orders.push(o); save(); } return o; },
   deliver: id => bqDeliver(id), refuse: id => bqRefuse(id), go: id => bqGo(id), buy: key => bqBuy(key), addRep(n) { const s = bqState(), l0 = s.lvl; s.rep += n; s.lvl = bqLevelOf(s.rep); save(); if (s.lvl > l0) bqLevelUp(s.lvl); },
 };
+
+// v21b : « pas 500 km pour une orange » : un produit courant se demande seulement s'il vient de pas trop loin.
+function bqRegKm(x) { try { const R = RG[x.region]; return R && R.anchor ? kmBetween(homeObj(), { lon: R.anchor[0], lat: R.anchor[1] }) : 0; } catch (e) { return 0; } }
+function bqRegSense(x) { const km = bqRegKm(x), r = x.rar || 0; return r === 0 ? km < 300 : r === 1 ? km < 1200 : true; }
