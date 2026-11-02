@@ -213,6 +213,17 @@ const BQ_CAT = [
   ['m', 2, ['Éclat de cristal', 'm', 'cristal', 1, null, '#bfe3f6']], ['m', 2, ['Plume d’oie', 'm', 'plume', 1, null, '#fbf8f0']], ['m', 3, ['Coquillages de brocante', 'm', 'coquillage', 1, null, '#f6cdb8']],
 ].map(([k, lvl, def], i) => ({ key: k + i, k, lvl, def }));
 BQ_RECIPES.forEach(r => BQ_CAT.push({ key: 'r_' + r.id, k: 'r', lvl: r.lvl, rec: r.id }));
+// v21 : outils (k 't', « Objets fabriqués ») et graines (ressources), clés stables (ajoutées à la fin)
+[['t', 0, ['Carte de région', 'm', 'outil', 1, null, '#efe2c4']], ['t', 0, ['Filet à papillons', 'm', 'outil', 1, null, '#7fae4f']],
+  ['t', 1, ['Pelle de voyage', 'm', 'outil', 1, null, '#a87a50']], ['t', 1, ['Canne à pêche', 'm', 'outil', 1, null, '#d9c38f']], ['t', 1, ['Loupe de naturaliste', 'm', 'outil', 1, null, '#9fd8f0']],
+  ['t', 2, ['Lampe frontale', 'm', 'outil', 2, null, '#f2c14e']], ['t', 2, ['Boussole', 'm', 'outil', 2, null, '#c9a35a']], ['t', 3, ['Burin de lapidaire', 'm', 'outil', 1, null, '#8f9cb3']],
+  ['m', 0, ['Pépins de pomme', 'm', 'graine', 0, null, '#c9a07a']], ['m', 0, ['Graines de fraisier', 'm', 'graine', 0, null, '#e9a0a0']],
+  ['m', 1, ['Bulbe de tulipe', 'm', 'graine', 0, null, '#9c6b4a']], ['m', 1, ['Graines de tournesol', 'm', 'graine', 0, null, '#a8b45a']],
+].forEach(([k, lvl, def], i) => BQ_CAT.push({ key: 'n' + k + i, k, lvl, def }));
+// les 4 rayons du magasin, comme au marché mondial
+const BQ_MCATS = [['comp', 'Compagnons', 'Œufs de compagnons'], ['mode', 'Vêtements', 'Vêtements et accessoires'], ['res', 'Ressources', 'Ingrédients, matériaux et graines'], ['craft', 'Objets fabriqués', 'Outils, meubles et recettes']];
+let bqMCat = 'comp';
+function bqMCatOf(x) { if (x.o) return 'comp'; if (x.x) return x.x.it.cat === 'v' ? 'mode' : 'res'; const a = BQ_CAT.find(y => y.key === x.key) || {}; return a.k === 'v' ? 'mode' : a.k === 'm' ? 'res' : 'craft'; }
 
 // ---------------- état ----------------
 let bView = 'comptoir';
@@ -697,7 +708,7 @@ function bqStepFor(r) {
 // prix réduits par la spécialité du commerce (farine à la boulangerie, vêtements à la mode, œufs à l'animalerie)
 function bqCheapF(it, egg) { const T = bqType(); if (!T) return 1; if (egg) return T.eggs ? 0.8 : 1; const c = T.cheap; if (!c || !it) return 1; return (c.subs && c.subs.includes(it.sub)) || (c.cats && c.cats.includes(it.cat)) ? c.f : 1; }
 function bqArticle(a) {
-  if (a.k === 'o') { const nm = a.sp ? `Œuf de ${bqSpName(a.sp).toLowerCase()}` : 'Œuf commun'; return { egg: { sp: a.sp }, it: { name: nm, cat: 'o', rarity: a.sp ? 2 : 1 }, price: bqRound5(a.price * bqCheapF(null, 1)), name: nm }; }
+  if (a.k === 'o') { const sn = a.sp ? bqSpName(a.sp).toLowerCase() : '', nm = a.sp ? `Œuf ${/^[aeiouyéèh]/.test(sn) ? 'd’' : 'de '}${sn}` : 'Œuf commun'; return { egg: { sp: a.sp }, it: { name: nm, cat: 'o', rarity: a.sp ? 2 : 1 }, price: bqRound5(a.price * bqCheapF(null, 1)), name: nm }; }
   if (a.k === 'r') { const r = BQ_RECIPES.find(x => x.id === a.rec); return { rec: r, it: bqItemOf(r.out), price: r.price, name: `Recette : ${r.out[0]}` }; }
   if (a.k === 'x') return { it: a.it, price: a.price, name: a.it.name, rare: 1 };
   const it = bqItemOf(a.def);
@@ -705,7 +716,7 @@ function bqArticle(a) {
 }
 function bqStock() {
   const s = bqState(), dk = dayKey(), L = s.lvl, T = bqType(), tid = T ? T.id : '';
-  if (s.stock.day === dk && s.stock.lvl === L && (s.stock.type || '') === tid && s.stock.items.length) return s.stock.items;
+  if (s.stock.day === dk && s.stock.lvl === L && (s.stock.type || '') === tid && s.stock.items.length && s.stock.v === 2) return s.stock.items;
   // les articles achetés aujourd'hui restent achetés, même si l'on change de commerce
   const keep = s.stock.day === dk ? new Set([...(s.stock.sold || []), ...s.stock.items.filter(x => x.sold).map(x => x.key)]) : new Set();
   seed(dk * 13 + 7 + L * 101 + [...tid].reduce((a, ch) => a + ch.charCodeAt(0) * 31, 0));
@@ -715,10 +726,10 @@ function bqStock() {
   // un panaché : vêtements, décos, matériaux, et une recette dès le niveau 2
   const byK = k => sh(ok.filter(a => a.k === k));
   const out = [];
-  const plan = { v: Math.ceil(n * 0.35), d: Math.ceil(n * 0.2), m: Math.ceil(n * 0.25), r: L >= 1 ? 1 : 0 };
+  // chaque rayon a ses articles : vêtements, ressources (dont graines), objets fabriqués (meubles, outils, recette)
+  const plan = { v: 2 + Math.floor(n / 3), m: 2 + Math.floor(n / 3), d: 1 + Math.floor(n / 5), t: L >= 2 ? 2 : 1, r: L >= 1 ? 1 : 0 };
   for (const [k, c] of Object.entries(plan)) out.push(...byK(k).slice(0, c));
-  for (const a of sh(ok)) { if (out.length >= n) break; if (!out.includes(a)) out.push(a); }
-  const items = out.slice(0, n).map(a => ({ key: a.key }));
+  const items = out.map(a => ({ key: a.key }));
   // parfois un article rare (dès « Maison réputée »)
   if (L >= 2 && srand() < 0.6 && typeof REGIONS !== 'undefined') {
     const pool = []; REGIONS.forEach(R => R.res.forEach(x => { if (x.rar >= 2 && x.rar <= (L >= 5 ? 4 : 3)) pool.push(x); }));
@@ -732,9 +743,9 @@ function bqStock() {
   if (srand() < (T && T.eggs ? 1 : 0.35)) { const sp = sps[Math.floor(srand() * sps.length)]; items.unshift({ key: 'o_' + sp, o: { sp, price: 220 } }); }
   if (T && T.eggs && L >= 2) { const sp = sps[Math.floor(srand() * sps.length)]; if (!items.some(x => x.key === 'o_' + sp)) items.unshift({ key: 'o_' + sp, o: { sp, price: 220 } }); }
   // articles du niveau suivant : visibles mais verrouillés, pour donner envie
-  if (L < BQ_LEVELS.length - 1) sh(BQ_CAT.filter(a => a.lvl === L + 1)).slice(0, 3).forEach(a => items.push({ key: a.key, locked: 1 }));
+  if (L < BQ_LEVELS.length - 1) ['v', 'm', 'd', 't'].forEach(k => sh(BQ_CAT.filter(a => a.k === k && a.lvl === L + 1)).slice(0, 2).forEach(a => items.push({ key: a.key, locked: 1 })));
   items.forEach(x => { if (keep.has(x.key)) x.sold = 1; });
-  s.stock = { day: dk, lvl: L, type: tid, items, sold: [...keep] };
+  s.stock = { day: dk, lvl: L, type: tid, items, sold: [...keep], v: 2 };
   save();
   return items;
 }
@@ -1137,16 +1148,16 @@ function renderComptoir(box) {
 function renderMagasin(box) {
   const s = bqState(), items = bqStock();
   let h = phead(null, 'Le magasin', `Les articles du jour, changés chaque matin. Vous avez ${coins(S.coins)}.`);
-  const grp = [['o', 'Œufs de compagnons'], ['v', 'Vêtements et accessoires'], ['d', 'Meubles et décos'], ['m', 'Graines et matériaux'], ['r', 'Recettes à débloquer'], ['x', 'Article rare du jour']];
-  const open = items.filter(x => !x.locked), locked = items.filter(x => x.locked);
-  for (const [k, title] of grp) {
-    const list = open.filter(x => (x.o ? 'o' : x.x ? 'x' : (BQ_CAT.find(a => a.key === x.key) || {}).k) === k); if (!list.length) continue;
-    h += `<h3 class="bq-h3">${title}</h3><div class="bq-grid">${list.map(x => bqShopCard(x)).join('')}</div>`;
-  }
+  const ic = k => { try { const c = MK_CATS.find(x => x[0] === k); return c ? `<svg viewBox="0 0 30 30" aria-hidden="true">${c[2]}</svg>` : ''; } catch (e) { return ''; } };
+  if (!BQ_MCATS.some(c => c[0] === bqMCat)) bqMCat = 'comp';
+  h += `<div class="mk-cats bq-mcats" role="tablist">${BQ_MCATS.map(([k, l]) => { const n = items.filter(x => !x.locked && !x.sold && bqMCatOf(x) === k).length; return `<button role="tab" data-bmcat="${k}" aria-selected="${bqMCat === k}">${ic(k)}<span>${l}${n ? ` <small>${n}</small>` : ''}</span></button>`; }).join('')}</div>`;
+  const cat = BQ_MCATS.find(c => c[0] === bqMCat), mine = items.filter(x => bqMCatOf(x) === bqMCat);
+  const open = mine.filter(x => !x.locked), locked = mine.filter(x => x.locked);
+  h += `<h3 class="bq-h3">${cat[2]}</h3>` + (open.length ? `<div class="bq-grid">${open.map(x => bqShopCard(x)).join('')}</div>` : `<p class="small">Rien dans ce rayon aujourd’hui : revenez demain.</p>`);
   if (locked.length) h += `<h3 class="bq-h3 bq-lockh">Au niveau « ${esc(bqLv(s.lvl + 1).name)} »</h3><div class="bq-grid">${locked.map(x => bqShopCard(x)).join('')}</div><p class="small">Livrez des commandes au Comptoir pour gagner de la réputation et débloquer ces articles.</p>`;
-  h += `<p class="small">Le stock change chaque jour. Plus votre boutique est réputée, plus il y a d’articles, et plus ils sont beaux.</p>`;
   box.innerHTML = h;
 }
+document.addEventListener('click', ev => { const el = ev.target.closest('[data-bmcat]'); if (!el) return; bqMCat = el.dataset.bmcat; renderPanel(); });
 function bqShopCard(x) {
   const a = bqStockArticle(x); if (!a) return '';
   const art = bqArticle(a), it = art.it, can = S.coins >= art.price;
@@ -1154,7 +1165,7 @@ function bqShopCard(x) {
     const btn = x.sold ? '<span class="bq-sold">Acheté</span>' : `<button class="btn ${can ? 'gold' : 'cream'} sm" data-bbuy="${x.key}" ${can ? '' : 'disabled'}>${coins(art.price)}</button>`;
     return `<div class="bq-art bq-eggart${x.sold ? ' sold' : ''}" style="--rc:${RARC[it.rarity]}"><div class="bq-aico bq-eggi">${bqEggSVG(art.egg.sp, 'bqse' + x.key)}</div><b>${esc(art.name)}</b><span>${art.egg.sp ? `${esc(bqSpName(art.egg.sp))} garanti` : 'Espèce surprise'} · éclot en 3 min</span>${btn}</div>`;
   }
-  const sub = art.rec ? `Recette · ${art.rec.kind}` : it.rid ? `${RARITY[it.rarity]} · spécialité ${typeof RG !== 'undefined' && RG[it.origin.region] ? esc(rgDe(RG[it.origin.region])) : ''}` : `${RARITY[it.rarity]} · ${it.cat === 'v' ? SLOT_LABEL[it.sub] : CAT_LABEL[it.cat]}`;
+  const sub = it.sub === 'outil' && typeof famUseLine === 'function' ? esc(famUseLine(it) || 'Outil') : art.rec ? `Recette · ${art.rec.kind}` : it.rid ? `${RARITY[it.rarity]} · spécialité ${typeof RG !== 'undefined' && RG[it.origin.region] ? esc(rgDe(RG[it.origin.region])) : ''}` : `${RARITY[it.rarity]} · ${it.cat === 'v' ? SLOT_LABEL[it.sub] : CAT_LABEL[it.cat]}`;
   const btn = x.locked ? `<span class="bq-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="10.5" width="13" height="10" rx="2.5" fill="#cfc5b4" stroke="#5b4636" stroke-width="2"/><path d="M8.5 10.5 V8 a3.5 3.5 0 0 1 7 0 V10.5" stroke="#5b4636" stroke-width="2.2" fill="none"/></svg>Niveau ${a.lvl + 1}</span>` : x.sold ? '<span class="bq-sold">Acheté</span>' : `<button class="btn ${can ? 'gold' : 'cream'} sm" data-bbuy="${x.key}" ${can ? '' : 'disabled'}>${coins(art.price)}</button>`;
   return `<div class="bq-art${x.locked ? ' locked' : ''}${x.sold ? ' sold' : ''}${art.rare ? ' rare' : ''}" style="--rc:${RARC[it.rarity]}"><div class="bq-aico">${itemIcon(it)}${art.rec ? '<i class="bq-recb">Recette</i>' : ''}</div><b>${esc(art.rec ? art.rec.out[0] : art.name)}</b><span>${sub}</span>${btn}</div>`;
 }
