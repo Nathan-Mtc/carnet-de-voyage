@@ -221,7 +221,7 @@ BQ_RECIPES.forEach(r => BQ_CAT.push({ key: 'r_' + r.id, k: 'r', lvl: r.lvl, rec:
   ['m', 1, ['Bulbe de tulipe', 'm', 'graine', 0, null, '#9c6b4a']], ['m', 1, ['Graines de tournesol', 'm', 'graine', 0, null, '#a8b45a']],
 ].forEach(([k, lvl, def], i) => BQ_CAT.push({ key: 'n' + k + i, k, lvl, def }));
 // les 4 rayons du magasin, comme au marché mondial
-const BQ_MCATS = [['comp', 'Compagnons', 'Œufs de compagnons'], ['mode', 'Vêtements', 'Vêtements et accessoires'], ['res', 'Ressources', 'Ingrédients, matériaux et graines'], ['craft', 'Objets fabriqués', 'Outils, meubles et recettes']];
+const BQ_MCATS = [['comp', 'Compagnons', 'Œufs de compagnons'], ['mode', 'Vêtements', 'Vêtements et accessoires'], ['res', 'Ressources', 'Ingrédients, matériaux et graines'], ['craft', 'Objets fabriqués', 'Objets fabriqués et outils']];
 let bqMCat = 'comp';
 function bqMCatOf(x) { if (x.r) return x.r; if (x.o) return 'comp'; if (x.x) return x.x.it.cat === 'v' ? 'mode' : 'res'; const a = BQ_CAT.find(y => y.key === x.key) || {}; return a.k === 'v' ? 'mode' : a.k === 'm' ? 'res' : 'craft'; }
 
@@ -1239,8 +1239,8 @@ function renderMagasin(box) {
   h += `<p class="bq-tmw"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="#fff8ea" stroke="#5b4636" stroke-width="1.8"/><path d="M10 5.5 V10 L13 12" fill="none" stroke="#5b4636" stroke-width="1.8" stroke-linecap="round"/></svg>Nouveaux articles demain · dans <b data-bqcd="${mid.getTime()}">${fmtDur(mid.getTime() - Date.now())}</b></p>`;
   try { h += bqPassHTML(); } catch (e) { console.error('marchand', e); }
   const ic = k => { try { const c = MK_CATS.find(x => x[0] === k); return c ? `<svg viewBox="0 0 30 30" aria-hidden="true">${c[2]}</svg>` : ''; } catch (e) { return ''; } };
-  if (!BQ_MCATS.some(c => c[0] === bqMCat)) bqMCat = 'comp';
-  h += `<div class="mk-cats bq-mcats" role="tablist">${BQ_MCATS.map(([k, l]) => { const n = items.filter(x => !x.locked && !x.sold && bqMCatOf(x) === k).length; return `<button role="tab" data-bmcat="${k}" aria-selected="${bqMCat === k}">${ic(k)}<span>${l}${n ? ` <small>${n}</small>` : ''}</span></button>`; }).join('')}</div>`;
+  bqMCat = 'craft'; // v24 : le magasin ne vend plus que les objets fabriqués et outils (compagnons, œufs, vêtements, ressources : au marché mondial)
+  if (false) h += `<div class="mk-cats bq-mcats" role="tablist">${BQ_MCATS.map(([k, l]) => { const n = items.filter(x => !x.locked && !x.sold && bqMCatOf(x) === k).length; return `<button role="tab" data-bmcat="${k}" aria-selected="${bqMCat === k}">${ic(k)}<span>${l}${n ? ` <small>${n}</small>` : ''}</span></button>`; }).join('')}</div>`;
   const cat = BQ_MCATS.find(c => c[0] === bqMCat), mine = items.filter(x => bqMCatOf(x) === bqMCat);
   const open = mine.filter(x => !x.locked), locked = mine.filter(x => x.locked);
   open.sort((a, b) => (b.cc ? 1 : 0) - (a.cc ? 1 : 0));
