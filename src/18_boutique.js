@@ -223,7 +223,7 @@ BQ_RECIPES.forEach(r => BQ_CAT.push({ key: 'r_' + r.id, k: 'r', lvl: r.lvl, rec:
 // les 4 rayons du magasin, comme au marché mondial
 const BQ_MCATS = [['comp', 'Compagnons', 'Œufs de compagnons'], ['mode', 'Vêtements', 'Vêtements et accessoires'], ['res', 'Ressources', 'Ingrédients, matériaux et graines'], ['craft', 'Objets fabriqués', 'Outils, meubles et recettes']];
 let bqMCat = 'comp';
-function bqMCatOf(x) { if (x.o) return 'comp'; if (x.x) return x.x.it.cat === 'v' ? 'mode' : 'res'; const a = BQ_CAT.find(y => y.key === x.key) || {}; return a.k === 'v' ? 'mode' : a.k === 'm' ? 'res' : 'craft'; }
+function bqMCatOf(x) { if (x.r) return x.r; if (x.o) return 'comp'; if (x.x) return x.x.it.cat === 'v' ? 'mode' : 'res'; const a = BQ_CAT.find(y => y.key === x.key) || {}; return a.k === 'v' ? 'mode' : a.k === 'm' ? 'res' : 'craft'; }
 
 // ---------------- état ----------------
 let bView = 'comptoir';
@@ -259,6 +259,34 @@ function bqState() {
 function bqLevelOf(rep) { let l = 0; BQ_LEVELS.forEach((L, i) => { if (rep >= L.rep) l = i; }); return l; }
 const bqHome = () => { try { return typeof rgHome === 'function' ? rgHome() : null; } catch (e) { return null; } };
 const bqRound5 = n => Math.max(5, Math.round(n / 5) * 5);
+
+// ---------------- pierres d'étoile (v22) ----------------
+// S.stones : seconde monnaie, rare (0 par défaut, les anciennes sauvegardes démarrent à 0).
+// On en gagne avec certaines commandes du comptoir (Normal : 1 fois sur 3, Défi : 2 ou 3), les défis et la fin des histoires (5 à 10).
+// PRÉVU POUR PLUS TARD : un tirage façon Dokkan Battle (invocation). Le tirage n'existe pas encore : ne pas dépenser S.stones ailleurs.
+function stonesN() { if (typeof S.stones !== 'number' || !isFinite(S.stones) || S.stones < 0) S.stones = 0; return S.stones; }
+function gainStones(n) {
+  n = Math.max(0, Math.round(n || 0)); stonesN(); if (!n) return 0;
+  S.stones += n;
+  try { renderTop(); const e = document.getElementById('stones'); if (e) { e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); } } catch (e) {}
+  return n;
+}
+// petite étoile cristal (facettes claires et foncées)
+const STONE_SVG = '<svg class="stone" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 1.4 L12.4 7.1 L18.6 7.6 L13.8 11.6 L15.3 17.8 L10 14.5 L4.7 17.8 L6.2 11.6 L1.4 7.6 L7.6 7.1Z" fill="#9fdcf6" stroke="#3d4f99" stroke-width="1.3" stroke-linejoin="round"/><path d="M10 1.4 L10 10 L1.4 7.6 L7.6 7.1Z M10 10 L15.3 17.8 L10 14.5Z M10 10 L18.6 7.6 L13.8 11.6Z" fill="#c7b6ff"/><path d="M10 1.4 L12.4 7.1 L10 10Z M10 10 L4.7 17.8 L6.2 11.6Z" fill="#e8f8ff"/><path d="M10 1.4 V10 L18.6 7.6 M10 10 L15.3 17.8 M10 10 L4.7 17.8 M10 10 L1.4 7.6" fill="none" stroke="#3d4f99" stroke-width=".5" opacity=".55"/><circle cx="7.2" cy="5.6" r=".9" fill="#fff"/></svg>';
+const stonesHTML = n => `<span class="money stonem">${STONE_SVG}${Math.round(n)}</span>`;
+const stonesWord = n => `${n} pierre${n > 1 ? 's' : ''} d’étoile`;
+// solde discret dans le HUD, à côté des pièces (créé à la volée : rien à changer dans shell.html)
+if (typeof renderTop === 'function') renderTop = (orig => function () {
+  const r = orig.apply(this, arguments);
+  try {
+    const c = document.getElementById('coins'); if (!c) return r;
+    let e = document.getElementById('stones');
+    if (!e) { e = document.createElement('button'); e.id = 'stones'; e.type = 'button'; e.className = 'stonep'; c.insertAdjacentElement('afterend', e); }
+    const n = stonesN(); e.innerHTML = STONE_SVG + '<b>' + n + '</b>'; e.setAttribute('aria-label', stonesWord(n));
+  } catch (e) {}
+  return r;
+})(renderTop);
+document.addEventListener('click', ev => { if (!ev.target.closest('#stones')) return; const n = stonesN(); toast(`${stonesWord(n)}. Gardez-les précieusement : elles serviront bientôt à un tirage spécial !`); });
 
 // ---------------- objets : compter, réserver, consommer ----------------
 function bqWorn() { const s = new Set(); for (const o of Object.values(S.outfits || {})) if (o && o.worn) for (const [sl, id] of Object.entries(o.worn)) if (id && o[sl] && o[sl] !== 'none') s.add(id); return s; }
@@ -708,48 +736,107 @@ function bqStepFor(r) {
 // prix réduits par la spécialité du commerce (farine à la boulangerie, vêtements à la mode, œufs à l'animalerie)
 function bqCheapF(it, egg) { const T = bqType(); if (!T) return 1; if (egg) return T.eggs ? 0.8 : 1; const c = T.cheap; if (!c || !it) return 1; return (c.subs && c.subs.includes(it.sub)) || (c.cats && c.cats.includes(it.cat)) ? c.f : 1; }
 function bqArticle(a) {
+  const art = bqArticle0(a);
+  // coup de cœur du jour : −30 %
+  if (a && a.cc && art) { art.was = art.price; art.price = bqRound5(art.price * 0.7); art.cc = 1; }
+  return art;
+}
+function bqArticle0(a) {
   if (a.k === 'o') { const sn = a.sp ? bqSpName(a.sp).toLowerCase() : '', nm = a.sp ? `Œuf ${/^[aeiouyéèh]/.test(sn) ? 'd’' : 'de '}${sn}` : 'Œuf commun'; return { egg: { sp: a.sp }, it: { name: nm, cat: 'o', rarity: a.sp ? 2 : 1 }, price: bqRound5(a.price * bqCheapF(null, 1)), name: nm }; }
   if (a.k === 'r') { const r = BQ_RECIPES.find(x => x.id === a.rec); return { rec: r, it: bqItemOf(r.out), price: r.price, name: `Recette : ${r.out[0]}` }; }
-  if (a.k === 'x') return { it: a.it, price: a.price, name: a.it.name, rare: 1 };
+  if (a.k === 'x') return { it: a.it, price: a.price, name: a.it.name, rare: a.lt ? 0 : 1 };
   const it = bqItemOf(a.def);
   return { it, price: bqRound5(value({ ...it, id: '' }) * 1.5 * bqCheapF(it)), name: it.name };
 }
+// v22 : VITRINE DU JOUR. 10 à 12 articles par rayon (catalogue + objets du monde entier, LOOT), renouvelés chaque jour
+// (graine dayKey), et 1 « coup de cœur » à −30 % par rayon. Les prix suivent value() × 1,5 comme le reste du magasin.
+const BQ_PER = L => 10 + (L >= 2 ? 1 : 0) + (L >= 4 ? 1 : 0);
+const BQ_NOSHOP = new Set(['outil', 'coffre', 'cle', 'gemme', 'fragment']);
+function bqLootPool(f) {
+  const seen = new Set(), out = [];
+  try { Object.values(LOOT).forEach(a => a.forEach(d => { if (!Array.isArray(d) || seen.has(d[0]) || !f(d)) return; seen.add(d[0]); out.push(d); })); } catch (e) {}
+  return out;
+}
 function bqStock() {
   const s = bqState(), dk = dayKey(), L = s.lvl, T = bqType(), tid = T ? T.id : '';
-  if (s.stock.day === dk && s.stock.lvl === L && (s.stock.type || '') === tid && s.stock.items.length && s.stock.v === 2) return s.stock.items;
+  if (s.stock.day === dk && s.stock.lvl === L && (s.stock.type || '') === tid && s.stock.items.length && s.stock.v === 3) return s.stock.items;
   // les articles achetés aujourd'hui restent achetés, même si l'on change de commerce
   const keep = s.stock.day === dk ? new Set([...(s.stock.sold || []), ...s.stock.items.filter(x => x.sold).map(x => x.key)]) : new Set();
   seed(dk * 13 + 7 + L * 101 + [...tid].reduce((a, ch) => a + ch.charCodeAt(0) * 31, 0));
   const sh = arr => { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(srand() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const n = bqLv(L).stock;
-  const ok = BQ_CAT.filter(a => a.lvl <= L && !(a.k === 'r' && s.recipes.includes(a.rec)));
-  // un panaché : vêtements, décos, matériaux, et une recette dès le niveau 2
-  const byK = k => sh(ok.filter(a => a.k === k));
-  const out = [];
-  // chaque rayon a ses articles : vêtements, ressources (dont graines), objets fabriqués (meubles, outils, recette)
-  const plan = { v: 2 + Math.floor(n / 3), m: 2 + Math.floor(n / 3), d: 1 + Math.floor(n / 5), t: L >= 2 ? 2 : 1, r: L >= 1 ? 1 : 0 };
-  for (const [k, c] of Object.entries(plan)) out.push(...byK(k).slice(0, c));
-  const items = out.map(a => ({ key: a.key }));
-  // parfois un article rare (dès « Maison réputée »)
+  const per = BQ_PER(L), ok = BQ_CAT.filter(a => a.lvl <= L && !(a.k === 'r' && s.recipes.includes(a.rec)));
+  const lootArt = (d, r) => { const it = bqItemOf(d); return { key: 'l' + hashStr(d[0]).toString(36), r, x: { it, lt: 1, price: bqRound5(value({ ...it, id: '' }) * 1.5 * bqCheapF(it)) } }; };
+  // un rayon : environ 55 % d'articles du catalogue de la boutique, le reste en objets du monde entier
+  const shelf = (r, cat, loot) => { const c = sh(cat).slice(0, Math.ceil(per * 0.55)).map(a => ({ key: a.key, r })); return sh(c.concat(sh(loot).slice(0, per - c.length).map(d => lootArt(d, r)))); };
+  const rMax = Math.min(3, 1 + Math.floor(L / 2));
+  const mode = shelf('mode', ok.filter(a => a.k === 'v'), bqLootPool(d => d[1] === 'v' && d[3] <= rMax && d[4]));
+  const res = shelf('res', ok.filter(a => a.k === 'm'), bqLootPool(d => (d[1] === 'm' || d[1] === 'n') && d[3] <= (L >= 3 ? 2 : 1) && !BQ_NOSHOP.has(d[2])));
+  const craft = shelf('craft', ok.filter(a => a.k === 'd' || a.k === 't' || a.k === 'r'), bqLootPool(d => d[1] === 'd' && d[3] <= rMax));
+  // parfois un article rare d'une région (dès « Maison réputée »)
   if (L >= 2 && srand() < 0.6 && typeof REGIONS !== 'undefined') {
     const pool = []; REGIONS.forEach(R => R.res.forEach(x => { if (x.rar >= 2 && x.rar <= (L >= 5 ? 4 : 3)) pool.push(x); }));
     const x = pool[Math.floor(srand() * pool.length)];
-    if (x) { const R = RG[x.region], km = kmBetween(homeObj(), { lon: R.anchor[0], lat: R.anchor[1] }); const it = { name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color, rid: x.id, origin: { region: R.id, place: R.short, km } }; items.push({ key: 'x_' + x.id, x: { it, price: bqRound5(value({ ...it, id: '' }) * 1.6) } }); }
+    if (x) { const R = RG[x.region], km = kmBetween(homeObj(), { lon: R.anchor[0], lat: R.anchor[1] }); const it = { name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color, rid: x.id, origin: { region: R.id, place: R.short, km } }; (x.cat === 'v' ? mode : res).push({ key: 'x_' + x.id, r: x.cat === 'v' ? 'mode' : 'res', x: { it, price: bqRound5(value({ ...it, id: '' }) * 1.6) } }); }
   }
-  // œufs de compagnons : un œuf commun (espèce surprise) chaque jour, parfois un œuf d'une espèce précise ; l'animalerie en a plus
-  const sps = bqSpIds();
-  items.unshift({ key: 'o_commun', o: { sp: null, price: 120 } });
-  if (T && T.eggs) items.unshift({ key: 'o_commun2', o: { sp: null, price: 120 } });
-  if (srand() < (T && T.eggs ? 1 : 0.35)) { const sp = sps[Math.floor(srand() * sps.length)]; items.unshift({ key: 'o_' + sp, o: { sp, price: 220 } }); }
-  if (T && T.eggs && L >= 2) { const sp = sps[Math.floor(srand() * sps.length)]; if (!items.some(x => x.key === 'o_' + sp)) items.unshift({ key: 'o_' + sp, o: { sp, price: 220 } }); }
+  // œufs : un œuf commun (espèce surprise), puis des œufs d'espèces précises ; l'animalerie en a deux communs
+  const comp = [{ key: 'o_commun', r: 'comp', o: { sp: null, price: 120 } }];
+  if (T && T.eggs) comp.push({ key: 'o_commun2', r: 'comp', o: { sp: null, price: 120 } });
+  sh(bqSpIds()).slice(0, per - comp.length).forEach(sp => comp.push({ key: 'o_' + sp, r: 'comp', o: { sp, price: 220 } }));
+  // un coup de cœur par rayon (jamais un article déjà acheté aujourd'hui)
+  // un coup de cœur par rayon, parmi les articles les plus chers (jamais un article déjà acheté aujourd'hui)
+  const pr = x => { try { return bqArticle0(bqStockArticle(x)).price; } catch (e) { return 0; } };
+  [comp, mode, res, craft].forEach(list => { const c = list.filter(x => !keep.has(x.key)).sort((a, b) => pr(b) - pr(a)); const top = c.slice(0, Math.max(1, Math.ceil(c.length / 3))); const x = top[Math.floor(srand() * top.length)]; if (x) x.cc = 1; });
+  const items = [...comp, ...mode, ...res, ...craft];
   // articles du niveau suivant : visibles mais verrouillés, pour donner envie
   if (L < BQ_LEVELS.length - 1) ['v', 'm', 'd', 't'].forEach(k => sh(BQ_CAT.filter(a => a.k === k && a.lvl === L + 1)).slice(0, 2).forEach(a => items.push({ key: a.key, locked: 1 })));
   items.forEach(x => { if (keep.has(x.key)) x.sold = 1; });
-  s.stock = { day: dk, lvl: L, type: tid, items, sold: [...keep], v: 2 };
+  s.stock = { day: dk, lvl: L, type: tid, items, sold: [...keep], v: 3 };
   save();
   return items;
 }
-function bqStockArticle(x) { if (x.o) return { k: 'o', sp: x.o.sp, price: x.o.price }; if (x.x) return { k: 'x', it: x.x.it, price: x.x.price }; return BQ_CAT.find(a => a.key === x.key); }
+function bqStockArticle(x) {
+  if (x.o) return { k: 'o', sp: x.o.sp, price: x.o.price, cc: x.cc };
+  if (x.x) return { k: 'x', it: x.x.it, price: x.x.price, lt: x.x.lt, cc: x.cc };
+  const a = BQ_CAT.find(y => y.key === x.key); return a ? Object.assign({}, a, { cc: x.cc }) : null;
+}
+
+// v22 : MARCHANDS DE PASSAGE. Toutes les 3 heures, un client du comptoir revient d'une région lointaine (REGIONS)
+// et vend 4 à 6 spécialités de là-bas (RG_RES). Encadré en haut du magasin, compte à rebours, aucune notification.
+const BQ_PASS_MS = 3 * 3600e3;
+const bqPassSlot = () => Math.floor(Date.now() / BQ_PASS_MS);
+function bqPass() {
+  if (typeof REGIONS === 'undefined' || !REGIONS.length) return null;
+  const slot = bqPassSlot(), r = rng(hashStr('passage' + slot + '|' + (S.home || '')) || 1), h = bqHome(), me = homeObj();
+  const far = [], other = [];
+  REGIONS.forEach(R => { if (!R.res || R.res.length < 4 || R.id === 'grand_large' || (h && R.id === h.id)) return; other.push(R); try { if (kmBetween(me, { lon: R.anchor[0], lat: R.anchor[1] }) > 1500) far.push(R); } catch (e) {} });
+  const pool = far.length ? far : other; if (!pool.length) return null;
+  const R = pool[Math.floor(r() * pool.length)], c = BQ_CLIENTS[Math.floor(r() * BQ_CLIENTS.length)];
+  // ses plus belles spécialités d'abord (les plus rares), dans un ordre mélangé
+  const n = Math.min(R.res.length, 4 + Math.floor(r() * 3));
+  const res = R.res.slice().sort((a, b) => b.rar - a.rar).slice(0, n); for (let i = res.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [res[i], res[j]] = [res[j], res[i]]; }
+  const km = (() => { try { return kmBetween(me, { lon: R.anchor[0], lat: R.anchor[1] }); } catch (e) { return 0; } })();
+  const items = res.slice(0, n).map(x => { const it = { name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar, color: x.color, rid: x.id, origin: { region: R.id, place: R.short, km } }; return { id: x.id, it, price: bqRound5(value({ ...it, id: '' }) * 1.6) }; });
+  const s = bqState(); if (!s.pass || typeof s.pass !== 'object' || s.pass.slot !== slot) s.pass = { slot, sold: [] };
+  if (!Array.isArray(s.pass.sold)) s.pass.sold = [];
+  return { slot, R, c, km, items, sold: s.pass.sold, end: (slot + 1) * BQ_PASS_MS };
+}
+function bqPassBuy(id, el) {
+  const P = bqPass(); if (!P) return; const x = P.items.find(y => y.id === id); if (!x || P.sold.includes(id)) return;
+  if (S.coins < x.price) { toast('Pas assez de pièces. Livrez une commande au Comptoir !'); return; }
+  S.coins -= x.price; P.sold.push(id);
+  const it = makeItem([x.it.name, x.it.cat, x.it.sub, x.it.rarity, null, x.it.color], 0, `${P.c.name}, marchand de passage`, [], { fixed: x.it.rarity });
+  it.rid = x.it.rid; it.origin = Object.assign({}, x.it.origin); it.paid = x.price;
+  S.inv.push(it); S.dex[it.name] = true; S.stats.shopBought = (S.stats.shopBought || 0) + 1;
+  save(); bqFly(el, x.it); renderTop(); renderPanel(); toast(`Acheté à ${P.c.name} : « ${it.name} », tout droit ${rgDe(P.R)} !`);
+}
+function bqPassHTML() {
+  const P = bqPass(); if (!P) return '';
+  const cards = P.items.map(x => {
+    const sold = P.sold.includes(x.id), can = S.coins >= x.price;
+    return `<div class="bq-pi${sold ? ' sold' : ''}" style="--rc:${RARC[x.it.rarity] || RARC[0]}"><span class="bq-aico">${itemIcon(x.it)}</span><b>${esc(x.it.name)}</b><small>${esc(RARITY[x.it.rarity] || '')}</small>${sold ? '<span class="bq-sold">Acheté</span>' : `<button class="btn ${can ? 'gold' : 'cream'} sm" data-bqpass="${esc(x.id)}" ${can ? '' : 'disabled'}>${coins(x.price)}</button>`}</div>`;
+  }).join('');
+  return `<section class="bq-pass" style="--pc:${P.R.color || '#c98a5a'}"><div class="bq-ph"><img src="${clientURI(P.c, 'content')}" alt=""><div><small>Marchand de passage</small><b>${esc(P.c.name)}, tout droit ${esc(rgDe(P.R))}</b><span>Des spécialités introuvables ici${P.km ? `, à ${Math.round(P.km).toLocaleString('fr-FR')} km` : ''}. Repart dans <b data-bqcd="${P.end}">${fmtDur(P.end - Date.now())}</b></span></div></div><div class="bq-prow">${cards}</div></section>`;
+}
 function bqBuy(key, el) {
   const s = bqState(), x = bqStock().find(y => y.key === key); if (!x || x.sold || x.locked) return;
   const a = bqStockArticle(x); if (!a) return;
@@ -1147,27 +1234,32 @@ function renderComptoir(box) {
 }
 function renderMagasin(box) {
   const s = bqState(), items = bqStock();
-  let h = phead(null, 'Le magasin', `Les articles du jour, changés chaque matin. Vous avez ${coins(S.coins)}.`);
+  const mid = new Date(); mid.setHours(24, 0, 0, 0);
+  let h = phead(null, 'Le magasin', `La vitrine du jour. Vous avez ${coins(S.coins)} et ${stonesHTML(stonesN())}.`);
+  h += `<p class="bq-tmw"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="#fff8ea" stroke="#5b4636" stroke-width="1.8"/><path d="M10 5.5 V10 L13 12" fill="none" stroke="#5b4636" stroke-width="1.8" stroke-linecap="round"/></svg>Nouveaux articles demain · dans <b data-bqcd="${mid.getTime()}">${fmtDur(mid.getTime() - Date.now())}</b></p>`;
+  try { h += bqPassHTML(); } catch (e) { console.error('marchand', e); }
   const ic = k => { try { const c = MK_CATS.find(x => x[0] === k); return c ? `<svg viewBox="0 0 30 30" aria-hidden="true">${c[2]}</svg>` : ''; } catch (e) { return ''; } };
   if (!BQ_MCATS.some(c => c[0] === bqMCat)) bqMCat = 'comp';
   h += `<div class="mk-cats bq-mcats" role="tablist">${BQ_MCATS.map(([k, l]) => { const n = items.filter(x => !x.locked && !x.sold && bqMCatOf(x) === k).length; return `<button role="tab" data-bmcat="${k}" aria-selected="${bqMCat === k}">${ic(k)}<span>${l}${n ? ` <small>${n}</small>` : ''}</span></button>`; }).join('')}</div>`;
   const cat = BQ_MCATS.find(c => c[0] === bqMCat), mine = items.filter(x => bqMCatOf(x) === bqMCat);
   const open = mine.filter(x => !x.locked), locked = mine.filter(x => x.locked);
+  open.sort((a, b) => (b.cc ? 1 : 0) - (a.cc ? 1 : 0));
   h += `<h3 class="bq-h3">${cat[2]}</h3>` + (open.length ? `<div class="bq-grid">${open.map(x => bqShopCard(x)).join('')}</div>` : `<p class="small">Rien dans ce rayon aujourd’hui : revenez demain.</p>`);
   if (locked.length) h += `<h3 class="bq-h3 bq-lockh">Au niveau « ${esc(bqLv(s.lvl + 1).name)} »</h3><div class="bq-grid">${locked.map(x => bqShopCard(x)).join('')}</div><p class="small">Livrez des commandes au Comptoir pour gagner de la réputation et débloquer ces articles.</p>`;
   box.innerHTML = h;
 }
 document.addEventListener('click', ev => { const el = ev.target.closest('[data-bmcat]'); if (!el) return; bqMCat = el.dataset.bmcat; renderPanel(); });
+document.addEventListener('click', ev => { const el = ev.target.closest('[data-bqpass]'); if (!el || el.disabled) return; bqPassBuy(el.dataset.bqpass, el); });
 function bqShopCard(x) {
   const a = bqStockArticle(x); if (!a) return '';
   const art = bqArticle(a), it = art.it, can = S.coins >= art.price;
   if (art.egg) {
-    const btn = x.sold ? '<span class="bq-sold">Acheté</span>' : `<button class="btn ${can ? 'gold' : 'cream'} sm" data-bbuy="${x.key}" ${can ? '' : 'disabled'}>${coins(art.price)}</button>`;
-    return `<div class="bq-art bq-eggart${x.sold ? ' sold' : ''}" style="--rc:${RARC[it.rarity]}"><div class="bq-aico bq-eggi">${bqEggSVG(art.egg.sp, 'bqse' + x.key)}</div><b>${esc(art.name)}</b><span>${art.egg.sp ? `${esc(bqSpName(art.egg.sp))} garanti` : 'Espèce surprise'} · éclot en 3 min</span>${btn}</div>`;
+    const btn = (art.cc && !x.sold ? `<s class="bq-was">${coins(art.was)}</s>` : '') + (x.sold ? '<span class="bq-sold">Acheté</span>' : `<button class="btn ${can ? 'gold' : 'cream'} sm" data-bbuy="${x.key}" ${can ? '' : 'disabled'}>${coins(art.price)}</button>`);
+    return `<div class="bq-art bq-eggart${x.sold ? ' sold' : ''}${art.cc ? ' cc' : ''}" style="--rc:${RARC[it.rarity]}"><div class="bq-aico bq-eggi">${bqEggSVG(art.egg.sp, 'bqse' + x.key)}</div><b>${esc(art.name)}</b><span>${art.egg.sp ? `${esc(bqSpName(art.egg.sp))} garanti` : 'Espèce surprise'} · éclot en 3 min</span>${btn}</div>`;
   }
   const sub = it.sub === 'outil' && typeof famUseLine === 'function' ? esc(famUseLine(it) || 'Outil') : art.rec ? `Recette · ${art.rec.kind}` : it.rid ? `${RARITY[it.rarity]} · spécialité ${typeof RG !== 'undefined' && RG[it.origin.region] ? esc(rgDe(RG[it.origin.region])) : ''}` : `${RARITY[it.rarity]} · ${it.cat === 'v' ? SLOT_LABEL[it.sub] : CAT_LABEL[it.cat]}`;
-  const btn = x.locked ? `<span class="bq-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="10.5" width="13" height="10" rx="2.5" fill="#cfc5b4" stroke="#5b4636" stroke-width="2"/><path d="M8.5 10.5 V8 a3.5 3.5 0 0 1 7 0 V10.5" stroke="#5b4636" stroke-width="2.2" fill="none"/></svg>Niveau ${a.lvl + 1}</span>` : x.sold ? '<span class="bq-sold">Acheté</span>' : `<button class="btn ${can ? 'gold' : 'cream'} sm" data-bbuy="${x.key}" ${can ? '' : 'disabled'}>${coins(art.price)}</button>`;
-  return `<div class="bq-art${x.locked ? ' locked' : ''}${x.sold ? ' sold' : ''}${art.rare ? ' rare' : ''}" style="--rc:${RARC[it.rarity]}"><div class="bq-aico">${itemIcon(it)}${art.rec ? '<i class="bq-recb">Recette</i>' : ''}</div><b>${esc(art.rec ? art.rec.out[0] : art.name)}</b><span>${sub}</span>${btn}</div>`;
+  const btn = x.locked ? `<span class="bq-lock"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="10.5" width="13" height="10" rx="2.5" fill="#cfc5b4" stroke="#5b4636" stroke-width="2"/><path d="M8.5 10.5 V8 a3.5 3.5 0 0 1 7 0 V10.5" stroke="#5b4636" stroke-width="2.2" fill="none"/></svg>Niveau ${a.lvl + 1}</span>` : x.sold ? '<span class="bq-sold">Acheté</span>' : `${art.cc ? `<s class="bq-was">${coins(art.was)}</s>` : ''}<button class="btn ${can ? 'gold' : 'cream'} sm" data-bbuy="${x.key}" ${can ? '' : 'disabled'}>${coins(art.price)}</button>`;
+  return `<div class="bq-art${x.locked ? ' locked' : ''}${x.sold ? ' sold' : ''}${art.rare && !art.cc ? ' rare' : ''}${art.cc ? ' cc' : ''}" style="--rc:${RARC[it.rarity]}"><div class="bq-aico">${itemIcon(it)}${art.rec ? '<i class="bq-recb">Recette</i>' : ''}</div><b>${esc(art.rec ? art.rec.out[0] : art.name)}</b><span>${sub}</span>${btn}</div>`;
 }
 function renderBoutique(box) {
   bqState();
@@ -1286,12 +1378,16 @@ document.addEventListener('click', ev => {
 });
 
 // horloge : arrivée des clients, délais, comptes à rebours
+let bqLastPass = null, bqLastDay = null;
 function bqTick() {
   try {
     const changed = bqTickOrders();
     if (changed) { save(); if (tab === 'boutique' && bView === 'comptoir') renderPanel(); else if (typeof renderNav === 'function') renderNav(); }
     const now = Date.now();
     document.querySelectorAll('[data-bqcd]').forEach(e => { e.textContent = fmtDur(+e.dataset.bqcd - now); });
+    // le marchand de passage repart : le suivant s'installe (le magasin se redessine s'il est ouvert)
+    const ps = bqPassSlot(); if (ps !== bqLastPass) { const was = bqLastPass; bqLastPass = ps; if (was != null && tab === 'boutique' && bView === 'magasin') renderPanel(); }
+    if (bqLastDay !== dayKey()) { const was = bqLastDay; bqLastDay = dayKey(); if (was != null && tab === 'boutique' && bView === 'magasin') renderPanel(); }
   } catch (e) { console.error('boutique', e); }
 }
 bqState(); bqTickOrders(); bqReadyIds = new Set(bqState().orders.filter(bqReady).map(o => o.id));
@@ -1455,12 +1551,26 @@ setInterval(bqTick, 4000);
 @media (max-width:420px){.bqc-acts .btn{font-size:14.5px}}
 .mbox:has(.bqc){max-width:560px}
 @media (min-width:700px){.bqc-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.hright{position:relative}.stonep{position:absolute;top:calc(100% + 3px);right:52px;z-index:2;display:inline-flex;align-items:center;gap:2px;background:rgba(255,255,255,.75);border:2px solid var(--ink);border-radius:999px;padding:1px 7px 1px 3px;font:800 13px var(--display);color:#3d4f99;cursor:pointer;box-shadow:0 2px 0 var(--ink);align-self:center}
+.stonep .stone{width:18px;height:18px}.stonep.bump{animation:purseBump .45s cubic-bezier(.2,1.8,.4,1)}
+.money .stone,.stonem .stone{width:16px;height:16px}.stonem{color:#3d4f99;font-weight:800}
+.bq-tmw{display:flex;align-items:center;gap:6px;margin:-4px 0 10px;font:700 12.5px var(--display);color:var(--ink2)}.bq-tmw svg{width:16px;height:16px;flex:none}
+.bq-pass{border:2.5px solid var(--ink);border-radius:18px;background:linear-gradient(135deg,#fff8ea,#fdeedd);box-shadow:0 3px 0 rgba(74,53,40,.25),inset 0 0 0 4px color-mix(in srgb,var(--pc) 28%,transparent);padding:10px;margin:0 0 12px}
+.bq-ph{display:flex;align-items:center;gap:8px}.bq-ph img{width:58px;height:58px;flex:none;border-radius:50%;background:color-mix(in srgb,var(--pc) 30%,#fff);border:2px solid var(--ink)}
+.bq-ph div{display:flex;flex-direction:column;min-width:0;line-height:1.2}.bq-ph small{font:800 10.5px var(--display);text-transform:uppercase;letter-spacing:.04em;color:#fff;background:var(--pc);border:1.5px solid var(--ink);border-radius:8px;padding:2px 6px;align-self:flex-start}
+.bq-ph b{font:800 15px var(--display);margin-top:2px}.bq-ph span{font-size:12px;color:var(--ink2)}.bq-ph span b{font-size:12.5px}
+.bq-prow{display:flex;gap:6px;overflow-x:auto;padding:8px 2px 2px;scrollbar-width:thin}
+.bq-pi{flex:none;width:96px;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;background:#fff;border:2px solid var(--ink);border-radius:12px;padding:6px 4px}
+.bq-pi .bq-aico{width:46px;height:46px}.bq-pi .bq-aico svg{width:36px;height:36px}.bq-pi b{font:700 11.5px/1.1 var(--display)}.bq-pi small{font-size:10px;color:var(--muted)}.bq-pi .btn{margin-top:auto}.bq-pi.sold{opacity:.55}
+.bq-art.cc{grid-column:span 2;background:linear-gradient(#fff,#ffeef3);border-color:#e0607e;box-shadow:0 3px 0 #c24a68}
+.bq-art.cc::before{content:"Coup de cœur · −30 %";position:absolute;top:-10px;left:50%;transform:translateX(-50%);white-space:nowrap;background:#e0607e;color:#fff;font:800 12px/1 var(--display);padding:4px 9px;border-radius:9px;border:2px solid var(--ink)}
+.bq-was{font-size:11.5px;color:var(--muted);text-decoration:line-through;margin-top:auto}.bq-was+.btn{margin-top:2px}
 `;
   document.head.appendChild(st);
 })();
 
 window.__boutique = {
-  open: openBoutique, render: renderBoutique, badge: shopBadge, ready: shopReady, state: bqState, tick: bqTick, stock: bqStock,
+  open: openBoutique, render: renderBoutique, badge: shopBadge, ready: shopReady, state: bqState, tick: bqTick, stock: bqStock, pass: bqPass, stones: stonesN, gainStones,
   clients: BQ_CLIENTS, levels: BQ_LEVELS, clientSVG, shopSVG: bqShopSVG,
   // tests : fournir ce qu'une commande demande
   fill(id) {

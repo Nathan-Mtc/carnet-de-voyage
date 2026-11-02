@@ -50,15 +50,17 @@ function qtRwIco(rw) {
   if (rw.k === 'cloth') return qtIco(bqItemOf(rw.def));
   if (rw.k === 'rec') return qtCall(() => CM_SCROLL, QT_SCROLL);
   if (rw.k === 'secret') return QT_FLAG;
+  if (rw.k === 'item' && rw.def) return qtIco(bqItemOf(rw.def));
   return QT_TROPHY;
 }
 function qtRwTxt(rw) {
-  const c = rw.coins ? ` + ${rw.coins} pièces` : '';
+  const c = (rw.also ? ` + ${rw.also[0]}` : '') + (rw.coins ? ` + ${rw.coins} pièces` : '') + (rw.stones ? ` + ${qtCall(() => stonesWord(rw.stones), rw.stones + ' pierres d’étoile')}` : '');
+  if (rw.k === 'item' && rw.def) return `${rw.lbl || 'Objet rare'} : ${rw.def[0]}${c}`;
   if (rw.k === 'egg') return `Œuf de ${qtCall(() => bqSpName(rw.sp), rw.sp).toLowerCase()}, variante unique${c}`;
   if (rw.k === 'cloth') return `Tenue exclusive : ${rw.def[0]}${c}`;
   if (rw.k === 'rec') return `Recette exclusive de votre commerce${c}`;
   if (rw.k === 'secret') return `Un lieu secret${c}`;
-  return `${rw.coins} pièces`;
+  return `${rw.coins} pièces${rw.stones ? ` + ${qtCall(() => stonesWord(rw.stones), '')}` : ''}`;
 }
 function qtGrant(rw, from) {
   let txt = qtRwTxt(rw);
@@ -76,8 +78,12 @@ function qtGrant(rw, from) {
       const r = typeof tzGiveRumor === 'function' ? tzGiveRumor(null, from, rw.near ? { lon: rw.near[0], lat: rw.near[1] } : null) : null;
       if (r) setTimeout(() => { try { tzRumorToast(from + ' vous confie un lieu secret', r); } catch (e) {} }, 1400);
       else { gainCoins(250); txt = '250 pièces'; }
+    } else if (rw.k === 'item' && rw.def) {
+      const it = makeItem(rw.def, 0, `Récompense : ${from}`, [], { fixed: rw.def[3] }); it.qt = 1; S.inv.push(it); S.dex[it.name] = true;
     }
+    if (Array.isArray(rw.also)) { const it = makeItem(rw.also, 0, `Récompense : ${from}`, [], { fixed: rw.also[3] }); S.inv.push(it); S.dex[it.name] = true; txt = txt.replace(` + ${rw.also[0]}`, ` + « ${rw.also[0]} »`); }
     if (rw.coins) gainCoins(rw.coins);
+    if (rw.stones && typeof gainStones === 'function') gainStones(rw.stones); // S.stones : réservé au futur tirage
   } catch (e) { console.error('quêtes récompense', e); }
   save(); return txt;
 }
@@ -214,11 +220,14 @@ const QT_DEFIS = [
   { id: 'reg5', title: 'Le tour express', txt: 'Visiter 5 régions différentes en 7 jours', n: 5, cur: qtWeekRegs, rw: { k: 'cloth', def: ['Cape du grand tour', 'v', 'dos', 4, 'cape', '#2f7f6c'], coins: 1200 } },
   { id: 'star3', title: 'Maître artisan', txt: 'Fabriquer un produit 3 étoiles de chaque recette de base de votre commerce', n: () => Math.max(1, qtShopRecs().length), cur: () => qtShopRecs().filter(R => qtState().log.m3[R.id]).length, rw: { k: 'rec', coins: 1500 } },
   { id: 'relic', title: 'Relique complète', txt: 'Assembler les 3 fragments d’une relique à l’atelier', n: 1, cur: () => qtCall(() => Object.keys(famState().relics).length, 0), rw: { k: 'secret', coins: 1200 } },
-  { id: 'far3', title: 'Au bout du monde', txt: 'Faire 3 voyages à plus de 5 000 km de chez vous', n: 3, cur: () => qtState().log.far, rw: { k: 'coins', coins: 2000 } },
-  { id: 'chest5', title: 'Chasseur de coffres', txt: 'Ouvrir 5 coffres avec la bonne clé', n: 5, cur: () => qtState().log.chests, rw: { k: 'egg', sp: 'quokka', coins: 1000 } },
+  { id: 'far3', title: 'Au bout du monde', txt: 'Faire 3 voyages à plus de 5 000 km de chez vous', n: 3, cur: () => qtState().log.far, rw: { k: 'item', lbl: 'Pierre précieuse', def: ['Diamant brut', 'm', 'gemme', 4, null, '#e8f4fa'], coins: 1500 } },
+  { id: 'chest5', title: 'Chasseur de coffres', txt: 'Ouvrir 5 coffres avec la bonne clé', n: 5, cur: () => qtState().log.chests, rw: { k: 'egg', sp: 'quokka', also: ['Clé ancienne', 'm', 'cle', 3, null, '#7a6a5a'], coins: 1000 } },
   { id: 'sp6', title: 'Grande famille', txt: 'Avoir des compagnons de 6 espèces différentes', n: 6, cur: qtSpecies, rw: { k: 'cloth', def: ['Couronne de fleurs du refuge', 'v', 'tete', 4, 'fleurs', '#f08aa6'], coins: 1500 } },
-  { id: 'nat12', title: 'Cabinet de curiosités', txt: 'Posséder 12 objets Nature différents (insectes, coquillages…)', n: 12, cur: qtNatureN, rw: { k: 'coins', coins: 1500 } },
+  { id: 'nat12', title: 'Cabinet de curiosités', txt: 'Posséder 12 objets Nature différents (insectes, coquillages…)', n: 12, cur: qtNatureN, rw: { k: 'item', lbl: 'Décoration légendaire', def: ['Vitrine de curiosités', 'd', 'statue', 4, null, '#c9a97a'], coins: 1000 } },
 ];
+// v22 : pierres d'étoile (S.stones, futur tirage) : 5 à 10 à la fin d'une histoire (selon sa longueur), 8 à 10 par défi
+QT_STORIES.forEach(q => { if (q.rw && q.rw.stones == null) q.rw.stones = Math.max(5, Math.min(10, q.steps.length + 2)); });
+QT_DEFIS.forEach((d, i) => { if (d.rw && d.rw.stones == null) d.rw.stones = [10, 8, 9, 10, 9, 8, 9, 8][i] || 8; });
 const qtDN = d => (typeof d.n === 'function' ? d.n() : d.n);
 function qtClaimDefi(id) {
   const d = QT_DEFIS.find(x => x.id === id), s = qtState(); if (!d || s.df[id]) return;

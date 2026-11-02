@@ -320,16 +320,39 @@ function cmFarRes() {
   const h = cmHome(), pool = []; REGIONS.forEach(R => { if (R.id !== h && R.id !== 'grand_large') R.res.forEach(x => { if (x.rar <= 1 && (typeof bqRegSense !== 'function' || bqRegSense(x))) pool.push(x); }); });
   return bqPick(pool);
 }
+// v22 : objets rares en récompense (décoration, clé de coffre, pierre précieuse), montrés en image avant d'accepter.
+// f : petit cadeau (clé en bois, déco commune) ; n : rare ; d : épique ou légendaire.
+const CM_RW_KIND = { deco: 'Décoration', cle: 'Clé de coffre', gemme: 'Pierre précieuse' };
+function cmRareItem(tier) {
+  const lo = tier === 'f' ? 0 : tier === 'n' ? 2 : 3, hi = tier === 'f' ? 1 : tier === 'n' ? 2 : 4, out = [];
+  try { // décorations du foyer (catalogue et objets du monde)
+    const deco = []; BQ_CAT.forEach(a => { if (a.k === 'd' && a.def[3] >= lo && a.def[3] <= hi) deco.push(a.def); });
+    Object.values(LOOT).forEach(l => l.forEach(d => { if (d[1] === 'd' && d[3] >= lo && d[3] <= hi && !deco.some(x => x[0] === d[0])) deco.push(d.slice(0, 6)); }));
+    if (deco.length) out.push({ w: 3, what: 'deco', def: pick(deco) });
+  } catch (e) {}
+  try { // clés de coffre (familles)
+    const locks = Object.keys(FAM_LOCKS).filter(l => FAM_LOCKS[l].r - 1 >= Math.max(0, lo - 1) && FAM_LOCKS[l].r - 1 <= hi);
+    if (locks.length) { const l = pick(locks), L = FAM_LOCKS[l]; out.push({ w: 2, what: 'cle', def: [famKeyName(l), 'm', 'cle', L.r - 1, null, L.col] }); }
+  } catch (e) {}
+  try { // pierres précieuses brutes (à tailler à l'atelier)
+    const g = FAM_GEMS.filter(x => x[4] >= Math.max(1, lo) && x[4] <= hi);
+    if (g.length) { const x = pick(g); out.push({ w: 2, what: 'gemme', def: [x[1], 'm', 'gemme', x[4], null, x[5]] }); }
+  } catch (e) {}
+  const r = out.length ? bqPick(out, x => x.w) : null;
+  return r ? { k: 'item', what: r.what, def: r.def } : null;
+}
 function cmRewardFor(tier, T, c) {
   const L = bqState().lvl, out = [];
   const excl = (CM_LINES[T.id] || []).filter(R => R.x && !cmState().unl.includes(R.id));
   const cloth = BQ_CAT.filter(a => a.k === 'v' && a.def[3] >= (tier === 'd' ? 3 : 2)).map(a => a.def);
-  if (tier === 'f') return { k: 'coins' };
-  if (tier === 'n') { out.push([{ k: 'coins' }, 2], [{ k: 'rumor' }, 1]); if (cloth.length) out.push([{ k: 'cloth', def: pick(cloth.filter(d => d[3] <= 2)) || pick(cloth) }, 1]); }
+  const rare = cmRareItem(tier);
+  if (tier === 'f') return rare && Math.random() < 0.35 ? rare : { k: 'coins' };
+  if (tier === 'n') { out.push([{ k: 'coins' }, 2], [{ k: 'rumor' }, 1]); if (cloth.length) out.push([{ k: 'cloth', def: pick(cloth.filter(d => d[3] <= 2)) || pick(cloth) }, 1]); if (rare) out.push([rare, 2]); }
   else {
     out.push([{ k: 'egg', sp: pick(bqSpIds()), variant: Math.random() < 0.5 }, 3], [{ k: 'rumor' }, 2], [{ k: 'coins' }, 1]);
     if (excl.length) out.push([{ k: 'rec', rid: excl[0].id }, 3]);
     if (cloth.length) out.push([{ k: 'cloth', def: pick(cloth) }, 2]);
+    if (rare) out.push([rare, 3]);
   }
   void L; void c;
   return bqPick(out, x => x[1])[0];
@@ -349,6 +372,9 @@ function cmApplyTier(o, tier) {
   }
   o.rw = cmRewardFor(tier, T, BQC(o.client));
   if (o.rw.k === 'coins' && tier !== 'f') o.coins = bqRound5(o.coins * 1.3);
+  // pierres d'étoile (S.stones, pour le futur tirage) : 1 commande Normal sur 3 en donne 1, un Défi en donne 2 ou 3
+  o.st = tier === 'd' ? 2 + (Math.random() < 0.4 ? 1 : 0) : tier === 'n' && Math.random() < 1 / 3 ? 1 : 0;
+  if (!o.st) delete o.st;
   return o;
 }
 if (typeof bqNewOrder === 'function') bqNewOrder = (orig => function (forceEasy) {
@@ -394,13 +420,14 @@ function cmGrant(o, c) {
     }
     if (rw.k === 'rec') { const st = cmState(); if (!st.unl.includes(rw.rid)) st.unl.push(rw.rid); return `la recette exclusive « ${CM_R[rw.rid].def[0]} »`; }
     if (rw.k === 'cloth') { const it = makeItem(rw.def, 0, `Cadeau de ${c.name}`, [], { fixed: Math.max(2, rw.def[3]) }); S.inv.push(it); S.dex[it.name] = true; return `« ${it.name} »`; }
+    if (rw.k === 'item' && Array.isArray(rw.def)) { const it = makeItem(rw.def, 0, `Cadeau de ${c.name}`, [], { fixed: rw.def[3] }); S.inv.push(it); S.dex[it.name] = true; return `« ${it.name} »`; }
   } catch (e) { console.error('commerce récompense', e); }
   return '';
 }
 if (typeof bqDeliver === 'function') bqDeliver = (orig => function (id) {
   const s = bqState(), o = s.orders.find(x => x.id === id), c = o && BQC(o.client);
   const r = orig.apply(this, arguments);
-  try { if (o && !s.orders.includes(o)) { const t = cmGrant(o, c); if (t) { save(); setTimeout(() => toast(`Récompense de ${c.name} : ${t} !`), 1100); } } } catch (e) {}
+  try { if (o && !s.orders.includes(o)) { let t = cmGrant(o, c); const st = o.st > 0 && typeof gainStones === 'function' ? gainStones(o.st) : 0; if (st) t = (t ? t + ' et ' : '') + stonesWord(st); if (t) { save(); setTimeout(() => toast(`Récompense de ${c.name} : ${t} !`), 1100); } } } catch (e) {}
   return r;
 })(bqDeliver);
 function cmAccept(id) { const o = bqState().orders.find(x => x.id === id); if (!o) return; delete o.pend; save(); cmPaint(true); }
@@ -411,7 +438,9 @@ function cmRwHTML(o) {
   else if (rw.k === 'rumor') { ic = CM_SCROLL; tx = 'Un lieu secret'; }
   else if (rw.k === 'rec' && CM_R[rw.rid]) { ic = cmIcon(CM_R[rw.rid]) + '<i class="cm-recb">Recette</i>'; tx = `Recette exclusive : ${CM_R[rw.rid].def[0]}`; }
   else if (rw.k === 'cloth') { ic = itemIcon(bqItemOf(rw.def)); tx = `Vêtement ${RARITY[rw.def[3]].toLowerCase()} : ${rw.def[0]}`; }
-  return `<div class="cm-rw"><span class="cm-rwi k-${rw.k}">${ic}</span><span class="cm-rwx"><b>${esc(tx)}</b><span>${coins(o.coins)} · ${BQ_STAR}+${o.rep}</span></span></div>`;
+  else if (rw.k === 'item' && Array.isArray(rw.def)) { ic = itemIcon(bqItemOf(rw.def)) + `<i class="cm-rwr" style="--rc:${RARC[rw.def[3]] || RARC[0]}">${esc(RARITY[rw.def[3]] || '')}</i>`; tx = `${CM_RW_KIND[rw.what] || 'Objet'} : ${rw.def[0]}`; }
+  const st = o.st > 0 && typeof STONE_SVG !== 'undefined' ? ` <em class="cm-stn" title="${esc(stonesWord(o.st))}">${STONE_SVG}+${o.st}</em>` : '';
+  return `<div class="cm-rw"><span class="cm-rwi k-${rw.k}">${ic}</span><span class="cm-rwx"><b>${esc(tx)}</b><span>${coins(o.coins)} · ${BQ_STAR}+${o.rep}${st}</span></span></div>`;
 }
 function cmOrderCard(o) {
   const c = BQC(o.client), al = bqAllocate(o), ready = !o.pend && al.every((a, i) => a.have >= o.req[i].n), tier = CM_TIER[o.tier || 'n'];
@@ -695,6 +724,8 @@ document.addEventListener('click', ev => { if (cmGame && ev.target.closest('[dat
 .cm-hu u{text-decoration:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--fc);border:1.5px solid var(--ink);font-size:14px}
 @media (min-width:700px){.cm-hsteps{grid-template-columns:repeat(3,1fr);gap:10px}.cm-hs{grid-template-columns:1fr;grid-template-areas:'n' 'a' 't' 's';justify-items:center}.cm-hs+.cm-hs::before{content:'→';top:45%;left:-11px}.cm-slots{max-width:640px;margin-left:auto;margin-right:auto}}
 @media (prefers-reduced-motion:reduce){.cm-anim *,.cm-defib,.cm-bb{animation:none!important}}
+.cm-rwr{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);font:800 8.5px/1 'Baloo 2',sans-serif;font-style:normal;color:#fff;background:var(--rc);border:1px solid var(--ink);border-radius:6px;padding:2px 4px;white-space:nowrap}
+.cm-stn{font-style:normal;display:inline-flex;align-items:center;gap:1px;color:#3d4f99;font-weight:800;background:#eef4ff;border:1.5px solid #9fb3e8;border-radius:8px;padding:0 4px}.cm-stn .stone{width:13px;height:13px}
 `;
   document.head.appendChild(st);
 })();
