@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Carnet de voyage</title>
+<title>Tiny Trails</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Carnet">
+<meta name="apple-mobile-web-app-title" content="Tiny Trails">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#f7e9cf">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -4096,7 +4096,7 @@ function maybeIntro() {
   // v13 : une nouvelle partie commence par l'œuf mystère (20_collection.js) ; l'ancienne fenêtre de bienvenue n'est plus utilisée
   if (typeof startFirstRun === 'function' && S.firstRun) return startFirstRun();
   if (S.seenIntro || typeof startFirstRun === 'function') { if (!S.seenIntro) { S.seenIntro = true; save(); } return; }
-  showModal(`<div class="mart">${drawChar('pistache', S.outfits.pistache, 'rire', 'intro')}</div><h2>Bienvenue dans le Carnet de voyage !</h2><p>Pistache, Mochi et Bulle tiennent une petite boutique et rêvent de voyages. <b>Trois gestes suffisent :</b></p><ol class="mlist"><li><b>Partir</b> : touchez « Partir » en haut (un rêve) ou « Partir chercher » (une commande).</li><li><b>Livrer à la boutique</b> : les clients paient en pièces et en réputation.</li><li><b>Habiller son compagnon</b> : vêtements, couleurs et concours de style.</li></ol><p>Le premier rêve de Pistache ne prend que deux petites balades !</p><button class="btn green big" data-closemodal="intro">C’est parti !</button>`);
+  showModal(`<div class="mart">${drawChar('pistache', S.outfits.pistache, 'rire', 'intro')}</div><h2>Bienvenue dans Tiny Trails !</h2><p>Pistache, Mochi et Bulle tiennent une petite boutique et rêvent de voyages. <b>Trois gestes suffisent :</b></p><ol class="mlist"><li><b>Partir</b> : touchez « Partir » en haut (un rêve) ou « Partir chercher » (une commande).</li><li><b>Livrer à la boutique</b> : les clients paient en pièces et en réputation.</li><li><b>Habiller son compagnon</b> : vêtements, couleurs et concours de style.</li></ol><p>Le premier rêve de Pistache ne prend que deux petites balades !</p><button class="btn green big" data-closemodal="intro">C’est parti !</button>`);
 }
 document.addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b) return;
@@ -11206,7 +11206,7 @@ let hatchCtx = null; // { egg, crack, first, id }
 function hatchEggScreen(egg, first) {
   hatchCtx = { egg, crack: 0, first: !!first, id: null };
   const intro = first
-    ? `<span class="hkick">Nouvelle partie</span><h2>Bienvenue dans le Carnet de voyage !</h2><p class="hlead">Explore le vrai monde pour trouver, élever et échanger des compagnons uniques. Tout commence avec cet œuf mystère : touchez-le pour le faire éclore !</p>`
+    ? `<span class="hkick">Nouvelle partie</span><h2>Bienvenue dans Tiny Trails !</h2><p class="hlead">Explore le vrai monde pour trouver, élever et échanger des compagnons uniques. Tout commence avec cet œuf mystère : touchez-le pour le faire éclore !</p>`
     : `<span class="hkick">${esc(COMP_FROM[egg.from && egg.from.how] || 'Un œuf')}${egg.from && egg.from.place ? ' · ' + esc(egg.from.place) : ''}</span><h2>Un œuf va éclore !</h2><p class="hlead">Qui se cache dedans ? Touchez l’œuf pour l’aider à sortir.</p>`;
   showModal(`<div class="hatchbox">${intro}<button class="eggbtn" data-egg-tap="1" aria-label="Toucher l’œuf (encore 3 fois)"><span class="eggwrap">${eggArt(egg, 0, 'egm')}</span></button><div class="eggdots" aria-hidden="true"><i></i><i></i><i></i></div><p class="egghint">Touchez l’œuf 3 fois</p></div>`);
   document.body.classList.toggle('firstrun', !!first);
