@@ -9494,107 +9494,364 @@ function bqHearts(el) {
 }
 
 // ---------------- dessin des clients (portrait en buste) ----------------
+// Même grammaire que les familiers (drawChar) : tête lissée, contour brun, yeux à iris et reflets,
+// joues à reflet, ombrage doux par dégradés. Chaque client a sa tenue et ses accessoires (BQ_LOOK).
+// viewBox 120 × 120 inchangé : la tête autour de (60, 57), les épaules en bas, les pattes posées devant.
 const BQ_SP = {
-  herisson: { fur: '#c49a72', dark: '#7a5a3f', face: '#f6e3c8', ears: 'round', er: 7, back: 'spikes' },
-  loutre: { fur: '#a87a56', dark: '#7a5338', face: '#f2dcc0', ears: 'round', er: 6.5, whisk: 1 },
-  renard: { fur: '#ec8a4f', dark: '#c9603a', face: '#fff5ea', ears: 'pointy', tip: '#5b4636', cheeks: 1 },
-  lapin: { fur: '#f4efe6', dark: '#d9cfc0', face: '#fffaf2', ears: 'long', inner: '#f6b8c8' },
-  chouette: { fur: '#b08a6a', dark: '#8a6448', face: '#f2e2c8', ears: 'tufts', beak: '#f2b03b', disc: 1 },
-  ours: { fur: '#a0704f', dark: '#7a5338', face: '#e9cfa8', ears: 'round', er: 10 },
-  souris: { fur: '#b9b4c4', dark: '#8a8496', face: '#f4f0f6', ears: 'big', inner: '#f6b8c8', whisk: 1 },
-  raton: { fur: '#a6a6b2', dark: '#6a6a78', face: '#f4f2ee', ears: 'pointy', mask: '#4a4a56', inner: '#5b5b66', tip: '#5b5b66' },
-  ecureuil: { fur: '#d9783f', dark: '#b05a2f', face: '#fbe6cc', ears: 'tufts', back: 'tail' },
-  blaireau: { fur: '#5f5f6a', dark: '#3d3d48', face: '#f4f2ee', ears: 'round', er: 6, stripe: 1 },
-  canard: { fur: '#f6d36b', dark: '#e3b04b', face: null, ears: 'none', beak: '#f2963b', bill: 1, tuft: 1 },
-  grenouille: { fur: '#8fcf7f', dark: '#6faf5f', face: '#d8f0c8', ears: 'frog', wide: 1 },
-  chat: { fur: '#e9a25f', dark: '#c97a3a', face: '#fff5ea', ears: 'pointy', inner: '#f6b8c8', whisk: 1, stripes: 1 },
-  chien: { fur: '#e9cfa0', dark: '#b08050', face: '#fffaf2', ears: 'floppy' },
-  mouton: { fur: '#f2dcc8', dark: '#d9bfa8', face: '#f8e8da', ears: 'side', wool: 1 },
-  faon: { fur: '#c9905a', dark: '#a06a3a', face: '#fbe6cc', ears: 'side', spots: 1 },
-  koala: { fur: '#a9aab6', dark: '#7a7b88', face: '#e8e8ee', ears: 'big', inner: '#f4f2f6', bignose: 1 },
-  pingouin: { fur: '#3d4258', dark: '#262a3a', face: '#fbfbf6', ears: 'none', beak: '#f2a03a', pface: 1 },
-  hamster: { fur: '#f2c08a', dark: '#d99a5f', face: '#fffaf0', ears: 'round', er: 6.5, puffy: 1 },
-  tortue: { fur: '#9cc88a', dark: '#6f9f5f', face: '#d8ecc8', ears: 'none', back: 'shell' },
+  herisson: { fur: '#f0d4b0', dark: '#8a6446', light: '#fbeedd', inner: '#d9a07e', iris: '#6a4632', rx: 26, ry: 23, hy: 59, shape: 'narrow' },
+  loutre: { fur: '#b08260', dark: '#7a5338', light: '#f4e0c6', inner: '#7a5338', iris: '#5a3a28', rx: 31, ry: 25, hy: 57, shape: 'wide' },
+  renard: { fur: '#ee915a', dark: '#c9603a', light: '#fff5ea', inner: '#fbe2cc', iris: '#a0603a', rx: 30, ry: 25, hy: 58, shape: 'cheeks' },
+  lapin: { fur: '#f6f1e8', dark: '#dccfbf', light: '#ffffff', inner: '#f6b8c8', iris: '#8a4a5a', rx: 28, ry: 25, hy: 60, shape: 'pear', nose: '#ee8fa6' },
+  chouette: { fur: '#b8916f', dark: '#86603f', light: '#f6e8d2', inner: '#86603f', iris: '#e8a23a', rx: 31, ry: 27, hy: 57, shape: 'owl' },
+  ours: { fur: '#a8774f', dark: '#7a5338', light: '#ecd2aa', inner: '#d9a982', iris: '#5a3a28', rx: 31, ry: 27, hy: 58, shape: 'pear' },
+  souris: { fur: '#bdb7c9', dark: '#8a8496', light: '#f6f2f8', inner: '#f6b8c8', iris: '#4a3a5a', rx: 26, ry: 23, hy: 61, shape: 'narrow', nose: '#ee8fa6' },
+  raton: { fur: '#aeadb9', dark: '#4e4e5c', light: '#f6f4f0', inner: '#5e5e6c', iris: '#8a6a4a', rx: 30, ry: 25, hy: 58, shape: 'cheeks', paw: '#5e5e6c', ring: 1 },
+  ecureuil: { fur: '#de7f45', dark: '#b05a2f', light: '#fbe6cc', inner: '#f6c49e', iris: '#5a3a28', rx: 28, ry: 24, hy: 59, shape: 'pear' },
+  blaireau: { fur: '#f4f2ee', dark: '#3f3f4b', light: '#ffffff', inner: '#9a9aa6', iris: '#7a5a3a', rx: 29, ry: 25, hy: 58, shape: 'narrow', paw: '#6a6a76', ring: 1 },
+  canard: { fur: '#f7d66f', dark: '#e0ac45', light: '#fff4c8', inner: '#e0ac45', iris: '#3d4a6a', rx: 29, ry: 27, hy: 57, shape: 'round', arm: 'wing' },
+  grenouille: { fur: '#94d283', dark: '#62a556', light: '#e2f4d2', inner: '#62a556', iris: '#8a5a2a', rx: 35, ry: 22, hy: 63, shape: 'wide', arm: 'frog' },
+  chat: { fur: '#eda866', dark: '#c97a3a', light: '#fff5ea', inner: '#f6b8c8', iris: '#7aa34a', rx: 30, ry: 25, hy: 58, shape: 'cheeks', nose: '#ee8fa6' },
+  chien: { fur: '#ecd3a5', dark: '#b88758', light: '#fffaf2', inner: '#b88758', iris: '#6a4632', rx: 29, ry: 26, hy: 58, shape: 'round' },
+  mouton: { fur: '#f3dcc6', dark: '#cfae92', light: '#fff4ea', inner: '#f6c2cf', iris: '#7a5a3a', rx: 24, ry: 23, hy: 61, shape: 'narrow', nose: '#d99a9a', wool: '#fbf8f0' },
+  faon: { fur: '#cf9660', dark: '#a06a3a', light: '#fdf0de', inner: '#fbe2cc', iris: '#5a3a28', rx: 27, ry: 25, hy: 59, shape: 'narrow' },
+  koala: { fur: '#adaebb', dark: '#7a7b88', light: '#f0f0f4', inner: '#f8f6fa', iris: '#4a3a3a', rx: 30, ry: 25, hy: 60, shape: 'pear' },
+  pingouin: { fur: '#454b64', dark: '#2a2e40', light: '#fbfbf6', inner: '#2a2e40', iris: '#3d5a8a', rx: 29, ry: 26, hy: 58, shape: 'round', arm: 'flip' },
+  hamster: { fur: '#f3c48e', dark: '#d99a5f', light: '#fffaf0', inner: '#f6b8c8', iris: '#4a3028', rx: 32, ry: 25, hy: 60, shape: 'puffy', nose: '#ee8fa6' },
+  tortue: { fur: '#a3cf90', dark: '#6f9f5f', light: '#e0f0d2', inner: '#6f9f5f', iris: '#5a4a2a', rx: 25, ry: 23, hy: 54, shape: 'round', arm: 'frog' },
 };
+// tenue de chaque client : g = vêtement, c2 = 2e couleur, pat = motif, hat = forme du chapeau, x = petits accessoires
+const BQ_LOOK = {
+  noisette: { g: 'tablier', c2: '#fff8ee', x: ['coeurpoche'] },
+  ondine: { g: 'marin', c2: '#fbf8f0', x: [] },
+  roussette: { g: 'robe', c2: '#fbf0ff', x: ['boucles'] },
+  pompon: { g: 'salopette', c2: '#f6ead0', pat: 'carreaux', hat: 'paille', x: ['carotte'] },
+  hulotte: { g: 'cardigan', c2: '#fbf6ea', x: ['plume', 'broche'] },
+  bruno: { g: 'pull', pat: 'torsade', x: [] },
+  mimi: { g: 'robe', c2: '#fffaf6', pat: 'pois', x: [] },
+  filou: { g: 'gilet', c2: '#e9e2d0', pat: 'raye', x: ['sac', 'cle'] },
+  chips: { g: 'sweat', c2: '#fff3d0', x: ['bandeau', 'sacados'] },
+  gaston: { g: 'salopette', c2: '#f3d9b0', pat: 'carreaux', x: ['crayon', 'outil'] },
+  capucine: { g: 'cardigan', c2: '#fff6f0', x: ['collier'] },
+  rainette: { g: 'cape', c2: '#f39ab0', x: ['collier'] },
+  moustache: { g: 'veste', c2: '#fbf8f0', x: ['noeudpap', 'mouchoir', 'montre'] },
+  biscotte: { g: 'sweat', c2: '#fffaf2', x: ['medaille'] },
+  frisette: { g: 'cardigan', c2: '#fff8f0', pat: 'pois', x: ['broche'] },
+  clochette: { g: 'cape', c2: '#fbf3e0', x: ['couronne'] },
+  eucalypso: { g: 'gilet', c2: '#f4ead4', hat: 'explo', x: ['camera', 'badge'] },
+  pingo: { g: 'doudoune', c2: '#fbf8f0', x: ['masqueski'] },
+  grignote: { g: 'pull', pat: 'raye', c2: '#fffaf0', x: ['bourse'] },
+  leonie: { g: 'chale', c2: '#f6eefa', x: ['demilune'] },
+};
+const bqHash = s => { let h = 7; for (const ch of String(s)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; };
+function bqLookOf(c) {
+  if (c.look && typeof c.look === 'object') return c.look;
+  if (BQ_LOOK[c.id]) return BQ_LOOK[c.id];
+  const h = bqHash(c.id + (c.cloth || ''));
+  return { g: ['pull', 'gilet', 'tablier', 'robe', 'veste', 'sweat', 'cardigan', 'salopette', 'cape', 'chale', 'marin', 'doudoune'][h % 12], pat: ['', 'raye', 'pois', 'carreaux', 'torsade'][(h >> 5) % 5],
+    c2: ['#fbf8f0', '#fff3d0', '#e6f0f8', '#fde8ee', '#eef6e2'][(h >> 8) % 5], x: [['sac'], ['badge'], ['collier'], ['noeudpap'], ['bourse'], ['broche'], ['boucles'], ['camera'], []][(h >> 11) % 9] };
+}
+function bqHeadD(P) {
+  const { rx, ry, hy } = P, N = 44, pts = [];
+  for (let i = 0; i < N; i++) {
+    const a = i / N * Math.PI * 2, sa = Math.sin(a), ca = Math.cos(a); let r = 1, xk = 1, yk = 1;
+    if (P.shape === 'cheeks' && sa > 0.15 && sa < 0.8 && Math.abs(ca) > 0.55) r = i % 2 ? 1.09 : 1;
+    else if (P.shape === 'puffy') { if (sa > 0) xk = 1 + 0.07 * sa; else yk = 0.96; }
+    else if (P.shape === 'pear' && sa > 0) xk = 1 + 0.05 * sa;
+    else if (P.shape === 'narrow' && sa > 0) xk = 1 - 0.1 * sa;
+    else if (P.shape === 'wide' && sa < 0) yk = 0.88;
+    else if (P.shape === 'owl' && sa < 0) xk = 1 - 0.05 * sa;
+    pts.push([60 + ca * rx * r * xk, P.hy + sa * ry * r * yk]);
+  }
+  return smooth(pts);
+}
+// petit nuage (laine, fourrure) : contour extérieur seul
+const bqCloud = (pts, fill, L) => `<g>${pts.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${L}" stroke-width="1.8"/>`).join('')}${pts.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${(r - 1).toFixed(1)}" fill="${fill}"/>`).join('')}</g>`;
+const bqMir = s => `${s}<g transform="matrix(-1 0 0 1 120 0)">${s}</g>`;
+const BQ_SVGC = new Map(), BQ_URIC = new Map();
 function clientSVG(c, mood, uid) {
-  const P = BQ_SP[c.sp] || BQ_SP.ours, L = '#5b4636', sw = 'stroke="#5b4636" stroke-width="2.4" stroke-linejoin="round"';
-  const joy = mood === 'joie', u = 'bq' + (uid || c.id);
-  let s = `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" class="bq-cl" role="img" aria-label="${esc(c.name)}, ${BQ_SP[c.sp] ? BQ_SPN[c.sp] : ''}">`;
-  // dos : piquants, queue, carapace, laine
-  if (P.back === 'spikes') { let d = 'M22 70'; for (let i = 0; i <= 10; i++) { const a = Math.PI * (1.05 + i * 0.09), r1 = 44, r2 = 34; d += ` L${(60 + Math.cos(a) * r1).toFixed(1)} ${(60 + Math.sin(a) * r1).toFixed(1)} L${(60 + Math.cos(a + 0.045) * r2).toFixed(1)} ${(60 + Math.sin(a + 0.045) * r2).toFixed(1)}`; } s += `<path d="${d} L98 70Z" fill="${P.dark}" ${sw}/>`; }
-  if (P.back === 'tail') s += `<path d="M86 112 C112 108 116 70 100 52 C92 42 104 30 112 38 C122 50 120 96 96 116Z" fill="${P.fur}" ${sw}/><path d="M104 46 C110 56 112 80 102 100" fill="none" stroke="${P.dark}" stroke-width="2" opacity=".6"/>`;
-  if (P.back === 'shell') s += `<path d="M10 116 C8 86 30 70 60 70 C90 70 112 86 110 116Z" fill="#8a6a3a" ${sw}/><path d="M24 108 L36 86 L60 80 L84 86 L96 108 M36 86 L44 108 M84 86 L76 108 M60 80 L60 96" fill="none" stroke="#5b4636" stroke-width="1.6" opacity=".7"/>`;
-  // oreilles derrière la tête
-  const ear = (x, y, side) => {
-    const m = side < 0 ? '' : ` transform="translate(${2 * 60} 0) scale(-1 1)"`;
-    switch (P.ears) {
-      case 'round': return `<g${m}><circle cx="${x}" cy="${y}" r="${P.er}" fill="${P.fur}" ${sw}/><circle cx="${x}" cy="${y}" r="${P.er * 0.5}" fill="${P.dark}" opacity=".55"/></g>`;
-      case 'big': return `<g${m}><circle cx="${x - 4}" cy="${y + 2}" r="15" fill="${P.fur}" ${sw}/><circle cx="${x - 4}" cy="${y + 2}" r="9" fill="${P.inner}"/></g>`;
-      case 'pointy': return `<g${m}><path d="M${x - 12} ${y + 14} L${x - 6} ${y - 14} L${x + 10} ${y + 6}Z" fill="${P.fur}" ${sw}/><path d="M${x - 9} ${y + 8} L${x - 6} ${y - 6} L${x + 4} ${y + 5}Z" fill="${P.inner || P.face || '#fff5ea'}"/>${P.tip ? `<path d="M${x - 8.4} ${y - 3} L${x - 6} ${y - 14} L${x - 1} ${y - 6}Z" fill="${P.tip}"/>` : ''}</g>`;
-      case 'long': return `<g${m}><path d="M${x + 2} ${y + 14} C${x - 12} ${y - 10} ${x - 10} ${y - 34} ${x - 2} ${y - 36} C${x + 6} ${y - 34} ${x + 12} ${y - 10} ${x + 10} ${y + 12}Z" fill="${P.fur}" ${sw}/><path d="M${x + 3} ${y + 6} C${x - 4} ${y - 10} ${x - 4} ${y - 26} ${x} ${y - 28} C${x + 4} ${y - 26} ${x + 7} ${y - 10} ${x + 7} ${y + 6}Z" fill="${P.inner}"/></g>`;
-      case 'tufts': return `<g${m}><path d="M${x - 8} ${y + 12} L${x - 6} ${y - 10} L${x + 8} ${y + 6}Z" fill="${P.dark}" ${sw}/></g>`;
-      case 'floppy': return `<g${m}><path d="M${x + 4} ${y} C${x - 14} ${y - 4} ${x - 18} ${y + 30} ${x - 8} ${y + 36} C${x} ${y + 40} ${x + 6} ${y + 20} ${x + 8} ${y + 8}Z" fill="${P.dark}" ${sw}/></g>`;
-      case 'side': return `<g${m}><ellipse cx="${x - 10}" cy="${y + 16}" rx="12" ry="6" transform="rotate(-25 ${x - 10} ${y + 16})" fill="${P.fur}" ${sw}/><ellipse cx="${x - 10}" cy="${y + 16}" rx="7" ry="3" transform="rotate(-25 ${x - 10} ${y + 16})" fill="#f6c2cf"/></g>`;
-      case 'frog': return `<g${m}><circle cx="${x + 4}" cy="${y + 8}" r="11" fill="${P.fur}" ${sw}/></g>`;
-      default: return '';
-    }
-  };
-  // corps et vêtement
-  s += `<path d="M14 120 C14 96 34 86 60 86 C86 86 106 96 106 120Z" fill="${c.cloth}" ${sw}/><path d="M48 88 Q60 98 72 88" fill="none" stroke="#5b4636" stroke-width="2" opacity=".5"/>`;
-  if (P.ears !== 'floppy') s += ear(36, 34, -1) + ear(36, 34, 1);
-  if (P.wool) s += `<g fill="#fbf8f0" ${sw}>${[[34, 40], [46, 30], [60, 27], [74, 30], [86, 40], [92, 54], [28, 54]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="11"/>`).join('')}</g>`;
-  // tête
-  const hrx = P.wide ? 36 : P.puffy ? 34 : 31, hry = P.wide ? 25 : 28;
-  s += `<ellipse cx="60" cy="58" rx="${hrx}" ry="${hry}" fill="${P.fur}" ${sw}/>`;
-  if (P.ears === 'floppy') s += ear(34, 40, -1) + ear(34, 40, 1);
-  if (P.wool) s += `<g fill="#fbf8f0">${[[42, 36], [54, 32], [66, 32], [78, 36]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="8"/>`).join('')}</g>`;
-  if (P.stripe) s += `<path d="M54 31 C55 44 56 56 60 64 C64 56 65 44 66 31 C63 30 57 30 54 31Z" fill="#f4f2ee"/>`;
-  if (P.stripes) s += `<path d="M52 32 l2 8 M60 30 v9 M68 32 l-2 8" stroke="${P.dark}" stroke-width="3" stroke-linecap="round"/>`;
-  if (P.spots) s += `<g fill="#fff3e2" opacity=".85"><circle cx="42" cy="40" r="2.6"/><circle cx="50" cy="35" r="2"/><circle cx="76" cy="38" r="2.4"/><circle cx="70" cy="34" r="1.8"/></g>`;
-  if (P.pface) s += `<path d="M60 76 C40 76 34 64 38 52 C41 44 50 44 56 49 L60 52 L64 49 C70 44 79 44 82 52 C86 64 80 76 60 76Z" fill="${P.face}"/>`;
-  if (P.cheeks) s += `<path d="M30 60 C36 74 50 80 60 78 C70 80 84 74 90 60 C80 66 70 66 60 70 C50 66 40 66 30 60Z" fill="${P.face}"/>`;
-  if (P.disc) s += `<circle cx="48" cy="56" r="11" fill="${P.face}"/><circle cx="72" cy="56" r="11" fill="${P.face}"/>`;
-  if (P.mask) s += `<path d="M30 56 C36 48 52 50 60 56 C68 50 84 48 90 56 C86 64 72 64 60 60 C48 64 34 64 30 56Z" fill="${P.mask}"/>`;
-  if (P.tuft) s += `<path d="M58 31 C54 22 60 20 62 24 C64 18 70 22 64 31" fill="${P.fur}" ${sw}/>`;
-  // museau
-  const beak = !!P.beak;
-  if (P.face && !beak && !P.pface && !P.cheeks) s += `<ellipse cx="60" cy="${P.wide ? 66 : 68}" rx="${P.wide ? 22 : 15}" ry="${P.wide ? 8 : 10}" fill="${P.face}"/>`;
-  else if (P.cheeks) s += `<ellipse cx="60" cy="69" rx="10" ry="7" fill="${P.face}"/>`;
-  // yeux
-  const ey = P.ears === 'frog' ? 46 : 57, ex = P.ears === 'frog' ? 18 : 12;
-  if (P.ears === 'frog') s += `<circle cx="${60 - ex}" cy="${ey}" r="9" fill="#fff" ${sw}/><circle cx="${60 + ex}" cy="${ey}" r="9" fill="#fff" ${sw}/>`;
-  [60 - ex, 60 + ex].forEach(x => {
-    if (joy) s += `<path d="M${x - 4.5} ${ey + 1} Q${x} ${ey - 5} ${x + 4.5} ${ey + 1}" fill="none" stroke="#3a2a22" stroke-width="2.6" stroke-linecap="round"/>`;
-    else s += `<ellipse cx="${x}" cy="${ey}" rx="${P.ears === 'frog' ? 4.6 : 4.2}" ry="${P.ears === 'frog' ? 5 : 5}" fill="#3a2a22"/><circle cx="${x + 1.4}" cy="${ey - 1.8}" r="1.6" fill="#fff"/>`;
-  });
-  // bec, nez, bouche
-  if (P.bill) s += `<ellipse cx="60" cy="69" rx="12" ry="6" fill="${P.beak}" ${sw}/><path d="M50 69 H70" stroke="#5b4636" stroke-width="1.4" opacity=".6"/>`;
-  else if (beak) s += `<path d="M55 64 L65 64 L60 73Z" fill="${P.beak}" ${sw}/>`;
-  else {
-    const ny = P.wide ? 62 : 64;
-    if (P.bignose) s += `<ellipse cx="60" cy="${ny}" rx="7" ry="8.5" fill="#3a3a48"/>`;
-    else s += `<ellipse cx="60" cy="${ny}" rx="3.6" ry="2.6" fill="#4a3528"/>`;
-    s += joy ? `<path d="M53 ${ny + 4} Q60 ${ny + 12} 67 ${ny + 4}Z" fill="#c45a6a" stroke="#4a3528" stroke-width="1.6" stroke-linejoin="round"/>` : P.wide ? `<path d="M48 ${ny + 4} Q60 ${ny + 10} 72 ${ny + 4}" fill="none" stroke="#4a3528" stroke-width="2" stroke-linecap="round"/>` : `<path d="M55 ${ny + 4} q2.5 3 5 0 q2.5 3 5 0" fill="none" stroke="#4a3528" stroke-width="1.8" stroke-linecap="round"/>`;
-    if (P.whisk) s += `<path d="M42 66 h-10 M42 70 l-9 3 M78 66 h10 M78 70 l9 3" stroke="#5b4636" stroke-width="1.3" stroke-linecap="round" opacity=".7"/>`;
+  const look = bqLookOf(c), key = [c.id, c.sp, c.cloth, c.acc, c.accC, look.g, mood, uid || ''].join('|');
+  const hit = BQ_SVGC.get(key); if (hit) return hit;
+  if (BQ_SVGC.size > 240) BQ_SVGC.clear();
+  const s = bqDrawClient(c, mood, uid, look); BQ_SVGC.set(key, s); return s;
+}
+function bqDrawClient(c, mood, uid, look) {
+  const P = BQ_SP[c.sp] || BQ_SP.ours, sp = BQ_SP[c.sp] ? c.sp : 'ours';
+  const L = '#5b4636', sw = `stroke="${L}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"`, s1 = `stroke="${L}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"`;
+  const joy = mood === 'joie', u = 'bq' + String(uid || c.id).replace(/[^\w-]/g, '');
+  const { rx, ry, hy } = P, top = hy - ry, H = bqHeadD(P), F = `url(#${u}hg)`;
+  const C = c.cloth || '#9cc3e8', C2 = look.c2 || '#fbf8f0', A = c.accC || '#f39ab0', CG = `url(#${u}cg)`, X = look.x || [];
+  const BODY = 'M12 121 C13 103 24 91 42 87 Q60 83 78 87 C96 91 107 103 108 121Z';
+  let s = `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" class="bq-cl" role="img" aria-label="${esc(c.name)}, ${BQ_SPN[c.sp] || ''}"><defs>`
+    + `<radialGradient id="${u}hg" gradientUnits="userSpaceOnUse" cx="${60 - rx * 0.3}" cy="${top + ry * 0.55}" r="${rx * 1.55}"><stop offset="0" stop-color="${shade(P.fur, 1.13)}"/><stop offset=".55" stop-color="${P.fur}"/><stop offset="1" stop-color="${shade(P.fur, 0.85)}"/></radialGradient>`
+    + `<linearGradient id="${u}cg" x1="0" y1="0" x2=".3" y2="1"><stop offset="0" stop-color="${shade(C, 1.12)}"/><stop offset="1" stop-color="${shade(C, 0.88)}"/></linearGradient>`
+    + `<clipPath id="${u}hc"><path d="${H}"/></clipPath><clipPath id="${u}bc"><path d="${BODY}"/></clipPath></defs>`;
+  // ---- dos : piquants, queue, carapace, laine ----
+  if (sp === 'herisson') {
+    const layer = (r1, r2, off, fill) => { let d = ''; for (let k = 0; k <= 20; k++) { const a = (160 + k * 11 + off) * Math.PI / 180, b1 = a - 0.09, b2 = a + 0.09; d += `${k ? 'L' : 'M'}${(60 + Math.cos(b1) * r2).toFixed(1)} ${(hy - 2 + Math.sin(b1) * r2).toFixed(1)} L${(60 + Math.cos(a) * r1).toFixed(1)} ${(hy - 2 + Math.sin(a) * r1).toFixed(1)} L${(60 + Math.cos(b2) * r2).toFixed(1)} ${(hy - 2 + Math.sin(b2) * r2).toFixed(1)} `; } return `<path d="${d}L60 ${hy}Z" fill="${fill}" ${sw}/>`; };
+    s += layer(42, 28, 0, P.dark) + layer(36, 24, 5.5, shade(P.dark, 1.25));
+    let t = ''; for (let k = 1; k < 20; k += 2) { const a = (160 + k * 11 + 5.5) * Math.PI / 180; t += `M${(60 + Math.cos(a) * 29).toFixed(1)} ${(hy - 2 + Math.sin(a) * 29).toFixed(1)} L${(60 + Math.cos(a) * 34).toFixed(1)} ${(hy - 2 + Math.sin(a) * 34).toFixed(1)} `; }
+    s += `<path d="${t}" stroke="#f3dcc0" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>`;
   }
-  if (P.puffy) s += `<ellipse cx="36" cy="68" rx="9" ry="7" fill="${P.face}"/><ellipse cx="84" cy="68" rx="9" ry="7" fill="${P.face}"/>`;
-  s += `<ellipse cx="${60 - ex - 9}" cy="${ey + 9}" rx="5" ry="3" fill="#f49a98" opacity=".7"/><ellipse cx="${60 + ex + 9}" cy="${ey + 9}" rx="5" ry="3" fill="#f49a98" opacity=".7"/>`;
-  // accessoire
-  const a = c.accC || '#f39ab0';
-  switch (c.acc) {
-    case 'noeud': s += `<g transform="translate(80 33) rotate(15)"><path d="M0 0 L-11 -7 L-11 7Z M0 0 L11 -7 L11 7Z" fill="${a}" ${sw}/><circle r="3.4" fill="${a}" ${sw}/></g>`; break;
-    case 'fleur': s += `<g transform="translate(${P.ears === 'long' ? 76 : 38} ${P.ears === 'long' ? 34 : 36})">${[0, 1, 2, 3, 4].map(k => `<circle cx="${(Math.cos(k * 1.256) * 5).toFixed(1)}" cy="${(Math.sin(k * 1.256) * 5).toFixed(1)}" r="4" fill="${a}" stroke="#5b4636" stroke-width="1.2"/>`).join('')}<circle r="2.8" fill="#f2c14e"/></g>`; break;
-    case 'chapeau': s += `<ellipse cx="60" cy="${33}" rx="34" ry="7" fill="${a}" ${sw}/><path d="M42 33 C42 16 78 16 78 33Z" fill="${a}" ${sw}/><path d="M43 29 H77" stroke="#d9604f" stroke-width="3.4"/>`; break;
-    case 'capitaine': s += `<path d="M36 36 C36 22 84 22 84 36Z" fill="${a}" ${sw}/><path d="M34 36 H86 L82 41 H38Z" fill="#2f3b5c" ${sw}/><circle cx="60" cy="30" r="3" fill="#f2c14e"/>`; break;
-    case 'casquette': s += `<path d="M36 40 C36 22 84 22 84 40Z" fill="${a}" ${sw}/><path d="M80 38 C92 38 98 41 96 43 L80 43Z" fill="${a}" ${sw}/>`; break;
-    case 'lunettes': s += `<circle cx="${60 - ex}" cy="${ey}" r="8" fill="#fff" fill-opacity=".25" stroke="${a}" stroke-width="2.2"/><circle cx="${60 + ex}" cy="${ey}" r="8" fill="#fff" fill-opacity=".25" stroke="${a}" stroke-width="2.2"/><path d="M${60 - ex + 8} ${ey} H${60 + ex - 8}" stroke="${a}" stroke-width="2"/>`; break;
-    case 'monocle': s += `<circle cx="${60 + ex}" cy="${ey}" r="8" fill="#fff" fill-opacity=".25" stroke="${a}" stroke-width="2.2"/><path d="M${60 + ex + 6} ${ey + 6} C${80} 82 76 92 72 96" fill="none" stroke="${a}" stroke-width="1.4"/><path d="M48 33 C48 18 72 18 72 33Z M42 33 H78" fill="#3b3f5a" stroke="#5b4636" stroke-width="2.4"/>`; break;
-    case 'echarpe': s += `<path d="M34 86 C44 94 76 94 86 86 L88 94 C74 102 46 102 32 94Z" fill="${a}" ${sw}/><path d="M74 96 L78 116 L86 114 L82 94Z" fill="${a}" ${sw}/>`; break;
-    case 'perles': s += `<g fill="${a}" stroke="#5b4636" stroke-width="1.2">${[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => `<circle cx="${(40 + i * 5).toFixed(1)}" cy="${(90 + Math.sin(i / 8 * Math.PI) * 6).toFixed(1)}" r="2.6"/>`).join('')}</g>`; break;
+  if (sp === 'ecureuil') s += plume([90, 121], [116, 104], [117, 54], [95, 38], 11, 14, P.fur, P.light, 0.22, L, 'bqtail');
+  if (sp === 'tortue') {
+    s += `<path d="M5 121 C3 90 26 74 60 74 C94 74 117 90 115 121Z" fill="#a8793f" ${sw}/><path d="M11 121 C11 95 30 80 60 80 C90 80 109 95 109 121Z" fill="#d4aa66"/>`
+      + `<path d="M5 112 l6 -1 M7 99 l6 2 M14 87 l5 4 M26 79 l3 5 M115 112 l-6 -1 M113 99 l-6 2 M106 87 l-5 4 M94 79 l-3 5" stroke="${L}" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>`
+      + `<path d="M18 104 L26 92 L40 86 M102 104 L94 92 L80 86" fill="none" stroke="#a8793f" stroke-width="1.8" stroke-linecap="round"/>`;
   }
+  if (sp === 'mouton') { const w = []; for (let k = 0; k <= 9; k++) { const a = (165 + k * 23.3) * Math.PI / 180; w.push([+(60 + Math.cos(a) * 30).toFixed(1), +(hy - 3 + Math.sin(a) * 28).toFixed(1), 10]); } s += bqCloud(w, P.wool, L); }
+  // ---- corps et vêtement ----
+  s += `<g clip-path="url(#${u}bc)">` + bqGarment(look, C, C2, A, CG, L, s1) + `<ellipse cx="60" cy="86" rx="25" ry="6.5" fill="#3a2a22" opacity=".13"/><ellipse cx="27" cy="100" rx="7" ry="4" fill="#fff" opacity=".16" transform="rotate(-30 27 100)"/></g>`;
+  s += `<path d="${BODY}" fill="none" ${sw}/>`;
+  // ---- autour du cou (avant la tête) ----
+  if (look.g === 'doudoune' && c.acc !== 'echarpe') { const f = []; for (let k = 0; k <= 8; k++) { const a = (200 - k * 27.5) * Math.PI / 180; f.push([+(60 + Math.cos(a) * 26).toFixed(1), +(82 - Math.sin(a) * 9).toFixed(1), 5.5]); } s += bqCloud(f, '#fbf4e6', L); }
+  if (sp === 'tortue') s += `<path d="M48 70 L46 92 Q60 97 74 92 L72 70Z" fill="${F}" ${sw}/><path d="M51 82 q9 3 18 0 M50 87 q10 3 20 0" fill="none" stroke="${P.dark}" stroke-width="1.4" stroke-linecap="round" opacity=".7"/>`;
+  s += bqNeck(c.acc, X, look, A, C, C2, L, sw, s1);
+  // ---- oreilles (derrière la tête) ----
+  s += bqEars(sp, P, F, L, sw, s1, top, false);
+  // ---- tête ----
+  if (sp === 'grenouille') s += `<path d="${H}" fill="${F}" ${sw}/>` + bqMir(`<circle cx="46" cy="${hy - 17}" r="10.5" fill="${F}" ${sw}/><ellipse cx="46" cy="${hy - 9.5}" rx="9" ry="4.4" fill="${F}"/>`);
+  else s += `<path d="${H}" fill="${F}"/>`;
+  s += `<g clip-path="url(#${u}hc)">${bqMarks(sp, P, top, L)}${X.includes('bandeau') ? `<rect x="20" y="${top + 4}" width="80" height="7" fill="${A === '#f39ab0' ? '#e5584f' : A}"/><path d="M20 ${top + 7.5} H100" stroke="#fff" stroke-width="1.6" opacity=".9"/>` : ''}${X.includes('masqueski') ? `<rect x="20" y="${top + 6}" width="80" height="4" fill="#3d4258"/>` : ''}</g>`;
+  if (sp !== 'grenouille') s += `<path d="${H}" fill="none" ${sw}/>`;
+  if (X.includes('bandeau')) s += `<path d="M${60 - rx + 2} ${top + 4.5} Q60 ${top - 1} ${60 + rx - 2} ${top + 4.5} M${60 - rx + 1} ${top + 11} Q60 ${top + 5} ${60 + rx - 1} ${top + 11}" fill="none" stroke="${L}" stroke-width="1.2" opacity=".55"/>`;
+  // ---- visage ----
+  s += bqFace(sp, P, joy, u, L, s1, top);
+  if (sp === 'mouton') s += bqCloud([[42, top + 9, 6], [49, top + 3, 7], [60, top + 1, 7.5], [71, top + 3, 7], [78, top + 9, 6]], P.wool, L) + `<path d="M46 ${top + 4} q3 -3 6 0 M57 ${top + 1} q3 -3 6 0 M68 ${top + 4} q3 -3 6 0" fill="none" stroke="#d9cbb8" stroke-width="1.3" stroke-linecap="round"/>`;
+  s += bqEars(sp, P, F, L, sw, s1, top, true);
+  // ---- chapeau, lunettes, fleur ----
+  s += bqHeadAcc(c.acc, X, look, sp, P, A, C, L, sw, s1, top);
+  if (sp === 'lapin') s += bqEars('lapinH', P, F, L, sw, s1, top, false);
+  // ---- bras et pattes ----
+  s += bqArms(P, look, C, C2, CG, L, sw, s1);
+  s += bqFront(X, A, C, L, sw, s1);
   return s + `</svg>`;
 }
-const clientURI = (c, mood) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(clientSVG(c, mood).replace('<svg ', '<svg width="120" height="120" '));
+function bqGarment(look, C, C2, A, CG, L, s1) {
+  const base = col => `<rect x="0" y="78" width="120" height="44" fill="${col}"/>`;
+  const dk = shade(C, 0.8), col2 = `<path d="M49 86 L54 95 L60 89 L66 95 L71 86" fill="${C2}" ${s1}/>`;
+  const pat = (p, col, on) => {
+    if (p === 'raye') return `<path d="M0 101 H120 M0 110 H120 M0 119 H120" stroke="${col}" stroke-width="3.6" opacity="${on || 0.75}"/>`;
+    if (p === 'pois') { let d = ''; for (let y = 94; y < 122; y += 8) for (let x = (y / 8) % 2 ? 6 : 10; x < 120; x += 9) d += `<circle cx="${x}" cy="${y}" r="1.5"/>`; return `<g fill="${col}" opacity="${on || 0.8}">${d}</g>`; }
+    if (p === 'carreaux') return `<path d="M0 93 H120 M0 101 H120 M0 109 H120 M0 117 H120 M20 80 V122 M28 80 V122 M36 80 V122 M44 80 V122 M52 80 V122 M60 80 V122 M68 80 V122 M76 80 V122 M84 80 V122 M92 80 V122 M100 80 V122" stroke="${col}" stroke-width="2.2" opacity="${on || 0.45}"/>`;
+    if (p === 'torsade') return [44, 76].map(x => `<path d="M${x} 92 q4 3 0 6 q-4 3 0 6 q4 3 0 6 q-4 3 0 6 q4 3 0 6" fill="none" stroke="${shade(C, 0.78)}" stroke-width="1.8" stroke-linecap="round"/><path d="M${x} 92 q-4 3 0 6 q4 3 0 6 q-4 3 0 6 q4 3 0 6 q-4 3 0 6" fill="none" stroke="${shade(C, 1.2)}" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>`).join('') + `<path d="M54 94 V122 M66 94 V122" stroke="${shade(C, 0.85)}" stroke-width="1.2" stroke-dasharray="1.6 1.6"/>`;
+    return '';
+  };
+  const strap = (d, col, w = 3.6) => `<path d="${d}" fill="none" stroke="${L}" stroke-width="${w + 2.4}" stroke-linecap="round"/><path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
+  const rib = `<path d="M41 88 Q60 98 79 88" fill="none" stroke="${L}" stroke-width="7.5" stroke-linecap="round"/><path d="M41 88 Q60 98 79 88" fill="none" stroke="${shade(C, 0.86)}" stroke-width="5" stroke-linecap="round"/><path d="M41 88 Q60 98 79 88" fill="none" stroke="${shade(C, 0.7)}" stroke-width="5" stroke-dasharray=".8 2.2"/>`;
+  switch (look.g) {
+    case 'tablier': return base(CG) + col2 + strap('M45 97 L47 87 M75 97 L73 87', C2, 3)
+      + `<path d="M40 97 Q60 92 80 97 L85 122 H35Z" fill="${C2}" ${s1}/><path d="M41 99.5 Q60 95 79 99.5" fill="none" stroke="${A}" stroke-width="2.2" stroke-dasharray="0.1 3.4" stroke-linecap="round"/>`
+      + `<path d="M51 105 H69 V113 Q60 117 51 113Z" fill="${shade(C2, 0.95)}" ${s1}/>` + ((look.x || []).includes('coeurpoche') ? `<path d="${heartD(60, 109.5, 2.6)}" fill="${A}"/>` : '');
+    case 'salopette': return base(C2) + pat(look.pat || 'carreaux', shade(C2, 0.7)) + col2
+      + `<path d="M44 99 H76 L79 122 H41Z" fill="${CG}" ${s1}/>` + strap('M46 100 L41 86 M74 100 L79 86', C)
+      + `<circle cx="46.5" cy="101" r="2.2" fill="#f2c14e" ${s1}/><circle cx="73.5" cy="101" r="2.2" fill="#f2c14e" ${s1}/><rect x="52" y="105" width="16" height="10" rx="2" fill="${shade(C, 0.92)}" ${s1}/><path d="M53.6 106.6 H66.4" stroke="${shade(C, 1.35)}" stroke-width="1" stroke-dasharray="1.6 1.4"/>`;
+    case 'gilet': return base(C2) + pat(look.pat, shade(C2, 0.82), 0.5) + col2
+      + bqMir(`<path d="M0 78 H45 C47 92 52 104 57 114 L57 122 H0Z" fill="${CG}" ${s1}/><path d="M28 104 h13 v8 h-13Z" fill="${shade(C, 0.92)}" ${s1}/><path d="M28 104 h13 l-1.5 4 h-10Z" fill="${dk}" ${s1}/><circle cx="53.5" cy="106" r="1.6" fill="${shade(C, 0.6)}"/><circle cx="56" cy="114" r="1.6" fill="${shade(C, 0.6)}"/>`);
+    case 'cardigan': return base(C2) + `<path d="M50 86 Q53 95 60 92 Q67 95 70 86" fill="none" stroke="${shade(C2, 0.85)}" stroke-width="1.4"/>`
+      + bqMir(`<path d="M0 78 H48 C50 92 53 104 55 122 H0Z" fill="${CG}" ${s1}/><path d="M48.5 82 C50.5 94 53 106 54.5 122" fill="none" stroke="${shade(C, 0.84)}" stroke-width="3.2"/>${look.pat === 'pois' ? `<g fill="${shade(C, 1.3)}"><circle cx="30" cy="98" r="1.4"/><circle cx="40" cy="104" r="1.4"/><circle cx="24" cy="110" r="1.4"/><circle cx="36" cy="116" r="1.4"/><circle cx="44" cy="94" r="1.4"/></g>` : ''}<circle cx="51.5" cy="100" r="1.7" fill="${C2}" ${s1}/><circle cx="53" cy="111" r="1.7" fill="${C2}" ${s1}/>`);
+    case 'pull': return base(CG) + pat(look.pat, look.pat === 'raye' ? C2 : shade(C, 0.8)) + rib;
+    case 'robe': return base(CG) + pat(look.pat, shade(C, 1.32)) + bqMir(`<path d="M60 88 C57 97 46 98 42 89 C48 90 55 89 60 88Z" fill="${C2}" ${s1}/>`) + `<circle cx="60" cy="101" r="1.7" fill="${C2}" ${s1}/><circle cx="60" cy="110" r="1.7" fill="${C2}" ${s1}/>`;
+    case 'veste': return base(CG) + `<path d="M47 86 L60 112 L73 86Z" fill="${C2}" ${s1}/>` + bqMir(`<path d="M46 85 L60 112 L49 104 L41 97 L48 93Z" fill="${shade(C, 0.78)}" ${s1}/><path d="M24 104 h12" stroke="${shade(C, 0.7)}" stroke-width="1.6" stroke-linecap="round"/>`) + `<circle cx="60" cy="116" r="1.8" fill="${shade(C, 0.55)}"/>`;
+    case 'marin': return base(CG) + bqMir(`<path d="M46 85 L58 104 L46 100 L40 94 L47 92Z" fill="${shade(C, 0.8)}" ${s1}/><circle cx="52" cy="104" r="1.9" fill="#f2c14e" ${s1}/><circle cx="51" cy="113" r="1.9" fill="#f2c14e" ${s1}/><path d="M14 98 Q22 90 32 91 L33 97 Q24 97 17 103Z" fill="#f2c14e" ${s1}/><path d="M17 103 l-1 4 M20 100 l-1 4 M23 98 l-.5 4" stroke="#c9963a" stroke-width="1.2" stroke-linecap="round"/>`) + `<path d="M53 86 Q60 92 67 86 L64 96 Q60 98 56 96Z" fill="${C2}" ${s1}/>`;
+    case 'doudoune': return base(CG) + `<path d="M6 103 Q60 111 114 103 M4 115 Q60 123 116 115" fill="none" stroke="${shade(C, 0.75)}" stroke-width="1.6"/><path d="M14 98 Q60 106 106 98 M10 110 Q60 118 110 110" fill="none" stroke="#fff" stroke-width="2.4" opacity=".22"/><path d="M60 90 V122" stroke="${shade(C, 0.62)}" stroke-width="1.6"/><rect x="58.3" y="96" width="3.4" height="6" rx="1.4" fill="#e9e2d0" ${s1}/>`;
+    case 'chale': return base(C2) + `<path d="M51 87 Q60 94 69 87" fill="none" stroke="${shade(C2, 0.8)}" stroke-width="1.4"/>`
+      + `<path d="M0 90 C22 85 44 86 60 92 C76 86 98 85 120 90 V106 C96 104 72 108 60 121 C48 108 24 104 0 106Z" fill="${CG}" ${s1}/><path d="M6 101 C26 99 46 103 60 114 C74 103 94 99 114 101" fill="none" stroke="${shade(C, 1.3)}" stroke-width="1.6" stroke-dasharray="0.1 4" stroke-linecap="round"/><path d="M57 119 l-1 3 M60 121 v2 M63 119 l1 3" stroke="${shade(C, 0.75)}" stroke-width="1.4" stroke-linecap="round"/>`;
+    case 'cape': return base(CG) + [-60, -32, 0, 32, 60].map(a => `<ellipse cx="60" cy="98" rx="6" ry="11" transform="rotate(${a} 60 86)" fill="${shade(C, 0.9)}" ${s1}/>`).join('') + `<circle cx="60" cy="95" r="3.4" fill="${C2}" ${s1}/><circle cx="59" cy="94" r="1" fill="#fff" opacity=".8"/>`;
+    case 'sweat': return base(CG) + `<path d="M36 88 Q60 101 84 88" fill="none" stroke="${L}" stroke-width="9.4" stroke-linecap="round"/><path d="M36 88 Q60 101 84 88" fill="none" stroke="${shade(C, 0.86)}" stroke-width="7" stroke-linecap="round"/>`
+      + `<path d="M54 96 V107 M66 96 V107" stroke="${C2}" stroke-width="1.6" stroke-linecap="round"/><rect x="52.8" y="106" width="2.4" height="3.4" rx="1" fill="${shade(C2, 0.8)}"/><rect x="64.8" y="106" width="2.4" height="3.4" rx="1" fill="${shade(C2, 0.8)}"/><path d="M40 122 L44 112 Q60 109 76 112 L80 122" fill="${shade(C, 0.93)}" ${s1}/>`;
+    default: return base(CG) + col2;
+  }
+}
+function bqNeck(acc, X, look, A, C, C2, L, sw, s1) {
+  let s = '';
+  if (acc === 'echarpe') {
+    const st = lumHex(A) > 0.7 ? shade(A, 0.8) : shade(A, 1.35);
+    s += `<path d="M71 92 L74 117 L83 115 L80 90Z" fill="${A}" ${sw}/><path d="M73 104 L81 103 M73.8 109 L82 108" stroke="${st}" stroke-width="2.2"/><path d="M75 117 l-.5 3 M78 116.5 v3 M81 116 l.5 3" stroke="${L}" stroke-width="1.3" stroke-linecap="round"/>`
+      + `<path d="M35 84 Q60 95 85 84 L87 92 Q60 104 33 92Z" fill="${A}" ${sw}/><path d="M42 89 Q60 98 78 89" fill="none" stroke="${st}" stroke-width="2.2" stroke-dasharray="3 3"/>`;
+  }
+  if (acc === 'perles') {
+    const strand = (dy, n, r) => { let g = ''; for (let i = 0; i <= n; i++) { const t = i / n, x = 42 + t * 36, y = 88 + dy + Math.sin(t * Math.PI) * (6 + dy); g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${A}" stroke="${L}" stroke-width="1"/><circle cx="${(x - r * 0.35).toFixed(1)}" cy="${(y - r * 0.35).toFixed(1)}" r="${(r * 0.32).toFixed(1)}" fill="#fff"/>`; } return g; };
+    s += strand(0, 9, 2.3) + (look.g === 'chale' ? strand(4, 10, 2) : '');
+  }
+  if (X.includes('medaille')) s += `<path d="M38 85 Q60 96 82 85" fill="none" stroke="${L}" stroke-width="5.6" stroke-linecap="round"/><path d="M38 85 Q60 96 82 85" fill="none" stroke="#5c6b94" stroke-width="3.4" stroke-linecap="round"/><circle cx="60" cy="96" r="4.2" fill="#f2c14e" ${s1}/><path d="${heartD(60, 96, 1.8)}" fill="#e5584f"/>`;
+  if (X.includes('collier')) s += `<path d="M44 87 Q60 99 76 87" fill="none" stroke="#c9a35a" stroke-width="1.2"/><path d="M60 95 q-3.2 3.6 0 7.2 q3.2 -3.6 0 -7.2Z" fill="${A}" ${s1}/><circle cx="59" cy="97.6" r=".9" fill="#fff"/>`;
+  if (X.includes('noeudpap')) s += `<g transform="translate(60 91)"><path d="M0 0 L-8 -4.5 Q-9.6 0 -8 4.5Z M0 0 L8 -4.5 Q9.6 0 8 4.5Z" fill="${A}" ${s1}/><rect x="-2" y="-2.2" width="4" height="4.4" rx="1.2" fill="${shade(A, 0.82)}" ${s1}/></g>`;
+  if (X.includes('camera')) s += `<path d="M40 88 L51 102 M80 88 L69 102" stroke="${L}" stroke-width="1.6"/><rect x="49" y="99" width="22" height="14" rx="3" fill="#4a4a56" ${s1}/><rect x="52" y="97" width="6" height="3" rx="1" fill="#4a4a56" ${s1}/><circle cx="60" cy="106" r="4.6" fill="#7fb6d9" ${s1}/><circle cx="58.6" cy="104.6" r="1.4" fill="#fff" opacity=".85"/><circle cx="67" cy="102" r="1" fill="#f2c14e"/>`;
+  if (X.includes('cle')) s += `<path d="M46 87 L58 100 M74 87 L62 100" stroke="#a87a50" stroke-width="1.2"/><circle cx="60" cy="102" r="3" fill="none" stroke="#e3b94a" stroke-width="2"/><path d="M60 105 V112 M60 109 h2.6 M60 111.4 h2" stroke="#e3b94a" stroke-width="2" stroke-linecap="round"/>`;
+  if (X.includes('bourse')) s += `<path d="M46 87 L56 99 M74 87 L64 99" stroke="#a87a50" stroke-width="1.2"/><path d="M55 100 Q60 97 65 100 Q70 108 65 112 H55 Q50 108 55 100Z" fill="#c98a5a" ${s1}/><path d="M55.5 101 Q60 103 64.5 101" fill="none" stroke="${L}" stroke-width="1.2"/><circle cx="60" cy="107" r="2.6" fill="#f2c14e" ${s1}/>`;
+  if (X.includes('sacados')) s += `<path d="M36 89 L33 122 M84 89 L87 122" stroke="${L}" stroke-width="6" stroke-linecap="round"/><path d="M36 89 L33 122 M84 89 L87 122" stroke="#c9603a" stroke-width="3.8" stroke-linecap="round"/>`;
+  if (X.includes('sac')) s += `<path d="M84 88 L34 122" stroke="${L}" stroke-width="5.4" stroke-linecap="round"/><path d="M84 88 L34 122" stroke="#a87a50" stroke-width="3.4" stroke-linecap="round"/>`;
+  return s;
+}
+function bqEars(sp, P, F, L, sw, s1, top, front) {
+  const { rx, hy } = P;
+  if (front) {
+    if (sp === 'chien') return bqMir(`<path d="M39 ${top + 3} C26 ${top + 1} 21 ${hy + 6} 25 ${hy + 16} C29 ${hy + 22} 37 ${hy + 15} 40 ${hy + 2} C41 ${hy - 8} 43 ${top + 6} 39 ${top + 3}Z" fill="${P.dark}" ${sw}/><path d="M33 ${top + 10} C29 ${hy} 29 ${hy + 9} 31 ${hy + 13}" fill="none" stroke="${shade(P.dark, 1.25)}" stroke-width="2" stroke-linecap="round" opacity=".7"/>`);
+    return '';
+  }
+  const pointy = (inner, tip) => bqMir(`<path d="M35 ${hy - 7} Q30 ${top - 6} 34 ${top - 16} Q46 ${top - 10} 55 ${top + 3}Z" fill="${F}" ${sw}/><path d="M38.5 ${hy - 11} Q35 ${top - 4} 36.4 ${top - 10} Q45 ${top - 6} 50.5 ${top + 3.5}Z" fill="${inner}"/>${tip ? `<path d="M33.4 ${top - 9} Q33.4 ${top - 13.5} 34 ${top - 16} Q39 ${top - 13} 42.4 ${top - 10.4} Q38 ${top - 8.4} 33.4 ${top - 9}Z" fill="${tip}" ${s1}/>` : ''}`);
+  switch (sp) {
+    case 'renard': return pointy(P.inner, '#6b4a3c');
+    case 'chat': return pointy(P.inner) + bqMir(`<path d="M39 ${top} l3 4 M37.5 ${top - 4} l3.5 3" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity=".9"/>`);
+    case 'raton': return bqMir(`<path d="M35 ${hy - 9} Q31 ${top - 3} 35 ${top - 11} Q46 ${top - 6} 53 ${top + 4}Z" fill="${F}" ${sw}/><path d="M38.5 ${hy - 12} Q35.5 ${top - 1} 37 ${top - 6} Q44.5 ${top - 3} 49.5 ${top + 4}Z" fill="${P.inner}" stroke="${P.light}" stroke-width="1.6" stroke-linejoin="round"/>`);
+    case 'ecureuil': return bqMir(`<path d="M37 ${hy - 10} Q34 ${top - 3} 36.5 ${top - 10} Q47 ${top - 5} 52 ${top + 4}Z" fill="${F}" ${sw}/><path d="M39.5 ${hy - 13} Q37.5 ${top - 1} 38.4 ${top - 5} Q45 ${top - 2} 49 ${top + 4}Z" fill="${P.inner}"/><path d="M36.5 ${top - 10} q-3 -4 -1 -8 M36.5 ${top - 10} q1 -5 4.5 -6.6 M36.5 ${top - 10} q-.5 -6 1.5 -8.6" fill="none" stroke="${P.dark}" stroke-width="1.8" stroke-linecap="round"/>`);
+    case 'ours': return bqMir(`<circle cx="${60 - rx + 6}" cy="${top + 5}" r="8.5" fill="${F}" ${sw}/><circle cx="${60 - rx + 6.5}" cy="${top + 5.5}" r="4.6" fill="${P.inner}"/>`);
+    case 'loutre': return bqMir(`<circle cx="${60 - rx + 3}" cy="${hy - 12}" r="4.8" fill="${F}" ${sw}/><circle cx="${60 - rx + 3.4}" cy="${hy - 11.6}" r="2.2" fill="${P.inner}"/>`);
+    case 'herisson': return bqMir(`<circle cx="40" cy="${top + 4}" r="5" fill="${F}" ${sw}/><circle cx="40.4" cy="${top + 4.4}" r="2.5" fill="${P.inner}"/>`);
+    case 'hamster': return bqMir(`<circle cx="${60 - rx + 9}" cy="${top + 4}" r="6.4" fill="${F}" ${sw}/><circle cx="${60 - rx + 9.4}" cy="${top + 4.6}" r="3.6" fill="${P.inner}"/>`);
+    case 'blaireau': return bqMir(`<circle cx="${60 - rx + 6}" cy="${top + 7}" r="5.4" fill="${P.dark}" ${sw}/><path d="M${60 - rx + 2} ${top + 4} q4 -3.4 8 0" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>`);
+    case 'souris': return bqMir(`<circle cx="${60 - rx + 1}" cy="${top + 1}" r="13.5" fill="${F}" ${sw}/><circle cx="${60 - rx + 2}" cy="${top + 2}" r="8.6" fill="${P.inner}"/><ellipse cx="${60 - rx}" cy="${top - 1}" rx="3.4" ry="2.2" fill="#fff" opacity=".45"/>`);
+    case 'koala': { const pts = []; for (let i = 0; i < 26; i++) { const a = i / 26 * Math.PI * 2, r = 13.5 * (i % 2 ? 1.07 : 0.98); pts.push([60 - rx + 1 + Math.cos(a) * r, top + 5 + Math.sin(a) * r]); } const ip = []; for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2, r = 8 * (i % 2 ? 1.12 : 0.95); ip.push([60 - rx + 2 + Math.cos(a) * r, top + 6 + Math.sin(a) * r]); } return bqMir(`<path d="${smooth(pts)}" fill="${F}" ${sw}/><path d="${smooth(ip)}" fill="${P.inner}"/>`); }
+    case 'chouette': return bqMir(`<path d="M37 ${top + 9} L28 ${top - 8} Q40 ${top - 4} 49 ${top + 4}Z" fill="${P.dark}" ${sw}/><path d="M33 ${top - 2} L40 ${top + 4}" stroke="${shade(P.dark, 1.3)}" stroke-width="1.4" stroke-linecap="round"/>`);
+    case 'faon': return bqMir(`<g transform="rotate(-28 ${60 - rx + 2} ${top + 8})"><ellipse cx="${60 - rx - 6}" cy="${top + 8}" rx="13" ry="6.6" fill="${F}" ${sw}/><ellipse cx="${60 - rx - 5}" cy="${top + 8}" rx="8.6" ry="3.6" fill="${P.inner}"/></g>`);
+    case 'mouton': return bqMir(`<g transform="rotate(18 ${60 - rx} ${hy - 4})"><ellipse cx="${60 - rx - 6}" cy="${hy - 4}" rx="9.5" ry="4.6" fill="${F}" ${sw}/><ellipse cx="${60 - rx - 5.5}" cy="${hy - 4}" rx="6" ry="2.4" fill="${P.inner}"/></g>`);
+    case 'lapinH': return `<g transform="rotate(-9 51 ${top + 4})"><path d="M47 ${top + 6} C41 ${top - 12} 40 ${top - 28} 46 ${top - 31} C52 ${top - 33} 57 ${top - 14} 56 ${top + 5}Z" fill="${F}" ${sw}/><path d="M48.6 ${top + 2} C45 ${top - 12} 44.6 ${top - 24} 47 ${top - 26} C50.4 ${top - 27} 53 ${top - 12} 53 ${top + 2}Z" fill="${P.inner}"/></g>`
+      + `<g transform="rotate(16 69 ${top + 4})"><path d="M64 ${top + 5} C63 ${top - 14} 68 ${top - 30} 73 ${top - 30} C78 ${top - 30} 76 ${top - 12} 73 ${top + 6}Z" fill="${F}" ${sw}/><path d="M66.6 ${top + 1} C66 ${top - 12} 69 ${top - 24} 72 ${top - 25} C74 ${top - 24} 73 ${top - 12} 70.6 ${top + 1}Z" fill="${P.inner}"/><path d="M64.6 ${top - 13} Q69 ${top - 17} 75.6 ${top - 15}" fill="none" stroke="${L}" stroke-width="1.3" opacity=".5"/></g>`;
+  }
+  return '';
+}
+// marques du pelage, dessinées à l'intérieur de la tête
+function bqMarks(sp, P, top, L) {
+  const { rx, ry, hy } = P, Lt = P.light, D = P.dark;
+  switch (sp) {
+    case 'herisson': { let d = `M${60 - rx - 4} ${top - 4} L${60 - rx - 4} ${hy - 4}`; for (let k = 0; k <= 10; k++) { const x = 60 - rx + k * (rx * 2 / 10), y = top + 11 + Math.abs(k - 5) * -0.9 + (k % 2 ? 4 : 0); d += ` L${x.toFixed(1)} ${y.toFixed(1)}`; } return `<path d="${d} L${60 + rx + 4} ${hy - 4} L${60 + rx + 4} ${top - 4}Z" fill="${D}"/><path d="M50 ${top + 3} l2 5 M60 ${top + 2} v6 M70 ${top + 3} l-2 5" stroke="#f3dcc0" stroke-width="1.4" stroke-linecap="round" opacity=".8"/>`; }
+    case 'loutre': return `<path d="M${60 - rx} ${hy + 1} C${60 - rx + 7} ${hy - 5} 50 ${hy} 60 ${hy + 2} C70 ${hy} ${60 + rx - 7} ${hy - 5} ${60 + rx} ${hy + 1} V${hy + ry + 2} H${60 - rx}Z" fill="${Lt}"/><ellipse cx="60" cy="${top + 5}" rx="16" ry="7" fill="${D}" opacity=".25"/>`;
+    case 'renard': return `<path d="M${60 - rx - 4} ${hy + 1} C42 ${hy + 3} 50 ${hy + 3} 60 ${hy + 5} C70 ${hy + 3} 78 ${hy + 3} ${60 + rx + 4} ${hy + 1} V${hy + ry + 4} H${60 - rx - 4}Z" fill="${Lt}"/><ellipse cx="60" cy="${top + 4}" rx="14" ry="7" fill="${D}" opacity=".3"/><ellipse cx="47" cy="${hy - 9}" rx="3" ry="1.8" fill="${Lt}" opacity=".85"/><ellipse cx="73" cy="${hy - 9}" rx="3" ry="1.8" fill="${Lt}" opacity=".85"/>`;
+    case 'chouette': return `<circle cx="49" cy="${hy + 1}" r="12.5" fill="${Lt}"/><circle cx="71" cy="${hy + 1}" r="12.5" fill="${Lt}"/><path d="M48 ${hy - 13} Q56 ${hy - 12} 60 ${hy - 3} Q64 ${hy - 12} 72 ${hy - 13}" fill="none" stroke="${D}" stroke-width="2.4" stroke-linecap="round"/><path d="M52 ${top + 7} l2 2.4 l2 -2.4 M58 ${top + 4} l2 2.4 l2 -2.4 M64 ${top + 7} l2 2.4 l2 -2.4" fill="none" stroke="${D}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 ${hy + 13} q2.4 2 4.8 0 M83 ${hy + 13} q2.4 2 4.8 0" fill="none" stroke="${D}" stroke-width="1.3" stroke-linecap="round"/>`;
+    case 'ours': case 'souris': case 'faon': case 'koala': case 'chien': case 'mouton': case 'lapin': {
+      let m = '';
+      if (sp === 'faon') m += `<g fill="${Lt}"><circle cx="52" cy="${top + 6}" r="1.9"/><circle cx="60" cy="${top + 4}" r="1.6"/><circle cx="68" cy="${top + 6}" r="1.9"/><circle cx="45" cy="${top + 10}" r="1.4"/><circle cx="75" cy="${top + 10}" r="1.4"/><circle cx="56" cy="${top + 9.5}" r="1.1"/><circle cx="64" cy="${top + 9.5}" r="1.1"/></g>`;
+      if (sp === 'chien') m += `<ellipse cx="71" cy="${hy - 1}" rx="9" ry="8" fill="${shade(P.fur, 0.86)}"/><path d="M57 ${top - 1} Q60 ${hy - 6} 55.5 ${hy + 2} H64.5 Q60 ${hy - 6} 63 ${top - 1}Z" fill="${Lt}" opacity=".9"/>`;
+      if (sp === 'koala') m += `<ellipse cx="60" cy="${hy + 17}" rx="15" ry="7" fill="${Lt}"/>`;
+      if (sp === 'ours') m += `<ellipse cx="60" cy="${top + 4}" rx="15" ry="6" fill="${D}" opacity=".22"/>`;
+      return m;
+    }
+    case 'raton': return `<ellipse cx="48" cy="${hy - 9}" rx="9.5" ry="4.2" fill="${Lt}"/><ellipse cx="72" cy="${hy - 9}" rx="9.5" ry="4.2" fill="${Lt}"/><path d="M57 ${top - 1} L60 ${hy - 4} L63 ${top - 1}Z" fill="${shade(P.fur, 0.72)}"/>`
+      + `<path d="M${60 - rx - 2} ${hy - 4} C44 ${hy - 9} 54 ${hy - 6} 60 ${hy - 1} C66 ${hy - 6} 76 ${hy - 9} ${60 + rx + 2} ${hy - 4} C88 ${hy + 6} 72 ${hy + 9} 64.5 ${hy + 4} Q60 ${hy + 2} 55.5 ${hy + 4} C48 ${hy + 9} 32 ${hy + 6} ${60 - rx - 2} ${hy - 4}Z" fill="${D}"/><path d="M${60 - rx} ${hy + 6} C40 ${hy + 9} 50 ${hy + 10} 60 ${hy + 9} C70 ${hy + 10} 80 ${hy + 9} ${60 + rx} ${hy + 6} V${hy + ry + 2} H${60 - rx}Z" fill="${Lt}"/>`;
+    case 'ecureuil': return `<ellipse cx="45" cy="${hy + 8}" rx="9.5" ry="7" fill="${Lt}"/><ellipse cx="75" cy="${hy + 8}" rx="9.5" ry="7" fill="${Lt}"/><ellipse cx="60" cy="${hy + 13}" rx="11" ry="7" fill="${Lt}"/><circle cx="49" cy="${hy + 1}" r="6.4" fill="${Lt}" opacity=".55"/><circle cx="71" cy="${hy + 1}" r="6.4" fill="${Lt}" opacity=".55"/><path d="M60 ${top} V${hy - 8}" stroke="${D}" stroke-width="5" stroke-linecap="round" opacity=".35"/>`;
+    case 'blaireau': return `<path d="M${60 - rx - 2} ${top + 10} C${60 - rx + 2} ${hy + 6} 40 ${hy + 16} 44 ${hy + ry + 2} H${60 - rx - 2}Z M${60 + rx + 2} ${top + 10} C${60 + rx - 2} ${hy + 6} 80 ${hy + 16} 76 ${hy + ry + 2} H${60 + rx + 2}Z" fill="${P.inner}" opacity=".55"/>`
+      + bqMir(`<path d="M40 ${top - 2} C44 ${hy - 10} 47 ${hy} 53.6 ${hy + 7} L56.4 ${hy + 5} C54.4 ${hy - 2} 53 ${hy - 12} 54 ${top - 2}Z" fill="${D}"/>`);
+    case 'canard': return `<ellipse cx="60" cy="${hy + 12}" rx="22" ry="10" fill="${Lt}" opacity=".8"/>`;
+    case 'grenouille': return `<ellipse cx="60" cy="${hy + 13}" rx="25" ry="8" fill="${Lt}"/><g fill="${D}" opacity=".45"><circle cx="40" cy="${hy - 3}" r="2.6"/><circle cx="36" cy="${hy + 3}" r="1.6"/><circle cx="81" cy="${hy - 2}" r="2.8"/><circle cx="60" cy="${hy - 13}" r="2"/></g>`;
+    case 'chat': return `<path d="M54 ${top + 1} q1.6 4.6 0 9 M60 ${top} v9.5 M66 ${top + 1} q-1.6 4.6 0 9 M${60 - rx - 1} ${hy + 2} h7 M${60 - rx} ${hy + 7} h6 M${60 + rx + 1} ${hy + 2} h-7 M${60 + rx} ${hy + 7} h-6" stroke="${D}" stroke-width="2.6" stroke-linecap="round" opacity=".75"/><ellipse cx="55.5" cy="${hy + 10}" rx="5.4" ry="4.2" fill="${Lt}"/><ellipse cx="64.5" cy="${hy + 10}" rx="5.4" ry="4.2" fill="${Lt}"/><ellipse cx="60" cy="${hy + 14}" rx="5" ry="3.4" fill="${Lt}"/>`;
+    case 'pingouin': return `<path d="M60 ${hy - 6} C56 ${hy - 15} 40 ${hy - 15} 37.5 ${hy - 2} C36 ${hy + 12} 48 ${hy + ry + 2} 60 ${hy + ry + 2} C72 ${hy + ry + 2} 84 ${hy + 12} 82.5 ${hy - 2} C80 ${hy - 15} 64 ${hy - 15} 60 ${hy - 6}Z" fill="${Lt}"/>`;
+    case 'hamster': return `<ellipse cx="44" cy="${hy + 9}" rx="11.5" ry="9" fill="${Lt}"/><ellipse cx="76" cy="${hy + 9}" rx="11.5" ry="9" fill="${Lt}"/><ellipse cx="60" cy="${hy + 12}" rx="9" ry="7.5" fill="${Lt}"/><path d="M60 ${top} V${hy - 9}" stroke="${D}" stroke-width="6" stroke-linecap="round" opacity=".3"/>`;
+    case 'tortue': return `<g fill="${D}" opacity=".35"><ellipse cx="52" cy="${top + 6}" rx="4.6" ry="3.4"/><ellipse cx="62" cy="${top + 4}" rx="4" ry="3"/><ellipse cx="71" cy="${top + 8}" rx="4.4" ry="3.2"/><ellipse cx="44" cy="${top + 11}" rx="3" ry="2.4"/></g><ellipse cx="60" cy="${hy + 15}" rx="17" ry="7" fill="${Lt}"/>`;
+  }
+  return '';
+}
+function bqFace(sp, P, joy, u, L, s1, top) {
+  const { hy } = P, Lt = P.light;
+  const frog = sp === 'grenouille', owl = sp === 'chouette', koala = sp === 'koala';
+  const ex = frog ? 14 : koala ? 12.5 : 11, ey = frog ? hy - 17 : sp === 'canard' ? hy - 2 : hy + 0.5;
+  const erx = owl ? 4.8 : frog ? 4.4 : 3.9, ery = owl ? 5.3 : frog ? 5 : 4.6;
+  const ink = P.ring ? '#fff6ea' : '#2a2130';
+  let s = '', ny = hy + 6.5, my = ny + 2.6, bx = ex + 9, by = ey + 7.5;
+  // museau clair
+  const muz = { ours: [10.5, 7.5], souris: [7.5, 5.2], faon: [8.5, 6.5], koala: [0, 0], chien: [11, 7.6], mouton: [8, 6], herisson: [8, 6], lapin: [0, 0] }[sp];
+  if (muz && muz[0]) s += `<ellipse cx="60" cy="${hy + 9}" rx="${muz[0]}" ry="${muz[1]}" fill="${Lt}"${sp === 'herisson' ? ` ${s1}` : ''}/><ellipse cx="57" cy="${hy + 6.6}" rx="${muz[0] * 0.4}" ry="${muz[1] * 0.3}" fill="#fff" opacity=".35"/>`;
+  if (sp === 'lapin') s += `<circle cx="56.4" cy="${hy + 9}" r="4.6" fill="${Lt}"/><circle cx="63.6" cy="${hy + 9}" r="4.6" fill="${Lt}"/>`;
+  if (sp === 'loutre') s += `<ellipse cx="55.4" cy="${hy + 9.5}" rx="5.6" ry="4.3" fill="${shade(Lt, 1.06)}"/><ellipse cx="64.6" cy="${hy + 9.5}" rx="5.6" ry="4.3" fill="${shade(Lt, 1.06)}"/><g fill="${P.dark}" opacity=".6"><circle cx="53" cy="${hy + 9.5}" r=".7"/><circle cx="55.6" cy="${hy + 11.4}" r=".7"/><circle cx="67" cy="${hy + 9.5}" r=".7"/><circle cx="64.4" cy="${hy + 11.4}" r=".7"/></g>`;
+  // anneaux clairs autour des yeux (masque sombre)
+  if (P.ring) s += [60 - ex, 60 + ex].map(x => `<ellipse cx="${x}" cy="${ey}" rx="${erx + 1.4}" ry="${ery + 1.4}" fill="#7a7a88"/>`).join('');
+  // yeux
+  s += [60 - ex, 60 + ex].map((x, i) => joy
+    ? `<path d="M${x - erx - 0.4} ${ey + 1.2} Q${x} ${ey - ery - 1.6} ${x + erx + 0.4} ${ey + 1.2}" fill="none" stroke="${ink}" stroke-width="2.2" stroke-linecap="round"/>`
+    : eyeOpen(x, ey, erx, ery, P.iris, u, i)).join('');
+  if (owl && !joy) s += [60 - ex, 60 + ex].map(x => `<path d="M${x - erx - 1.6} ${ey - ery + 0.6} Q${x} ${ey - ery - 2.4} ${x + erx + 1.6} ${ey - ery + 0.6}" fill="none" stroke="${L}" stroke-width="1.4" stroke-linecap="round"/>`).join('');
+  if (sp === 'tortue' && !joy) s += [60 - ex, 60 + ex].map(x => `<path d="M${x - erx - 0.6} ${ey - 1.4} Q${x} ${ey - ery - 1.4} ${x + erx + 0.6} ${ey - 1.4} L${x + erx + 0.6} ${ey - ery - 1.6} L${x - erx - 0.6} ${ey - ery - 1.6}Z" fill="${P.fur}"/><path d="M${x - erx - 0.6} ${ey - 1.4} Q${x} ${ey - ery - 1.4} ${x + erx + 0.6} ${ey - 1.4}" fill="none" stroke="${L}" stroke-width="1.5" stroke-linecap="round"/>`).join('');
+  // joues
+  const bk = joy ? 1.2 : 1, blush = mixHex('#f49a98', P.fur, 0.12);
+  if (frog) { bx = 25; by = hy + 4; }
+  s += [-1, 1].map(k => `<ellipse cx="${60 + k * bx}" cy="${by}" rx="${(4.4 * bk).toFixed(1)}" ry="${(2.6 * bk).toFixed(1)}" fill="${blush}" opacity="${joy ? 0.75 : 0.6}"/><ellipse cx="${60 + k * bx - 1.6}" cy="${by - 1}" rx="1.1" ry=".6" fill="#fff" opacity=".7"/>`).join('');
+  // nez, bec, bouche
+  const nose = (y, w, col) => `<path d="M${60 - w} ${y - 1.2} Q60 ${y - 2.6} ${60 + w} ${y - 1.2} Q${60 + w * 0.8} ${y + 1.8} 60 ${y + 2.6} Q${60 - w * 0.8} ${y + 1.8} ${60 - w} ${y - 1.2}Z" fill="${col}" stroke="${L}" stroke-width="1" stroke-linejoin="round"/><ellipse cx="${60 - w * 0.35}" cy="${y - 1}" rx="${(w * 0.32).toFixed(1)}" ry=".6" fill="#fff" opacity=".75"/>`;
+  const wM = y => `<path d="M60 ${y - 0.6} V${y + 1.2} M55.4 ${y + 0.6} Q57.7 ${y + 3.4} 60 ${y + 1.2} Q62.3 ${y + 3.4} 64.6 ${y + 0.6}" fill="none" stroke="${L}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const openM = (y, w = 4.6) => `<path d="M60 ${y - 0.6} V${y + 0.6}" stroke="${L}" stroke-width="1.5" stroke-linecap="round"/><path d="M${60 - w} ${y + 0.6} Q60 ${y + 1.6} ${60 + w} ${y + 0.6} Q${60 + w * 0.8} ${y + 7} 60 ${y + 7} Q${60 - w * 0.8} ${y + 7} ${60 - w} ${y + 0.6}Z" fill="#8c3a4c" stroke="${L}" stroke-width="1.4" stroke-linejoin="round"/><ellipse cx="60" cy="${y + 5.2}" rx="${w * 0.5}" ry="1.5" fill="#f4889f"/>`;
+  const teeth = y => `<rect x="58.2" y="${y}" width="3.6" height="3" rx=".7" fill="#fff" stroke="${L}" stroke-width=".9"/><path d="M60 ${y} v2.6" stroke="${L}" stroke-width=".6"/>`;
+  const whisk = y => `<path d="M${46} ${y} l-10 -1.6 M46 ${y + 3} l-9 2 M74 ${y} l10 -1.6 M74 ${y + 3} l9 2" stroke="${L}" stroke-width="1.1" stroke-linecap="round" opacity=".55"/>`;
+  switch (sp) {
+    case 'chouette': s += `<path d="M56.4 ${hy + 3.4} Q60 ${hy + 1.8} 63.6 ${hy + 3.4} Q62.6 ${hy + 8.6} 60 ${hy + 11.4} Q57.4 ${hy + 8.6} 56.4 ${hy + 3.4}Z" fill="#f2b03b" ${s1}/><ellipse cx="58.6" cy="${hy + 4.4}" rx="1.2" ry=".7" fill="#fff" opacity=".7"/>` + (joy ? `<path d="M57.6 ${hy + 9.4} Q60 ${hy + 13} 62.4 ${hy + 9.4}" fill="#8c3a4c" ${s1}/>` : ''); break;
+    case 'pingouin': s += `<path d="M56 ${hy + 4.4} Q60 ${hy + 2.8} 64 ${hy + 4.4} Q62.2 ${hy + 9.4} 60 ${hy + 10.6} Q57.8 ${hy + 9.4} 56 ${hy + 4.4}Z" fill="#f5a33c" ${s1}/>` + (joy ? `<path d="M57.6 ${hy + 8.6} Q60 ${hy + 12.6} 62.4 ${hy + 8.6}" fill="#8c3a4c" ${s1}/>` : ''); break;
+    case 'canard': s += (joy ? `<path d="M50 ${hy + 9} Q60 ${hy + 17} 70 ${hy + 9}Z" fill="#8c3a4c" ${s1}/>` : '')
+      + `<path d="M47 ${hy + 5} Q60 ${hy - 0.5} 73 ${hy + 5} Q75 ${hy + 11} 60 ${hy + (joy ? 9.6 : 13)} Q45 ${hy + 11} 47 ${hy + 5}Z" fill="#f59a45" ${s1}/><path d="M50 ${hy + 4.4} Q60 ${hy + 1} 70 ${hy + 4.4}" fill="none" stroke="#ffd08a" stroke-width="1.6" stroke-linecap="round"/><circle cx="56.6" cy="${hy + 5}" r=".9" fill="${L}"/><circle cx="63.4" cy="${hy + 5}" r=".9" fill="${L}"/>`
+      + (joy ? '' : `<path d="M49.6 ${hy + 9} Q60 ${hy + 11.6} 70.4 ${hy + 9}" fill="none" stroke="${L}" stroke-width="1.2" opacity=".7"/>`); break;
+    case 'grenouille': s += `<circle cx="57" cy="${hy - 1}" r=".9" fill="${L}"/><circle cx="63" cy="${hy - 1}" r=".9" fill="${L}"/>` + (joy ? `<path d="M42 ${hy + 4} Q60 ${hy + 7} 78 ${hy + 4} Q72 ${hy + 16} 60 ${hy + 16} Q48 ${hy + 16} 42 ${hy + 4}Z" fill="#8c3a4c" stroke="${L}" stroke-width="1.6" stroke-linejoin="round"/><ellipse cx="60" cy="${hy + 12.6}" rx="7" ry="2.4" fill="#f4889f"/>` : `<path d="M42 ${hy + 4} Q60 ${hy + 14} 78 ${hy + 4}" fill="none" stroke="${L}" stroke-width="1.8" stroke-linecap="round"/><path d="M40.6 ${hy + 2} q1.4 1 1.4 2.4 M79.4 ${hy + 2} q-1.4 1 -1.4 2.4" fill="none" stroke="${L}" stroke-width="1.4" stroke-linecap="round"/>`); break;
+    case 'tortue': s += `<circle cx="57.6" cy="${hy + 5}" r=".9" fill="${L}"/><circle cx="62.4" cy="${hy + 5}" r=".9" fill="${L}"/>` + (joy ? openM(hy + 8, 6) : `<path d="M52 ${hy + 9} Q60 ${hy + 14} 68 ${hy + 9}" fill="none" stroke="${L}" stroke-width="1.6" stroke-linecap="round"/>`); break;
+    case 'koala': s += `<ellipse cx="60" cy="${hy + 5}" rx="5.6" ry="7" fill="#4a4a58" stroke="${L}" stroke-width="1"/><ellipse cx="58.2" cy="${hy + 1.8}" rx="1.6" ry="2.4" fill="#fff" opacity=".45"/>` + (joy ? openM(hy + 12.6, 4) : `<path d="M56 ${hy + 13.4} Q60 ${hy + 16} 64 ${hy + 13.4}" fill="none" stroke="${L}" stroke-width="1.5" stroke-linecap="round"/>`); break;
+    default: {
+      const big = { ours: 4.2, chien: 4.4, raton: 3.4, blaireau: 3.6, loutre: 4.4, herisson: 3.2, faon: 3.2 }[sp] || 2.6;
+      if (sp === 'herisson') ny = hy + 5;
+      if (sp === 'hamster' || sp === 'souris' || sp === 'lapin') ny = hy + 7;
+      my = ny + 2.6;
+      s += nose(ny, big, P.nose || '#4a3528');
+      if (joy) s += openM(my, sp === 'chien' ? 5 : 4.4) + (sp === 'chien' ? `<path d="M57 ${my + 5} Q57 ${my + 11} 60 ${my + 11} Q63 ${my + 11} 63 ${my + 5}Z" fill="#f4889f" stroke="${L}" stroke-width="1.2"/><path d="M60 ${my + 6} v3" stroke="#d66a80" stroke-width="1"/>` : '');
+      else s += wM(my);
+      if (['lapin', 'ecureuil', 'hamster'].includes(sp)) s += teeth(joy ? my + 1.2 : my + 2.4);
+      if (['chat', 'souris', 'loutre', 'raton', 'renard'].includes(sp)) s += whisk(ny + 3);
+    }
+  }
+  return s;
+}
+function bqHeadAcc(acc, X, look, sp, P, A, C, L, sw, s1, top) {
+  const { rx, hy } = P, ex = sp === 'grenouille' ? 14 : sp === 'koala' ? 12.5 : 11, ey = sp === 'grenouille' ? hy - 17 : sp === 'canard' ? hy - 2 : hy + 0.5;
+  let s = '';
+  const glasses = (r, col, half) => [60 - ex, 60 + ex].map(x => half
+    ? `<path d="M${x - r} ${ey + 0.6} H${x + r} Q${x + r} ${ey + r} ${x} ${ey + r} Q${x - r} ${ey + r} ${x - r} ${ey + 0.6}Z" fill="#dff0fa" fill-opacity=".35" stroke="${col}" stroke-width="1.8"/>`
+    : `<circle cx="${x}" cy="${ey}" r="${r}" fill="#dff0fa" fill-opacity=".3" stroke="${col}" stroke-width="2"/><path d="M${x - r * 0.5} ${ey - r * 0.2} l${r * 0.4} ${-r * 0.4}" stroke="#fff" stroke-width="1.3" stroke-linecap="round" opacity=".9"/>`).join('')
+    + `<path d="M${60 - ex + r} ${ey + (half ? 1.4 : -0.6)} Q60 ${ey - (half ? 1 : 3)} ${60 + ex - r} ${ey + (half ? 1.4 : -0.6)}" fill="none" stroke="${col}" stroke-width="1.8"/>`;
+  if (X.includes('demilune')) s += glasses(5.6, '#c9a35a', 1) + `<path d="M${60 - ex - 5.6} ${ey + 1} Q${60 - rx} ${hy + 20} 46 ${hy + 28}" fill="none" stroke="#c9a35a" stroke-width=".9" stroke-dasharray="1.2 1"/>`;
+  if (X.includes('masqueski')) s += `<path d="M${60 - rx + 4} ${top + 8} Q60 ${top + 4} ${60 + rx - 4} ${top + 8}" fill="none" stroke="${L}" stroke-width="5.6"/><path d="M${60 - rx + 4} ${top + 8} Q60 ${top + 4} ${60 + rx - 4} ${top + 8}" fill="none" stroke="#3d4258" stroke-width="3.6"/><rect x="45" y="${top + 1}" width="30" height="11" rx="5.5" fill="#f6d36b" ${sw}/><rect x="47.4" y="${top + 3.2}" width="11.6" height="6.6" rx="3.3" fill="#7fc8e8"/><rect x="61" y="${top + 3.2}" width="11.6" height="6.6" rx="3.3" fill="#7fc8e8"/><path d="M49 ${top + 7.6} l3.6 -3 M62.6 ${top + 7.6} l3.6 -3" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>`;
+  if (X.includes('crayon')) s += `<g transform="translate(${60 + rx - 3} ${top + 10}) rotate(-62)"><rect x="-2" y="-13" width="4" height="19" fill="#f2c14e" ${s1}/><path d="M-2 6 L0 11 L2 6Z" fill="#f6dcb0" ${s1}/><path d="M-.6 9 L0 11 L.6 9Z" fill="${L}"/><rect x="-2" y="-15.4" width="4" height="3" rx="1" fill="#f39ab0" ${s1}/></g>`;
+  if (X.includes('boucles')) s += [-1, 1].map(k => `<path d="M${60 + k * (rx - 2.6)} ${hy + 8} v3" stroke="#c9a35a" stroke-width="1"/><circle cx="${60 + k * (rx - 2.6)}" cy="${hy + 13}" r="2.4" fill="#fbf8f0" ${s1}/>`).join('');
+  if (X.includes('couronne')) { const fl = [[40, top + 10, '#f6c2cf'], [49, top + 4, '#fff8f0'], [60, top + 2, '#f6d36b'], [71, top + 4, '#fff8f0'], [80, top + 10, '#f6c2cf']]; s += `<path d="M${60 - rx + 2} ${top + 13} Q60 ${top - 4} ${60 + rx - 2} ${top + 13}" fill="none" stroke="#7fae4f" stroke-width="2.2"/>` + [[44, top + 7, -40], [55, top + 2, -15], [66, top + 2, 15], [76, top + 7, 40]].map(([x, y, a]) => `<ellipse cx="${x}" cy="${y}" rx="3.6" ry="1.8" transform="rotate(${a} ${x} ${y})" fill="#9cc88a" ${s1}/>`).join('') + fl.map(([x, y, f]) => [0, 1, 2, 3, 4].map(k => `<circle cx="${(x + Math.cos(k * 1.257) * 2.6).toFixed(1)}" cy="${(y + Math.sin(k * 1.257) * 2.6).toFixed(1)}" r="2.2" fill="${f}" stroke="${L}" stroke-width=".9"/>`).join('') + `<circle cx="${x}" cy="${y}" r="1.4" fill="#f2c14e"/>`).join(''); }
+  const flower = (x, y, r) => `<g transform="translate(${x} ${y})"><ellipse cx="-6" cy="5" rx="4.4" ry="2" transform="rotate(30 -6 5)" fill="#8fbf6a" ${s1}/>${[0, 1, 2, 3, 4].map(k => `<ellipse cx="${(Math.cos(k * 1.257 - 1.57) * r).toFixed(1)}" cy="${(Math.sin(k * 1.257 - 1.57) * r).toFixed(1)}" rx="${(r * 0.75).toFixed(1)}" ry="${(r * 0.62).toFixed(1)}" transform="rotate(${(k * 72).toFixed(0)} ${(Math.cos(k * 1.257 - 1.57) * r).toFixed(1)} ${(Math.sin(k * 1.257 - 1.57) * r).toFixed(1)})" fill="${A}" stroke="${L}" stroke-width="1.2"/>`).join('')}<circle r="${(r * 0.62).toFixed(1)}" fill="#f2c14e" stroke="${L}" stroke-width="1.1"/><circle cx="-.8" cy="-.8" r="${(r * 0.22).toFixed(1)}" fill="#fff" opacity=".8"/></g>`;
+  switch (acc) {
+    case 'noeud': s += `<g transform="translate(${60 + rx * 0.62} ${top + 6}) rotate(18)"><path d="M0 0 C-3 -8 -13 -8 -12 0 C-13 8 -3 8 0 0Z M0 0 C3 -8 13 -8 12 0 C13 8 3 8 0 0Z" fill="${A}" ${s1}/><path d="M-3 1 L-6 10 L-2.6 8.6 L-1 11 Z M3 1 L6 10 L2.6 8.6 L1 11Z" fill="${shade(A, 0.86)}" ${s1}/><path d="M-9 -2 q3 -1 5 1 M9 -2 q-3 -1 -5 1" fill="none" stroke="${shade(A, 0.75)}" stroke-width="1.1" stroke-linecap="round"/><rect x="-3" y="-3.4" width="6" height="6.8" rx="2.4" fill="${shade(A, 0.92)}" ${s1}/></g>`; break;
+    case 'fleur': if (!X.includes('couronne')) s += flower(sp === 'lapin' ? 74 : sp === 'grenouille' ? 60 : 60 - rx * 0.62, sp === 'lapin' ? top + 4 : sp === 'grenouille' ? hy - 22 : top + 7, 3.6); break;
+    case 'chapeau': {
+      const by = top + 6, w = rx + 9;
+      if (look.hat === 'explo') s += `<path d="M44 ${by} C43 ${by - 18} 77 ${by - 18} 76 ${by}Z" fill="${A}" ${sw}/><path d="M50 ${by - 12} Q60 ${by - 8} 70 ${by - 12}" fill="none" stroke="${shade(A, 0.75)}" stroke-width="1.6" stroke-linecap="round"/><path d="M${60 - w} ${by + 2} Q60 ${by - 7} ${60 + w} ${by + 2} Q60 ${by + 7} ${60 - w} ${by + 2}Z" fill="${shade(A, 1.08)}" ${sw}/><path d="M44.4 ${by - 3} Q60 ${by - 5} 75.6 ${by - 3} L75.8 ${by + 0.6} Q60 ${by - 1.6} 44.2 ${by + 0.6}Z" fill="#7a5338"/>`;
+      else s += `<path d="M${60 - w} ${by + 2} Q60 ${by - 7} ${60 + w} ${by + 2} Q60 ${by + 8} ${60 - w} ${by + 2}Z" fill="${A}" ${sw}/><path d="M${60 - w + 5} ${by + 2} Q60 ${by - 3} ${60 + w - 5} ${by + 2}" fill="none" stroke="${shade(A, 0.8)}" stroke-width="1" stroke-dasharray="2 2"/><path d="M45 ${by} C45 ${by - 17} 75 ${by - 17} 75 ${by}Z" fill="${A}" ${sw}/><path d="M48 ${by - 9} Q60 ${by - 11} 72 ${by - 9}" fill="none" stroke="${shade(A, 0.8)}" stroke-width="1" stroke-dasharray="2 2"/><path d="M45.2 ${by - 4} Q60 ${by - 6} 74.8 ${by - 4} L75 ${by - 0.4} Q60 ${by - 2.4} 45 ${by - 0.4}Z" fill="#e5584f"/>${look.hat === 'paille' ? `<circle cx="70" cy="${by - 3}" r="2.4" fill="#fff" ${s1}/>` : ''}`;
+      break;
+    }
+    case 'capitaine': { const by = top + 6; s += `<path d="M41 ${by} C40 ${by - 15} 80 ${by - 15} 79 ${by}Z" fill="${A}" ${sw}/><path d="M40 ${by - 1} H80 L79 ${by + 4} H41Z" fill="#2f3b5c" ${sw}/><path d="M44 ${by + 4} Q60 ${by + 12} 76 ${by + 4}Z" fill="#2a2e40" ${sw}/><circle cx="60" cy="${by - 6}" r="3.4" fill="#f2c14e" ${s1}/><path d="M60 ${by - 8} v4 M58.4 ${by - 5.4} q1.6 1.6 3.2 0" fill="none" stroke="${L}" stroke-width=".9" stroke-linecap="round"/><path d="M47 ${by + 1.4} H73" stroke="#f2c14e" stroke-width="1.2" stroke-dasharray="2.6 1.6"/>`; break; }
+    case 'casquette': { const by = top + 8; s += `<path d="M38 ${by} C37 ${by - 21} 83 ${by - 21} 82 ${by}Z" fill="${A}" ${sw}/><path d="M60 ${by - 15.6} V${by} M49 ${by - 13} Q47 ${by - 6} 47 ${by} M71 ${by - 13} Q73 ${by - 6} 73 ${by}" fill="none" stroke="${shade(A, 0.8)}" stroke-width="1.2"/><path d="M38 ${by - 1} Q60 ${by - 4} 82 ${by - 1} L82 ${by + 1.8} Q60 ${by - 1.4} 38 ${by + 1.8}Z" fill="${shade(A, 0.82)}" ${s1}/><path d="M74 ${by - 1} C88 ${by - 3} 98 ${by} 96 ${by + 4} C90 ${by + 6} 80 ${by + 4} 72 ${by + 2}Z" fill="${shade(A, 0.9)}" ${sw}/><circle cx="60" cy="${by - 16}" r="2.4" fill="${shade(A, 0.85)}" ${s1}/><ellipse cx="50" cy="${by - 10}" rx="5" ry="2.4" fill="#fff" opacity=".25" transform="rotate(-25 50 ${by - 10})"/>`; break; }
+    case 'lunettes': s += glasses(6.4, A); break;
+    case 'monocle': { const by = top + 5; s += `<circle cx="${60 + ex}" cy="${ey}" r="6.4" fill="#dff0fa" fill-opacity=".3" stroke="${A}" stroke-width="2"/><path d="M${60 + ex - 3} ${ey - 2} l2.6 -2.6" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/><path d="M${60 + ex + 5} ${ey + 4} C${80} ${hy + 22} 74 ${hy + 30} 70 ${hy + 33}" fill="none" stroke="${A}" stroke-width="1" stroke-dasharray="1.4 1"/>`
+      + `<path d="M46 ${by} L47.6 ${by - 20} Q60 ${by - 22} 72.4 ${by - 20} L74 ${by}Z" fill="#3b3f5a" ${sw}/><path d="M46.8 ${by - 6} Q60 ${by - 8} 73.2 ${by - 6} L73.6 ${by - 2} Q60 ${by - 4} 46.4 ${by - 2}Z" fill="${A}"/><path d="M38 ${by + 1} Q60 ${by - 6} 82 ${by + 1} Q60 ${by + 6} 38 ${by + 1}Z" fill="#3b3f5a" ${sw}/><path d="M51 ${by - 18} V${by - 9}" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".2"/>`; break; }
+  }
+  return s;
+}
+function bqArms(P, look, C, C2, CG, L, sw, s1) {
+  const sl = ['salopette', 'gilet', 'chale', 'cardigan'].includes(look.g) ? (look.g === 'cardigan' ? CG : C2) : look.g === 'cape' ? shade(C, 0.9) : CG;
+  const paw = P.paw || P.fur, k = P.arm || 'paw';
+  let hand;
+  if (k === 'wing') hand = `<path d="M40 110 C46 106 54 108 55 113 C52 113 50 115 51 118 C48 117 45 119 45 121 C42 119 38 116 40 110Z" fill="${P.fur}" ${s1}/><path d="M47 111 l3 3 M44 113 l2 4" stroke="${P.dark}" stroke-width="1.2" stroke-linecap="round"/>`;
+  else if (k === 'flip') hand = `<path d="M39 112 C44 106 54 107 58 115 C52 118 44 119 39 112Z" fill="${P.fur}" ${s1}/><path d="M44 111 Q49 110 53 113" fill="none" stroke="#6a7090" stroke-width="1.2" stroke-linecap="round"/>`;
+  else if (k === 'frog') hand = `<ellipse cx="45" cy="113" rx="6.2" ry="5" fill="${paw}" ${s1}/>${[[49.5, 108.6], [52, 112.4], [50.6, 116.4]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2" fill="${shade(paw, 1.08)}" ${s1}/>`).join('')}`;
+  else hand = `<ellipse cx="46" cy="113" rx="7" ry="5.8" transform="rotate(-35 46 113)" fill="${paw}" ${s1}/><path d="M49.6 109.6 l1.6 1.4 M51 112.6 l1.8 .8" stroke="${L}" stroke-width="1.1" stroke-linecap="round" opacity=".7"/><ellipse cx="44" cy="111" rx="2.2" ry="1.3" transform="rotate(-35 44 111)" fill="#fff" opacity=".3"/>`;
+  return bqMir(`<path d="M19 102 C20 112 28 120 37 120 L46 109 C40 104 34 98 29 94 C24 95 20 98 19 102Z" fill="${sl}" ${sw}/><path d="M24 104 C27 110 31 114 36 116" fill="none" stroke="#3a2a22" stroke-width="2.4" stroke-linecap="round" opacity=".12"/>`
+    + `<path d="M35.4 118.4 L44.4 107.6 L47.4 110 L38.6 121Z" fill="${look.g === 'pull' || look.g === 'sweat' ? shade(C, 0.84) : look.g === 'doudoune' ? '#fbf4e6' : shade(typeof sl === 'string' && sl[0] === '#' ? sl : C, 0.9)}" ${s1}/>` + hand);
+}
+// devant : sac, poches, petits objets portés sur la poitrine
+function bqFront(X, A, C, L, sw, s1) {
+  let s = '';
+  if (X.includes('sac')) s += `<path d="M12 104 H34 L33 121 H13Z" fill="#c98a5a" ${sw}/><path d="M11 103 H35 L33 112 Q23 115 13 112Z" fill="#a87a50" ${sw}/><circle cx="23" cy="112" r="1.8" fill="#f2c14e" ${s1}/>`;
+  if (X.includes('badge')) s += `<circle cx="38" cy="96" r="4.6" fill="${A === '#f39ab0' ? '#f2c14e' : '#f6d36b'}" ${s1}/><path d="${starD(38, 96.3, 2.8)}" fill="#e5584f"/>`;
+  if (X.includes('broche')) s += `<g transform="translate(40 96)">${[0, 1, 2, 3, 4].map(k => `<circle cx="${(Math.cos(k * 1.257) * 2.2).toFixed(1)}" cy="${(Math.sin(k * 1.257) * 2.2).toFixed(1)}" r="1.9" fill="${A}" stroke="${L}" stroke-width=".9"/>`).join('')}<circle r="1.5" fill="#f2c14e"/></g>`;
+  if (X.includes('plume')) s += `<rect x="68" y="97" width="11" height="8" rx="1.4" fill="${shade(C, 0.9)}" ${s1}/><path d="M74 98 C76 92 80 88 86 84 C84 90 80 95 75 98Z" fill="#fbf8f0" ${s1}/><path d="M75 98 L84 86" stroke="${L}" stroke-width=".8"/>`;
+  if (X.includes('mouchoir')) s += `<path d="M70 99 L73 95 L75 98 L77 94.6 L80 99Z" fill="${A}" ${s1}/><path d="M69 99 H81" stroke="${L}" stroke-width="1.4" stroke-linecap="round"/>`;
+  if (X.includes('montre')) s += `<path d="M44 108 Q50 113 56 107" fill="none" stroke="#e3b94a" stroke-width="1.2" stroke-dasharray="1.6 .8"/>`;
+  if (X.includes('carotte')) s += `<path d="M62.6 103 l-2.4 -6 M64 103 l.6 -7 M65.4 103 l3.6 -5.4" stroke="#6faf5f" stroke-width="2" stroke-linecap="round"/><path d="M61 102.4 H67 L66.4 105.4 H61.6Z" fill="#f2963b" ${s1}/>`;
+  if (X.includes('outil')) s += `<rect x="62.6" y="97.4" width="4.8" height="7.6" rx="1.8" fill="#e5584f" ${s1}/><path d="M63.4 103.4 H66.6" stroke="#a6a6b2" stroke-width="1.6"/>`;
+  return s;
+}
+const clientURI = (c, mood) => {
+  const k = [c.id, c.sp, c.cloth, c.acc, c.accC, mood].join('|'); let v = BQ_URIC.get(k);
+  if (!v) { if (BQ_URIC.size > 240) BQ_URIC.clear(); v = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(clientSVG(c, mood).replace('<svg ', '<svg width="120" height="120" ')); BQ_URIC.set(k, v); }
+  return v;
+};
 
 // ---------------- les commerces dessinés : emblème et façade ----------------
 // emblème dans une boîte de 40 × 40, centré en (20, 20)
