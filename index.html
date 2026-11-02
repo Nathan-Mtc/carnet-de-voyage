@@ -13004,6 +13004,7 @@ function renderMarche(box) {
   if (mkView === 'annonces' && m.unseen) { m.unseen = 0; save(); setTimeout(() => { try { renderNav(); } catch (e) {} }, 0); }
   const online = 1180 + Math.round(240 * Math.sin(Date.now() / 3.6e6)) + (mkHash(dayKey()) % 90);
   let h = `<div class="mk-ban"><span class="mk-glob" aria-hidden="true"><svg viewBox="0 0 30 30">${MK_CATS[2][2]}</svg></span><div><b>Marché mondial <span>(bientôt avec de vrais joueurs)</span></b><small>${online.toLocaleString('fr-FR')} voyageurs simulés · ${m.list.length} annonces · le stock tourne en continu</small></div></div>`;
+  if (mkView === 'acheter' && typeof b2BuyExtras === 'function') h += b2BuyExtras();
   if (mkView !== 'annonces') {
     h += `<div class="mk-cats" role="tablist">${MK_CATS.map(([k, l, ic]) => `<button role="tab" data-mkcat="${k}" aria-selected="${mkCat === k}"><svg viewBox="0 0 30 30" aria-hidden="true">${ic}</svg><span>${l}</span></button>`).join('')}</div>`;
     if (mkCat === 'res' && typeof REGIONS !== 'undefined') {
@@ -13066,7 +13067,7 @@ document.addEventListener('click', ev => {
 });
 function mkViewsBar() {
   const m = mkState(), mine = m.mine.filter(l => !l.sold).length, b2 = typeof b2MarcheHTML === 'function';
-  const v = [['place', 'Place'], ['acheter', 'Acheter'], ['vendre', 'Vendre'], ['annonces', 'Mes annonces'], ['quetes', 'Quêtes']].filter(([k]) => b2 || (k !== 'place' && k !== 'quetes'));
+  const v = [['acheter', 'Acheter'], ['vendre', 'Vendre'], ['annonces', 'Mes annonces'], ['quetes', 'Quêtes']].filter(([k]) => b2 || (k !== 'place' && k !== 'quetes'));
   return `<div class="filters mk-views" style="--n:${v.length}" aria-label="Marché mondial">${v.map(([k, l]) => `<button data-mkview="${k}" aria-pressed="${mkView === k}">${l}${k === 'annonces' && mine ? ` <small>${mine}</small>` : ''}${k === 'annonces' && m.unseen ? '<i class="mk-dot" aria-label="Ventes conclues"></i>' : ''}</button>`).join('')}</div>`;
 }
 function openMarche(cat, sp) {
@@ -13155,7 +13156,7 @@ setInterval(mkTick, 5000);
 .mk-ban>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
 .mk-ban b{font:800 16.5px/1.2 var(--display)}.mk-ban b span{font:700 13px var(--display);color:var(--teal)}
 .mk-ban small{font-size:12px;color:var(--ink2)}
-.mk-views{position:sticky;top:-16px;z-index:4;margin:-16px -16px 12px;padding:10px 10px 8px;display:grid;grid-template-columns:repeat(var(--n,5),minmax(0,1fr));gap:5px;background:var(--paper);border-bottom:2.5px solid var(--ink);box-shadow:0 4px 10px rgba(74,53,40,.12)}
+.mk-views{position:sticky;top:-16px;z-index:4;margin:-16px -16px 12px;padding:10px 10px 8px;display:grid!important;flex-wrap:nowrap;grid-template-columns:repeat(var(--n,5),minmax(0,1fr));gap:5px;background:var(--paper);border-bottom:2.5px solid var(--ink);box-shadow:0 4px 10px rgba(74,53,40,.12)}
 .mk-subs{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 10px}.mk-subs button{padding:5px 10px;border:2px solid var(--ink);border-radius:999px;background:#fffaf0;font:800 12.5px 'Baloo 2',sans-serif;color:var(--ink);cursor:pointer}.mk-subs button[aria-pressed=true]{background:var(--ink);color:#fff}.mk-subs svg{width:15px;height:15px;vertical-align:-3px}
 .mk-views button{position:relative;padding:6px 2px 4px;font-size:12.5px;line-height:1.05;text-align:center;min-height:38px;white-space:normal}
 .mk-dot,.mk-ndot{position:absolute;width:12px;height:12px;border-radius:50%;background:var(--rust,#d9604f);border:2px solid #fff;box-shadow:0 0 0 1.5px var(--ink)}
@@ -21389,6 +21390,13 @@ function b2TrendHTML(t) {
   const it = b2ResIt(t.x), now = mkFair(it), was = b2FairBase ? b2FairBase(it) : 0;
   return `<div class="b2tr"><span class="b2tri">${itemIcon(it)}</span><b>${esc(t.x.name)}</b><em><i aria-hidden="true">↑</i> Prix de vente +${t.pct} % cette semaine</em>${was && was < now ? `<span class="b2trp"><s aria-label="Prix habituel">${was}</s><b aria-label="Prix cette semaine">${coins(now)}</b></span>` : `<span class="b2trp"><b>${coins(now)}</b></span>`}<span class="b2trf">${rgIcon(RG[t.x.region], 's')}${esc(RG[t.x.region].short)}</span><button class="btn cream sm" data-b2trend="${t.x.id}">Où la trouver</button></div>`;
 }
+// v24 : « À la mode cette semaine » et « Enchère » passent dans Acheter (la Place est supprimée)
+function b2BuyExtras() {
+  let h = '';
+  try { const tr = b2Trends(); if (tr.length) h += `<h3 class="bq-h3">À la mode cette semaine</h3><p class="small b2trh">Ces spécialités se vendent plus cher au marché mondial jusqu’à la fin de la semaine.</p><div class="b2trs">${tr.map(b2TrendHTML).join('')}</div>`; } catch (e) {}
+  try { h += `<h3 class="bq-h3">Enchère</h3>` + b2AucHTML(); } catch (e) {}
+  return h ? h + '<h3 class="bq-h3">Annonces</h3>' : '';
+}
 function b2MarcheHTML() {
   const m = mkState(); mkProcess(); mkRotate();
   const online = 1180 + Math.round(240 * Math.sin(Date.now() / 3.6e6)) + (mkHash(dayKey()) % 90);
@@ -21413,12 +21421,12 @@ function b2QuetesHTML() {
   return mkViewsBar() + h;
 }
 if (typeof renderMarche === 'function') {
-  try { mkView = 'place'; } catch (e) {}
+  try { mkView = 'acheter'; } catch (e) {}
   renderMarche = (orig => function (box) {
     const m = mkState();
     if (m.unseen && mkAuto !== m.sold) return orig.apply(this, arguments); // des ventes conclues : « Mes annonces » d'abord
-    if (mkView === 'place') box.innerHTML = b2MarcheHTML();
-    else if (mkView === 'quetes') { mkView = 'place'; box.innerHTML = b2MarcheHTML(); if (typeof qtOpenPage === 'function') setTimeout(qtOpenPage, 0); else box.innerHTML = b2QuetesHTML(); } // v21 : les vraies quêtes (38_quetes.js)
+    if (mkView === 'place') { mkView = 'acheter'; return orig.apply(this, arguments); } // v24 : la Place est supprimée
+    else if (mkView === 'quetes') { mkView = 'acheter'; orig.apply(this, arguments); if (typeof qtOpenPage === 'function') setTimeout(qtOpenPage, 0); else box.innerHTML = b2QuetesHTML(); } // v21 : les vraies quêtes (38_quetes.js)
     else orig.apply(this, arguments);
   })(renderMarche);
 }

@@ -279,6 +279,13 @@ function b2TrendHTML(t) {
   const it = b2ResIt(t.x), now = mkFair(it), was = b2FairBase ? b2FairBase(it) : 0;
   return `<div class="b2tr"><span class="b2tri">${itemIcon(it)}</span><b>${esc(t.x.name)}</b><em><i aria-hidden="true">↑</i> Prix de vente +${t.pct} % cette semaine</em>${was && was < now ? `<span class="b2trp"><s aria-label="Prix habituel">${was}</s><b aria-label="Prix cette semaine">${coins(now)}</b></span>` : `<span class="b2trp"><b>${coins(now)}</b></span>`}<span class="b2trf">${rgIcon(RG[t.x.region], 's')}${esc(RG[t.x.region].short)}</span><button class="btn cream sm" data-b2trend="${t.x.id}">Où la trouver</button></div>`;
 }
+// v24 : « À la mode cette semaine » et « Enchère » passent dans Acheter (la Place est supprimée)
+function b2BuyExtras() {
+  let h = '';
+  try { const tr = b2Trends(); if (tr.length) h += `<h3 class="bq-h3">À la mode cette semaine</h3><p class="small b2trh">Ces spécialités se vendent plus cher au marché mondial jusqu’à la fin de la semaine.</p><div class="b2trs">${tr.map(b2TrendHTML).join('')}</div>`; } catch (e) {}
+  try { h += `<h3 class="bq-h3">Enchère</h3>` + b2AucHTML(); } catch (e) {}
+  return h ? h + '<h3 class="bq-h3">Annonces</h3>' : '';
+}
 function b2MarcheHTML() {
   const m = mkState(); mkProcess(); mkRotate();
   const online = 1180 + Math.round(240 * Math.sin(Date.now() / 3.6e6)) + (mkHash(dayKey()) % 90);
@@ -303,12 +310,12 @@ function b2QuetesHTML() {
   return mkViewsBar() + h;
 }
 if (typeof renderMarche === 'function') {
-  try { mkView = 'place'; } catch (e) {}
+  try { mkView = 'acheter'; } catch (e) {}
   renderMarche = (orig => function (box) {
     const m = mkState();
     if (m.unseen && mkAuto !== m.sold) return orig.apply(this, arguments); // des ventes conclues : « Mes annonces » d'abord
-    if (mkView === 'place') box.innerHTML = b2MarcheHTML();
-    else if (mkView === 'quetes') { mkView = 'place'; box.innerHTML = b2MarcheHTML(); if (typeof qtOpenPage === 'function') setTimeout(qtOpenPage, 0); else box.innerHTML = b2QuetesHTML(); } // v21 : les vraies quêtes (38_quetes.js)
+    if (mkView === 'place') { mkView = 'acheter'; return orig.apply(this, arguments); } // v24 : la Place est supprimée
+    else if (mkView === 'quetes') { mkView = 'acheter'; orig.apply(this, arguments); if (typeof qtOpenPage === 'function') setTimeout(qtOpenPage, 0); else box.innerHTML = b2QuetesHTML(); } // v21 : les vraies quêtes (38_quetes.js)
     else orig.apply(this, arguments);
   })(renderMarche);
 }
