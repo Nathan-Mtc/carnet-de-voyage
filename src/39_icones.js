@@ -359,6 +359,42 @@ const ICO_RULES = [
   [/tissu|chute|voile|sac a pain|sac en filet|trousse|ceinture/, 'tissu'], [/sac en papier|sac/, 'sac'],
   [/cle|porte-cles/, 'cle'], [/eclat/, 'cristal'],
 ];
+// v26 : pictogrammes des produits du comptoir (toutes les recettes de CM_LINES ont une icône reconnaissable)
+const iBone = (c, rot = -24) => `<g transform="rotate(${rot} 20 20)">` + iP('M14 16 H26 a4.6 4.6 0 1 1 5 4 a4.6 4.6 0 1 1 -5 4 H14 a4.6 4.6 0 1 1 -5 -4 a4.6 4.6 0 1 1 5 -4Z', c) + '</g>';
+const iCream = (y = 16) => iP(`M9 ${y} q0 -6 6 -5 q2 -6 8 -3 q6 -3 8 3 q2 3 -1 5Z`, '#fffaf2', 1.3);
+const iShell = (x, y, c) => `<g transform="translate(${x} ${y})">` + iP('M-5 2 C-5 -6 5 -6 5 2Z', c, 1.1) + iL('M0 2 V-3 M-2.6 2 L-3.4 -2 M2.6 2 L3.4 -2', IL, .7) + '</g>';
+Object.assign(ICO, {
+  brochette: ['#e5584f', c => iL('M5 36 L35 4', '#a87a50', 2.6) + iC(10.5, 30.5, 4.6, c) + iH(9, 29, 1.2) + iC(16.5, 24.5, 4.4, '#f2a93b') + iL('M14.5 24.5 h4 M16.5 22.5 v4', '#fff3c4', .9) + iC(22.5, 18.5, 4.4, '#8fcf6a') + iC(22.5, 18.5, 1.4, '#3f4a2a', .6) + iC(28.5, 12.5, 4.4, '#9a6fd6') + iH(27, 11, 1.2) + iP('M33 6 l3 -3', 'none', 1.6)],
+  milkshake: ['#f3aec1', c => iP('M11 15 H29 L26 36 H14Z', c) + iL('M13 23 H27 M14 29 H26', shade(c, 0.8), 1.1) + iCream(15) + iL('M24 12 L29 2', '#e5584f', 2.6) + iC(16, 7.5, 2.8, '#e5584f', 1.1) + iL('M16 5 q1 -3 3 -3', IL, 1) + iH(16, 25, 1.5)],
+  bombe: ['#d9604f', c => iE(20, 34, 16, 3.6, '#fffaf2') + iP('M5 33 C5 12 35 12 35 33Z', c) + iL('M7 27 Q20 22 33 27', '#fff3c4', 2.4) + iL('M6 31 Q20 28 34 31', shade(c, 0.72), 1.6) + iC(20, 12.5, 3.2, '#e5584f', 1.1) + iL('M20 9.5 q2 -4 5 -4', '#5fa274', 1.3) + iH(12, 22)],
+  piecemontee: ['#f6e3c4', c => iE(20, 36, 16, 2.6, '#fffaf2') + [[9, 31], [16, 31], [24, 31], [31, 31], [12.5, 25], [20, 25], [27.5, 25], [16, 19], [24, 19], [20, 13]].map(([x, y]) => iC(x, y, 3.9, '#e8b46c', 1.1)).join('') + iL('M8 30 Q20 20 32 30 M11 24 Q20 15 29 24', '#f6d36b', 1.1) + iL('M20 9 V3', IL, 1.2) + iP('M20 3 L26 5 L20 7Z', '#f39ab0', 1)],
+  clocheplat: ['#d9604f', c => iE(20, 32, 17, 4, '#fffaf2') + iP('M5 31 C5 12 35 12 35 31Z', '#d6dde3') + iC(20, 11, 2.6, '#b5bcc2', 1.1) + iH(13, 21) + iL('M5 31 H35', IL, 1.6) + iP('M27 31 l5 -6 l3 6Z', c, 1.1) + iL('M14 6 q2 -3 0 -5 M26 6 q2 -3 0 -5', IL, 1)],
+  gratin: ['#f2c14e', c => iR(5, 17, 30, 15, 5, '#fffaf2') + iP('M7 19 H33 V23 Q27 20 20 23 Q13 26 7 22Z', c, 1.1) + iC(13, 21, 1.4, shade(c, 0.6), .6) + iC(24, 20.5, 1.6, shade(c, 0.6), .6) + iR(1, 21, 5, 4, 2, '#fffaf2', 1.2) + iR(34, 21, 5, 4, 2, '#fffaf2', 1.2) + iL('M14 13 q2 -3 0 -6 M24 13 q2 -3 0 -6', IL, 1.1)],
+  nouilles: ['#d9733f', c => iL('M23 18 L34 3 M27 19 L37 6', '#a87a50', 2.2) + iP('M4 19 H36 C36 29 29 35 20 35 C11 35 4 29 4 19Z', c) + iE(20, 19, 16, 4, '#f6e3a4') + iL('M10 19 q3 -2 6 0 q3 2 6 0 q3 -2 6 0', '#e3b06b', 1.1) + iC(14, 18.5, 2, '#8fcf6a', .8) + iL('M9 26 h22', shade(c, 0.7), 1.4)],
+  fondue: ['#f2d06b', c => iL('M24 18 L35 3', '#b5bcc2', 1.8) + iC(35, 3, 2.2, '#e3b06b', .9) + iP('M7 18 H33 L30 32 H10Z', '#c9604f') + iE(20, 18, 13, 3.4, c) + iP('M12 18 q1 5 3 0 M24 18 q1 6 3 0', c, .9) + iL('M3 21 h4 M33 21 h4', IL, 2) + iP('M12 34 h16 l-2 3 h-12Z', '#5b4636', 1) + iP('M17 37 q3 -5 6 0Z', '#f2a05a', .8)],
+  friandise: ['#c99a6a', c => iBone(c) + iC(16, 17, 1, '#7a5a3a', .4) + iC(21, 21, 1, '#7a5a3a', .4) + iC(25, 17, 1, '#7a5a3a', .4) + iH(13, 14, 1.3)],
+  biscuitpoisson: ['#e3a85f', c => iP('M4 20 C10 10 24 10 30 20 C24 30 10 30 4 20Z M30 20 L37 13 V27Z', c) + iC(11, 18, 1.6, IL, .5) + iL('M16 15 q3 5 0 10 M21 15 q3 5 0 10', shade(c, 0.7), 1) + iC(25, 20, 1, shade(c, 0.6), .4)],
+  jouet: ['#c99a6a', c => iL('M4 34 L10 30', IL, 1.3) + iR(10, 22, 22, 8, 3, c) + iC(14, 32, 3.6, '#e5584f') + iC(28, 32, 3.6, '#e5584f') + iC(14, 32, 1, IL, .5) + iC(28, 32, 1, IL, .5) + iP('M12 22 Q12 12 20 12 Q26 12 26 18 V22Z', c) + iC(29, 12, 5.4, c) + iP('M33 12 l5 1 l-5 2Z', '#f2a93b', 1) + iC(30, 11, 1.1, IL, .4) + iP('M26 8 q-1 -5 3 -6 q1 4 -1 6Z', shade(c, 0.8), 1)],
+  corbeille: ['#f3aec1', c => iE(20, 27, 17, 9, '#d9a35f') + iL('M5 26 Q20 33 35 26', shade('#d9a35f', 0.7), 1.2) + iE(20, 23, 13, 5.6, c) + iL('M11 23 q4 -2 8 0 M21 22 q4 -2 8 0', '#fff', 1.2) + iBone('#fffaf2', -10).replace('rotate(-10 20 20)', 'translate(14 4) scale(.38) rotate(-10 20 20)')],
+  corbeilleroyale: ['#9a6fd6', c => ICO.corbeille[1](c) + iP('M12 13 V4 L16 8 L20 2 L24 8 L28 4 V13Z', '#f6d36b', 1.2) + iC(20, 10, 1.4, '#e5584f', .6)],
+  coffret: ['#a8b45a', c => iR(4, 18, 32, 17, 3, '#c99a6a') + iL('M4 24 H36', shade('#c99a6a', 0.7), 1.1) + iR(8, 9, 7, 10, 2, '#e5584f', 1.2) + iR(8, 8, 7, 3, 1, '#fffaf2', .9) + iR(17, 7, 7, 12, 2, '#f2a93b', 1.2) + iR(17, 6, 7, 3, 1, '#fffaf2', .9) + iP('M26 19 L28 9 Q31 7 33 10 L34 19Z', c, 1.2) + iR(12, 26, 16, 6, 2, '#fff3d6', 1)],
+  paniergourmand: ['#d9a35f', c => iR(23, 2, 6, 18, 3, '#e3b06b', 1.2) + ICO.panier[1](c) + iP('M20 15 L28 18 L22 21Z', '#f2d06b', 1)],
+  arche: ['#e07a9a', c => iL('M8 37 V20 a12 12 0 0 1 24 0 V37', '#7fbf6a', 3.6) + iL('M8 37 V20 a12 12 0 0 1 24 0 V37', IL, 1) + [[8, 26], [9, 15], [14, 9.5], [20, 8], [26, 9.5], [31, 15], [32, 26]].map(([x, y], i) => iPet(x, y, 2.3, 5, i % 2 ? '#fff6c2' : c, i % 2 ? '#f2a93b' : '#f6d36b')).join('')],
+  marquepage: ['#f6c2cf', c => iP('M13 3 H27 V37 L20 31 L13 37Z', c) + iL('M15 7 H25', shade(c, 0.75), 1) + iPet(20, 17, 2.8, 5, '#fffaf2', '#f2c14e') + iLeaf(17, 25, -30, '#7fbf5f', .6) + iL('M20 3 V0', '#e5584f', 1.6)],
+  mobile: ['#f6cdb8', c => iL('M5 9 H35', '#a87a50', 2.4) + iL('M20 9 V3 M9 9 V22 M20 9 V28 M31 9 V18', IL, .9) + iShell(9, 25, c) + iShell(20, 31, '#fffaf2') + iShell(31, 21, '#f6d36b') + iStar(20, 15, 3, '#f39ab0')],
+  carafe: ['#f2e27a', c => iP('M11 8 H25 L27 15 Q32 25 27 35 H11 Q6 25 11 15Z', '#eef6fa') + iP('M10 20 H28 Q30 27 26.5 33.5 H11.5 Q8 27 10 20Z', c, 1) + iL('M27 13 q8 3 3 14', IL, 1.8) + iC(18, 6, 4.2, '#f6d84e', 1.1) + iL('M18 2.5 V9.5 M14.6 6 H21.4', '#fffaf0', .9) + iH(14, 25, 1.4)],
+  viennois: ['#6b4a32', c => iP('M11 16 H29 L26 36 H14Z', '#fffaf2') + iP('M12 19 H28 L25.6 34 H14.4Z', c, 1) + iCream(16) + iC(15, 9, .9, '#6b4a32', .3) + iC(21, 7, .9, '#6b4a32', .3) + iC(25, 10, .9, '#6b4a32', .3) + iL('M29 20 h3 a3 3 0 0 1 0 6 h-3', IL, 1.6)],
+  cafecreme: ['#c99a6a', c => iE(20, 33, 17, 4, '#fffaf2') + iP('M7 15 H31 V23 C31 33 7 33 7 23Z', '#fffaf2') + iE(19, 15, 12, 3.4, c) + iP('M19 17.4 l-3.4 -2.2 a1.8 1.8 0 0 1 3.4 -1.4 a1.8 1.8 0 0 1 3.4 1.4Z', '#fff3e0', .6) + iL('M31 18 h3 a3.4 3.4 0 0 1 0 7 h-3', IL, 1.6) + iL('M15 9 q2 -3 0 -6 M22 9 q2 -3 0 -6', IL, 1.1)],
+  parchemin: ['#e3b07a', c => iP('M8 8 H30 V32 H10Z', '#efe2c4') + iC(8, 8, 3.4, c, 1.2) + iC(30, 32, 3.4, c, 1.2) + iL('M13 26 q5 -9 10 -4 q4 3 5 -6', '#c9604f', 1.3).replace('/>', ' stroke-dasharray="2 2"/>') + iL('M23 12 l4 4 M27 12 l-4 4', '#c9604f', 1.8)],
+});
+ICO_RULES.unshift(
+  [/brochette/, 'brochette'], [/milk-?shake/, 'milkshake'], [/bombe glacee/, 'bombe'], [/^cornet/, 'glace'], [/piece montee/, 'piecemontee'],
+  [/festin/, 'clocheplat'], [/gratin/, 'gratin'], [/plat du bout du monde|nouilles|ramen/, 'nouilles'], [/fondue/, 'fondue'],
+  [/biscuits? au poisson/, 'biscuitpoisson'], [/friandise exotique/, 'bonbon'], [/friandise/, 'friandise'], [/poisson/, 'poisson', 'n'],
+  [/jouet/, 'jouet'], [/panier royal/, 'corbeilleroyale'], [/panier douillet|corbeille/, 'corbeille'], [/panier gourmand/, 'paniergourmand'], [/coffret/, 'coffret'],
+  [/\barche\b/, 'arche'], [/marque-page/, 'marquepage'], [/mobile de/, 'mobile'], [/citronnade|limonade/, 'carafe'], [/viennois/, 'viennois'],
+  [/cafe creme|cappuccino|latte/, 'cafecreme'], [/^the fumant/, 'theiere'], [/terres lointaines/, 'parchemin'], [/atlas/, 'livre'], [/souvenir du bout du monde/, 'boule']
+);
 const _icoCache = new Map();
 function icoKeyOf(it) {
   const k = it.cat + '|' + it.name; if (_icoCache.has(k)) return _icoCache.get(k);
@@ -385,4 +421,4 @@ if (typeof itemIcon === 'function') itemIcon = (orig => function (it) {
   return orig.apply(this, arguments);
 })(itemIcon);
 // accès pour les tests (planche de contrôle hors jeu)
-window.__v21 = { drawChar: (...a) => drawChar(...a), itemIcon: it => itemIcon(it), VX, ICO, icoRarity };
+window.__v21 = { drawChar: (...a) => drawChar(...a), itemIcon: it => itemIcon(it), VX, ICO, icoRarity, icoKeyOf, ICO_RULES, NEW_RULES: 28 };
