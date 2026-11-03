@@ -44,8 +44,14 @@ const OB_K = {
   collection: { grp: 'col', c: '#3d6fa0', b: '#e2eefa', ic: 'collection' },
   vendre: { grp: 'vendre', c: '#7a5f50', b: '#f4ede2', ic: 'vendre' },
   autre: { grp: '', c: '#7a5f50', b: '#f4ede2', ic: 'autre' },
+  // v35 (47_usages.js) : kinds standard
+  cuisiner: { grp: 'fab', c: '#b8562a', b: '#fdeee0', ic: 'nourrir' },
+  construire: { grp: 'fab', c: '#a8561e', b: '#ffe8d4', ic: 'batiment' },
+  expedition: { grp: '', c: '#2f6ea3', b: '#e1eefa', ic: 'tresor' },
+  planter: { grp: 'comp', c: '#3f8a3f', b: '#e5f4df', ic: 'attirer' },
+  offrande: { grp: '', c: '#8a6a10', b: '#fff4cc', ic: 'tresor' },
 };
-const OB_ALIAS = { commande: 'client', clients: 'client', boutique: 'client', appat: 'attirer', oeuf: 'eclore', couveuse: 'eclore', vente: 'vendre', marche: 'vendre', atelier: 'recette', village: 'batiment', usage: 'autre', codex: 'collection' };
+const OB_ALIAS = { commande: 'client', clients: 'client', boutique: 'client', appat: 'attirer', oeuf: 'eclore', couveuse: 'eclore', vente: 'vendre', marche: 'vendre', atelier: 'recette', porter: 'habiller', familier: 'nourrir', coffre: 'tresor', village: 'batiment', usage: 'autre', codex: 'collection' };
 const OB_GROUPS = [
   ['tout', 'Tout', 'tout'],
   ['comp', 'Pour mes compagnons', 'habiller'],
@@ -120,7 +126,7 @@ function obInfo(it) {
     if (k === 'attirer') { add({ k, txt, line: txt, sub: 'Emportez-le en voyage', act: 'Emporter comme appât', go: 'bait', prio: 76, ...ext }); continue; }
     if (k === 'eclore') { add({ k, txt, line: txt, sub: 'À la couveuse de la nurserie', act: 'Couveuse', go: 'egg', prio: 78, ...ext }); continue; }
     if (k === 'vendre') { add({ k, txt, line: txt, act: 'Vendre', go: 'sell', prio: 18, ...ext }); continue; }
-    add({ k: 'autre', txt, line: txt, act: ext ? 'Y aller' : '', prio: 20, ...ext });
+    add({ k: OB_K[k] && k !== 'client' ? k : 'autre', txt, line: txt, act: ext ? 'Faire' : '', prio: 20, ...ext });
   }
   // 3. usages propres à la nature de l'objet
   if (it.cat === 'v' && !uses.some(u => u.k === 'habiller')) {
@@ -237,31 +243,33 @@ function obCard(g, i) {
   const it = g.it, inf = g.inf, line = typeof famUseLine === 'function' && !inf.now ? famUseLine(it) : inf.main.line;
   return `<button class="obc r${it.rarity}${inf.now ? ' now' : ''}" data-fiche="${esc(it.id)}" style="--rc:${RARC[it.rarity]};--d:${Math.min(i, 14) * 0.025}s" aria-label="${esc(it.name)}, ${RARITY[it.rarity]}${g.n > 1 ? ', ' + g.n + ' exemplaires' : ''}. ${esc(line)}">
 <span class="obtop">${obFamPill(it, 'mini')}${g.n > 1 ? `<span class="obx">×${g.n}</span>` : ''}</span>
-<span class="obi">${itemIcon(it)}${g.worn ? '<em class="obworn">Porté</em>' : ''}</span>
+<span class="obi">${itemIcon(it)}${typeof usBadgesHTML === 'function' ? usBadgesHTML(it) : ''}${g.worn ? '<em class="obworn">Porté</em>' : ''}</span>
 <b class="obnm">${esc(it.name)}</b><span class="obrar">${RARITY[it.rarity]}${it.edition ? ' · Édition' : it.special ? ' · Unique' : ''}</span>
 ${obFamLine(it, inf)}</button>`;
 }
 const OB_FAM_ALIAS = { comp: 'jardin', client: 'tout', fab: 'materiaux', vendre: 'tresors', col: 'nature' };
 const OB_FAM_EMPTY = { nourriture: 'Pas de nourriture : les marchés, cafés et vergers en regorgent.', materiaux: 'Pas de matériaux : bois, laine, pierres… se trouvent partout en voyage.', vetements: 'Pas de vêtement : chaque paysage a les siens.', jardin: 'Pas de graine : on en trouve à la campagne, en forêt et sur les îles.', equipement: 'Pas d’équipement : fabriquez-en à l’atelier (onglet Équipement).', nature: 'Pas encore d’insecte ni de coquillage : explorez forêts, prairies et plages.', tresors: 'Pas encore de trésor : coffres, pierres précieuses et fragments vous attendent au loin.' };
 function obRenderBag(box) {
-  if (typeof bagFilter !== 'undefined' && bagFilter !== obLastBag) { obFilter = bagFilter === 'v' ? 'vetements' : 'tout'; obLastBag = bagFilter; }
-  if (OB_FAM_ALIAS[obFilter]) obFilter = OB_FAM_ALIAS[obFilter];
+  // v35 : onglets d'USAGE (47_usages.js) ; un objet à plusieurs usages apparaît dans chacun
+  const UT = typeof US_TABS !== 'undefined' ? US_TABS : [['tout', 'Tout']];
+  if (typeof bagFilter !== 'undefined' && bagFilter !== obLastBag) { obFilter = bagFilter === 'v' ? 'porter' : 'tout'; obLastBag = bagFilter; }
+  if (!UT.some(t => t[0] === obFilter)) obFilter = obFilter === 'vetements' ? 'porter' : 'tout';
   OB_FNS = [];
-  const all = obGroupInv(), total = S.inv.length, fams = typeof FAM !== 'undefined' ? Object.keys(FAM) : [];
-  const cnt = { tout: 0 }; fams.forEach(k => { cnt[k] = 0; });
-  all.forEach(g => { cnt.tout += g.n; const f = obFam(g.it); if (f in cnt) cnt[f] += g.n; });
-  if (!(obFilter in cnt)) obFilter = 'tout';
-  const list = obFilter === 'tout' ? all : all.filter(g => obFam(g.it) === obFilter);
+  const all = obGroupInv(), total = S.inv.length, tabsOf = g => (g.tabs = g.tabs || (typeof usTabsOf === 'function' ? usTabsOf(g.it) : new Set()));
+  const cnt = {}; UT.forEach(([k]) => { cnt[k] = 0; });
+  all.forEach(g => { cnt.tout += g.n; tabsOf(g).forEach(t => { if (t in cnt) cnt[t] += g.n; }); });
+  const list = obFilter === 'tout' ? all : all.filter(g => tabsOf(g).has(obFilter));
   const nowN = all.filter(g => g.inf.now).reduce((a, g) => a + g.n, 0);
-  let h = `<div class="obhead"><div class="obht"><b>Mon sac</b><span>${obPl(total, 'objet', 'objets')} · 7 familles, chacune son usage</span></div><button class="obhelp" data-oblegend="1" aria-expanded="${obLegend}" aria-controls="obLegend" title="Les raretés">?</button></div>`;
+  const tico = k => (k === 'tout' ? obIco('tout') : typeof usPill === 'function' ? usPill(US_TAB_ICO[k], 's') : '');
+  let h = `<div class="obhead"><div class="obht"><b>Mon sac</b><span>${obPl(total, 'objet', 'objets')} · rangés par usage</span></div><button class="obhelp" data-oblegend="1" aria-expanded="${obLegend}" aria-controls="obLegend" title="Les raretés">?</button></div>`;
   if (obLegend) h += obLegendHTML();
-  h += `<div class="obfil famfil" role="tablist" aria-label="Trier le sac par famille"><button role="tab" class="obf-tout" data-obf="tout" aria-selected="${obFilter === 'tout'}">${obIco('tout')}<span>Tout</span><i>${cnt.tout}</i></button>${fams.map(k => { const F = FAM[k]; return `<button role="tab" class="obf-${k}${cnt[k] ? '' : ' zero'}" data-obf="${k}" aria-selected="${obFilter === k}" style="--fc:${F.couleur};--fb:${F.fond}"><b class="famico" aria-hidden="true">${F.icone}</b><span>${F.nom}</span><i>${cnt[k]}</i></button>`; }).join('')}</div>`;
-  if (obFilter !== 'tout' && FAM[obFilter]) h += `<p class="famhint" style="--fc:${FAM[obFilter].couleur};--fb:${FAM[obFilter].fond}"><b>${FAM[obFilter].icone} ${FAM[obFilter].nom}</b> : ${esc(FAM[obFilter].usage)}.</p>`;
+  h += `<div class="obfil usfil" role="tablist" aria-label="Trier le sac par usage">${UT.map(([k, nm]) => `<button role="tab" class="obf-${k}${cnt[k] || k === 'tout' ? '' : ' zero'}" data-obf="${k}" aria-selected="${obFilter === k}">${tico(k)}<span>${nm}</span><i>${cnt[k]}</i></button>`).join('')}</div>`;
+  if (obFilter !== 'tout' && typeof US_TAB_HINT !== 'undefined' && US_TAB_HINT[obFilter]) h += `<p class="famhint">${esc(US_TAB_HINT[obFilter])}</p>`;
   if (nowN && obFilter === 'tout') h += `<p class="obnowtip"><span class="obdot"></span>${obPl(nowN, 'objet est attendu', 'objets sont attendus')} en ce moment par une commande ou un rêve : ${nowN > 1 ? 'ils sont' : 'il est'} en tête.</p>`;
   if (!total) h += `<div class="obempty">${obIco('tout', 'big')}<p>Le sac est vide. Envoyez un compagnon en voyage : il reviendra avec des vêtements, des matériaux et des spécialités locales.</p><button class="btn gold sm" data-obgo="voyage">Partir en voyage</button></div>`;
-  else if (!list.length) h += `<div class="obempty"><b class="famico big">${FAM[obFilter] ? FAM[obFilter].icone : ''}</b><p>${OB_FAM_EMPTY[obFilter] || ''}</p></div>`;
+  else if (!list.length) h += `<div class="obempty"><p>${esc((typeof US_TAB_EMPTY !== 'undefined' && US_TAB_EMPTY[obFilter]) || '')}</p></div>`;
   else h += `<div class="obgrid">${list.map(obCard).join('')}</div>`;
-  if (total) h += `<p class="small obfoot">Les objets identiques sont regroupés (×N). En tête : ce qui sert maintenant, puis les plus rares.</p>`;
+  if (total) h += `<p class="small obfoot">Les pastilles rondes disent à quoi sert l’objet. Touchez-le pour l’utiliser.</p>`;
   box.innerHTML = h;
 }
 if (typeof renderBag === 'function') renderBag = (orig => function (box) {

@@ -6195,6 +6195,11 @@ const GAME = {
   _uses: [],
   addUses(fn) { this._uses.push(fn); },
   usesOf(it) { const out = []; for (const f of this._uses) { try { out.push(...(f(it) || [])); } catch (e) {} } return out; },
+  // v35 : actions directes sur un objet. Chaque module enregistre (item) => [{ label, kind, run: () => {} }]
+  // kind standard : 'cuisiner' | 'construire' | 'expedition' | 'familier' | 'porter' | 'offrande' | 'planter' | 'vendre' | 'recycler'
+  _acts: [],
+  addAction(fn) { this._acts.push(fn); },
+  actionsOf(it) { const out = []; for (const f of this._acts) { try { out.push(...(f(it) || [])); } catch (e) {} } return out; },
 };
 // --- émissions branchées sur les fonctions existantes ---
 {
@@ -13519,8 +13524,14 @@ const OB_K = {
   collection: { grp: 'col', c: '#3d6fa0', b: '#e2eefa', ic: 'collection' },
   vendre: { grp: 'vendre', c: '#7a5f50', b: '#f4ede2', ic: 'vendre' },
   autre: { grp: '', c: '#7a5f50', b: '#f4ede2', ic: 'autre' },
+  // v35 (47_usages.js) : kinds standard
+  cuisiner: { grp: 'fab', c: '#b8562a', b: '#fdeee0', ic: 'nourrir' },
+  construire: { grp: 'fab', c: '#a8561e', b: '#ffe8d4', ic: 'batiment' },
+  expedition: { grp: '', c: '#2f6ea3', b: '#e1eefa', ic: 'tresor' },
+  planter: { grp: 'comp', c: '#3f8a3f', b: '#e5f4df', ic: 'attirer' },
+  offrande: { grp: '', c: '#8a6a10', b: '#fff4cc', ic: 'tresor' },
 };
-const OB_ALIAS = { commande: 'client', clients: 'client', boutique: 'client', appat: 'attirer', oeuf: 'eclore', couveuse: 'eclore', vente: 'vendre', marche: 'vendre', atelier: 'recette', village: 'batiment', usage: 'autre', codex: 'collection' };
+const OB_ALIAS = { commande: 'client', clients: 'client', boutique: 'client', appat: 'attirer', oeuf: 'eclore', couveuse: 'eclore', vente: 'vendre', marche: 'vendre', atelier: 'recette', porter: 'habiller', familier: 'nourrir', coffre: 'tresor', village: 'batiment', usage: 'autre', codex: 'collection' };
 const OB_GROUPS = [
   ['tout', 'Tout', 'tout'],
   ['comp', 'Pour mes compagnons', 'habiller'],
@@ -13595,7 +13606,7 @@ function obInfo(it) {
     if (k === 'attirer') { add({ k, txt, line: txt, sub: 'Emportez-le en voyage', act: 'Emporter comme appât', go: 'bait', prio: 76, ...ext }); continue; }
     if (k === 'eclore') { add({ k, txt, line: txt, sub: 'À la couveuse de la nurserie', act: 'Couveuse', go: 'egg', prio: 78, ...ext }); continue; }
     if (k === 'vendre') { add({ k, txt, line: txt, act: 'Vendre', go: 'sell', prio: 18, ...ext }); continue; }
-    add({ k: 'autre', txt, line: txt, act: ext ? 'Y aller' : '', prio: 20, ...ext });
+    add({ k: OB_K[k] && k !== 'client' ? k : 'autre', txt, line: txt, act: ext ? 'Faire' : '', prio: 20, ...ext });
   }
   // 3. usages propres à la nature de l'objet
   if (it.cat === 'v' && !uses.some(u => u.k === 'habiller')) {
@@ -13712,31 +13723,33 @@ function obCard(g, i) {
   const it = g.it, inf = g.inf, line = typeof famUseLine === 'function' && !inf.now ? famUseLine(it) : inf.main.line;
   return `<button class="obc r${it.rarity}${inf.now ? ' now' : ''}" data-fiche="${esc(it.id)}" style="--rc:${RARC[it.rarity]};--d:${Math.min(i, 14) * 0.025}s" aria-label="${esc(it.name)}, ${RARITY[it.rarity]}${g.n > 1 ? ', ' + g.n + ' exemplaires' : ''}. ${esc(line)}">
 <span class="obtop">${obFamPill(it, 'mini')}${g.n > 1 ? `<span class="obx">×${g.n}</span>` : ''}</span>
-<span class="obi">${itemIcon(it)}${g.worn ? '<em class="obworn">Porté</em>' : ''}</span>
+<span class="obi">${itemIcon(it)}${typeof usBadgesHTML === 'function' ? usBadgesHTML(it) : ''}${g.worn ? '<em class="obworn">Porté</em>' : ''}</span>
 <b class="obnm">${esc(it.name)}</b><span class="obrar">${RARITY[it.rarity]}${it.edition ? ' · Édition' : it.special ? ' · Unique' : ''}</span>
 ${obFamLine(it, inf)}</button>`;
 }
 const OB_FAM_ALIAS = { comp: 'jardin', client: 'tout', fab: 'materiaux', vendre: 'tresors', col: 'nature' };
 const OB_FAM_EMPTY = { nourriture: 'Pas de nourriture : les marchés, cafés et vergers en regorgent.', materiaux: 'Pas de matériaux : bois, laine, pierres… se trouvent partout en voyage.', vetements: 'Pas de vêtement : chaque paysage a les siens.', jardin: 'Pas de graine : on en trouve à la campagne, en forêt et sur les îles.', equipement: 'Pas d’équipement : fabriquez-en à l’atelier (onglet Équipement).', nature: 'Pas encore d’insecte ni de coquillage : explorez forêts, prairies et plages.', tresors: 'Pas encore de trésor : coffres, pierres précieuses et fragments vous attendent au loin.' };
 function obRenderBag(box) {
-  if (typeof bagFilter !== 'undefined' && bagFilter !== obLastBag) { obFilter = bagFilter === 'v' ? 'vetements' : 'tout'; obLastBag = bagFilter; }
-  if (OB_FAM_ALIAS[obFilter]) obFilter = OB_FAM_ALIAS[obFilter];
+  // v35 : onglets d'USAGE (47_usages.js) ; un objet à plusieurs usages apparaît dans chacun
+  const UT = typeof US_TABS !== 'undefined' ? US_TABS : [['tout', 'Tout']];
+  if (typeof bagFilter !== 'undefined' && bagFilter !== obLastBag) { obFilter = bagFilter === 'v' ? 'porter' : 'tout'; obLastBag = bagFilter; }
+  if (!UT.some(t => t[0] === obFilter)) obFilter = obFilter === 'vetements' ? 'porter' : 'tout';
   OB_FNS = [];
-  const all = obGroupInv(), total = S.inv.length, fams = typeof FAM !== 'undefined' ? Object.keys(FAM) : [];
-  const cnt = { tout: 0 }; fams.forEach(k => { cnt[k] = 0; });
-  all.forEach(g => { cnt.tout += g.n; const f = obFam(g.it); if (f in cnt) cnt[f] += g.n; });
-  if (!(obFilter in cnt)) obFilter = 'tout';
-  const list = obFilter === 'tout' ? all : all.filter(g => obFam(g.it) === obFilter);
+  const all = obGroupInv(), total = S.inv.length, tabsOf = g => (g.tabs = g.tabs || (typeof usTabsOf === 'function' ? usTabsOf(g.it) : new Set()));
+  const cnt = {}; UT.forEach(([k]) => { cnt[k] = 0; });
+  all.forEach(g => { cnt.tout += g.n; tabsOf(g).forEach(t => { if (t in cnt) cnt[t] += g.n; }); });
+  const list = obFilter === 'tout' ? all : all.filter(g => tabsOf(g).has(obFilter));
   const nowN = all.filter(g => g.inf.now).reduce((a, g) => a + g.n, 0);
-  let h = `<div class="obhead"><div class="obht"><b>Mon sac</b><span>${obPl(total, 'objet', 'objets')} · 7 familles, chacune son usage</span></div><button class="obhelp" data-oblegend="1" aria-expanded="${obLegend}" aria-controls="obLegend" title="Les raretés">?</button></div>`;
+  const tico = k => (k === 'tout' ? obIco('tout') : typeof usPill === 'function' ? usPill(US_TAB_ICO[k], 's') : '');
+  let h = `<div class="obhead"><div class="obht"><b>Mon sac</b><span>${obPl(total, 'objet', 'objets')} · rangés par usage</span></div><button class="obhelp" data-oblegend="1" aria-expanded="${obLegend}" aria-controls="obLegend" title="Les raretés">?</button></div>`;
   if (obLegend) h += obLegendHTML();
-  h += `<div class="obfil famfil" role="tablist" aria-label="Trier le sac par famille"><button role="tab" class="obf-tout" data-obf="tout" aria-selected="${obFilter === 'tout'}">${obIco('tout')}<span>Tout</span><i>${cnt.tout}</i></button>${fams.map(k => { const F = FAM[k]; return `<button role="tab" class="obf-${k}${cnt[k] ? '' : ' zero'}" data-obf="${k}" aria-selected="${obFilter === k}" style="--fc:${F.couleur};--fb:${F.fond}"><b class="famico" aria-hidden="true">${F.icone}</b><span>${F.nom}</span><i>${cnt[k]}</i></button>`; }).join('')}</div>`;
-  if (obFilter !== 'tout' && FAM[obFilter]) h += `<p class="famhint" style="--fc:${FAM[obFilter].couleur};--fb:${FAM[obFilter].fond}"><b>${FAM[obFilter].icone} ${FAM[obFilter].nom}</b> : ${esc(FAM[obFilter].usage)}.</p>`;
+  h += `<div class="obfil usfil" role="tablist" aria-label="Trier le sac par usage">${UT.map(([k, nm]) => `<button role="tab" class="obf-${k}${cnt[k] || k === 'tout' ? '' : ' zero'}" data-obf="${k}" aria-selected="${obFilter === k}">${tico(k)}<span>${nm}</span><i>${cnt[k]}</i></button>`).join('')}</div>`;
+  if (obFilter !== 'tout' && typeof US_TAB_HINT !== 'undefined' && US_TAB_HINT[obFilter]) h += `<p class="famhint">${esc(US_TAB_HINT[obFilter])}</p>`;
   if (nowN && obFilter === 'tout') h += `<p class="obnowtip"><span class="obdot"></span>${obPl(nowN, 'objet est attendu', 'objets sont attendus')} en ce moment par une commande ou un rêve : ${nowN > 1 ? 'ils sont' : 'il est'} en tête.</p>`;
   if (!total) h += `<div class="obempty">${obIco('tout', 'big')}<p>Le sac est vide. Envoyez un compagnon en voyage : il reviendra avec des vêtements, des matériaux et des spécialités locales.</p><button class="btn gold sm" data-obgo="voyage">Partir en voyage</button></div>`;
-  else if (!list.length) h += `<div class="obempty"><b class="famico big">${FAM[obFilter] ? FAM[obFilter].icone : ''}</b><p>${OB_FAM_EMPTY[obFilter] || ''}</p></div>`;
+  else if (!list.length) h += `<div class="obempty"><p>${esc((typeof US_TAB_EMPTY !== 'undefined' && US_TAB_EMPTY[obFilter]) || '')}</p></div>`;
   else h += `<div class="obgrid">${list.map(obCard).join('')}</div>`;
-  if (total) h += `<p class="small obfoot">Les objets identiques sont regroupés (×N). En tête : ce qui sert maintenant, puis les plus rares.</p>`;
+  if (total) h += `<p class="small obfoot">Les pastilles rondes disent à quoi sert l’objet. Touchez-le pour l’utiliser.</p>`;
   box.innerHTML = h;
 }
 if (typeof renderBag === 'function') renderBag = (orig => function (box) {
@@ -29106,6 +29119,1144 @@ window.__qm = { art: qmRewardArt, vit: qmVitHTML, pop: qmRewardPop, wear: qmWear
 `;
   document.head.appendChild(st);
 })();
+
+// ================= v35 : À QUOI SERT CHAQUE OBJET (usages, actions directes, vêtements utiles) =================
+// Le joueur : « on ne sait pas à quoi servent les items, ni dans quel but ».
+// 1. Déclare (GAME.addUses / GAME.addAction, contrat de 13_bus.js) les usages qui manquaient : recettes du commerce,
+//    matériel d'expédition, graines, clés et coffres, vêtements, offrandes et quêtes (actions), vente et recyclage.
+// 2. usKinds(it) : les « kind » standard d'un objet (cuisiner, construire, expedition, familier, porter, planter, offrande),
+//    d'après GAME.usesOf (y compris ceux des autres modules, ex. 48_progression.js) ; pastilles SVG (usBadgesHTML).
+// 3. Sac rangé par usage : onglets d'usage (usTabsOf) utilisés par obRenderBag (23_objets.js).
+// 4. Fiche : rangée « objet → résultats » en images, « Utiliser », « Vendre (≈ X) », « Recycler ».
+// 5. Vêtements utiles : un bonus par vêtement (d'après son nom et sa forme, vFormOf) et 8 ensembles (3 pièces sur 4).
+//    Vraiment appliqués : xpRiskK (risques), collect (butin), cfDurMul (préparation, donc cmDur), cmSell (paiement).
+// Aucune nouvelle clé dans S (tout est calculé) : anciennes sauvegardes compatibles. Aucune fenêtre spontanée.
+
+const usCall = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch (e) { return d; } };
+const US_INK = '#5b4636';
+
+// ---------------- pastilles (cercle coloré, trait d'encre, dessin blanc : même style que les glyphes de régions) ----------------
+const US_K = {
+  cuisiner: { nom: 'Cuisiner', c: '#e0784a', g: '<ellipse cx="10" cy="11.5" rx="5.6" ry="4.2" fill="#fff"/><path d="M15 10 L19 8" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M7.5 5 q-1 -1.6 0 -3 M10.5 5 q-1 -1.6 0 -3" stroke="#fff" stroke-width="1.3" fill="none" stroke-linecap="round"/>' },
+  construire: { nom: 'Construire', c: '#b07a4f', g: '<path d="M6 17 L12.5 10.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/><path d="M9.5 6.5 L14 3.5 L17.5 7 L14.5 11.5Z" fill="#fff"/>' },
+  expedition: { nom: 'Expédition', c: '#5f8fb8', g: '<rect x="5" y="6.5" width="10" height="10.5" rx="3" fill="#fff"/><path d="M7.5 6.5 V5 a2.5 2.5 0 0 1 5 0 V6.5" stroke="#fff" stroke-width="1.6" fill="none"/><rect x="7.5" y="11" width="5" height="3" rx="1" fill="#5f8fb8"/>' },
+  familier: { nom: 'Familiers', c: '#d9739a', g: '<ellipse cx="10" cy="13" rx="3.6" ry="3" fill="#fff"/><circle cx="5.6" cy="9" r="1.7" fill="#fff"/><circle cx="8.3" cy="6.2" r="1.7" fill="#fff"/><circle cx="11.7" cy="6.2" r="1.7" fill="#fff"/><circle cx="14.4" cy="9" r="1.7" fill="#fff"/>' },
+  porter: { nom: 'Porter', c: '#8a6fc4', g: '<path d="M7 4.5 L3.5 7.5 L5.5 10 L7 9 V16 H13 V9 L14.5 10 L16.5 7.5 L13 4.5 Q10 6.5 7 4.5Z" fill="#fff"/>' },
+  planter: { nom: 'Planter', c: '#5fa274', g: '<path d="M10 17 V9" stroke="#fff" stroke-width="2" stroke-linecap="round"/><path d="M10 10 Q4 10 4 5 Q9.5 5 10 10Z M10 9 Q16 9 16 4 Q10.5 4 10 9Z" fill="#fff"/>' },
+  offrande: { nom: 'Offrande', c: '#c9a03a', g: '<rect x="4.5" y="8.5" width="11" height="8" rx="1.5" fill="#fff"/><rect x="3.5" y="6.5" width="13" height="3" rx="1" fill="#fff"/><path d="M10 6.5 V16.5" stroke="#c9a03a" stroke-width="1.8"/><path d="M10 6.5 Q7 2.5 6 5 Q6.5 6.5 10 6.5 Q13 2.5 14 5 Q13.5 6.5 10 6.5Z" fill="#fff"/>' },
+  vendre: { nom: 'Vendre', c: '#c9a03a', g: '<circle cx="10" cy="10" r="5.6" fill="#fff"/><path d="M10 7 V13" stroke="#c9a03a" stroke-width="1.8" stroke-linecap="round"/>' },
+  recycler: { nom: 'Recycler', c: '#6fa58a', g: '<path d="M6 8.5 a4.5 4.5 0 0 1 7.6 -2 M14 11.5 a4.5 4.5 0 0 1 -7.6 2" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M14.6 3.6 V7.2 H11Z M5.4 16.4 V12.8 H9Z" fill="#fff"/>' },
+  // bonus de commerce des vêtements
+  prep: { nom: 'Préparation', c: '#e0784a', g: '<circle cx="10" cy="11" r="5.8" fill="#fff"/><path d="M10 7.8 V11 L12.4 12.4" stroke="#e0784a" stroke-width="1.6" fill="none" stroke-linecap="round"/><rect x="8.4" y="2.6" width="3.2" height="2" rx=".8" fill="#fff"/>' },
+  pay: { nom: 'Clients', c: '#d9a520', g: '<circle cx="10" cy="10" r="5.8" fill="#fff"/><path d="M8 8.2 h3.4 a1.6 1.6 0 0 1 0 3.2 h-2.8 a1.6 1.6 0 0 0 0 3.2 H12" stroke="#d9a520" stroke-width="1.4" fill="none" stroke-linecap="round" transform="translate(0 -1.6)"/>' },
+  tous: { nom: 'Tous terrains', c: '#7f9a6a', g: '<circle cx="10" cy="10" r="5.6" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M10 4 L11.6 10 L10 16 L8.4 10Z" fill="#fff"/>' },
+};
+const usPill = (k, cls = '', title = '') => { const K = US_K[k]; if (!K) return ''; return `<i class="uspill ${cls}" style="--pc:${K.c}"${title ? ` title="${esc(title)}"` : ''} aria-hidden="true"><svg viewBox="0 0 20 20">${K.g}</svg></i>`; };
+// pastille d'un terrain (glyphes de 17_regions.js, couleurs de 41_expedition.js)
+const usTerrPill = (t, cls = '', title = '') => {
+  if (t === '*') return usPill('tous', cls, title);
+  const T = usCall(() => XP_T[t], null); if (!T) return '';
+  const g = usCall(() => RG_GLYPH[T[2]], '') || '';
+  return `<i class="uspill ${cls}" style="--pc:${T[3]}"${title ? ` title="${esc(title)}"` : ''} aria-hidden="true"><svg viewBox="0 0 24 24">${g}</svg></i>`;
+};
+const US_TNAME = { montagne: 'en montagne', mer: 'en mer', foret: 'en forêt', ville: 'en ville', desert: 'au désert', froid: 'dans le grand froid', '*': 'partout' };
+
+// ---------------- correspondance d'ingrédients ----------------
+function usIngMatch(key, it) {
+  if (!it || it.tresor || it.mk) return false;
+  if (key === 'far') return usCall(() => cmIsFar(it), false) && it.cat !== 'v';
+  if (String(key).startsWith('r:')) return it.rid === key.slice(2);
+  return !!(ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'));
+}
+const usDefItem = def => ({ name: def[0], cat: def[1], sub: def[2], rarity: def[3] || 0, look: def[4] || null, color: def[5] || null });
+const usIco = def => usCall(() => itemIcon(usDefItem(def)), '');
+
+// ---------------- recettes ----------------
+// commerce : lignes des commerces ouverts (sinon toutes : on voit ce qu'on pourrait cuisiner)
+function usShopLines() {
+  const own = usCall(() => bqOwned(), []), T = usCall(() => cmT(), null);
+  const ids = own.length ? own : Object.keys(CM_LINES);
+  if (T && !ids.includes(T.id)) ids.unshift(T.id);
+  return ids;
+}
+function usCmRecipes(it) {
+  if (!it || typeof CM_LINES === 'undefined') return [];
+  const out = [], T = usCall(() => cmT(), null);
+  for (const sh of usShopLines()) for (const R of CM_LINES[sh] || []) {
+    if (R.egg || !usCall(() => cmUnlocked(R), false)) continue;
+    if (R.ing.some(([k]) => usIngMatch(k, it))) out.push({ R, here: !!(T && T.id === R.shop), ok: !!(T && T.id === R.shop) && usCall(() => cmCanIng(R), false) });
+  }
+  return out.sort((a, b) => (b.ok - a.ok) || (b.here - a.here));
+}
+const usRecLocked = r => usCall(() => BQ_RIDS.has(r.id) && !bqRecOwned(r.id), false);
+function usAtRecipes(it) {
+  if (!it || typeof RECIPES === 'undefined') return [];
+  const seen = new Set(), out = [];
+  for (const r of RECIPES) {
+    if (seen.has(r.out[0]) || usRecLocked(r) || !r.ing.some(([k]) => usIngMatch(k, it))) continue;
+    seen.add(r.out[0]); out.push({ r, ok: usCall(() => canCraft(r), false) });
+  }
+  return out.sort((a, b) => b.ok - a.ok);
+}
+const usGearOf = def => usCall(() => XP_GBY[String(def[0]).replace(/ \(chef-d’œuvre\)$/, '')], null);
+// kind d'une recette d'après ce qu'elle produit
+const usOutKind = def => (def[1] === 'n' ? 'cuisiner' : usGearOf(def) || def[2] === 'outil' ? 'expedition' : 'construire');
+
+// ---------------- les kinds standard d'un objet ----------------
+const usCache = new Map(); let usCacheT = 0;
+function usKinds(it) {
+  if (!it) return [];
+  const now = Date.now(); if (now - usCacheT > 800) { usCache.clear(); usCacheT = now; }
+  const ck = (it.id || it.name) + '|' + ((typeof S !== 'undefined' && S.inv) ? S.inv.length : 0);
+  if (usCache.has(ck)) return usCache.get(ck);
+  const K = new Set();
+  const raw = usCall(() => GAME.usesOf(it), []) || [];
+  for (const u of raw) {
+    if (!u) continue;
+    const k = u.kind, txt = String(u.txt || '');
+    if (US_K[k] && k !== 'vendre' && k !== 'recycler') { K.add(k); continue; }
+    if (k === 'batiment') K.add('construire');
+    else if (k === 'nourrir' || k === 'attirer' || k === 'eclore') K.add('familier');
+    else if (k === 'habiller') K.add('porter');
+    else if (k === 'recette') {
+      if (/^Offrande/.test(txt)) K.add('offrande');
+      else if (/^Atelier\s*:/.test(txt)) { const nm = txt.replace(/^Atelier\s*:\s*/, ''), r = RECIPES.find(x => x.out[0] === nm); K.add(r ? usOutKind(r.out) : 'construire'); }
+    }
+  }
+  if (it.cat === 'v') K.add('porter');
+  if (it.cat === 'n' && !it.mk) K.add('familier');
+  if (usGearOf([it.name]) || usCall(() => famToolOf(it), null)) K.add('expedition');
+  if (usCall(() => famSeedOf(it), null)) K.add('planter');
+  const order = ['porter', 'cuisiner', 'construire', 'expedition', 'familier', 'planter', 'offrande'];
+  const out = order.filter(k => K.has(k));
+  usCache.set(ck, out);
+  return out;
+}
+// onglets du sac
+const US_TABS = [['tout', 'Tout'], ['cuisiner', 'Cuisiner'], ['construire', 'Construire'], ['partir', 'Partir'], ['familier', 'Familiers'], ['porter', 'Porter'], ['autre', 'Autres / à vendre']];
+const US_TAB_ICO = { cuisiner: 'cuisiner', construire: 'construire', partir: 'expedition', familier: 'familier', porter: 'porter', autre: 'vendre' };
+const US_TAB_HINT = {
+  cuisiner: 'Ingrédients : préparez des plats au commerce, puis vendez-les aux clients.',
+  construire: 'Matériaux : fabriquez à l’atelier, construisez au village.',
+  partir: 'Matériel, outils et offrandes : pour les expéditions et les gardiens.',
+  familier: 'Pour nourrir, attirer ou faire éclore vos familiers.',
+  porter: 'Chaque vêtement porté donne un bonus. 3 pièces d’un même ensemble : gros bonus !',
+  autre: 'Collection, trésors et surplus : à garder, ou à vendre au marché.',
+};
+const US_TAB_EMPTY = { cuisiner: 'Aucun ingrédient pour vos recettes pour l’instant : marchés et vergers en regorgent.', construire: 'Aucun matériau : bois, laine, pierres… se trouvent partout en voyage.', partir: 'Aucun matériel d’expédition : fabriquez-en à l’atelier.', familier: 'Rien pour vos familiers : la nourriture se trouve partout.', porter: 'Aucun vêtement : chaque paysage a les siens.', autre: 'Rien d’autre : tout a un usage !' };
+function usTabsOf(it) {
+  const k = usKinds(it), t = new Set();
+  k.forEach(x => { if (x === 'cuisiner' || x === 'construire' || x === 'familier' || x === 'porter') t.add(x); if (x === 'expedition' || x === 'offrande') t.add('partir'); });
+  if (!t.size) t.add('autre');
+  return t;
+}
+// 1 ou 2 pastilles dans un coin de l'icône
+function usBadgesHTML(it) {
+  if (!it) return '';
+  try {
+    const ks = usKinds(it), pills = [];
+    if (it.cat === 'v') {
+      pills.push(usPill('porter', 's'));
+      const b = usWearOf(it);
+      if (b) pills.push(b.t === 'cm' ? usPill(b.k, 's', b.txt) : usTerrPill(b.t, 's', b.txt));
+    } else ks.slice(0, 2).forEach(k => pills.push(usPill(k, 's', US_K[k].nom)));
+    return pills.length ? `<span class="usbd" aria-label="${esc(ks.map(k => US_K[k].nom).join(', '))}">${pills.join('')}</span>` : '';
+  } catch (e) { return ''; }
+}
+
+// ================= VÊTEMENTS UTILES =================
+// forme dessinée → [terrain | 'cm', type de bonus] ; risk : moins de risques, loot : plus de butin, prep : préparation plus rapide, pay : clients qui paient mieux
+const US_FORM = {
+  godillots: ['montagne', 'risk'], chullo: ['montagne', 'risk'], rando: ['montagne', 'risk'], gants: ['montagne', 'risk'], cuir: ['montagne', 'risk'], sac: ['montagne', 'loot'], kepi: ['montagne', 'loot'],
+  moufles: ['froid', 'risk'], fourrees: ['froid', 'risk'], apres: ['froid', 'risk'], chapka: ['froid', 'risk'], bonnet: ['froid', 'risk'], pompon: ['froid', 'risk'], echarpe: ['froid', 'risk'], tartan: ['froid', 'risk'], jacquard: ['froid', 'loot'], pull: ['froid', 'risk'], noel: ['froid', 'loot'], mitaines: ['froid', 'loot'],
+  cire: ['mer', 'risk'], bouee: ['mer', 'risk'], cuissardes: ['mer', 'risk'], capitaine: ['mer', 'risk'], bainb: ['mer', 'risk'],
+  mariniere: ['mer', 'loot'], bain: ['mer', 'loot'], tongs: ['mer', 'loot'], coquill: ['mer', 'loot'], lei: ['mer', 'loot'], hawai: ['mer', 'loot'], tshirt: ['mer', 'loot'], short: ['mer', 'loot'], calecon: ['mer', 'loot'],
+  cheche: ['desert', 'risk'], sombrero: ['desert', 'risk'], sandales: ['desert', 'risk'], babouches: ['desert', 'risk'], explorateur: ['desert', 'risk'], kasa: ['desert', 'risk'], poncho: ['desert', 'loot'], bandana: ['desert', 'loot'],
+  bottes: ['foret', 'risk'], carreaux: ['foret', 'risk'], salopette: ['foret', 'risk'], gilet: ['foret', 'risk'], carquois: ['foret', 'risk'], chaussettes: ['foret', 'risk'],
+  paille: ['foret', 'loot'], jardin: ['foret', 'loot'], champignon: ['foret', 'loot'], bob: ['foret', 'loot'], panier: ['foret', 'loot'], oreilles: ['foret', 'loot'], sabots: ['foret', 'loot'], laurier: ['foret', 'loot'], cape: ['foret', 'loot'], fleurs: ['foret', 'loot'],
+  baskets: ['ville', 'loot'], casquette: ['ville', 'loot'], cartable: ['ville', 'loot'], tote: ['ville', 'loot'], valise: ['ville', 'loot'], sweat: ['ville', 'loot'], jean: ['ville', 'loot'], maillot: ['ville', 'loot'], rayee: ['ville', 'loot'], rayees: ['ville', 'loot'], bandanacou: ['ville', 'loot'], securite: ['ville', 'risk'], veste: ['ville', 'risk'],
+  toque: ['cm', 'prep'], tablier: ['cm', 'prep'], chaussons: ['cm', 'prep'], peignoir: ['cm', 'prep'],
+  noeud: ['cm', 'pay'], foulard: ['cm', 'pay'], beret: ['cm', 'pay'], hautforme: ['cm', 'pay'], cloche: ['cm', 'pay'], dentelle: ['cm', 'pay'], kimono: ['cm', 'pay'], soie: ['cm', 'pay'], montre: ['cm', 'pay'], bracelet: ['cm', 'pay'],
+  diademe: ['cm', 'pay'], couronne: ['cm', 'pay'], mandarine: ['cm', 'pay'], jupe: ['cm', 'pay'], tutu: ['cm', 'pay'], plissee: ['cm', 'pay'], ruban: ['cm', 'pay'], clochette: ['cm', 'pay'], serretete: ['cm', 'pay'],
+  canotier: ['cm', 'pay'], sorciere: ['cm', 'pay'], nuit: ['cm', 'pay'], bandeau: ['cm', 'pay'], ailes: ['cm', 'pay'], capeetoile: ['cm', 'pay'], vampire: ['cm', 'pay'], kilt: ['cm', 'pay'], perles: ['cm', 'pay'], chapeau: ['cm', 'pay'],
+};
+// mots du nom qui l'emportent (un « bonnet de montagne » aide en montagne)
+const US_WORD = [[/montagn|sommet|alpin|trek|randonn|escalad|cervin/, 'montagne'], [/polaire|neige|yeti|ski|flocon|islandais|banquise|glace/, 'froid'], [/marin|mer\b|plage|surf|pecheur|plong|bretag|matelot|capitaine/, 'mer'], [/desert|sable|safari|dune|oasis|sahara/, 'desert'], [/foret|bucheron|bois\b|jardin|champignon/, 'foret'], [/ville|metro|urbain|city/, 'ville'], [/chef|cuisin|patiss|boulang|toque|tablier/, 'cm:prep']];
+const usPct = v => Math.round(v * 100);
+function usFormOf(it) {
+  if (!it || it.cat !== 'v') return null;
+  const base = it.look || ''; return usCall(() => vFormOf(it.name || '', it.sub, base), base) || base;
+}
+// le bonus d'un vêtement : { t, k, v, txt }
+function usWearOf(it) {
+  if (!it || it.cat !== 'v') return null;
+  const f = usFormOf(it), n = usCall(() => vNorm(it.name), String(it.name || '').toLowerCase());
+  let d = US_FORM[f] || US_FORM[it.look] || null;
+  for (const [re, t] of US_WORD) if (re.test(n)) { d = t.startsWith('cm:') ? ['cm', t.slice(3)] : [t, d && d[0] === t ? d[1] : 'risk']; break; }
+  if (!d) d = ['ville', 'loot'];
+  const r = Math.max(0, Math.min(4, it.rarity || 0));
+  const v = d[1] === 'risk' ? 0.10 + 0.025 * r : d[1] === 'loot' ? 0.10 + 0.03 * r : 0.08 + 0.02 * r;
+  return { t: d[0], k: d[1], v, txt: usBonusTxt(d[0], d[1], v) };
+}
+function usBonusTxt(t, k, v) {
+  if (k === 'risk') return `−${usPct(v)} % de risques ${US_TNAME[t] || ''}`;
+  if (k === 'loot') return `+${usPct(v)} % de butin ${US_TNAME[t] || ''}`;
+  if (k === 'prep') return `−${usPct(v)} % de temps de préparation`;
+  return `+${usPct(v)} % de pièces des clients`;
+}
+// ---------------- ensembles : 4 pièces (une par emplacement) ; bonus dès 3 pièces portées ----------------
+const US_SETS = [
+  { id: 'marin', nom: 'Marin breton', pcs: [['haut', ['mariniere']], ['tete', ['capitaine', 'bob', 'casquette']], ['pieds', ['cuissardes', 'tongs', 'bottes']], ['cou', ['bouee', 'foulard', 'rayee']]], fx: [['mer', 'risk', 0.3], ['mer', 'loot', 0.25]] },
+  { id: 'explo', nom: 'Explorateur', pcs: [['tete', ['explorateur']], ['haut', ['gilet', 'veste']], ['dos', ['rando', 'sac', 'carquois']], ['pieds', ['godillots']]], fx: [['*', 'risk', 0.2]] },
+  { id: 'monta', nom: 'Montagnard', pcs: [['tete', ['chullo', 'bonnet', 'pompon']], ['haut', ['jacquard', 'pull']], ['mains', ['gants', 'moufles', 'cuir']], ['pieds', ['godillots', 'apres']]], fx: [['montagne', 'risk', 0.35], ['montagne', 'loot', 0.2]] },
+  { id: 'chef', nom: 'Chef pâtissier', pcs: [['tete', ['toque']], ['haut', ['tablier']], ['cou', ['noeud', 'foulard']], ['mains', ['soie', 'mitaines', 'gants']]], fx: [['cm', 'prep', 0.3]] },
+  { id: 'jard', nom: 'Jardinier', pcs: [['tete', ['paille']], ['bas', ['salopette']], ['mains', ['jardin']], ['pieds', ['sabots', 'bottes']]], fx: [['foret', 'loot', 0.3], ['foret', 'risk', 0.2]] },
+  { id: 'polaire', nom: 'Voyageur polaire', pcs: [['tete', ['chapka', 'bonnet', 'pompon', 'noel']], ['cou', ['echarpe', 'tartan']], ['mains', ['moufles', 'fourrees']], ['pieds', ['apres']]], fx: [['froid', 'risk', 0.35], ['froid', 'loot', 0.2]] },
+  { id: 'nomade', nom: 'Nomade du désert', pcs: [['tete', ['sombrero', 'kasa', 'explorateur']], ['cou', ['cheche', 'bandanacou']], ['haut', ['poncho']], ['pieds', ['sandales', 'babouches']]], fx: [['desert', 'risk', 0.35], ['desert', 'loot', 0.2]] },
+  { id: 'chic', nom: 'Citadin chic', pcs: [['tete', ['beret', 'hautforme', 'cloche']], ['cou', ['noeud', 'dentelle', 'perles']], ['haut', ['kimono', 'veste']], ['mains', ['montre', 'bracelet', 'soie']]], fx: [['cm', 'pay', 0.25]] },
+];
+const US_SET_MIN = 3;
+const usSlots = () => usCall(() => ST_SLOT_IDS, ['tete', 'cou', 'haut', 'bas', 'mains', 'pieds', 'dos']);
+// vêtements portés par k (objets du sac, tenue de départ, ancienne tenue)
+function usWornItems(k) {
+  if (!k || !S.outfits || !S.outfits[k]) return [];
+  return usSlots().map(sl => usCall(() => stWorn(k, sl), null)).filter(Boolean);
+}
+function usSetsOf(k) {
+  const worn = usWornItems(k), bySl = {}; worn.forEach(it => { bySl[it.sub] = usFormOf(it); });
+  return US_SETS.map(St => { const got = St.pcs.map(([sl, fs]) => !!bySl[sl] && fs.includes(bySl[sl])); const n = got.filter(Boolean).length; return { St, n, got, on: n >= US_SET_MIN }; });
+}
+// tous les bonus de k : [{ t, k, v, txt, set? }]
+function usBonusOf(k) {
+  const out = [];
+  usWornItems(k).forEach(it => { const b = usWearOf(it); if (b) out.push({ ...b, it }); });
+  usSetsOf(k).filter(x => x.on).forEach(x => x.St.fx.forEach(([t, kk, v]) => out.push({ t, k: kk, v, txt: usBonusTxt(t, kk, v), set: x.St.nom })));
+  return out;
+}
+const US_CAP = { risk: 0.6, loot: 0.6, prep: 0.45, pay: 0.5 };
+function usSum(list, kind, terr) { const s = list.filter(b => b.k === kind && (!terr || b.t === terr || b.t === '*')).reduce((a, b) => a + b.v, 0); return Math.min(US_CAP[kind], s); }
+const usRiskMul = (k, terr) => 1 - usSum(usBonusOf(k), 'risk', terr || 'foret');
+const usLootP = (k, terr) => usSum(usBonusOf(k), 'loot', terr || 'foret');
+// commerce : toute l'équipe compte (ceux qui sont au commerce comme ceux qui le représentent en voyage)
+function usTeam() { const t = usCall(() => teamIds(), null); return (Array.isArray(t) && t.length ? t : Object.keys(S.comps || {})).filter(k => usCall(() => CHARS[k], null)); }
+const usShopB = kind => Math.min(US_CAP[kind], usTeam().reduce((a, k) => a + usSum(usBonusOf(k), kind), 0));
+
+// ---- application réelle ----
+if (typeof xpRiskK === 'function') xpRiskK = (orig => function (k, c) {
+  const r = orig.apply(this, arguments);
+  try { if (r > 0 && k && c) { const m = usRiskMul(k, c.terr); if (m < 1) return Math.max(0.03, r * m); } } catch (e) {}
+  return r;
+})(xpRiskK);
+let usLootMsg = null;
+if (typeof collect === 'function') collect = (orig => function () {
+  usLootMsg = null;
+  try {
+    const k = S.sel, t = S.trips[k];
+    if (t && t.done && !t.tuto && !t.usL) {
+      t.usL = 1;
+      const terr = t.xpTerr || usCall(() => xpTerrOf(t.dest), 'foret'), p = usLootP(k, terr);
+      if (p > 0 && Math.random() < p) {
+        const b = usCall(() => lootFor((t.dest && t.dest.tags && t.dest.tags.length) ? t.dest.tags : ['campagne'], t.luck || 0, t.dest ? t.dest.name : '', 1, k)[0], null);
+        if (b) { b.usb = 1; t.bag.push(b); usLootMsg = { k, txt: `Bonus de tenue (${US_TNAME[terr] || ''}) : « ${b.name} » en plus !` }; }
+      }
+    }
+  } catch (e) { console.error('usages butin', e); }
+  return orig.apply(this, arguments);
+})(collect);
+if (typeof showHaul === 'function') showHaul = (orig => function (h) {
+  try { if (usLootMsg && h && h.comp === usLootMsg.k) { h.extra = (h.extra || []).concat([usLootMsg.txt]); usLootMsg = null; } } catch (e) {}
+  return orig.apply(this, arguments);
+})(showHaul);
+if (typeof cfDurMul === 'function') cfDurMul = (orig => function () {
+  const m = orig.apply(this, arguments);
+  try { const b = usShopB('prep'); if (b > 0) return m * (1 - b); } catch (e) {}
+  return m;
+})(cfDurMul);
+if (typeof cmSell === 'function') cmSell = (orig => function () {
+  const c0 = S.coins, r = orig.apply(this, arguments);
+  try { const d = S.coins - c0, b = usShopB('pay'); if (d > 0 && b > 0) { const x = Math.max(1, Math.round(d * b)); gainCoins(x); renderTop(); } } catch (e) {}
+  return r;
+})(cmSell);
+try { if (window.__cm) window.__cm.sell = cmSell; } catch (e) {}
+
+// ================= RECYCLAGE : matériaux de base =================
+const US_BASE = {
+  bois: ['Planche de bois', 'm', 'bois', 0, null, '#b07a4f'],
+  tissu: ['Coupon de tissu', 'm', 'tissu', 0, null, '#e9b58f'],
+  pierre: ['Pierre brute', 'm', 'pierre', 0, null, '#a9a39a'],
+  metal: ['Ferraille', 'm', 'metal', 0, null, '#8f9cb3'],
+  terreau: ['Terreau', 'm', 'mousse', 0, null, '#7a5a3a'],
+};
+const US_BASE_NAMES = new Set(Object.values(US_BASE).map(d => d[0]));
+function usBaseOf(it) {
+  if (!it || it.tresor || it.cat === 't' || US_BASE_NAMES.has(it.name)) return null;
+  const f = usCall(() => famOf(it), null), s = it.sub || '';
+  if (it.cat === 'v' || /tissu|laine|plume/.test(s)) return 'tissu';
+  if (/metal|plastique|medaille|outil|cle|coffre/.test(s) || f === 'equipement') return 'metal';
+  if (/pierre|eclat|cristal|sable|gemme|coquillage|perle|corail|fragment/.test(s) || f === 'nature' || f === 'tresors') return 'pierre';
+  if (it.cat === 'n' || f === 'jardin' || /fleur|feuille|graine|mousse|champignon/.test(s)) return 'terreau';
+  return 'bois';
+}
+const usRecN = it => 1 + ((it.rarity || 0) >= 2 ? 1 : 0);
+function usRecycle(id) {
+  const it = S.inv.find(i => i.id === id), b = usBaseOf(it); if (!b) return null;
+  const go = () => {
+    const x = S.inv.find(i => i.id === id); if (!x) return;
+    S.inv.splice(S.inv.indexOf(x), 1);
+    for (const o of Object.values(S.outfits || {})) if (o && o.worn && o.worn[x.sub] === x.id) { o[x.sub] = 'none'; o.worn[x.sub] = null; }
+    const n = usRecN(x), made = [];
+    for (let i = 0; i < n; i++) { const m = makeItem(US_BASE[b], 0, 'Recyclé', [], { fixed: 0 }); S.inv.push(m); made.push(m); }
+    S.dex[US_BASE[b][0]] = true;
+    save(); usCall(() => { renderTop(); renderComps(); renderPanel(); });
+    toast(`Recyclé : « ${x.name} » → ${n} × ${US_BASE[b][0].toLowerCase()}.`);
+  };
+  if (typeof styleGuard === 'function') styleGuard(id, 'recycler', go); else go();
+  return b;
+}
+function usSell(id) {
+  const it = S.inv.find(i => i.id === id); if (!it || it.tresor) return;
+  const m = $('modal'); if (m) m.hidden = true;
+  const b = document.createElement('button'); b.hidden = true; b.dataset.sellq = id; document.body.appendChild(b); b.click(); b.remove(); // même chemin que la vente rapide (10_ui.js)
+}
+
+// ================= ACTIONS (GAME.addAction) et USAGES (GAME.addUses) =================
+const usAfter = () => usCall(() => { renderTop(); renderPanel(); });
+function usCook(rid) {
+  const R = CM_R[rid], T = usCall(() => cmT(), null); if (!R) return;
+  if (!T || T.id !== R.shop) { const B = usCall(() => BQS(R.shop), null); toast(`« ${R.def[0]} » se prépare dans votre ${B ? B.name.toLowerCase() : 'commerce'} : changez de commerce à la boutique.`); return; }
+  const n0 = cmState().sl.filter(Boolean).length;
+  cmStart(rid);
+  if (cmState().sl.filter(Boolean).length > n0) toast(`En préparation : « ${R.def[0]} » (${Math.round(cmDur(R))} s). Il ira sur le comptoir.`);
+  usAfter();
+}
+function usCraft(rid) {
+  const r = RECIPES.find(x => x.id === rid); if (!r) return;
+  if (usCall(() => canCraft(r), false)) { const n0 = S.stats.crafted; craft(rid); if (S.stats.crafted > n0) toast(`Fabriqué : « ${r.out[0]} » !`); usAfter(); return; }
+  usCall(() => obGo('craft', rid));
+}
+function usFeed(id) { const b = document.createElement('button'); b.hidden = true; b.dataset.feed = id; document.body.appendChild(b); b.click(); b.remove(); }
+function usWear(id) {
+  const it = S.inv.find(i => i.id === id), k = S.sel; if (!it || !k) return;
+  if (typeof styleEquip === 'function') styleEquip(k, it); else return usCall(() => obGo('wear', '', id));
+  const b = usWearOf(it); usCall(() => { renderTop(); renderComps(); renderPanel(); });
+  toast(`${CHARS[k].name} porte « ${it.name} »${b ? ` : ${b.txt}` : ''}.`);
+}
+function usGearEquip(id) {
+  const k = S.sel, a = usCall(() => xpEq(k), null); if (!a) return;
+  let slot = a.indexOf(null); if (slot < 0) slot = 0;
+  if (usCall(() => xpEquip(k, slot, id), false)) { toast(`${CHARS[k].name} emporte « ${S.inv.find(i => i.id === id).name} » en expédition.`); usAfter(); }
+  else toast('Ce matériel est déjà porté par un autre compagnon.');
+}
+function usPlant(id) {
+  const J = usCall(() => famState().j, null); if (!J) return;
+  const n = usCall(() => famPlotN(), 3); let i = -1; for (let p = 0; p < n; p++) if (!J.plots[p]) { i = p; break; }
+  if (i < 0) { toast('Le jardin est plein : récoltez d’abord (Foyer › Jardin).'); return; }
+  const it = S.inv.find(x => x.id === id), s = it && famSeedOf(it);
+  if (famSow(i, id)) { toast(`Planté ! « ${s.out[0]} » à récolter dans ${s.min} min (Foyer › Jardin).`); usAfter(); }
+}
+function usQuests(sel) { usCall(() => { qtOpenPage(); if (sel) setTimeout(() => { const e = document.querySelector('#modal ' + sel); if (e && e.scrollIntoView) e.scrollIntoView({ block: 'center' }); }, 80); }); }
+
+GAME.addUses(it => {
+  const out = []; if (!it) return out;
+  usCmRecipes(it).slice(0, 3).forEach(({ R }) => out.push({ txt: `${R.def[1] === 'n' ? 'Cuisiner' : 'Préparer'} : ${R.def[0]}`, kind: R.def[1] === 'n' ? 'cuisiner' : 'construire', go: () => usCook(R.id) }));
+  const G = usGearOf([it.name]); if (G) out.push({ txt: `Expédition : ${usCall(() => XP_G[G.g][2], '')}`, kind: 'expedition', go: () => usGearEquip(it.id) });
+  const s = usCall(() => famSeedOf(it), null); if (s) out.push({ txt: `Planter : ${s.out[0]} en ${s.min} min`, kind: 'planter', go: () => usPlant(it.id) });
+  const ch = usCall(() => famIsChest(it), null); if (ch) out.push({ txt: `Coffre : s’ouvre avec une ${famKeyName(ch).toLowerCase()}`, kind: 'tresor', go: () => famOpenChest(it.id) });
+  const ky = usCall(() => famIsKey(it), null); if (ky) out.push({ txt: `Clé : ouvre un ${famChestName(ky).toLowerCase()}`, kind: 'tresor' });
+  if (it.cat === 'v') { const b = usWearOf(it); if (b) out.push({ txt: `Porté : ${b.txt}`, kind: 'porter', go: () => usWear(it.id) }); }
+  return out;
+});
+GAME.addAction(it => {
+  const out = []; if (!it || !S.inv.includes(it)) return out;
+  // recettes du commerce (avec le produit en image)
+  const cms = usCmRecipes(it).slice(0, 4), cmN = new Set(cms.map(x => x.R.def[0]));
+  cms.forEach(({ R, ok, here }) => out.push({ label: R.def[0], kind: R.def[1] === 'n' ? 'cuisiner' : 'construire', out: R.def, ready: ok, hint: here ? `${R.ing.map(([k, n]) => `${n} ${usCall(() => cmIngName(k), k).toLowerCase()}`).join(' + ')}` : 'Dans un autre commerce', run: () => usCook(R.id) }));
+  // atelier (vêtements, matériel d'expédition, objets)
+  usAtRecipes(it).filter(x => !cmN.has(x.r.out[0])).slice(0, 4).forEach(({ r, ok }) => out.push({ label: r.out[0], kind: usOutKind(r.out), out: r.out, ready: ok, run: () => usCraft(r.id) }));
+  // bâtiments du village
+  usCall(() => VILLAGE_BUILDINGS.filter(b => !villageBuilt(b.id) && b.cost.some(([k]) => usIngMatch(k, it))).slice(0, 2), []).forEach(b => out.push({ label: b.name, kind: 'construire', ico: usCall(() => obIco('batiment'), ''), run: () => obGo('village') }));
+  // vêtement, matériel, graine, coffre, clé
+  if (it.cat === 'v') out.push({ label: 'Porter', kind: 'porter', ready: true, run: () => usWear(it.id) });
+  if (usGearOf([it.name])) out.push({ label: 'Équiper', kind: 'expedition', ready: true, run: () => usGearEquip(it.id) });
+  const s = usCall(() => famSeedOf(it), null); if (s) out.push({ label: s.out[0], kind: 'planter', out: s.out, ready: true, run: () => usPlant(it.id) });
+  const ch = usCall(() => famIsChest(it), null);
+  if (ch) { const has = S.inv.some(i => usCall(() => famIsKey(i), null) === ch); out.push({ label: 'Ouvrir', kind: 'coffre', ready: has, run: () => famOpenChest(it.id) }); }
+  const ky = usCall(() => famIsKey(it), null);
+  if (ky) { const c = S.inv.find(i => usCall(() => famIsChest(i), null) === ky); out.push({ label: `Ouvrir le ${famChestName(ky).toLowerCase()}`, kind: 'coffre', out: [famChestName(ky), 'm', 'coffre', 1, null, usCall(() => FAM_LOCKS[ky].col, '#b07a4f')], ready: !!c, run: () => (c ? famOpenChest(c.id) : toast(`Il vous faut d’abord un ${famChestName(ky).toLowerCase()} : on en trouve en voyage.`)) }); }
+  // nourrir (48_progression.js peut fournir le sien : le même libellé n'est affiché qu'une fois)
+  if (it.cat === 'n' && !it.mk && usCall(() => tasteOf(S.sel, it), 'like') !== 'hate') out.push({ label: 'Nourrir', kind: 'familier', ready: true, run: () => usFeed(it.id) });
+  // offrandes aux gardiens (43_mysteres.js)
+  usCall(() => MY_GUARDS.filter(G => { const g = myGRec(G.id); return g.d && !g.done && (g.t || 0) < G.offers.length && myOfferMatch(myOffer(G))(it); }).slice(0, 1), []).forEach(G => out.push({ label: `Offrir : ${G.nm}`, kind: 'offrande', ready: true, run: () => usQuests('#qmq-gd_' + G.id) }));
+  // objectif du jour et quêtes (38_quetes.js)
+  usCall(() => qtNeeds().filter(n => n.match && (n.src === 'jour' || n.src === 'quete') && n.match(it)).slice(0, 1), []).forEach(n => out.push({ label: n.src === 'jour' ? 'Objectif du jour' : 'Quête', kind: 'quete', ready: true, run: () => usQuests() }));
+  // vendre et recycler
+  if (!it.tresor) out.push({ label: `Vendre (≈ ${usCall(() => sellPrice(it), 0)} pièces)`, kind: 'vendre', run: () => usSell(it.id) });
+  if (usBaseOf(it)) out.push({ label: 'Recycler', kind: 'recycler', out: US_BASE[usBaseOf(it)], run: () => usRecycle(it.id) });
+  return out;
+});
+
+// ================= LA FICHE : objet → résultats, Utiliser, Vendre, Recycler =================
+let US_ACTS = [];
+const US_MAIN_ORDER = ['porter', 'expedition', 'planter', 'coffre', 'offrande', 'cuisiner', 'construire', 'familier'];
+function usActsFor(it) {
+  const all = usCall(() => GAME.actionsOf(it), []) || [], seen = new Map();
+  all.forEach(a => { if (a && a.label && typeof a.run === 'function') seen.set(String(a.label).toLowerCase(), a); }); // le dernier déclaré l'emporte (ex. 48_progression.js)
+  return [...seen.values()];
+}
+function usMainOf(acts, it) {
+  const use = acts.filter(a => a.kind !== 'vendre' && a.kind !== 'recycler' && a.kind !== 'quete');
+  const rank = a => { const i = US_MAIN_ORDER.indexOf(a.kind); return i < 0 ? 50 : i; };
+  return use.filter(a => a.ready).sort((a, b) => rank(a) - rank(b))[0] || use.sort((a, b) => rank(a) - rank(b))[0] || null;
+}
+function usFicheHTML(it) {
+  US_ACTS = usActsFor(it);
+  const idx = a => US_ACTS.indexOf(a);
+  const res = US_ACTS.filter(a => (a.out || a.ico) && a.kind !== 'vendre' && a.kind !== 'recycler').slice(0, 6);
+  const main = usMainOf(US_ACTS, it), sell = US_ACTS.find(a => a.kind === 'vendre'), rec = US_ACTS.find(a => a.kind === 'recycler');
+  let h = '<div class="usfiche">';
+  if (res.length) {
+    h += `<div class="usflow"><span class="usfrom">${usCall(() => itemIcon(it), '')}${usBadgesHTML(it)}</span><svg class="usarr" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12 H18 M13 6 L19 12 L13 18" fill="none" stroke="${US_INK}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="usouts">`;
+    h += res.map(a => `<button class="usres${a.ready ? ' ok' : ''}" data-usact="${idx(a)}" title="${esc(a.label)}${a.hint ? ' · ' + esc(a.hint) : ''}" aria-label="${esc(a.label)}${a.ready ? ', prêt' : ''}"><span class="usri">${a.out ? usIco(a.out) : a.ico}${usPill(US_K[a.kind] ? a.kind : 'construire', 's usrk')}${a.ready ? '<b class="usok" aria-hidden="true">✓</b>' : ''}</span><small>${esc(a.label)}</small></button>`).join('');
+    h += '</div></div>';
+  }
+  const btns = [];
+  if (main) btns.push(`<button class="btn green sm usmain" data-usact="${idx(main)}">${usPill(US_K[main.kind] ? main.kind : 'construire', 's')}<span>Utiliser<small>${esc(main.label)}</small></span></button>`);
+  if (sell) btns.push(`<button class="btn cream sm ussell" data-usact="${idx(sell)}">${usPill('vendre', 's')}<span>Vendre ≈ ${usCall(() => coins(sellPrice(it)), '')}</span></button>`);
+  if (rec) btns.push(`<button class="btn cream sm usrec" data-usact="${idx(rec)}" title="Devient : ${esc(rec.out[0])}">${usPill('recycler', 's')}<span>Recycler</span><span class="usrb">${usIco(rec.out)}</span></button>`);
+  if (btns.length) h += `<div class="usbtns">${btns.join('')}</div>`;
+  return h + '</div>';
+}
+if (typeof openFiche === 'function') openFiche = (orig => function (id) {
+  const r = orig.apply(this, arguments);
+  try {
+    const it = S.inv.find(i => i.id === id), f = document.querySelector('#modal .fiche');
+    if (!it || !f) return r;
+    const at = f.querySelector('.famtop') || f.querySelector('.obfk') || f.querySelector('h2');
+    const html = usFicheHTML(it);
+    if (at && at.classList.contains('famtop')) at.insertAdjacentHTML('beforebegin', html); else if (at) at.insertAdjacentHTML('afterend', html); else f.insertAdjacentHTML('afterbegin', html);
+    // pas de doublons : le bouton du bandeau et la vente rapide sont remplacés par « Utiliser » et « Vendre »
+    f.querySelectorAll('.famtop .famtb, .obff [data-sellq]').forEach(b => b.remove());
+    // la liste détaillée des usages reste disponible, repliée
+    const sec = f.querySelector('.obsec');
+    if (sec && f.querySelector('.usflow, .usbtns')) { const h3 = sec.querySelector('h3'); const d = document.createElement('details'); d.className = 'obsec usdet'; d.innerHTML = `<summary>${h3 ? h3.textContent : 'À quoi ça sert'}</summary>`; if (h3) h3.remove(); while (sec.firstChild) d.appendChild(sec.firstChild); sec.replaceWith(d); }
+  } catch (e) { console.error('usages fiche', e); }
+  return r;
+})(openFiche);
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-usact]'); if (!b || b.disabled) return;
+  const a = US_ACTS[+b.dataset.usact]; if (!a) return;
+  const m = $('modal'); if (m && b.closest('#modal')) m.hidden = true;
+  try { a.run(); } catch (e) { console.error('usages action', e); }
+});
+
+// ================= SAC ET BUTIN : pastilles =================
+if (typeof haulCard === 'function') haulCard = (orig => function (it) {
+  const h = orig.apply(this, arguments);
+  try { const bd = usBadgesHTML(it); if (bd) return h.replace('<span class="hico">', `<span class="hico usrel">${bd}`); } catch (e) {}
+  return h;
+})(haulCard);
+
+// ================= GARDE-ROBE : bonus de la tenue et ensembles =================
+function usWardHTML(k) {
+  const bs = usBonusOf(k).filter(b => !b.set), sets = usSetsOf(k);
+  // regroupe les bonus identiques (même terrain, même type)
+  const g = new Map(); bs.forEach(b => { const key = b.t + b.k; g.set(key, { ...b, v: (g.get(key) ? g.get(key).v : 0) + b.v }); });
+  const chip = b => `<span class="uswc">${b.t === 'cm' ? usPill(b.k, 's') : usTerrPill(b.t, 's')}${esc(usBonusTxt(b.t, b.k, Math.min(US_CAP[b.k], b.v)))}</span>`;
+  let h = `<div class="uswr"><p class="uswl"><b>Bonus :</b> ${g.size ? [...g.values()].map(chip).join('') : '<span class="uswe">aucun vêtement porté</span>'}</p>`;
+  const show = sets.filter(x => x.n > 0).sort((a, b) => b.n - a.n).slice(0, 2);
+  if (!show.length) show.push(sets[0]);
+  h += show.map(x => `<p class="uswset${x.on ? ' on' : ''}"><b>${esc(x.St.nom)}</b><em>${x.n}/4</em><span class="uswd">${x.got.map(o => `<i class="${o ? 'y' : ''}"></i>`).join('')}</span><small>${x.St.fx.map(([t, kk, v]) => `<span class="uswc">${t === 'cm' ? usPill(kk, 's') : usTerrPill(t, 's')}${esc(usBonusTxt(t, kk, v))}</span>`).join('')}${x.on ? '' : `<span>dès ${US_SET_MIN} pièces</span>`}</small></p>`).join('');
+  return h + '</div>';
+}
+if (typeof renderWardrobe === 'function') renderWardrobe = (orig => function (k) {
+  const h = orig.apply(this, arguments);
+  try { const at = h.indexOf('<div class="wrstage">'); if (at >= 0) return h.slice(0, at) + usWardHTML(k) + h.slice(at); } catch (e) { console.error('usages garde-robe', e); }
+  return h;
+})(renderWardrobe);
+
+// ================= STYLES =================
+(function usCSS() {
+  const st = document.createElement('style');
+  st.textContent = `
+.uspill{--sz:15px;display:inline-flex;align-items:center;justify-content:center;flex:none;width:var(--sz);height:var(--sz);border-radius:50%;background:var(--pc);border:1.5px solid ${US_INK};font-style:normal;box-sizing:border-box}
+.uspill svg{width:78%;height:78%;display:block}
+.uspill.s{--sz:15px}
+.usbd{position:absolute;right:-3px;bottom:-3px;display:flex;gap:1px;z-index:2;pointer-events:none}
+.usbd .uspill{box-shadow:0 1px 0 rgba(91,70,54,.25)}
+.obi{position:relative}.hico.usrel{position:relative;display:inline-block}
+.usfiche{margin:8px 0 6px;display:flex;flex-direction:column;gap:8px;max-width:100%}
+.usflow{display:flex;align-items:center;gap:6px;background:#fff8ec;border:2px solid #ecdcc4;border-radius:16px;padding:6px 8px;min-width:0}
+.usfrom{position:relative;flex:none;width:44px;height:44px;display:inline-block}.usfrom svg:not(.uspill svg){width:44px;height:44px}
+.usarr{flex:none;width:20px;height:20px}
+.usouts{display:flex;gap:6px;overflow-x:auto;min-width:0;padding:2px;scrollbar-width:none}
+.usres{flex:none;width:58px;display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:2px solid #e3d3bb;border-radius:12px;padding:4px 2px 3px;cursor:pointer;font:inherit;color:inherit;opacity:.72}
+.usres.ok{opacity:1;border-color:#7fbf8e;background:#f1fbf3}
+.usres:active{transform:scale(.95)}
+.usri{position:relative;width:40px;height:40px;display:block}.usri>svg{width:40px;height:40px}
+.usri .usrk{position:absolute;left:-3px;bottom:-3px}
+.usok{position:absolute;right:-4px;top:-4px;width:15px;height:15px;border-radius:50%;background:#4f9f63;color:#fff;font-size:10px;line-height:15px;text-align:center;border:1.5px solid ${US_INK}}
+.usres small{font-size:10.5px;line-height:1.1;max-width:54px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.usbtns{display:flex;gap:6px;flex-wrap:wrap}
+.usbtns .btn{display:inline-flex;align-items:center;gap:5px;flex:1 1 auto;justify-content:center;min-width:0}
+.usbtns .btn span{display:inline-flex;flex-direction:column;align-items:flex-start;line-height:1.05}
+.usbtns .ussell span{flex-direction:row;align-items:center;gap:2px}.ussell i{font-style:normal}
+.usmain small{font-size:10px;font-weight:600;opacity:.85;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.usrb{width:22px;height:22px}.usrb svg{width:22px;height:22px}
+.usdet summary{cursor:pointer;font-weight:800;color:#8a6a50;font-size:13px;margin:4px 0}
+.uswr{margin:6px 0;padding:6px 8px;background:#fff8ec;border:2px solid #ecdcc4;border-radius:14px;font-size:12.5px}
+.uswr p{margin:2px 0;display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.uswc{display:inline-flex;align-items:center;gap:3px;background:#fff;border:1.5px solid #e3d3bb;border-radius:99px;padding:1px 7px 1px 2px;font-weight:700}
+.uswe{opacity:.7}
+.uswset b{font-weight:800}.uswset em{font-style:normal;font-weight:800;color:#8a6a50}
+.uswset.on{background:#eef8ee;border-radius:10px;padding:2px 4px}.uswset.on em{color:#3f8a4f}
+.uswd{display:inline-flex;gap:2px}.uswd i{width:9px;height:9px;border-radius:50%;border:1.5px solid ${US_INK};background:#fff}.uswd i.y{background:#7fbf8e}
+.uswset small{display:inline-flex;align-items:center;gap:3px;flex-wrap:wrap;opacity:.9}
+.obfil.usfil{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.obfil.usfil button{min-height:46px;padding:4px 6px 5px}
+.obfil.usfil button i.uspill{--sz:20px;grid-row:1;grid-column:1;justify-self:start;min-width:0;padding:0;height:var(--sz);width:var(--sz);background:var(--pc);border-radius:50%;line-height:0}
+.obfil.usfil button span{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.obfil.usfil .obf-autre{grid-column:span 2}
+@media (min-width:700px){.obfil.usfil{grid-template-columns:repeat(7,minmax(0,1fr))}.obfil.usfil .obf-autre{grid-column:auto}}
+`;
+  document.head.appendChild(st);
+})();
+
+// ---------------- outils de test ----------------
+window.__us = {
+  kinds: it => usKinds(it), tabs: it => [...usTabsOf(it)], badges: it => usBadgesHTML(it), wear: it => usWearOf(it), bonus: k => usBonusOf(k), sets: k => usSetsOf(k).map(x => ({ id: x.St.id, n: x.n, on: x.on })),
+  riskMul: (k, t) => usRiskMul(k, t), lootP: (k, t) => usLootP(k, t), shop: kind => usShopB(kind), acts: it => usActsFor(it).map(a => ({ label: a.label, kind: a.kind, ready: !!a.ready, img: !!(a.out || a.ico) })),
+  T: () => ({ openSheet, openFiche, xpRiskK, styleEquip, styleUnequip, makeItem, cmState, cmDur, CM_R, renderPanel }),
+  base: it => usBaseOf(it), recycle: usRecycle, sell: usSell, SETS: US_SETS, BASE: US_BASE, ward: k => usWardHTML(k),
+};
+
+// ================= v35 : LE SENTIMENT DE PROGRESSION =================
+// 1. CONSTRUIRE : la maison (Foyer) et la boutique (onglet Préparer du comptoir) s'agrandissent avec des MATÉRIAUX.
+//    10 améliorations × 3 niveaux, chacune avec un effet réel, et un petit dessin ajouté à la scène.
+// 2. NOURRIR LES FAMILIERS : depuis leur fiche (Talents). La nourriture donne de l'XP (plat préféré ×2) ; les stades de
+//    croissance viennent de 45_equipage.js (eqStage) ; à chaque stade, un POUVOIR (Flair, Endurance, Bonne étoile).
+// 3. RANG D'EXPLORATEUR : calculé à partir de ce que le joueur a fait. Badge discret dans le HUD, à côté des pièces.
+// 4. PASSEPORT : un tampon par région visitée, dans l'Album ; paliers de tampons récompensés.
+// État : S.prg = { b: {id: niveau}, rk: dernier rang vu, pal: {palier: 1}, pw: {familier: stade vu}, rec: {commerce: n}, gift: {} }.
+// Enveloppes : fyRender, cmRecipesHTML, czSceneHTML, cmState, cmTickBuyers, cmSell, nsLayout, nsRoomFor, fyCapInfo, fyMods,
+// famSow, wdMomentsHTML, renderTalents, startTrip, collect, renderTop, renderAlbum. Usages : GAME.addUses / GAME.addAction.
+// Tests : window.__prg.
+
+const pgCall = (f, d) => { try { return f(); } catch (e) { return d; } };
+function pgState() {
+  if (!S.prg || typeof S.prg !== 'object' || Array.isArray(S.prg)) S.prg = {};
+  const P = S.prg;
+  ['b', 'pal', 'pw', 'rec', 'gift'].forEach(k => { if (!P[k] || typeof P[k] !== 'object' || Array.isArray(P[k])) P[k] = {}; });
+  return P;
+}
+const pgLvl = id => Math.max(0, Math.min(3, +pgState().b[id] || 0));
+const pgTuto = () => pgCall(() => tuOn(), false);
+
+// ---------------- 1. CONSTRUIRE ----------------
+const PG_MAT = { bois: ['planche', 'planches'], pierre: ['pierre', 'pierres'], tissu: ['tissu', 'tissus'], metal: ['métal', 'métaux'], verre: ['verre', 'verres'], cristal: ['cristal', 'cristaux'] };
+const PG_B = [
+  { id: 'chambre', w: 'maison', nm: 'Chambre d’amis', eff: l => `+${l} familier${l > 1 ? 's' : ''} logé${l > 1 ? 's' : ''} au foyer`,
+    cost: [[['bois', 6], ['tissu', 3], ['pierre', 2]], [['bois', 10], ['tissu', 5], ['verre', 2]], [['bois', 14], ['tissu', 8], ['metal', 4]]] },
+  { id: 'serre', w: 'maison', nm: 'Serre', eff: l => `Jardin : les graines poussent ${[0, 20, 35, 50][l]} % plus vite`,
+    cost: [[['verre', 4], ['bois', 4]], [['verre', 7], ['bois', 6], ['metal', 2]], [['verre', 10], ['metal', 5], ['pierre', 4]]] },
+  { id: 'atelier', w: 'maison', nm: 'Atelier agrandi', eff: l => `${15 * l} % de chances de fabriquer en double`,
+    cost: [[['bois', 5], ['metal', 3]], [['bois', 8], ['metal', 5], ['pierre', 3]], [['bois', 12], ['metal', 8], ['verre', 3]]] },
+  { id: 'cheminee', w: 'maison', nm: 'Cheminée', eff: l => `Repos ${['', '1,5', '2', '2,5'][l]}× plus rapide`,
+    cost: [[['pierre', 6], ['metal', 2]], [['pierre', 10], ['metal', 3], ['bois', 4]], [['pierre', 14], ['metal', 5], ['verre', 2]]] },
+  { id: 'repas', w: 'maison', nm: 'Coin repas', eff: l => `Nourrir un familier : +${25 * l} % d’XP`,
+    cost: [[['bois', 4], ['tissu', 2]], [['bois', 6], ['tissu', 4], ['pierre', 3]], [['bois', 10], ['tissu', 6], ['verre', 3]]] },
+  { id: 'observ', w: 'maison', nm: 'Observatoire', rank: 3, eff: l => `Moments rares annoncés ${[45, 90, 150, 240][l]} jours à l’avance (au lieu de 45)`,
+    cost: [[['verre', 4], ['metal', 4], ['pierre', 4]], [['verre', 6], ['metal', 6], ['cristal', 1]], [['verre', 10], ['metal', 8], ['cristal', 2]]] },
+  { id: 'vitrine', w: 'boutique', nm: 'Vitrine', eff: l => `+${l} client${l > 1 ? 's' : ''} dans la file`,
+    cost: [[['verre', 3], ['bois', 4]], [['verre', 6], ['bois', 6], ['metal', 2]], [['verre', 9], ['metal', 4], ['tissu', 3]]] },
+  { id: 'cuisine', w: 'boutique', nm: 'Cuisine agrandie', eff: l => `+${l} place${l > 1 ? 's' : ''} de préparation`,
+    cost: [[['metal', 4], ['pierre', 4], ['bois', 2]], [['metal', 6], ['pierre', 6], ['bois', 4]], [['metal', 10], ['pierre', 8], ['verre', 3]]] },
+  { id: 'terrasse', w: 'boutique', nm: 'Terrasse', eff: l => `Les clients paient +${10 * l} %`,
+    cost: [[['bois', 6], ['tissu', 3]], [['bois', 8], ['tissu', 5], ['pierre', 4]], [['bois', 12], ['tissu', 8], ['pierre', 6]]] },
+  { id: 'enseigne', w: 'boutique', nm: 'Enseigne lumineuse', eff: l => `Amitié des clients ×${['1', '1,5', '2', '3'][l]} : plus de clients fidèles`,
+    cost: [[['metal', 3], ['verre', 3]], [['metal', 5], ['verre', 5], ['bois', 3]], [['metal', 8], ['verre', 8], ['cristal', 1]]] },
+];
+const PG_BY = {}; PG_B.forEach(B => { PG_BY[B.id] = B; });
+const PG_LV_RANK = [0, 1, 2, 6]; // niveau 2 : rang Randonneur ; niveau 3 : rang Grand explorateur
+const pgNeedRank = (B, lv) => Math.max(PG_LV_RANK[lv] || 1, lv === 1 && B.rank ? B.rank : 1);
+// un matériau utilisable : la bonne sous-famille, pas un produit du commerce, pas un trésor
+function pgUsable(it, key) {
+  if (!it || it.cat !== 'm' || it.mk || it.tresor || it.special || it.rel || (it.rarity || 0) > 2) return false;
+  const subs = ING[key] ? ING[key][0] : [key]; if (!subs.includes(it.sub)) return false;
+  return pgCall(() => famOf(it) === 'materiaux', true);
+}
+const pgHave = key => (S.inv || []).filter(it => pgUsable(it, key)).length;
+function pgTake(key, n) {
+  const c = S.inv.filter(it => pgUsable(it, key)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || (a.rarity || 0) - (b.rarity || 0));
+  c.slice(0, n).forEach(it => S.inv.splice(S.inv.indexOf(it), 1));
+}
+const pgMatKey = it => Object.keys(PG_MAT).find(k => pgUsable(it, k)) || null;
+const pgMatTxt = (k, n) => `${n} ${PG_MAT[k] ? PG_MAT[k][n > 1 ? 1 : 0] : k}`;
+const pgCostTxt = cost => cost.map(([k, n]) => pgMatTxt(k, n)).join(', ');
+function pgMatIco(k) { const r = pgCall(() => cmIngIcon(k), ''); return r || pgCall(() => itemIcon({ cat: 'm', sub: k, color: '#b07a4f' }), ''); }
+function pgCan(id) {
+  const B = PG_BY[id], l = pgLvl(id); if (!B || l >= 3) return { ok: false, max: true };
+  const need = pgNeedRank(B, l + 1), rk = pgRank().i + 1;
+  const cost = B.cost[l], miss = cost.filter(([k, n]) => pgHave(k) < n);
+  return { ok: rk >= need && !miss.length, rankOk: rk >= need, need, cost, miss };
+}
+function pgBuild(id) {
+  const B = PG_BY[id], c = pgCan(id); if (!B || !c.ok) return false;
+  c.cost.forEach(([k, n]) => pgTake(k, n));
+  const P = pgState(); P.b[id] = pgLvl(id) + 1;
+  S.stats.built = (S.stats.built || 0) + 1;
+  save();
+  pgCele(`${B.nm} ${P.b[id] > 1 ? 'niveau ' + P.b[id] : ''} construit${B.nm.endsWith('e') && !/Atelier/.test(B.nm) ? 'e' : ''} ! ${B.eff(P.b[id])}`);
+  pgCheck();
+  return true;
+}
+let pgMissOpen = null;
+function pgMissHTML(id) {
+  const c = pgCan(id); if (!c.miss || !c.miss.length) return '';
+  const rows = c.miss.map(([k, n]) => {
+    const h = pgHave(k), locs = pgCall(() => cfLocs(k), []), buy = pgCall(() => cfShop(k), null), nm = PG_MAT[k] ? PG_MAT[k][1] : k;
+    const lr = locs.map(L => { const i = pgCall(() => CF_GO.push({ step: L.step, name: nm, why: PG_BY[id].nm }) - 1, -1); return i < 0 ? '' : `<div class="cf-loc"><span class="cf-lx"><b>${esc(L.label)}</b><small>${esc(L.sub || '')}${L.km != null ? ` · ${pgCall(() => fmtDist(L.km), '')}` : ''}</small></span><button class="btn gold sm" data-cfgo="${i}">Y aller</button></div>`; }).join('');
+    return `<div class="cf-mi"><div class="cf-mih"><span class="cf-ii">${pgMatIco(k)}</span><span class="cf-mx"><b>${esc(nm.charAt(0).toUpperCase() + nm.slice(1))}</b><span>Vous en avez <b class="cf-cnt">${Math.min(h, n)}/${n}</b></span></span></div>
+      ${lr ? `<div class="cf-locs"><small class="cf-lt">Où le trouver, au plus près :</small>${lr}</div>` : '<p class="cf-lt">En voyage : rues, forêts, ports et chantiers en rapportent.</p>'}
+      ${buy ? `<button class="btn cream sm cf-buy" data-cfbuy="${buy.kind}:${esc(buy.key)}" data-pgbuy="1">Acheter ${buy.where} (≈ ${buy.price} pièces)</button>` : ''}</div>`;
+  }).join('');
+  return `<div class="cf-miss pg-miss"><div class="cf-mh"><b>Il manque pour « ${esc(PG_BY[id].nm)} »</b><button class="cf-x" data-pgx="1" aria-label="Fermer">✕</button></div>${rows}</div>`;
+}
+const PG_STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 L14.8 8.6 L21.4 9.3 L16.4 13.7 L17.9 20.3 L12 16.9 L6.1 20.3 L7.6 13.7 L2.6 9.3 L9.2 8.6Z"/></svg>';
+function pgCardHTML(B) {
+  const l = pgLvl(B.id), c = pgCan(B.id);
+  const lv = `<span class="pg-lv" aria-label="Niveau ${l} sur 3">${[1, 2, 3].map(i => `<i class="${i <= l ? 'on' : ''}">${PG_STAR}</i>`).join('')}</span>`;
+  let body;
+  if (c.max) body = `<p class="pg-eff on">${esc(B.eff(3))}</p><span class="pg-done">Niveau maximum</span>`;
+  else {
+    const costs = c.cost.map(([k, n]) => { const h = pgHave(k); return `<span class="pg-ing${h >= n ? ' ok' : ''}" title="${esc(pgMatTxt(k, n))}">${pgMatIco(k)}<i>${Math.min(h, n)}/${n}</i></span>`; }).join('');
+    const btn = !c.rankOk ? `<span class="pg-lock">Rang ${c.need} : ${esc(PG_RANKS[c.need - 1].n)}</span>`
+      : c.ok ? `<button class="btn green sm" data-pgbuild="${B.id}">Construire</button>` : `<button class="btn cream sm" data-pgmiss="${B.id}">Où trouver</button>`;
+    body = `${l ? `<p class="pg-eff on">Actuel : ${esc(B.eff(l))}</p>` : ''}<p class="pg-eff">${l ? 'Niveau suivant' : 'Effet'} : <b>${esc(B.eff(l + 1))}</b></p><span class="pg-cost" aria-label="Coût : ${esc(pgCostTxt(c.cost))}">${costs}</span>${btn}`;
+  }
+  return `<div class="pg-card${c.ok ? ' can' : ''}${l ? ' built' : ''}" data-pgcard="${B.id}"><span class="pg-pic">${pgIconSVG(B.id)}</span><div class="pg-x"><b>${esc(B.nm)}</b>${lv}${body}</div></div>${pgMissOpen === B.id ? pgMissHTML(B.id) : ''}`;
+}
+function pgBuildHTML(w) {
+  const list = PG_B.filter(B => B.w === w);
+  const n = list.reduce((a, B) => a + pgLvl(B.id), 0);
+  return `<section class="pg-build" id="pgBuild_${w}"><h3 class="pg-h">${pgIconSVG('hammer')}<span>À construire</span><small>${n}/${list.length * 3} · avec les matériaux rapportés de voyage</small></h3><div class="pg-list">${list.map(pgCardHTML).join('')}</div></section>`;
+}
+// petites icônes des améliorations
+const PG_L = '#5b4636';
+function pgIconSVG(id) {
+  const s = `stroke="${PG_L}" stroke-width="2" stroke-linejoin="round"`;
+  const g = {
+    chambre: `<path d="M4 22 V12 L14 5 L24 12 V22Z" fill="#f6dcc0" ${s}/><rect x="8" y="15" width="12" height="7" rx="2" fill="#9cc3e6" ${s}/><rect x="8" y="13" width="5" height="3" rx="1.4" fill="#fff" ${s}/>`,
+    serre: `<path d="M4 23 V13 Q14 3 24 13 V23Z" fill="#d8f0ee" ${s}/><path d="M14 6 V23 M4 15 H24" stroke="${PG_L}" stroke-width="1.4"/><path d="M9 23 q0-5 3-6 M19 23 q0-5-3-6" fill="none" stroke="#4f8a3f" stroke-width="2"/>`,
+    atelier: `<rect x="4" y="15" width="20" height="4" rx="1" fill="#c98a5a" ${s}/><path d="M7 19 V24 M21 19 V24" ${s}/><path d="M9 14 L15 6 L18 8 L12 15Z" fill="#b5bcc2" ${s}/>`,
+    cheminee: `<rect x="7" y="9" width="14" height="15" fill="#d98b6a" ${s}/><path d="M10 24 V17 Q14 13 18 17 V24" fill="#5b4636"/><path d="M12 22 q2-5 4 0" fill="#f6a945"/><path d="M5 9 H23" ${s}/>`,
+    repas: `<path d="M5 14 H23 L20 22 H8Z" fill="#f2c14e" ${s}/><ellipse cx="14" cy="14" rx="9" ry="2.6" fill="#fff3c9" ${s}/><circle cx="11" cy="12.5" r="2" fill="#e0604f"/><circle cx="16" cy="12.5" r="2" fill="#8fbf6a"/>`,
+    observ: `<path d="M6 23 V15 Q14 5 22 15 V23Z" fill="#c9d4e6" ${s}/><path d="M13 13 L22 6" stroke="${PG_L}" stroke-width="3" stroke-linecap="round"/><circle cx="21" cy="4" r="1.5" fill="#f2c14e"/>`,
+    vitrine: `<rect x="4" y="8" width="20" height="15" rx="2" fill="#dff1f6" ${s}/><path d="M4 16 H24" ${s}/><circle cx="10" cy="13" r="2.3" fill="#f3aec1"/><circle cx="17" cy="13" r="2.3" fill="#f2c14e"/><path d="M8 8 l4-4" stroke="#fff" stroke-width="1.6"/>`,
+    cuisine: `<path d="M6 13 H22 V21 Q22 24 19 24 H9 Q6 24 6 21Z" fill="#8f9cb3" ${s}/><path d="M4 13 H24" ${s}/><path d="M10 9 q1-3 0-5 M14 9 q1-3 0-5 M18 9 q1-3 0-5" fill="none" stroke="#b9ad9a" stroke-width="1.6" stroke-linecap="round"/>`,
+    terrasse: `<path d="M3 11 Q14 1 25 11Z" fill="#e5587f" ${s}/><path d="M14 11 V24 M8 24 H20" ${s}/><path d="M8 11 Q11 6 14 11 Q17 6 20 11" fill="#fff" opacity=".6"/>`,
+    enseigne: `<rect x="3" y="7" width="22" height="12" rx="3" fill="#f6c445" ${s}/><path d="M9 7 V3 M19 7 V3" ${s}/><path d="M14 9.5 l1.3 2.6 2.8.3-2.1 1.9.6 2.8-2.6-1.4-2.6 1.4.6-2.8-2.1-1.9 2.8-.3Z" fill="#fff"/>`,
+    hammer: `<path d="M5 9 L13 4 L17 8 L9 13Z" fill="#b5bcc2" ${s}/><path d="M13 9 L23 21" stroke="${PG_L}" stroke-width="3.2" stroke-linecap="round"/><path d="M13 9 L23 21" stroke="#c98a5a" stroke-width="1.6" stroke-linecap="round"/>`,
+  };
+  return `<svg class="pg-ic" viewBox="0 0 28 28" aria-hidden="true">${g[id] || ''}</svg>`;
+}
+// la scène de la maison : chaque amélioration ajoute un élément ; les emplacements vides restent en pointillés
+function pgHouseSVG() {
+  const L = PG_L, s = `stroke="${L}" stroke-width="2.2" stroke-linejoin="round"`, ghost = 'fill="none" stroke="#b9ad9a" stroke-width="1.6" stroke-dasharray="4 3"';
+  const lv = id => pgLvl(id);
+  let g = `<svg viewBox="0 0 360 150" class="pg-house" role="img" aria-label="Votre maison">`;
+  g += `<rect width="360" height="150" fill="#dff0f7"/><circle cx="330" cy="26" r="12" fill="#fbe39a"/><path d="M0 128 Q90 116 180 124 T360 122 V150 H0Z" fill="#a8d08d"/><path d="M0 138 H360" stroke="#8fbf6a" stroke-width="2"/>`;
+  // serre (à gauche)
+  if (lv('serre')) { g += `<g class="pg-el" data-pgel="serre"><path d="M10 128 V98 Q38 72 66 98 V128Z" fill="#e3f6f3" fill-opacity=".85" ${s}/><path d="M38 80 V128 M10 108 H66" stroke="${L}" stroke-width="1.4"/>`; for (let i = 0; i < lv('serre') + 1; i++) g += `<path d="M${18 + i * 14} 128 q0-12 5-15 M${18 + i * 14} 128 q0-10-5-12" fill="none" stroke="#4f8a3f" stroke-width="2.4" stroke-linecap="round"/><circle cx="${23 + i * 14}" cy="112" r="3" fill="#f39ab0"/>`; g += `</g>`; }
+  else g += `<path d="M10 128 V98 Q38 72 66 98 V128Z" ${ghost}/>`;
+  // chambre d'amis (annexe)
+  if (lv('chambre')) { g += `<g class="pg-el" data-pgel="chambre"><path d="M72 128 V86 L100 70 L128 86 V128Z" fill="#f3d7c2" ${s}/>`; for (let i = 0; i < lv('chambre'); i++) g += `<rect x="${80 + (i % 2) * 22}" y="${92 + Math.floor(i / 2) * 18}" width="14" height="12" rx="2" fill="#fbd76a" ${s}/>`; g += `</g>`; }
+  else g += `<path d="M72 128 V86 L100 70 L128 86 V128Z" ${ghost}/>`;
+  // la maison
+  g += `<path d="M128 128 V74 L180 40 L232 74 V128Z" fill="#fff3e2" ${s}/><path d="M120 78 L180 36 L240 78" fill="none" stroke="#d9604f" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><rect x="168" y="98" width="24" height="30" rx="3" fill="#c98a5a" ${s}/><rect x="140" y="86" width="20" height="16" rx="2" fill="#9cc3e6" ${s}/><rect x="200" y="86" width="20" height="16" rx="2" fill="#9cc3e6" ${s}/>`;
+  // cheminée et fumée
+  if (lv('cheminee')) { g += `<g class="pg-el" data-pgel="cheminee"><rect x="206" y="40" width="14" height="26" fill="#d98b6a" ${s}/>`; for (let i = 0; i < lv('cheminee'); i++) g += `<circle class="pg-smoke" style="animation-delay:${i * 0.8}s" cx="${213 + i * 3}" cy="${32 - i * 9}" r="${5 + i}" fill="#fff" opacity=".85"/>`; g += `</g>`; }
+  else g += `<rect x="206" y="44" width="14" height="22" ${ghost}/>`;
+  // atelier (à droite)
+  if (lv('atelier')) g += `<g class="pg-el" data-pgel="atelier"><path d="M238 128 V94 L268 82 L298 94 V128Z" fill="#e9c7a0" ${s}/><rect x="252" y="104" width="32" height="24" fill="#a8754a" ${s}/>${lv('atelier') > 1 ? `<path d="M258 112 L274 104 L278 108 L262 116Z" fill="#b5bcc2" ${s}/>` : ''}${lv('atelier') > 2 ? `<circle cx="268" cy="94" r="5" fill="#f2c14e" ${s}/>` : ''}</g>`;
+  else g += `<path d="M238 128 V94 L268 82 L298 94 V128Z" ${ghost}/>`;
+  // observatoire (sur la colline)
+  if (lv('observ')) g += `<g class="pg-el" data-pgel="observ"><rect x="306" y="96" width="44" height="32" fill="#c9d4e6" ${s}/><path d="M306 96 Q328 68 350 96Z" fill="#8f9cb3" ${s}/><path d="M326 84 L346 66" stroke="${L}" stroke-width="5" stroke-linecap="round"/>${'<circle cx="300" cy="50" r="1.8" fill="#f2c14e"/><circle cx="350" cy="44" r="1.8" fill="#f2c14e"/><circle cx="318" cy="56" r="1.4" fill="#f2c14e"/>'.slice(0, 40 * lv('observ') + 10)}</g>`;
+  else g += `<path d="M306 128 V96 Q328 68 350 96 V128Z" ${ghost}/>`;
+  // coin repas (devant)
+  if (lv('repas')) g += `<g class="pg-el" data-pgel="repas"><rect x="146" y="132" width="68" height="6" rx="2" fill="#c98a5a" ${s}/><path d="M152 138 V148 M208 138 V148" ${s}/>${Array.from({ length: lv('repas') }, (_, i) => `<ellipse cx="${162 + i * 18}" cy="130" rx="7" ry="3" fill="#f2c14e" ${s}/>`).join('')}</g>`;
+  else g += `<rect x="146" y="132" width="68" height="6" ${ghost}/>`;
+  return g + `</svg>`;
+}
+function pgHouseHTML() {
+  const list = PG_B.filter(B => B.w === 'maison'), n = list.reduce((a, B) => a + pgLvl(B.id), 0);
+  const effs = list.filter(B => pgLvl(B.id)).map(B => `<li>${pgIconSVG(B.id)}<span>${esc(B.eff(pgLvl(B.id)))}</span></li>`).join('');
+  return `<div class="pg-home"><div class="pg-scene">${pgHouseSVG()}</div><div class="pg-hx"><b>Votre maison</b><small>${n ? `${n} amélioration${n > 1 ? 's' : ''} sur ${list.length * 3}` : 'Elle s’agrandit avec les matériaux de vos voyages : bois, pierre, tissu, métal, verre.'}</small>${effs ? `<ul class="pg-effs">${effs}</ul>` : ''}</div></div>`;
+}
+// la scène du comptoir : enseigne, vitrine, terrasse, fourneau en plus
+function pgShopSVG() {
+  const L = PG_L, s = `stroke="${L}" stroke-width="2" stroke-linejoin="round"`;
+  let g = '';
+  const en = pgLvl('enseigne'), vi = pgLvl('vitrine'), te = pgLvl('terrasse'), cu = pgLvl('cuisine');
+  if (en) g += `<g class="pg-sign" data-pgel="enseigne"><path d="M150 4 V14 M210 4 V14" ${s}/><rect x="136" y="12" width="88" height="26" rx="8" fill="#f6c445" ${s}/>${Array.from({ length: en }, (_, i) => `<path transform="translate(${180 + (i - (en - 1) / 2) * 20} 25)" d="M0 -8 L2.4 -2.6 L8 -2.2 L3.8 1.6 L5 7.2 L0 4.4 L-5 7.2 L-3.8 1.6 L-8 -2.2 L-2.4 -2.6Z" fill="#fff"/>`).join('')}</g>`;
+  if (vi) g += `<g data-pgel="vitrine"><rect x="10" y="292" width="74" height="56" rx="5" fill="#e8f6fa" fill-opacity=".9" ${s}/><path d="M10 320 H84" ${s}/>${Array.from({ length: vi + 1 }, (_, i) => `<circle cx="${24 + i * 16}" cy="${308}" r="6" fill="${['#f3aec1', '#f2c14e', '#9cc38a', '#e5587f'][i]}" ${s}/>`).join('')}<path d="M18 298 l10-6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></g>`;
+  if (te) g += `<g data-pgel="terrasse"><path d="M236 300 Q266 270 296 300Z" fill="#e5587f" ${s}/><path d="M246 300 Q256 288 266 300 Q276 288 286 300" fill="#fff" opacity=".55"/><path d="M266 300 V352" ${s}/><rect x="244" y="336" width="44" height="6" rx="2" fill="#c98a5a" ${s}/>${te > 1 ? `<rect x="226" y="344" width="14" height="6" rx="2" fill="#c98a5a" ${s}/>` : ''}${te > 2 ? `<rect x="292" y="344" width="14" height="6" rx="2" fill="#c98a5a" ${s}/>` : ''}</g>`;
+  if (cu) g += `<g data-pgel="cuisine">${Array.from({ length: cu }, (_, i) => `<g transform="translate(${300 - i * 40} 58)"><path d="M0 10 H30 V24 Q30 30 24 30 H6 Q0 30 0 24Z" fill="#8f9cb3" ${s}/><path d="M-4 10 H34" ${s}/><path class="pg-steam" d="M8 4 q3-6 0-10 M16 4 q3-6 0-10 M24 4 q3-6 0-10" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"/></g>`).join('')}</g>`;
+  return g ? `<div class="pg-cz" aria-hidden="true"><svg viewBox="0 0 360 380" preserveAspectRatio="none">${g}</svg></div>` : '';
+}
+
+// ---------------- effets réels des améliorations ----------------
+// chambre (+ rangs 4 et 7) : des places en plus au foyer
+const pgBeds = () => pgLvl('chambre') + (pgRank().i >= 3 ? 1 : 0) + (pgRank().i >= 6 ? 1 : 0);
+if (typeof nsLayout === 'function') nsLayout = (orig => function () {
+  const L = orig.apply(this, arguments);
+  try { let n = pgBeds(); while (n-- > 0 && L.tent.length) { const k = L.tent.shift(); L.by.prairie.push(k); L.where[k] = 'prairie'; } } catch (e) {}
+  return L;
+})(nsLayout);
+if (typeof nsRoomFor === 'function') nsRoomFor = (orig => function (sp) {
+  if (orig.apply(this, arguments)) return true;
+  try { const L = nsLayout(); return !L.tent.length && L.by.prairie.length < nsCap('prairie') + pgBeds(); } catch (e) { return false; }
+})(nsRoomFor);
+if (typeof fyCapInfo === 'function') fyCapInfo = (orig => function () { const r = orig.apply(this, arguments); try { r.cap += pgBeds(); } catch (e) {} return r; })(fyCapInfo);
+// cheminée : repos plus rapide
+if (typeof fyMods === 'function') fyMods = (orig => function () { const m = orig.apply(this, arguments); try { m.rest += 0.5 * pgLvl('cheminee'); } catch (e) {} return m; })(fyMods);
+// serre : les graines poussent plus vite
+if (typeof famSow === 'function') famSow = (orig => function (i) {
+  const ok = orig.apply(this, arguments);
+  try { const l = pgLvl('serre'), p = ok && famState().j.plots[i]; if (p && l && !p.pg) { p.ms = Math.round(p.ms * (1 - [0, 0.2, 0.35, 0.5][l])); p.pg = 1; save(); } } catch (e) {}
+  return ok;
+})(famSow);
+// atelier : parfois un objet fabriqué en double
+GAME.on('craft', d => {
+  const l = pgLvl('atelier'); if (!l || !d || !d.item || Math.random() >= 0.15 * l + (window.__prg && __prg.forceDouble ? 1 : 0)) return;
+  const it = Object.assign({}, d.item, { id: uidGen(), date: Date.now() }); S.inv.push(it); save();
+  setTimeout(() => toast(`Atelier agrandi : « ${it.name} » fabriqué en double !`), 900);
+});
+// cuisine : des places de préparation en plus (gardées à part, rendues après la logique existante)
+if (typeof cmState === 'function') cmState = (orig => function () {
+  let ex = [];
+  try { const c = bqState().cm; if (c && Array.isArray(c.sl) && typeof c._b === 'number' && c.sl.length > c._b) ex = c.sl.splice(c._b); } catch (e) {}
+  const c = orig.apply(this, arguments);
+  try {
+    c._b = c.sl.length;
+    const n = pgLvl('cuisine');
+    for (let i = 0; i < n; i++) { const x = ex[i]; c.sl.push(x && CM_R[x.rid] ? x : null); }
+  } catch (e) {}
+  return c;
+})(cmState);
+// vitrine : plus de clients dans la file (la logique existante s'arrête à 2)
+if (typeof cmTickBuyers === 'function') cmTickBuyers = (orig => function () {
+  let ch = orig.apply(this, arguments);
+  try {
+    const ex = pgLvl('vitrine'), c = cmState();
+    if (ex && c.buy.length >= 2 && c.buy.length < 2 + ex) {
+      const keep = c.buy.splice(0, c.buy.length - 1), cids = new Set(keep.map(b => b.cid));
+      const r = orig.apply(this, arguments);
+      const fresh = c.buy.filter(b => !cids.has(b.cid));
+      c.buy = keep.concat(fresh);
+      ch = ch || r;
+    }
+  } catch (e) {}
+  return ch;
+})(cmTickBuyers);
+// terrasse : +10 % par niveau ; enseigne : plus d'amitié
+if (typeof cmSell === 'function') cmSell = (orig => function (bid) {
+  const c0 = S.coins, b = pgCall(() => cmState().buy.find(x => x.id === bid), null);
+  const r = orig.apply(this, arguments);
+  try {
+    const sold = S.coins > c0 && b && !cmState().buy.includes(b);
+    if (sold) {
+      const te = pgLvl('terrasse'), en = pgLvl('enseigne');
+      if (te) { const bonus = Math.max(1, Math.round((S.coins - c0) * 0.1 * te)); gainCoins(bonus); S.prg.lastTip = bonus; }
+      if (en) { const extra = en === 3 ? 2 : en === 2 ? 1 : (Math.random() < 0.5 ? 1 : 0); if (extra) b2Heart(b.cid, extra); }
+      if (te || en) { save(); renderTop(); }
+    }
+  } catch (e) { console.error('progression vente', e); }
+  return r;
+})(cmSell);
+// observatoire : les moments rares plus tôt
+const pgObsDays = () => [45, 90, 150, 240][pgLvl('observ')];
+function pgObsList() {
+  const H = pgObsDays(); if (H <= 45) return [];
+  return pgCall(() => WD_MOM.filter(M => M.win && !wdInWin(wdMD(), M.win)).map(M => {
+    const d = wdDate(); for (let i = 46; i <= H; i++) { const x = new Date(d.getTime() + i * 864e5), md = (x.getMonth() + 1) * 100 + x.getDate(); if (wdInWin(md, M.win)) return { M, i }; }
+    return null;
+  }).filter(o => o && wdMoSoon(o.M) > 45).sort((a, b) => a.i - b.i), []);
+}
+if (typeof wdMomentsHTML === 'function') wdMomentsHTML = (orig => function () {
+  let h = orig.apply(this, arguments);
+  try {
+    const l = pgObsList();
+    if (l.length) h += `<p class="wd-sub pg-obs">${pgIconSVG('observ')}L’observatoire voit plus loin (${pgObsDays()} jours)</p><ul class="pg-obsl">${l.map(o => `<li>${o.M.ico} <b>${esc(o.M.nm)}</b> · ${esc(o.M.where)} · dans ${o.i} jours</li>`).join('')}</ul>`;
+  } catch (e) {}
+  return h;
+})(wdMomentsHTML);
+
+// ---------------- 2. NOURRIR ET FAIRE ÉVOLUER LES FAMILIERS ----------------
+const PG_POW = {
+  flair: { nm: 'Flair', txt: n => `+${n} objet${n > 1 ? 's' : ''} par voyage` },
+  endu: { nm: 'Endurance', txt: n => `−${10 * n} % de durée de voyage` },
+  etoile: { nm: 'Bonne étoile', txt: n => `objets plus rares en voyage (+${n * 10} % de chance)` },
+};
+const PG_SP_POW = { panda: 'flair', capy: 'endu', axo: 'etoile', renard: 'flair', fennec: 'endu', tanuki: 'etoile', paresseux: 'etoile', lemur: 'flair', phoque: 'endu', quokka: 'flair' };
+function pgPowOf(k) { const sp = pgCall(() => spOf(k), k) || k; return PG_SP_POW[sp] || ['flair', 'endu', 'etoile'][pgCall(() => fyHash(String(sp)), 0) % 3]; }
+const pgStage = k => pgCall(() => eqStage(k), (S.prog[k] && S.prog[k].lvl >= 20) ? 3 : (S.prog[k] && S.prog[k].lvl >= 10) ? 2 : 1);
+const pgPowN = k => Math.max(0, pgStage(k) - 1);
+const pgPowLine = (k, n) => { const P = PG_POW[pgPowOf(k)]; return `${P.nm}${n > 1 ? ' II' : ''} : ${P.txt(Math.max(1, n))}`; };
+// aliments du sac : les plats du commerce d'abord, le préféré en tête ; jamais ce qu'il déteste
+function pgFoods(k) {
+  const rank = { love: 0, like: 1, hate: 9 };
+  const seen = new Set();
+  return (S.inv || []).filter(it => it.cat === 'n' && pgCall(() => tasteOf(k, it), 'like') !== 'hate')
+    .sort((a, b) => rank[pgCall(() => tasteOf(k, a), 'like')] - rank[pgCall(() => tasteOf(k, b), 'like')] || (b.mk ? 1 : 0) - (a.mk ? 1 : 0) || (b.rarity || 0) - (a.rarity || 0))
+    .filter(it => { const key = it.name + '|' + (it.mk ? it.mk.st : ''); if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, 5);
+}
+function pgFoodXP(k, it) {
+  const love = pgCall(() => tasteOf(k, it), 'like') === 'love';
+  const base = it.mk ? 30 + 10 * (it.mk.st || 1) : 12 + 6 * (it.rarity || 0);
+  return Math.round(base * (love ? 2 : 1) * (1 + 0.25 * pgLvl('repas')));
+}
+function pgFeed(k, id) {
+  const it = (S.inv || []).find(i => i.id === id && i.cat === 'n'); if (!it || !S.prog[k] || !S.comps[k]) return null;
+  if (pgCall(() => tasteOf(k, it), 'like') === 'hate') return null;
+  const st0 = pgStage(k), lv0 = S.prog[k].lvl, love = pgCall(() => tasteOf(k, it), 'like') === 'love';
+  S.inv.splice(S.inv.indexOf(it), 1);
+  const xp = addXP(k, pgFoodXP(k, it));
+  pgCall(() => { const c = fyC(k); c.joy = fyClamp(c.joy + (love ? 20 : 10)); }, 0);
+  S.stats.fed = (S.stats.fed || 0) + 1; if (love) pgCall(() => bump('feed_love'), 0);
+  const st1 = pgStage(k), nm = CHARS[k].name;
+  pgState().pw[k] = st1;
+  save();
+  if (st1 > st0) pgCele(`${nm} devient ${pgCall(() => eqStageWord(k, st1), 'plus fort')} ! Pouvoir : ${pgPowLine(k, st1 - 1)}`);
+  else toast(`${nm} se régale${love ? ' (son préféré : XP ×2)' : ''} : +${xp} XP${S.prog[k].lvl > lv0 ? ` · niveau ${S.prog[k].lvl} !` : ''}`);
+  pgCheck();
+  return { xp, st0, st1 };
+}
+function pgFeedHTML(k) {
+  const p = S.prog[k] || { lvl: 1, xp: 0 }, need = needXP(p.lvl), f = Math.min(1, p.xp / need), st = pgStage(k), n = pgPowN(k), away = !!(S.trips && S.trips[k]);
+  const nextLv = st === 1 ? 10 : st === 2 ? 20 : 0, foods = away ? [] : pgFoods(k);
+  const pow = n ? `<p class="pg-pow on">${pgIconSVG('enseigne').replace('pg-ic', 'pg-ic pw')}<b>${esc(pgPowLine(k, n))}</b></p>`
+    : `<p class="pg-pow">${pgIconSVG('enseigne').replace('pg-ic', 'pg-ic pw off')}<span>Au stade suivant (niv. ${nextLv}) : ${esc(pgPowLine(k, 1))}</span></p>`;
+  const row = foods.map(it => { const love = pgCall(() => tasteOf(k, it), 'like') === 'love'; return `<button class="pg-fd${love ? ' love' : ''}" data-pgfeed="${k}:${esc(it.id)}" aria-label="Nourrir avec ${esc(it.name)} : +${pgFoodXP(k, it)} XP" title="${esc(it.name)}"><span class="ico">${itemIcon(it)}</span>${love ? '<i class="pg-heart">❤</i>' : ''}<small>+${pgFoodXP(k, it)}</small></button>`; }).join('');
+  return `<div class="pg-feed" id="pgFeed"><div class="pg-fh"><b>Nourrir</b><span class="pg-xpb" aria-label="${p.xp} sur ${need} XP"><i style="width:${(f * 100).toFixed(1)}%"></i><em>Niv. ${p.lvl} · ${p.xp}/${need} XP</em></span></div>
+    ${away ? '<p class="pg-fn">En voyage : vous le nourrirez à son retour.</p>' : row ? `<div class="pg-fds">${row}</div>` : '<p class="pg-fn">Rien à manger dans le sac : préparez un plat au comptoir ou partez en voyage.</p>'}${pow}</div>`;
+}
+if (typeof renderTalents === 'function') renderTalents = (orig => function (k) {
+  const h = orig.apply(this, arguments);
+  try {
+    if (!CHARS[k] || !S.prog[k] || pgTuto()) return h;
+    const at = ['<div class="xpf', '<div class="eqf">', '<div class="cptree">'].map(x => h.indexOf(x)).filter(i => i >= 0).sort((a, b) => a - b)[0];
+    return at != null ? h.slice(0, at) + pgFeedHTML(k) + h.slice(at) : h + pgFeedHTML(k);
+  } catch (e) { console.error('progression fiche', e); return h; }
+})(renderTalents);
+// les pouvoirs en voyage
+const pgRankDurMul = () => (pgRank().i >= 7 ? 0.95 : 1);
+if (typeof startTrip === 'function') startTrip = (orig => function () {
+  const k = S.sel, before = S.trips[k];
+  const r = orig.apply(this, arguments);
+  try {
+    const t = S.trips[k];
+    if (t && t !== before && !t.pg) {
+      t.pg = 1; const pw = pgPowOf(k), n = pgPowN(k);
+      let mul = pgRankDurMul(); if (n && pw === 'endu') mul *= 1 - 0.1 * n;
+      if (mul < 1) { t.out = Math.round(t.out * mul); t.stay = Math.round((t.stay || 0) * mul); t.total = Math.max(1000, Math.round(t.total * mul)); }
+      if (n && pw === 'etoile') t.luck = (t.luck || 0) + 0.5 * n;
+      if (n && pw === 'flair') t.pgFl = n;
+      save();
+    }
+  } catch (e) { console.error('progression départ', e); }
+  return r;
+})(startTrip);
+if (typeof collect === 'function') collect = (orig => function () {
+  const k = S.sel, t = S.trips && S.trips[k];
+  const r = orig.apply(this, arguments);
+  try {
+    if (t && t.pgFl && S.trips[k] !== t) {
+      const items = lootFor((t.dest && t.dest.tags && t.dest.tags.length ? t.dest.tags : ['campagne']), t.luck || 0, (t.dest && t.dest.name) || 'Voyage', t.pgFl, k);
+      items.forEach(it => { it.from = it.from || 'Voyage'; S.inv.push(it); if (S.dex) S.dex[it.name] = true; });
+      t.pgFl = 0; save();
+      if (items.length) setTimeout(() => toast(`Flair de ${CHARS[k].name} : +${items.length} objet${items.length > 1 ? 's' : ''} (${items.map(i => i.name).join(', ')})`), 600);
+    }
+  } catch (e) { console.error('progression retour', e); }
+  return r;
+})(collect);
+
+// ---------------- 3. RANG D'EXPLORATEUR ----------------
+const PG_RANKS = [
+  { n: 'Petit voyageur', at: 0, un: 'Les premières améliorations à construire' },
+  { n: 'Randonneur', at: 15, un: 'Améliorations de niveau 2' },
+  { n: 'Baroudeur', at: 40, un: 'L’observatoire et une recette exclusive au comptoir' },
+  { n: 'Explorateur', at: 80, un: '+1 place de familier au foyer' },
+  { n: 'Aventurier', at: 140, un: 'Les énigmes difficiles' },
+  { n: 'Grand explorateur', at: 220, un: 'Améliorations de niveau 3' },
+  { n: 'Cartographe', at: 320, un: '+1 place de familier et une 2e recette exclusive' },
+  { n: 'Pionnier', at: 450, un: 'Tous les voyages 5 % plus courts' },
+  { n: 'Légende', at: 620, un: 'La couronne de légende' },
+];
+const PG_PTS = [['lieux', 'lieu découvert', 1], ['reg', 'région', 5], ['qu', 'quête', 2], ['en', 'énigme', 5], ['lock', 'lieu à cadenas', 8], ['bat', 'construction', 4], ['fam', 'familier', 3]];
+function pgPtsDetail() {
+  const d = {
+    lieux: pgCall(() => Object.keys(S.visited || {}).length, 0),
+    reg: pgStamps().length,
+    qu: +S.stats.qclaimed || 0,
+    en: pgCall(() => myDoneN(), 0),
+    lock: pgCall(() => Object.keys(xpState().won || {}).length, 0),
+    bat: PG_B.reduce((a, B) => a + pgLvl(B.id), 0),
+    fam: pgCall(() => compIds().length, 0),
+  };
+  let pts = PG_PTS.reduce((a, [k, , w]) => a + (d[k] || 0) * w, 0);
+  PG_PAL.forEach(P => { if (pgState().pal[P.n]) pts += P.pts; });
+  return { d, pts };
+}
+function pgRank() {
+  if (pgRank._c && Date.now() - pgRank._t < 400) return pgRank._c;
+  const { pts } = pgPtsDetail(); let i = 0; PG_RANKS.forEach((R, j) => { if (pts >= R.at) i = j; });
+  const nx = PG_RANKS[i + 1] || null, cur = PG_RANKS[i];
+  pgRank._c = { i, R: cur, nx, pts, f: nx ? (pts - cur.at) / (nx.at - cur.at) : 1 }; pgRank._t = Date.now();
+  return pgRank._c;
+}
+pgRank._c = null; pgRank._t = 0;
+const pgFlush = () => { pgRank._c = null; };
+// déblocages concrets, appliqués à chaque vérification (idempotents)
+function pgApplyRank(i) {
+  // énigmes difficiles (43_mysteres.js) : ouvertes d'office au rang Aventurier
+  pgCall(() => { MY_UNLOCK[3] = i >= 4 ? 0 : 4; }, 0);
+  // recettes exclusives du comptoir
+  const want = (i >= 2 ? 1 : 0) + (i >= 6 ? 1 : 0), P = pgState(), got = [];
+  if (want) pgCall(() => { const c = cmState(); BQ_SHOPS.forEach(T => { const ex = (CM_LINES[T.id] || []).filter(R => R.x && !R.egg); let n = +P.rec[T.id] || 0; while (n < want && ex.length) { const R = ex.find(x => !c.unl.includes(x.id)); if (!R) break; c.unl.push(R.id); n++; if (T.id === pgCall(() => cmT().id, '')) got.push(R.def[0]); } P.rec[T.id] = n; }); }, 0);
+  if (i >= 8 && !P.gift.crown) { P.gift.crown = 1; pgCall(() => { const it = makeItem(['Couronne de légende', 'v', 'tete', 4, 'couronne', '#f2c14e'], 0, 'Rang Légende', [], { fixed: 4 }); S.inv.push(it); S.dex[it.name] = true; }, 0); }
+  return got;
+}
+// ---------------- 4. PASSEPORT ----------------
+const PG_PAL = [{ n: 5, coins: 200, pts: 10, mat: 0 }, { n: 10, coins: 500, pts: 20, mat: 3 }, { n: 20, coins: 1200, pts: 40, mat: 5 }, { n: 40, coins: 3000, pts: 80, mat: 8 }];
+function pgStamps() {
+  return pgCall(() => {
+    const st = rgState().seen, home = pgCall(() => rgHome().id, null);
+    return REGIONS.filter(R => rgDiscovered(R.id)).map(R => ({ R, t: (st[R.id] && st[R.id].first) || (R.id === home ? 0 : Date.now()) })).sort((a, b) => a.t - b.t);
+  }, []);
+}
+const PG_MAT_GIFT = [['Planche de chêne', 'bois', '#b07a4f'], ['Pierre de taille', 'pierre', '#a9a39a'], ['Lingot de fer', 'metal', '#8f9cb3'], ['Vitre soufflée', 'verre', '#bfe1f2'], ['Coupon de lin', 'tissu', '#e9dcc0']];
+function pgPalCheck() {
+  const n = pgStamps().length, P = pgState(), msgs = [];
+  PG_PAL.forEach(L => {
+    if (n < L.n || P.pal[L.n]) return;
+    P.pal[L.n] = 1; gainCoins(L.coins);
+    for (let i = 0; i < L.mat; i++) { const d = PG_MAT_GIFT[i % PG_MAT_GIFT.length]; const it = makeItem([d[0], 'm', d[1], 1, null, d[2]], 0, 'Passeport', [], { fixed: 1 }); S.inv.push(it); if (S.dex) S.dex[it.name] = true; }
+    msgs.push(`Passeport : ${L.n} tampons ! +${L.coins} pièces${L.mat ? `, ${L.mat} matériaux` : ''}`);
+  });
+  return msgs;
+}
+function pgStampSVG(R, i) {
+  const c = R.color || '#5b8fd0', nm = String(R.short || R.name || ''), t = nm.length > 13 ? nm.slice(0, 12) + '.' : nm, fs = t.length > 10 ? 6.4 : t.length > 7 ? 8 : 10;
+  const rot = ((i * 37) % 17) - 8;
+  return `<svg viewBox="0 0 80 80" class="pg-stamp" role="img" aria-label="Tampon ${esc(nm)}"><g transform="rotate(${rot} 40 40)"><circle cx="40" cy="40" r="35" fill="${c}" fill-opacity=".12" stroke="${c}" stroke-width="3"/><circle cx="40" cy="40" r="28" fill="none" stroke="${c}" stroke-width="1.4" stroke-dasharray="3 2.4"/><text x="40" y="43" text-anchor="middle" font-size="${fs}" font-weight="800" fill="${c}" font-family="inherit">${esc(t.toUpperCase())}</text><path d="M28 54 H52" stroke="${c}" stroke-width="1.6"/><path transform="translate(40 26)" d="M0 -5 L1.5 -1.6 L5 -1.4 L2.4 1 L3.1 4.6 L0 2.8 L-3.1 4.6 L-2.4 1 L-5 -1.4 L-1.5 -1.6Z" fill="${c}"/></g></svg>`;
+}
+function pgPassHTML() {
+  const l = pgStamps(), n = l.length, P = pgState(), tot = pgCall(() => REGIONS.length, 43);
+  const pals = PG_PAL.map(L => `<span class="pg-pal${P.pal[L.n] ? ' ok' : n >= L.n ? ' ok' : ''}"><b>${L.n}</b><small>${P.pal[L.n] ? '✔' : `+${L.coins}`}</small></span>`).join('');
+  const nx = PG_PAL.find(L => n < L.n);
+  return `<details class="pg-pass" open><summary>${pgIconSVG('enseigne').replace('pg-ic', 'pg-ic pass')}<b>Passeport</b><small>${n}/${tot} tampons${nx ? ` · prochain palier : ${nx.n}` : ''}</small></summary>
+    <div class="pg-pals" aria-label="Paliers de tampons">${pals}</div>
+    <div class="pg-stamps">${l.map((o, i) => `<span class="pg-st" title="${esc(o.R.name)}">${pgStampSVG(o.R, i)}</span>`).join('')}${Array.from({ length: Math.max(0, Math.min(3, tot - n)) }, () => '<span class="pg-st empty" aria-hidden="true"></span>').join('')}</div></details>`;
+}
+if (typeof renderAlbum === 'function') renderAlbum = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try {
+    if (!box || pgTuto()) return r;
+    const at = box.querySelector('.mdreg') || box.querySelector('.phead, h2, header');
+    if (at) at.insertAdjacentHTML('afterend', pgPassHTML()); else box.insertAdjacentHTML('afterbegin', pgPassHTML());
+  } catch (e) { console.error('passeport', e); }
+  return r;
+})(renderAlbum);
+
+// ---------------- vérification : rang, paliers, célébration ----------------
+let pgCeleQ = [];
+function pgCele(msg) {
+  pgCeleQ.push(msg); if (pgCeleQ.length > 1) return;
+  const show = () => {
+    const m = pgCeleQ[0]; if (!m) return;
+    let el = document.getElementById('pgCele');
+    if (!el) { el = document.createElement('div'); el.id = 'pgCele'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); document.body.appendChild(el); }
+    el.innerHTML = `<i>${PG_STAR}</i><span>${esc(m)}</span><i>${PG_STAR}</i>`; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    clearTimeout(pgCele.h); pgCele.h = setTimeout(() => { el.classList.remove('on'); pgCeleQ.shift(); if (pgCeleQ.length) setTimeout(show, 350); }, 2600);
+  };
+  show();
+}
+function pgCheck() {
+  if (!S || (S.firstRun && S.firstRun.stage && S.firstRun.stage !== 'done' && pgTuto())) return;
+  const P = pgState(); pgFlush();
+  const pal = pgPalCheck(); if (pal.length) pgFlush();
+  const R = pgRank(), first = P.rk == null;
+  const got = pgApplyRank(R.i);
+  // stades déjà atteints (anciennes sauvegardes) : notés sans annonce
+  pgCall(() => compIds().forEach(k => { if (P.pw[k] == null) P.pw[k] = pgStage(k); else if (pgStage(k) > P.pw[k]) { P.pw[k] = pgStage(k); pgCele(`${CHARS[k].name} : nouveau pouvoir ! ${pgPowLine(k, pgPowN(k))}`); } }), 0);
+  if (first) P.rk = R.i;
+  else if (R.i > P.rk) {
+    for (let i = P.rk + 1; i <= R.i; i++) pgCele(`Nouveau rang : ${PG_RANKS[i].n} ! Débloqué : ${PG_RANKS[i].un}${i === R.i && got.length ? ` (« ${got[0]} »)` : ''}`);
+    P.rk = R.i;
+  }
+  pal.forEach(m => pgCele(m));
+  if (pal.length || (!first && R.i !== P.rk0)) save();
+  P.rk0 = R.i;
+  pgBadge();
+}
+// ---------------- badge du HUD ----------------
+function pgBadge() {
+  const host = document.querySelector('.hud .hright'); if (!host) return;
+  let b = document.getElementById('pgRank');
+  if (!b) { b = document.createElement('button'); b.id = 'pgRank'; b.className = 'pg-rank'; b.type = 'button'; const c = document.getElementById('coins'); host.insertBefore(b, c || host.firstChild); }
+  const R = pgRank();
+  b.hidden = pgTuto();
+  b.setAttribute('aria-label', `Rang d’explorateur ${R.i + 1} : ${R.R.n}`);
+  b.innerHTML = `<span class="pg-rn">${R.i + 1}</span><span class="pg-rb"><i style="width:${(R.f * 100).toFixed(0)}%"></i></span>`;
+  const pop = document.getElementById('pgRankPop'); if (pop && !pop.hidden) pop.innerHTML = pgPopHTML();
+}
+function pgPopHTML() {
+  const R = pgRank(), { d } = pgPtsDetail();
+  const how = PG_PTS.map(([k, l, w]) => `${l} +${w}`).join(' · ');
+  return `<div class="pg-ph"><span class="pg-rn big">${R.i + 1}</span><span><b>${esc(R.R.n)}</b><small>${R.pts} points d’explorateur</small></span><button class="cf-x" data-pgpop="0" aria-label="Fermer">✕</button></div>
+    <span class="pg-rb big"><i style="width:${(R.f * 100).toFixed(0)}%"></i></span>
+    <p>${pgIconSVG('observ')}<span>${R.nx ? `Prochain rang : <b>${esc(R.nx.n)}</b> (encore ${R.nx.at - R.pts} points)` : 'Rang maximum : vous êtes une légende !'}</span></p>
+    <p>${pgIconSVG('enseigne')}<span>${R.nx ? `Il débloque : <b>${esc(R.nx.un)}</b>` : `Débloqué : ${esc(R.R.un)}`}</span></p>
+    <p>${pgIconSVG('hammer')}<span>Progresser : ${esc(how)}. Déjà ${d.lieux} lieux, ${d.reg} tampons, ${d.bat} constructions.</span></p>`;
+}
+function pgTogglePop(show) {
+  let p = document.getElementById('pgRankPop');
+  if (!p) { p = document.createElement('div'); p.id = 'pgRankPop'; p.className = 'pg-pop'; p.hidden = true; document.body.appendChild(p); }
+  p.hidden = show === false ? true : show === true ? false : !p.hidden;
+  if (!p.hidden) p.innerHTML = pgPopHTML();
+}
+if (typeof renderTop === 'function') renderTop = (orig => function () { const r = orig.apply(this, arguments); try { pgCheck(); } catch (e) { console.error('rang', e); } return r; })(renderTop);
+
+// ---------------- branchement dans le Foyer et le comptoir ----------------
+if (typeof fyRender === 'function') fyRender = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try {
+    if (!box || pgTuto()) return r;
+    const html = pgHouseHTML() + pgBuildHTML('maison'), head = box.querySelector('.fw-head');
+    if (head) head.insertAdjacentHTML('afterend', html); else box.insertAdjacentHTML('afterbegin', html);
+  } catch (e) { console.error('progression foyer', e); }
+  return r;
+})(fyRender);
+if (typeof cmRecipesHTML === 'function') cmRecipesHTML = (orig => function () { const h = orig.apply(this, arguments); try { if (cmT() && !pgTuto()) return h + pgBuildHTML('boutique'); } catch (e) {} return h; })(cmRecipesHTML);
+if (typeof czSceneHTML === 'function') czSceneHTML = (orig => function () { const h = orig.apply(this, arguments); try { const o = pgShopSVG(); if (o) return h.replace(/<\/div><\/div>$/, o + '</div></div>'); } catch (e) {} return h; })(czSceneHTML);
+function pgRepaint() {
+  const b = $('panelBody'), top = b ? b.scrollTop : 0;
+  try { if (typeof cmOnComptoir === 'function' && cmOnComptoir()) { cmPaint(true); } else renderPanel(); } catch (e) { renderPanel(); }
+  if (b) b.scrollTop = top;
+}
+document.addEventListener('click', ev => {
+  const el = ev.target.closest && ev.target.closest('[data-pgbuild],[data-pgmiss],[data-pgx],[data-pgfeed],[data-pgpop],#pgRank,[data-pgbuy]');
+  if (!el) {
+    const p = document.getElementById('pgRankPop'); if (p && !p.hidden && !ev.target.closest('#pgRankPop')) p.hidden = true;
+    return;
+  }
+  const d = el.dataset;
+  if (el.id === 'pgRank') { pgTogglePop(); return; }
+  if (d.pgpop != null) { pgTogglePop(false); return; }
+  if (d.pgbuild) { pgMissOpen = null; if (pgBuild(d.pgbuild)) { renderTop(); pgRepaint(); } return; }
+  if (d.pgmiss) { pgMissOpen = pgMissOpen === d.pgmiss ? null : d.pgmiss; pgRepaint(); return; }
+  if (d.pgx) { pgMissOpen = null; pgRepaint(); return; }
+  if (d.pgbuy) { setTimeout(() => { try { pgRepaint(); } catch (e) {} }, 30); return; }
+  if (d.pgfeed) { const i = d.pgfeed.indexOf(':'), k = d.pgfeed.slice(0, i), id = d.pgfeed.slice(i + 1); if (pgFeed(k, id)) { renderTop(); renderComps(); pgRepaint(); } }
+});
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape') { const p = document.getElementById('pgRankPop'); if (p) p.hidden = true; } });
+
+// ---------------- usages et actions (contrat 13_bus.js) ----------------
+GAME.addUses(it => {
+  const out = [];
+  if (!it) return out;
+  if (it.cat === 'm') {
+    const k = pgMatKey(it);
+    if (k) { const nm = PG_B.filter(B => B.cost.some(c => c.some(([x]) => x === k))).map(B => B.nm); out.push({ txt: `Construire : ${nm.slice(0, 3).join(', ')}${nm.length > 3 ? '…' : ''}`, kind: 'construire' }); }
+  }
+  if (it.cat === 'n') {
+    const fans = pgCall(() => compIds().filter(k => CHARS[k] && tasteOf(k, it) === 'love').map(k => CHARS[k].name), []);
+    out.push({ txt: fans.length ? `Nourrir un familier : plat préféré de ${fans.slice(0, 2).join(' et ')} (XP ×2)` : 'Nourrir un familier : de l’XP pour grandir et gagner un pouvoir', kind: 'familier' });
+  }
+  return out;
+});
+GAME.addAction(it => {
+  if (!it) return [];
+  if (it.cat === 'm' && pgMatKey(it)) return [{ label: 'Construire', kind: 'construire', run: () => { pgCall(() => { openSheet('foyer'); setTimeout(() => { const e = document.getElementById('pgBuild_maison'); if (e) e.scrollIntoView({ block: 'start' }); }, 60); }, 0); } }];
+  if (it.cat === 'n') {
+    const ks = pgCall(() => compIds().filter(k => CHARS[k] && S.comps[k] && !S.trips[k] && tasteOf(k, it) !== 'hate'), []);
+    ks.sort((a, b) => (tasteOf(b, it) === 'love') - (tasteOf(a, it) === 'love'));
+    const k = ks[0]; if (!k) return [];
+    return [{ label: `Nourrir ${CHARS[k].name}${tasteOf(k, it) === 'love' ? ' ❤' : ''}`, kind: 'familier', run: () => { if (pgFeed(k, it.id)) { renderTop(); renderComps(); pgCall(() => renderPanel(), 0); } } }];
+  }
+  return [];
+});
+
+// ---------------- style ----------------
+(function pgCSS() {
+  const st = document.createElement('style');
+  st.textContent = `
+.pg-rank{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:40px;height:40px;padding:3px 6px;border-radius:14px;border:2.5px solid #5b4636;background:#fff3c4;box-shadow:0 3px 0 rgba(74,53,40,.3);cursor:pointer;color:#4a3528;font:800 15px/1 var(--display,inherit);margin-right:6px;flex:none}
+.pg-rn{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#e0a52a;color:#fff;font:800 12.5px/1 var(--display,inherit);border:2px solid #5b4636}
+.pg-rn.big{width:34px;height:34px;font-size:18px;flex:none}
+.pg-rb{display:block;width:30px;height:5px;border-radius:4px;background:#e7dcc4;overflow:hidden}.pg-rb i{display:block;height:100%;background:#3a8f5a;border-radius:4px}
+.pg-rb.big{width:100%;height:8px;margin:6px 0 4px}
+.pg-pop{position:fixed;z-index:60;top:64px;right:8px;width:min(320px,calc(100vw - 16px));padding:10px 12px;border-radius:18px;border:2.5px solid #5b4636;background:#fffaf0;box-shadow:0 6px 0 rgba(74,53,40,.2),0 14px 30px rgba(74,53,40,.2);color:#4a3528;font-size:13px}
+.pg-pop .pg-ph{display:flex;gap:8px;align-items:center}.pg-pop .pg-ph>span{display:flex;flex-direction:column;flex:1}.pg-pop .pg-ph b{font:800 17px/1.1 var(--display,inherit)}.pg-pop .pg-ph small{color:#7a6250}
+.pg-pop p{display:flex;gap:8px;align-items:flex-start;margin:6px 0 0;line-height:1.3}.pg-pop p .pg-ic{width:22px;height:22px;flex:none}
+#pgCele{position:fixed;z-index:70;left:50%;top:10px;transform:translate(-50%,-160%);display:flex;align-items:center;gap:8px;width:max-content;max-width:min(440px,calc(100vw - 24px));padding:8px 14px;border-radius:18px;font-size:13.5px!important;border:2.5px solid #a8781a;background:linear-gradient(#fff6d0,#f6d77a);color:#4a3528;font:800 14px/1.25 var(--display,inherit);box-shadow:0 5px 0 rgba(168,120,26,.35),0 12px 24px rgba(74,53,40,.2);transition:transform .45s cubic-bezier(.3,1.5,.6,1);pointer-events:none;text-align:center}
+#pgCele.on{transform:translate(-50%,0)}#pgCele i svg{width:18px;height:18px;fill:#e0a52a;display:block}
+.pg-ic{width:26px;height:26px;flex:none;display:block}
+.pg-home{display:flex;flex-direction:column;border:2.5px solid var(--line,#e2d3bd);border-radius:18px;overflow:hidden;background:#fff;margin:0 0 10px}
+.pg-scene svg{display:block;width:100%;height:auto}
+.pg-hx{padding:8px 12px;display:flex;flex-direction:column;gap:2px}.pg-hx>b{font:800 16px/1.2 var(--display,inherit)}.pg-hx small{color:var(--ink2,#7a6250)}
+.pg-effs{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:3px}.pg-effs li{display:flex;gap:6px;align-items:center;font-size:12.5px;font-weight:700;color:#2f6b3a}.pg-effs .pg-ic{width:20px;height:20px}
+.pg-smoke{animation:pgSmoke 2.4s ease-in infinite}.pg-steam{animation:pgSmoke 1.8s ease-in infinite}
+.pg-sign rect{filter:drop-shadow(0 0 6px #ffd84a)}.pg-sign{animation:pgGlow 2s ease-in-out infinite}
+.pg-cz{position:absolute;inset:0;z-index:4;pointer-events:none}.pg-cz svg{width:100%;height:100%;display:block}
+.pg-build{margin:12px 0}
+.pg-h{display:flex;align-items:center;gap:6px;margin:0 0 8px;font:800 16px/1.2 var(--display,inherit)}.pg-h{flex-wrap:wrap}.pg-h small{flex-basis:100%;font-weight:600;font-size:12px;line-height:1.2;color:var(--ink2,#7a6250)}
+.pg-list{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.pg-card{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:2.5px solid var(--line,#e2d3bd);border-radius:16px;background:#fff}
+.pg-card.can{border-color:#3a8f5a;box-shadow:0 3px 0 rgba(58,143,90,.25)}.pg-card.built{background:#fffaf0}
+.pg-pic{width:46px;height:46px;flex:none;border-radius:14px;background:#f4ebe1;display:flex;align-items:center;justify-content:center}.pg-pic .pg-ic{width:34px;height:34px}
+.pg-x{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.pg-x>b{font:800 14.5px/1.15 var(--display,inherit)}
+.pg-lv{display:flex;gap:2px}.pg-lv i svg{width:14px;height:14px;fill:#e7dcc4;stroke:#b9ad9a;stroke-width:1.5;display:block}.pg-lv i.on svg{fill:#f2c14e;stroke:#a8781a}
+.pg-eff{margin:0;font-size:12.5px;line-height:1.3;color:var(--ink2,#7a6250)}.pg-eff.on{color:#2f6b3a;font-weight:700}
+.pg-cost{display:flex;flex-wrap:wrap;gap:5px}
+.pg-ing{position:relative;display:inline-flex;align-items:center;gap:3px;padding:2px 6px 2px 3px;border-radius:10px;border:2px solid #f0c9b8;background:#fff4ef;font:800 12px/1 var(--display,inherit);color:#b0482f}
+.pg-ing.ok{border-color:#bfe3c9;background:#eef8f0;color:#2f6b3a}.pg-ing svg{width:22px;height:22px;display:block}.pg-ing i{font-style:normal}
+.pg-card .btn{align-self:flex-start;margin-top:2px}
+.pg-lock,.pg-done{font-size:12px;font-weight:800;color:#7a6250;background:#f4ebe1;border-radius:10px;padding:3px 8px;align-self:flex-start}
+.pg-miss{margin:-2px 0 4px}
+.pg-feed{margin:8px 0;padding:8px 10px;border:2.5px solid var(--line,#e2d3bd);border-radius:16px;background:#fff}
+.pg-fh{display:flex;align-items:center;gap:8px}.pg-fh>b{font:800 15px/1.1 var(--display,inherit)}
+.pg-xpb{position:relative;flex:1;height:18px;border-radius:9px;background:#efe6d6;overflow:hidden;border:2px solid #e2d3bd}.pg-xpb i{display:block;height:100%;background:linear-gradient(#ffd86b,#f2b53a);transition:width .5s}
+.pg-xpb em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:800 11px/1 var(--display,inherit);font-style:normal;color:#4a3528}
+.pg-fds{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-top:8px}
+.pg-fd{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px 3px;border-radius:14px;border:2.5px solid var(--line,#e2d3bd);background:#fffaf0;cursor:pointer;min-height:56px}
+.pg-fd.love{border-color:#e5587f;background:#fff0f4}.pg-fd .ico svg{width:32px;height:32px;display:block}.pg-fd small{font:800 11px/1 var(--display,inherit);color:#a8781a}
+.pg-heart{position:absolute;top:-6px;right:-4px;font-style:normal;font-size:14px;color:#e5587f}
+.pg-fd:active{transform:scale(.94)}
+.pg-fn{margin:6px 0 0;font-size:12.5px;color:var(--ink2,#7a6250)}
+.pg-pow{display:flex;gap:6px;align-items:center;margin:8px 0 0;font-size:12.5px;color:var(--ink2,#7a6250)}.pg-pow.on{color:#7a4fb0}.pg-pow .pg-ic{width:22px;height:22px}.pg-pow .pg-ic.off{filter:grayscale(1);opacity:.5}
+.pg-pass{margin:8px 0 12px;border:2.5px solid var(--line,#e2d3bd);border-radius:16px;background:#fbf4e4;padding:6px 10px 10px}
+.pg-pass summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none}.pg-pass summary::-webkit-details-marker{display:none}.pg-pass summary b{font:800 16px/1.1 var(--display,inherit)}.pg-pass summary small{color:var(--ink2,#7a6250);margin-left:auto;font-size:12px;text-align:right}
+.pg-pals{display:flex;gap:6px;margin:8px 0}.pg-pal{flex:1;display:flex;flex-direction:column;align-items:center;padding:3px 0;border-radius:10px;border:2px dashed #d8c7ab;background:#fff;font-size:11px;color:#7a6250}.pg-pal b{font:800 14px/1 var(--display,inherit);color:#4a3528}.pg-pal.ok{border-style:solid;border-color:#3a8f5a;background:#eef8f0;color:#2f6b3a}
+.pg-stamps{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.pg-st{display:block;aspect-ratio:1}.pg-st svg{width:100%;height:100%;display:block}.pg-st.empty{border-radius:50%;border:2px dashed #d8c7ab}
+.pg-obs{display:flex;align-items:center;gap:6px}.pg-obsl{margin:0 0 8px;padding-left:18px;font-size:13px}
+.cm-slots:has(> :nth-child(5)){grid-template-columns:repeat(3,minmax(0,1fr))!important}
+@keyframes pgSmoke{0%{transform:translateY(4px);opacity:0}30%{opacity:.9}100%{transform:translateY(-10px);opacity:0}}
+@keyframes pgGlow{0%,100%{opacity:1}50%{opacity:.82}}
+@media (prefers-reduced-motion:reduce){.pg-smoke,.pg-steam,.pg-sign{animation:none}#pgCele{transition:none}}
+@media (max-width:420px){.pg-rank{min-width:34px;height:36px;padding:2px 4px;margin-right:4px}}
+`;
+  document.head.appendChild(st);
+})();
+setTimeout(() => { try { pgCheck(); } catch (e) {} }, 1600);
+
+window.__prg = {
+  state: pgState, B: PG_B, RANKS: PG_RANKS, lvl: pgLvl, can: pgCan, build: pgBuild, have: pgHave, rank: () => (pgFlush(), pgRank()), pts: pgPtsDetail, check: pgCheck,
+  stamps: pgStamps, passHTML: pgPassHTML, feed: pgFeed, foods: pgFoods, foodXP: pgFoodXP, stage: pgStage, powLine: pgPowLine, powOf: pgPowOf, beds: pgBeds, obs: pgObsList,
+  forceDouble: false,
+  T: () => ({ S, makeItem, rgState, REGIONS, cmState, CM_R, MY_UNLOCK, fyMods, fyCapInfo, needXP, openSheet, renderPanel, renderTop, GAME }),
+};
 
 })();
 </script>

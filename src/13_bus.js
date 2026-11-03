@@ -8,6 +8,11 @@ const GAME = {
   _uses: [],
   addUses(fn) { this._uses.push(fn); },
   usesOf(it) { const out = []; for (const f of this._uses) { try { out.push(...(f(it) || [])); } catch (e) {} } return out; },
+  // v35 : actions directes sur un objet. Chaque module enregistre (item) => [{ label, kind, run: () => {} }]
+  // kind standard : 'cuisiner' | 'construire' | 'expedition' | 'familier' | 'porter' | 'offrande' | 'planter' | 'vendre' | 'recycler'
+  _acts: [],
+  addAction(fn) { this._acts.push(fn); },
+  actionsOf(it) { const out = []; for (const f of this._acts) { try { out.push(...(f(it) || [])); } catch (e) {} } return out; },
 };
 // --- émissions branchées sur les fonctions existantes ---
 {
