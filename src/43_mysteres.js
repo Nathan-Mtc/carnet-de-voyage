@@ -527,10 +527,10 @@ function myRiddleBig(R, followed) {
     const used = (r.h || 0) >= i, ok = myHintOk(R, i);
     return `<li class="${used ? 'on' : ''}"><i>${i}</i><div>${used ? body : `<b>${lbl}</b><small>${ok ? 'Réduit un peu la récompense.' : `Disponible après ${i - 1} essai${i > 2 ? 's' : ''} (et l’indice ${i - 1}).`}</small>`}</div>${!used && ok ? `<button class="btn cream sm" data-myshint="${R.id}">Voir</button>` : ''}</li>`;
   };
-  return `<div class="my-big"><div class="my-bh"><span class="my-bi">${MY_SCROLL}</span><div><span class="bqc-kick">${followed ? 'Énigme suivie' : 'Énigme à suivre'} · ${MY_TIER[R.tier]}</span>${myCall(() => qmMeta('explo', R.tier, myRwTags(R)), '')}<p class="my-q">« ${esc(R.q)} »</p></div></div>
+  const art = myCall(() => qmRewardArt(qmRiddleRw(R, 'explo'), 84), '');
+  return `<div class="my-big" id="qmq-ri_${R.id}"><div class="my-bh">${art || `<span class="my-bi">${MY_SCROLL}</span>`}<div><span class="bqc-kick">${followed ? 'Énigme suivie' : 'Énigme à suivre'} · ${MY_TIER[R.tier]}</span>${myCall(() => qmMeta('explo', R.tier, []), '')}<p class="my-q">« ${esc(R.q)} »</p><small class="my-rwl">${esc(myCall(() => qmRName(qmRiddleRw(R, 'explo')), ''))} · titre « ${esc(R.rw.ti)} »</small></div></div>
     <ol class="my-hints">${hint(1, 'Indice 1 : un indice écrit', `<b>${esc(R.h1)}</b>`)}${hint(2, 'Indice 2 : une grande zone sur la carte', '<b>Une grande zone violette est tracée sur la carte.</b>')}${hint(3, 'Indice 3 : une zone plus petite', '<b>La zone violette s’est resserrée.</b>')}</ol>
-    <p class="my-how">Trouvez l’endroit vous-même sur la carte et envoyez-y un familier : il faut arriver ${tol}. Essais : <b>${r.tries || 0}</b> · un essai raté ne coûte que du temps.</p>
-    <div class="qt-rwb"><span>${myCall(() => R.rw.it ? itemIcon({ name: R.rw.it[0], cat: R.rw.it[1], sub: R.rw.it[2], rarity: 4, look: R.rw.it[4], color: R.rw.it[5] }) : R.rw.pc ? MY_XMARK : QT_TROPHY, QT_TROPHY)}</span><div><small>Récompense unique</small><b>${esc(myRwTxt(R))}</b></div></div>
+    <details class="qmc-more my-howd"><summary aria-label="Comment jouer">+</summary><div>Trouvez l’endroit vous-même sur la carte et envoyez-y un familier : il faut arriver ${tol}. Essais : <b>${r.tries || 0}</b> · un essai raté ne coûte que du temps.</div></details>
     <div class="my-acts">${followed ? '' : `<button class="btn cream" data-mysfollow="${R.id}">Suivre</button>`}<button class="btn green" data-myssearch="${R.id}">Chercher sur la carte</button></div></div>`;
 }
 function myRiddlesHTML() {
@@ -541,7 +541,7 @@ function myRiddlesHTML() {
     const list = MY_RIDDLES.filter(R => R.tier === tier), open = myTierOpen(tier);
     h += `<div class="my-tier"><b class="my-tt t${tier}">${MY_TIER[tier]}</b><small>${list.filter(R => myRec(R.id).done).length}/${list.length}${open ? '' : ` · se débloque après ${MY_UNLOCK[tier] - myDoneN(tier - 1)} énigme${MY_UNLOCK[tier] - myDoneN(tier - 1) > 1 ? 's' : ''} ${MY_TIER[tier - 1]}${MY_UNLOCK[tier] - myDoneN(tier - 1) > 1 ? 's' : ''} de plus`}</small></div>`;
     if (!open) continue;
-    h += `<div class="my-list">${list.filter(R => R !== first).map(R => { const r = myRec(R.id); return `<div class="my-row${r.done ? ' done' : ''}"><span class="my-ri">${r.done ? '✔' : '?'}</span><div><b>${r.done ? esc(R.name) : `« ${esc(R.q.length > 70 ? R.q.slice(0, 68) + '…' : R.q)} »`}</b><small>${r.done ? `Résolue · titre « ${esc(R.rw.ti)} »` : `${r.tries ? `${r.tries} essai${r.tries > 1 ? 's' : ''}` : ''}`}</small>${r.done ? '' : myCall(() => qmMeta('explo', R.tier, myRwTags(R)), '')}</div>${r.done ? '' : `<button class="btn cream sm" data-mysfollow="${R.id}">Suivre</button>`}</div>`; }).join('')}</div>`;
+    h += `<div class="my-list">${list.filter(R => R !== first).map(R => { const r = myRec(R.id), rw = myCall(() => Object.assign(qmRiddleRw(R, 'explo'), { got: !!r.done }), null); return qmCard({ id: 'ri_' + R.id, mode: 'explo', cls: r.done ? 'done' : '', art: rw ? qmRewardArt(rw, 64, { pills: !r.done }) : '', t: r.done ? esc(R.name) : `« ${esc(R.q.length > 56 ? R.q.slice(0, 54) + '…' : R.q)} »`, line: `Titre « ${esc(R.rw.ti)} »${r.tries && !r.done ? ` · ${r.tries} essai${r.tries > 1 ? 's' : ''}` : ''}`, dif: r.done ? 0 : R.tier, more: r.done || R.q.length <= 56 ? '' : `« ${esc(R.q)} »`, btn: r.done ? '<span class="qt-ok">✔</span>' : `<button class="btn cream sm" data-mysfollow="${R.id}">Suivre</button>` }); }).join('')}</div>`;
   }
   return h;
 }
@@ -555,7 +555,8 @@ function myWhereHTML(o) {
 }
 function myGuardHTML(G) {
   const g = myGRec(G.id), N = G.offers.length;
-  if (!g.d) return `<div class="my-g sil">${myGuardImg(G, false)}<div><b>Gardien inconnu</b><small>Une silhouette rôde quelque part… Voyagez : au retour, on entend parfois des rumeurs. Certaines énigmes en parlent aussi.</small></div></div>`;
+  const gart = (myst, got) => myCall(() => qmRewardArt({ k: 'guard', G, mode: 'hist', myst, got }, 72), '') || myGuardImg(G, !myst);
+  if (!g.d) return `<div class="my-g sil" id="qmq-gd_${G.id}">${gart(true, false)}<div><b>Gardien inconnu</b><small>Écoutez les rumeurs en voyage.</small></div></div>`;
   const pips = Array.from({ length: N }, (_, i) => `<i class="${i < (g.t || 0) ? 'on' : ''}"></i>`).join('');
   let body = '';
   if (g.done === 'comp') body = `<small class="my-gd">Il vous a confié ${esc(myCall(() => S.comps[g.cid].name, G.cn))}, un familier rare.</small>`;
@@ -565,12 +566,12 @@ function myGuardHTML(G) {
     const o = myOffer(G), c = myCond(o.c, S.sel), n = myHave(o);
     body = `<div class="my-off"><span class="my-oi">${myCall(() => cmIngIcon(o.k), '')}</span><span><small>Visite ${(g.t || 0) + 1}/${N} : il aime</small><b>${esc(o.t)}</b><small>Vous en avez ${n}${c.txt ? ` · ${esc(c.txt)}` : ''}</small></span></div><div class="my-acts"><button class="btn cream sm" data-myswhere="${G.id}">Où la trouver</button><button class="btn gold sm" data-mysgg="${G.id}">Y aller</button></div>${myWhere === G.id ? myWhereHTML(o) : ''}`;
   }
-  return `<div class="my-g${g.done ? ' done' : ''}">${myGuardImg(G, true)}<div><b>${esc(G.nm)}</b><small>${esc(G.where)}</small>${g.done ? '' : myCall(() => qmMeta('hist', Math.max(1, Math.min(3, N - 2)), ['Familier légendaire', 'ou Bénédiction']), '')}<span class="my-pips" aria-label="Confiance ${g.t || 0} sur ${N}">${pips}</span>${body}</div></div>`;
+  return `<div class="my-g${g.done ? ' done' : ''}" id="qmq-gd_${G.id}">${gart(false, !!g.done)}<div><b>${esc(G.nm)}</b><small>${esc(G.where)} · familier légendaire ou bénédiction</small>${g.done ? '' : myCall(() => qmMeta('hist', Math.max(1, Math.min(3, N - 2)), []), '')}<span class="my-pips" aria-label="Confiance ${g.t || 0} sur ${N}">${pips}</span>${body}</div></div>`;
 }
 function myMapsHTML() {
   return `<h3 class="qt-h3" id="myCartes">Cartes déchirées <small>4 morceaux chacune</small></h3><div class="my-maps">${MY_MAPS.map(M => {
     const n = myPieces(M.id).filter(Boolean).length, full = n === 4, won = myState().x[M.id];
-    return `<div class="my-mc${full ? ' full' : ''}" id="myMap_${M.id}">${myMapSVG(M)}<b>${esc(M.nm)}</b>${won ? '' : myCall(() => qmMeta('explo', M.zone[2] > 1000 ? 3 : 2, ['Lieu secret', 'Trésor unique']), '')}<small>${full ? (won ? `Trésor trouvé : ${esc(M.tr[0])} ✔` : `Lieu secret révélé : ${esc(M.sec.name)}`) : `${n}/4 morceaux · en voyage (${esc(M.zn)}), énigmes${M.locks.length ? ', lieux à cadenas' : ''}`}</small>${full && !won ? `<button class="btn green sm" data-mysx="${M.id}">Expédition finale</button>` : ''}</div>`;
+    return `<div class="my-mc${full ? ' full' : ''}" id="myMap_${M.id}"><span class="my-mcv">${myMapSVG(M)}${myCall(() => qmRewardArt({ k: 'item', def: M.tr, mode: 'explo', myst: !full && !won, got: !!won }, 46, { pills: false }), '')}</span><b>${esc(M.nm)}</b>${won ? '' : myCall(() => qmMeta('explo', M.zone[2] > 1000 ? 3 : 2, []), '')}<small>${full ? (won ? `Trésor trouvé : ${esc(M.tr[0])} ✔` : `Lieu secret révélé : ${esc(M.sec.name)}`) : `${n}/4 morceaux · en voyage (${esc(M.zn)}), énigmes${M.locks.length ? ', lieux à cadenas' : ''}`}</small>${full && !won ? `<button class="btn green sm" data-mysx="${M.id}">Expédition finale</button>` : ''}</div>`;
   }).join('')}</div>`;
 }
 function mySectionsHTML() {

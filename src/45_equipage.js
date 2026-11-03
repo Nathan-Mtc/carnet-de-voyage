@@ -550,7 +550,8 @@ function eqConHTML(c) {
   let det = '';
   if (D.ty === 'lieux') det = `<div class="eqc-l">${D.L.map(([nm], i) => `<span class="${c.got[i] ? 'ok' : ''}">${c.got[i] ? '✓' : ''}${esc(nm)}${c.got[i] ? '' : ` <button class="eqc-go" data-eqcgo="${c.id}:${i}">Y aller</button>`}</span>`).join('')}</div>`;
   else if (D.ty === 'cont' && c.got.length) det = `<small>Déjà : ${esc(c.got.join(', '))}</small>`;
-  return `<div class="eqc${raced ? ' raced' : ''}">${eqCliImg(c.cid)}<div><b>${esc(D.t)}</b><small>Pour ${esc(eqCliNm(c.cid))} · ⏱ ${eqLeft(c.end - Date.now())} · ${Math.round(D.coins * mul)} pièces${c.rev ? ' · revanche' : ''}</small>${eqCall(() => qmMeta('defi', D.ty === 'terr' || D.ty === 'rare' ? 2 : 3, [`${Math.round(D.stones * mul)} pierres d’étoile`]), '')}
+  const art = eqCall(() => qmRewardArt({ k: 'stones', n: Math.round(D.stones * mul), mode: 'defi', coins: Math.round(D.coins * mul) }, 64), '');
+  return `<div class="eqc${raced ? ' raced' : ''}" id="qmq-co_${c.id}">${art || eqCliImg(c.cid)}<div><b>${esc(D.t)}</b><small>${art ? eqCliImg(c.cid).replace('class="eq-cimg"', 'class="qt-face"') : ''}Pour ${esc(eqCliNm(c.cid))} · ⏱ ${eqLeft(c.end - Date.now())}${c.rev ? ' · revanche' : ''}</small>${eqCall(() => qmMeta('defi', D.ty === 'terr' || D.ty === 'rare' ? 2 : 3, []), '')}
     <span class="eqc-bar" aria-label="Vous : ${cur} sur ${n}"><i style="width:${(cur / n * 100).toFixed(0)}%"></i><em>Vous ${cur}/${n}</em></span>
     ${raced ? `<span class="eqc-bar riv" aria-label="Gaspard"><i style="width:${(eqRivP() * 100).toFixed(0)}%"></i><em>Gaspard ${Math.round(eqRivP() * 100)} %</em></span>` : ''}${det}</div></div>`;
 }
@@ -574,7 +575,8 @@ function eqRivalHTML() {
 }
 function eqDelCardHTML(D) {
   const it = eqDelItem(D, []);
-  return `<div class="eqc del">${eqCliImg(D.cid)}<div><b>Apporter 1 ${esc(eqLow(eqRName(D.rid)))} à ${esc(D.city)}</b><small>Pour ${esc(D.who)}, de la part de ${esc(eqCliNm(D.cid))}</small>${eqCall(() => qmMeta('defi', 2, ['2 pierres d’étoile']), '')}<small>${D.st === 'sent' ? `En route avec ${esc(eqNm(D.by))}…` : `Avant ${eqLeft(D.end - Date.now())} · ${it ? 'en stock ✓' : 'à préparer au comptoir'}`} · ${eqDelRw(D, S.sel)} pièces, +4 amitié</small>${D.st === 'open' ? `<button class="btn gold sm" data-eqdel="1">Y aller</button>` : ''}</div></div>`;
+  const art = eqCall(() => qmRewardArt({ k: 'stones', n: 2, mode: 'defi', coins: eqDelRw(D, S.sel) }, 64), '');
+  return `<div class="eqc del">${art || eqCliImg(D.cid)}<div><b>Apporter 1 ${esc(eqLow(eqRName(D.rid)))} à ${esc(D.city)}</b>${eqCall(() => qmMeta('defi', 2, []), '')}<small>${D.st === 'sent' ? `En route avec ${esc(eqNm(D.by))}…` : `Avant ${eqLeft(D.end - Date.now())} · ${it ? 'en stock ✓' : 'à préparer au comptoir'}`} · +4 amitié</small>${D.st === 'open' ? `<button class="btn gold sm" data-eqdel="1">Y aller</button>` : ''}</div></div>`;
 }
 if (typeof qtPageHTML === 'function') qtPageHTML = (orig => function () {
   const h = orig.apply(this, arguments);

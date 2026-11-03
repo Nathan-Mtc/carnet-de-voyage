@@ -179,7 +179,7 @@ function qtAdvance(q, rec) {
   if (rec.i >= q.steps.length) {
     rec.done = 1; if (qtState().follow === q.id) qtState().follow = '';
     const t = qtGrant(q.rw, qtCli(q.who).name);
-    setTimeout(() => { toast(`Histoire terminée : « ${q.title} » ! Récompense : ${t}.`); try { confetti(true); } catch (e) {} }, 400);
+    setTimeout(() => { toast(`Histoire terminée : « ${q.title} » ! Récompense : ${t}.`); try { confetti(true); } catch (e) {} qtCall(() => qmRewardPop(qmFromQt(q.rw, 'hist'), 'Histoire terminée !'), 0); }, 400);
   } else rec.b = qtBase(q.steps[rec.i]);
   save(); qtRefreshAll();
 }
@@ -235,7 +235,7 @@ function qtClaimDefi(id) {
   const d = QT_DEFIS.find(x => x.id === id), s = qtState(); if (!d || s.df[id]) return;
   if (qtCall(d.cur, 0) < qtDN(d)) return;
   s.df[id] = 1; const t = qtGrant(d.rw, d.title);
-  toast(`Défi réussi : « ${d.title} » ! ${t}.`); try { confetti(true); } catch (e) {}
+  toast(`Défi réussi : « ${d.title} » ! ${t}.`); try { confetti(true); } catch (e) {} qtCall(() => qmRewardPop({ k: 'stones', n: d.rw.stones || 8, mode: 'defi', bonus: qmRewardArt(Object.assign(qmFromQt(d.rw, 'defi'), { coins: 0 }), 34, { pills: false }) }, 'Défi réussi !'), 0);
   qtRefreshAll();
 }
 
@@ -445,7 +445,8 @@ function qtDayHTML() {
   const rows = D.list.map((o, i) => {
     const it = qtDayIt(o), h = qtCount(qtDayMatch(o)), F = qtFam(it);
     const act = o.done ? '<span class="qt-ok">✔</span>' : h ? `<button class="btn green sm" data-qtday="${i}">Livrer</button>` : `<button class="btn gold sm" data-qtneed="day:${i}">Y aller</button>`;
-    return `<div class="qt-drow${o.done ? ' done' : ''}"><span class="qt-di" style="--fc:${F ? F.couleur : '#d9604f'}">${qtIco(it)}<i class="qtf"></i></span><div class="qt-nx"><b>${esc(o.name)}</b><span>${esc(o.where)}</span>${o.done ? '' : qtCall(() => qmMeta('defi', o.z === 'far' ? 3 : o.z === 'reg' ? 2 : 1, [`${qtDaySt(o)} pierre${qtDaySt(o) > 1 ? 's' : ''} d’étoile`]), '')}</div><span class="qt-pay">${coins(o.pay)}</span>${act}</div>`;
+    void F;
+    return qmCard({ id: 'dy_' + i, mode: 'defi', cls: o.done ? 'done' : '', art: qtCall(() => qmRewardArt({ k: 'stones', n: qtDaySt(o), mode: 'defi', got: !!o.done, coins: o.pay }, 56), ''), t: `<span class="qm-ti">${qtIco(it)}</span>${esc(o.name)}`, line: esc(o.where), dif: o.done ? 0 : o.z === 'far' ? 3 : o.z === 'reg' ? 2 : 1, btn: act });
   }).join('');
   return `<section class="qt-today" id="qtToday"><h3 class="qt-h3">🔎 Objectif du jour : trouver un objet <small>${left ? `${left} à rapporter` : 'tout est rempli, bravo !'}</small></h3>${rows || '<p class="empty">Rien aujourd’hui.</p>'}</section>`;
 }
@@ -456,10 +457,13 @@ function qtOpenList() { qtOpenPage(); }
 const qtRwTag = rw => (rw.k === 'cloth' ? 'Tenue exclusive' : rw.k === 'rec' ? 'Recette exclusive' : rw.k === 'egg' ? 'Familier' : rw.k === 'secret' ? 'Lieu secret' : rw.lbl || 'Objet rare');
 function qtStoryHTML(q, big) {
   const s = qtState(), rec = s.st[q.id], open = qtOpen(q), c = qtCli(q.who);
-  if (!open) return `<div class="qt-story locked"><span class="qt-face qt-face0">?</span><div><b>${esc(q.title)}</b><small>Terminez une autre histoire pour la débloquer.</small></div></div>`;
+  const art = (z, got, myst) => qtCall(() => qmRewardArt(Object.assign(qmFromQt(q.rw, 'hist'), { got, myst }), z), '');
+  if (!open) return qmCard({ id: 'st_' + q.id, mode: 'hist', cls: 'locked', art: art(64, false, true), t: esc(q.title), line: 'Terminez une autre histoire pour l’ouvrir.' });
   if (!big) {
     const st = rec ? (rec.done ? 'Terminée ✔' : `Étape ${rec.i + 1}/${q.steps.length}`) : `${q.steps.length} étapes`;
-    return `<div class="qt-story${rec && rec.done ? ' done' : ''}">${qtFace(q.who)}<div><b>${esc(q.title)}</b><small>${esc(c.name)} · ${st}</small>${rec && rec.done ? '' : qtCall(() => qmMeta('hist', QT_SDIF[q.id] || 2, [qtRwTag(q.rw)]), '')}<span class="qt-rw"><i>${qtRwIco(q.rw)}</i>${esc(qtRwTxt(q.rw))}</span></div>${rec && rec.done ? '' : `<button class="btn cream sm" data-qtfollow="${q.id}">Suivre</button>`}</div>`;
+    const done = !!(rec && rec.done);
+    return qmCard({ id: 'st_' + q.id, mode: 'hist', cls: done ? 'done' : '', art: art(64, done, false), t: esc(q.title), line: `${qtFace(q.who)}${esc(c.name)} · ${st}`, dif: done ? 0 : QT_SDIF[q.id] || 2,
+      more: `${esc(q.pitch)}<br><b>${esc(qtRwTxt(q.rw))}</b>`, btn: done ? '<span class="qt-ok">✔</span>' : `<button class="btn cream sm" data-qtfollow="${q.id}">Suivre</button>` });
   }
   const steps = q.steps.map((st, i) => {
     const done = rec && (rec.done || i < rec.i), cur = rec && !rec.done && i === rec.i, pr = cur ? qtStepProg(st, rec) : null;
@@ -473,12 +477,15 @@ function qtStoryHTML(q, big) {
     }
     return `<li class="${done ? 'done' : cur ? 'cur' : ''}"><i class="qt-ck">${done ? '✔' : i + 1}</i><div><b>${esc(st.txt)}${pr && pr.n > 1 ? ` <small>${pr.cur}/${pr.n}</small>` : ''}</b>${cur || done ? `<span>${esc(st.story)}</span>` : ''}</div>${act}</li>`;
   }).join('');
-  return `<div class="qt-big"><div class="qt-bh">${qtFace(q.who)}<div><span class="bqc-kick">Histoire suivie</span><h3>${esc(q.title)}</h3>${qtCall(() => qmMeta('hist', QT_SDIF[q.id] || 2, [qtRwTag(q.rw)]), '')}<small>${esc(c.name)} : ${esc(q.pitch)}</small></div></div>
-    <ol class="qt-steps">${steps}</ol><div class="qt-rwb"><span>${qtRwIco(q.rw)}</span><div><small>Récompense unique</small><b>${esc(qtRwTxt(q.rw))}</b></div></div></div>`;
+  return `<div class="qt-big" id="qmq-big"><div class="qt-bh qm-bigh">${art(92, false, false)}<div><span class="bqc-kick">Histoire suivie</span><h3>${esc(q.title)}</h3><small>${qtFace(q.who)}${esc(c.name)} · ${esc(qtCall(() => qmRName(qmFromQt(q.rw, 'hist')), ''))}</small>${qtCall(() => qmMeta('hist', QT_SDIF[q.id] || 2, []), '')}<details class="qmc-more"><summary aria-label="L’histoire">+</summary><div>${esc(q.pitch)}</div></details></div></div>
+    <ol class="qt-steps">${steps}</ol></div>`;
 }
 function qtDefiHTML(d) {
   const n = qtDN(d), cur = Math.min(n, qtCall(d.cur, 0)), got = qtState().df[d.id];
-  return `<div class="qt-defi${got ? ' done' : ''}"><span class="qt-dt">${QT_TROPHY}</span><div><b>${esc(d.title)}</b><small>${esc(d.txt)}</small>${got ? '' : qtCall(() => qmMeta('defi', 3, [`${d.rw.stones || 8} pierres d’étoile`]), '')}<span class="qt-bar"><i style="width:${(cur / n * 100).toFixed(0)}%"></i></span><span class="qt-rw"><i>${qtRwIco(d.rw)}</i>${esc(qtRwTxt(d.rw))}</span></div>${got ? '<span class="qt-ok">✔</span>' : cur >= n ? `<button class="btn green sm" data-qtdefi="${d.id}">Récupérer</button>` : `<span class="qt-cnt">${cur}/${n}</span>`}</div>`;
+  const bonus = qtCall(() => qmRewardArt(Object.assign(qmFromQt(d.rw, 'defi'), { coins: 0 }), 30, { pills: false }), '');
+  const art = qtCall(() => qmRewardArt({ k: 'stones', n: d.rw.stones || 8, mode: 'defi', got: !!got, bonus, coins: d.rw.coins }, 64), '');
+  return qmCard({ id: 'df_' + d.id, mode: 'defi', cls: got ? 'done' : '', art, t: esc(d.title), line: esc(d.txt), body: got ? '' : `<span class="qt-bar"><i style="width:${(cur / n * 100).toFixed(0)}%"></i></span>`, dif: got ? 0 : 3,
+    more: `Récompense : ${esc(qtRwTxt(d.rw))}`, btn: got ? '<span class="qt-ok">✔</span>' : cur >= n ? `<button class="btn green sm" data-qtdefi="${d.id}">Récupérer</button>` : `<span class="qt-cnt">${cur}/${n}</span>` });
 }
 function qtPageHTML() {
   const s = qtState(), f = QT_BY[s.follow];
