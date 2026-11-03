@@ -255,7 +255,7 @@ function eqContractsOnReturn(t, out) {
       const mul = c.rev ? 1.5 : 1, coinsN = Math.round(D.coins * mul), st = Math.round(D.stones * mul);
       let beat = 0;
       if (E.riv.cid === c.id) { E.riv.cid = null; E.riv.l = (E.riv.l || 0) + 1; E.riv.last = { k: 'lose', t: D.t, at: Date.now() }; beat = 3; }
-      eqCall(() => gainCoins(coinsN), 0); eqCall(() => gainStones(st + beat), 0);
+      eqCall(() => gainCoins(coinsN), 0); eqCall(() => gainStones(st + beat), 0); eqCall(() => xpGain(t.comp, terr, 60), 0); // XP du familier en bonus
       eqHist({ t: D.t, res: 'ok' });
       out.push({ k: 'cok', t: D.t, cid: c.cid, coins: coinsN, stones: st + beat, beat: !!beat });
     } else out.push({ k: 'cstep', t: D.t, cur, n });
@@ -398,7 +398,7 @@ function eqOnReturn(k, t) {
       E.wsp[d.eqsp] = who || k;
       const it = eqCall(() => makeItem(P.it, 0, `Lieu réservé : ${P.name}`, P.tags, { fixed: 4 }), null);
       if (it) { it.special = true; it.xpr = 1; t.bag.push(it); }
-      eqAddTitle(who || k, P.ti); eqCall(() => gainStones(8), 0);
+      eqAddTitle(who || k, P.ti); t.coins = (t.coins || 0) + 300; // v33 : plus de pierres d'étoile (Exploration)
       out.push({ k: 'spw', sp: d.eqsp, it: P.it[0], ti: P.ti });
     }
   }
@@ -419,7 +419,7 @@ function eqHaulHTML(H) {
     if (o.k === 'plus') return `<p><span class="eqh-i">${EQ_ICO_BAG}</span><span>+${o.n} objet${o.n > 1 ? 's' : ''} (${esc(o.why)})</span></p>`;
     if (o.k === 'coins') return `<p><span class="eqh-i">${CM_COIN}</span><span>+${o.n} pièces (${esc(o.why)})</span></p>`;
     if (o.k === 'duo') return `<p class="eqh-duo"><img src="${portraitURI(H.k, 'rire')}" alt=""><img src="${portraitURI(o.p, 'rire')}" alt=""><span>Amitié ${esc(eqNm(H.k))} et ${esc(eqNm(o.p))} : <b>${o.n} voyage${o.n > 1 ? 's' : ''} ensemble</b> · ${esc(eqAmiNm(o.lv1))}${o.lv1 > o.lv0 ? ' <b class="ok">nouveau palier !</b>' : ''}</span></p>`;
-    if (o.k === 'spw') return `<p class="eqh-big"><span class="eqh-i">${eqSpIco(o.sp, 'm')}</span><span><b>Lieu réservé conquis !</b><small>${esc(o.it)} · titre « ${esc(o.ti)} » · +8 pierres d’étoile</small></span></p>`;
+    if (o.k === 'spw') return `<p class="eqh-big"><span class="eqh-i">${eqSpIco(o.sp, 'm')}</span><span><b>Lieu réservé conquis !</b><small>${esc(o.it)} · titre « ${esc(o.ti)} » · +300 pièces</small></span></p>`;
     if (o.k === 'del') return `<p class="eqh-big">${eqCliImg(o.cid, 'joie')}<span><b>Livraison réussie à ${esc(o.city)} !</b><small>${esc(eqCliNm(o.cid))} vous remercie : +${o.coins} pièces · +4 amitié · +2 pierres d’étoile</small></span></p>`;
     if (o.k === 'delko') return `<p>Livraison pas encore faite : le produit est revenu dans le sac. Il reste du temps !</p>`;
     if (o.k === 'cok') return `<p class="eqh-big">${eqCliImg(o.cid, 'joie')}<span><b>Contrat rempli : ${esc(o.t)} !</b><small>+${o.coins} pièces · +${o.stones} pierres d’étoile${o.beat ? ' · Gaspard le renard est battu !' : ''}</small></span></p>`;
@@ -550,7 +550,7 @@ function eqConHTML(c) {
   let det = '';
   if (D.ty === 'lieux') det = `<div class="eqc-l">${D.L.map(([nm], i) => `<span class="${c.got[i] ? 'ok' : ''}">${c.got[i] ? '✓' : ''}${esc(nm)}${c.got[i] ? '' : ` <button class="eqc-go" data-eqcgo="${c.id}:${i}">Y aller</button>`}</span>`).join('')}</div>`;
   else if (D.ty === 'cont' && c.got.length) det = `<small>Déjà : ${esc(c.got.join(', '))}</small>`;
-  return `<div class="eqc${raced ? ' raced' : ''}">${eqCliImg(c.cid)}<div><b>${esc(D.t)}</b><small>Pour ${esc(eqCliNm(c.cid))} · reste ${eqLeft(c.end - Date.now())} · ${Math.round(D.coins * mul)} pièces + ${Math.round(D.stones * mul)} pierres${c.rev ? ' · revanche' : ''}</small>
+  return `<div class="eqc${raced ? ' raced' : ''}">${eqCliImg(c.cid)}<div><b>${esc(D.t)}</b><small>Pour ${esc(eqCliNm(c.cid))} · ⏱ ${eqLeft(c.end - Date.now())} · ${Math.round(D.coins * mul)} pièces${c.rev ? ' · revanche' : ''}</small>${eqCall(() => qmMeta('defi', D.ty === 'terr' || D.ty === 'rare' ? 2 : 3, [`${Math.round(D.stones * mul)} pierres d’étoile`]), '')}
     <span class="eqc-bar" aria-label="Vous : ${cur} sur ${n}"><i style="width:${(cur / n * 100).toFixed(0)}%"></i><em>Vous ${cur}/${n}</em></span>
     ${raced ? `<span class="eqc-bar riv" aria-label="Gaspard"><i style="width:${(eqRivP() * 100).toFixed(0)}%"></i><em>Gaspard ${Math.round(eqRivP() * 100)} %</em></span>` : ''}${det}</div></div>`;
 }
@@ -559,20 +559,22 @@ function eqSecHTML() {
   const E = eqState(), R = E.riv, now = Date.now();
   let h = `<section class="eq-sec"><h3 class="qt-h3" id="eqContrats">Contrats <small>collectionneurs pressés, grosses récompenses</small></h3>`;
   h += E.con.length ? E.con.map(eqConHTML).join('') : '<p class="qt-hint">Pas de contrat pour l’instant : un collectionneur passera après votre prochain voyage.</p>';
-  const raced = R.cid && E.con.find(c => c.id === R.cid), canRev = R.last && R.last.k === 'win' && now >= (R.rev || 0) && !R.cid;
-  h += `<h3 class="qt-h3" id="eqRival">Rival <small>${R.w || 0} victoire${(R.w || 0) > 1 ? 's' : ''} pour lui · ${R.l || 0} pour vous</small></h3><div class="eqr">${eqRivalImg(raced ? 'content' : R.last && R.last.k === 'win' ? 'joie' : 'content')}<div><b>Gaspard le renard</b>`;
+  void R; void now;
+  h += eqRivalHTML() + '</section>';
+  return h;
+}
+function eqRivalHTML() {
+  const E = eqState(), R = E.riv, now = Date.now(), raced = R.cid && E.con.find(c => c.id === R.cid), canRev = R.last && R.last.k === 'win' && now >= (R.rev || 0) && !R.cid;
+  let h = `<div class="eqr" id="eqRival">${eqRivalImg(raced ? 'content' : R.last && R.last.k === 'win' ? 'joie' : 'content')}<div><b>Rival : Gaspard le renard <small>${R.w || 0} victoire${(R.w || 0) > 1 ? 's' : ''} pour lui · ${R.l || 0} pour vous</small></b>`;
   if (raced) h += `<small>Il court après le même contrat : « ${esc(eqCDef(raced).t)} ». S’il arrive avant vous, c’est perdu !</small><span class="eqc-bar riv"><i style="width:${(eqRivP() * 100).toFixed(0)}%"></i><em>${Math.round(eqRivP() * 100)} %</em></span>`;
   else if (R.last && R.last.k === 'win') h += `<small>Il vous a doublé sur « ${esc(R.last.t)} ». ${canRev ? '' : `Revanche possible dans ${eqLeft(R.rev - now)}.`}</small>${canRev ? `<button class="btn gold sm" data-eqrev="1" ${E.con.length >= 2 ? 'disabled' : ''}>Revanche ! (récompense ×1,5)</button>${E.con.length >= 2 ? '<small>Terminez d’abord un contrat.</small>' : ''}` : ''}`;
   else if (R.last && R.last.k === 'lose') h += `<small>Battu sur « ${esc(R.last.t)} » ! Il rumine sa défaite… et reviendra.</small>`;
   else h += '<small>Un explorateur rival, rusé et rapide. Il vise parfois les mêmes trésors que vous.</small>';
-  h += '</div></div>';
-  const D = E.del;
-  if (D) h += `<h3 class="qt-h3" id="eqLivr">Livraison urgente</h3>${eqDelCardHTML(D)}`;
-  return h + '</section>';
+  return h + '</div></div>';
 }
 function eqDelCardHTML(D) {
   const it = eqDelItem(D, []);
-  return `<div class="eqc del">${eqCliImg(D.cid)}<div><b>${esc(eqCliNm(D.cid))} : 1 ${esc(eqLow(eqRName(D.rid)))} pour ${esc(D.who)} à ${esc(D.city)}</b><small>${D.st === 'sent' ? `En route avec ${esc(eqNm(D.by))}…` : `Avant ${eqLeft(D.end - Date.now())} · ${it ? 'en stock ✓' : 'à préparer au comptoir'}`} · ${eqDelRw(D, S.sel)} pièces, +4 amitié</small>${D.st === 'open' ? `<button class="btn gold sm" data-eqdel="1">Y aller</button>` : ''}</div></div>`;
+  return `<div class="eqc del">${eqCliImg(D.cid)}<div><b>Apporter 1 ${esc(eqLow(eqRName(D.rid)))} à ${esc(D.city)}</b><small>Pour ${esc(D.who)}, de la part de ${esc(eqCliNm(D.cid))}</small>${eqCall(() => qmMeta('defi', 2, ['2 pierres d’étoile']), '')}<small>${D.st === 'sent' ? `En route avec ${esc(eqNm(D.by))}…` : `Avant ${eqLeft(D.end - Date.now())} · ${it ? 'en stock ✓' : 'à préparer au comptoir'}`} · ${eqDelRw(D, S.sel)} pièces, +4 amitié</small>${D.st === 'open' ? `<button class="btn gold sm" data-eqdel="1">Y aller</button>` : ''}</div></div>`;
 }
 if (typeof qtPageHTML === 'function') qtPageHTML = (orig => function () {
   const h = orig.apply(this, arguments);

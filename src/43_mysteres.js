@@ -6,7 +6,7 @@
 //    Le joueur suit une énigme, trouve LUI-MÊME l'endroit sur la carte et y envoie un familier (case « Chercher ici » au départ).
 //    Verdict à l'arrivée : à moins de X km (30, 20 ou 15 km selon le niveau). Raté : « Ce n'est pas ici… le vent souffle vers l'ouest ».
 //    3 indices : un texte, puis une zone large, puis une zone plus petite (cercle décalé, jamais centré sur la réponse). L'indice 2
-//    demande 1 essai, l'indice 3 en demande 2. Chaque indice réduit un peu les pierres et les pièces. Récompense UNIQUE à chaque fois.
+//    demande 1 essai, l'indice 3 en demande 2. Chaque indice réduit un peu les pièces. Récompense UNIQUE à chaque fois (v33 : plus de pierres d'étoile).
 // 2. GARDIENS : 10 créatures rares (dessin des clients + cape dorée et aura). Découverts par une rumeur (voyage proche) ou une énigme.
 //    3 à 5 visites, chacune avec SON offrande (et parfois une condition : nuit, matériel, niveau de terrain). Puis : familier rare
 //    (une espèce cousine qu'il vous confie) ou bénédiction permanente, au choix.
@@ -23,7 +23,8 @@ const MY_TIER = ['', 'facile', 'moyen', 'difficile'];
 const MY_TOL = [0, 30, 20, 15];           // km : distance maximale pour réussir
 const MY_RBIG = [0, 150, 350, 800];       // km : rayon de la zone large (indice 2)
 const MY_RSMALL = [0, 40, 90, 200];       // km : rayon de la petite zone (indice 3)
-const MY_STONES = [0, 3, 6, 10], MY_COINS = [0, 80, 200, 450];
+// v33 : plus de pierres d'étoile ici (réservées à l'onglet Défis) ; pièces et XP du familier plus généreuses en Exploration
+const MY_STONES = [0, 0, 0, 0], MY_COINS = [0, 150, 350, 700], MY_XPB = [0, 30, 50, 80];
 const MY_HOME_KM = 30;
 const MR4 = (n, cat, sub, look, col) => [n, cat, sub, 4, look, col];
 const MY_RIDDLES = [
@@ -117,7 +118,7 @@ const MY_MAPS = [
   { id: 'dragon', nm: 'Carte du dragon de jade', zone: [108, 28, 3200], zn: 'l’Asie', locks: ['everest'],
     sec: { name: 'Grotte du dragon de jade (baie d’Ha Long)', lon: 107.18, lat: 20.91, tags: ['mer', 'ile'] }, tr: MR4('Dragon de jade', 'd', 'statue', null, '#3fae7a'), ti: 'Ami du dragon de jade', stones: 40, coins: 3000 },
 ];
-const MY_M = {}; MY_MAPS.forEach(M => { M.rid = MY_RIDDLES.filter(R => R.rw.pc === M.id).map(R => R.id); MY_M[M.id] = M; });
+const MY_M = {}; MY_MAPS.forEach(M => { M.coins += M.stones * 40; M.stones = 0; M.rid = MY_RIDDLES.filter(R => R.rw.pc === M.id).map(R => R.id); MY_M[M.id] = M; });
 
 // ---------------- état et outils ----------------
 function myState() {
@@ -168,15 +169,16 @@ function myCheck(R, d) {
   const heat = km < tol * 4 ? 'Vous brûlez !' : km < 300 ? 'Vous chauffez…' : km < 1500 ? 'C’est encore loin.' : 'C’est très, très loin d’ici.';
   return { ok: false, km, txt: `Ce n’est pas ici… le vent souffle vers ${myDir(d, R)}. ${heat}` };
 }
-// récompense (les indices réduisent les pierres et les pièces, jamais l'objet unique)
-function myRwVals(R) { const h = myRec(R.id).h || 0, b = MY_STONES[R.tier]; return { stones: Math.max(1, b - h * Math.ceil(b / 4)), coins: Math.round(MY_COINS[R.tier] * (1 - 0.2 * h)), h }; }
+// récompense (les indices réduisent les pièces, jamais l'objet unique)
+const myRwTags = R => [R.rw.it ? 'Trésor unique' : R.rw.pc ? 'Morceau de carte' : 'Secret de gardien', 'Titre'];
+function myRwVals(R) { const h = myRec(R.id).h || 0; return { stones: 0, coins: Math.round(MY_COINS[R.tier] * (1 - 0.2 * h)), xp: MY_XPB[R.tier], h }; }
 function myRwTxt(R) {
   const v = myRwVals(R), a = [];
   if (R.rw.it) a.push(R.rw.it[0]);
   if (R.rw.pc) a.push(`un morceau de la ${MY_M[R.rw.pc].nm.toLowerCase()}`);
   if (R.rw.gd) a.push('le secret d’un gardien légendaire');
   a.push(`le titre « ${R.rw.ti} »`);
-  return `${a.join(' · ')} · ${v.stones} pierre${v.stones > 1 ? 's' : ''} d’étoile · ${v.coins} pièces`;
+  return `${a.join(' · ')} · ${v.coins} pièces · +${v.xp} XP`;
 }
 
 // ---------------- dessins ----------------
@@ -376,7 +378,7 @@ function myGoHTML(d, k) {
     const o = myOffer(G), c = myCond(o.c, k), n = myHave(o), g = myGRec(G.id);
     h += `<div class="mygo g">${myGuardImg(G, true, 's')}<span class="mygo-x"><b>${esc(G.nm)} · confiance ${g.t || 0}/${G.offers.length}</b><small>Offrande : ${esc(o.t)} · vous en avez <b class="${n ? 'ok' : 'no'}">${n}</b>${c.txt ? ` · ${esc(c.txt)} <b class="${c.ok ? 'ok' : 'no'}">${c.ok ? '✓' : '✗'}</b>` : ''}</small></span></div>`;
   }
-  if (d.mysx) { const M = MY_M[d.mysx], won = myState().x[M.id]; h += `<div class="mygo sec"><span class="mygo-i">${MY_XMARK}</span><span class="mygo-x"><b>Lieu secret : expédition finale</b><small>${won ? 'Trésor déjà trouvé.' : `Trésor unique : ${esc(M.tr[0])} · titre « ${esc(M.ti)} » · ${M.stones} pierres d’étoile · ${M.coins} pièces`}</small></span></div>`; }
+  if (d.mysx) { const M = MY_M[d.mysx], won = myState().x[M.id]; h += `<div class="mygo sec"><span class="mygo-i">${MY_XMARK}</span><span class="mygo-x"><b>Lieu secret : expédition finale</b><small>${won ? 'Trésor déjà trouvé.' : `Trésor unique : ${esc(M.tr[0])} · titre « ${esc(M.ti)} » · ${M.coins} pièces`}</small></span></div>`; }
   return h;
 }
 if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
@@ -409,7 +411,7 @@ function myOnArrive(t) {
       if (R.rw.pc) { const i = myAddPiece(R.rw.pc); if (i >= 0) got.push(`morceau ${i + 1}/4 de la ${MY_M[R.rw.pc].nm.toLowerCase()}`); }
       if (R.rw.gd && myDiscover(R.rw.gd, 'énigme')) got.push(`le secret de ${MY_G[R.rw.gd].nm.toLowerCase()}`);
       const X = myCall(() => xpState(), null); if (X) (X.titles[k] = Array.isArray(X.titles[k]) ? X.titles[k] : []).push(R.rw.ti);
-      myCall(() => gainStones(v.stones), 0); t.coins = (t.coins || 0) + v.coins;
+      t.coins = (t.coins || 0) + v.coins; myCall(() => xpGain(k, t.xpTerr || xpTerrOf(d), v.xp), 0);
       myJ(t, `Trouvé ! C’est bien ici : ${R.name}. Sous une pierre plate, un petit coffret attendait ${n}.`, [['rare', 'énigme résolue'], ['place', R.rw.ti]]);
       myLog(t, { k: 'ok', id: R.id, got, stones: v.stones, coins: v.coins, h: v.h });
     } else {
@@ -477,7 +479,7 @@ if (typeof collect === 'function') collect = (orig => function () {
           X.x[M.id] = { k, at: Date.now() };
           const it = makeItem(M.tr, 0, `Trésor : ${M.sec.name}`, M.sec.tags, { fixed: 4 }); it.special = true; it.mys = 1; t.bag.push(it);
           const XS = myCall(() => xpState(), null); if (XS) (XS.titles[k] = Array.isArray(XS.titles[k]) ? XS.titles[k] : []).push(M.ti);
-          myCall(() => gainStones(M.stones), 0); t.coins = (t.coins || 0) + M.coins;
+          t.coins = (t.coins || 0) + M.coins; myCall(() => xpGain(k, t.xpTerr || xpTerrOf(t.dest), 100), 0);
           log.push({ k: 'secret', m: M.id, it: it.name });
         } else if (t.xpFail) log.push({ k: 'secretko', m: M.id });
       }
@@ -491,7 +493,7 @@ if (typeof collect === 'function') collect = (orig => function () {
 function myHaulHTML(H) {
   const n = myNm(H.k), rows = [];
   for (const L of H.log) {
-    if (L.k === 'ok') { const R = MY_R[L.id]; rows.push(`<div class="myh big ok"><span class="myh-i">${MY_SCROLL}</span><span><b>J’ai trouvé ! Énigme résolue : ${esc(R.name)}</b><small>« ${esc(R.q)} »</small><small class="myh-rw">${L.got.map(esc).join(' · ')}${L.got.length ? ' · ' : ''}titre « ${esc(R.rw.ti)} » · +${L.stones} pierre${L.stones > 1 ? 's' : ''} d’étoile · +${L.coins} pièces${L.h ? ` <em>(${L.h} indice${L.h > 1 ? 's' : ''})</em>` : ' <em>sans indice, bravo !</em>'}</small></span></div>`); }
+    if (L.k === 'ok') { const R = MY_R[L.id]; rows.push(`<div class="myh big ok"><span class="myh-i">${MY_SCROLL}</span><span><b>J’ai trouvé ! Énigme résolue : ${esc(R.name)}</b><small>« ${esc(R.q)} »</small><small class="myh-rw">${L.got.map(esc).join(' · ')}${L.got.length ? ' · ' : ''}titre « ${esc(R.rw.ti)} » · +${L.coins} pièces${L.h ? ` <em>(${L.h} indice${L.h > 1 ? 's' : ''})</em>` : ' <em>sans indice, bravo !</em>'}</small></span></div>`); }
     else if (L.k === 'ko') rows.push(`<div class="myh ko"><span class="myh-i">${MY_SCROLL}</span><span><b>${esc(L.txt)}</b><small>Aucune pénalité : réessayez quand vous voulez. Essai n° ${L.tries}.${myHintOk(MY_R[L.id], (myRec(L.id).h || 0) + 1) ? ' Un nouvel indice est disponible dans Quêtes.' : ''}</small></span></div>`);
     else if (L.k === 'noarr') rows.push(`<div class="myh ko"><span class="myh-i">${MY_SCROLL}</span><span><b>${esc(n)} n’a pas pu chercher la réponse de l’énigme.</b><small>Le voyage s’est arrêté avant l’arrivée. Retentez votre chance !</small></span></div>`);
     else if (L.k === 'piece') { const M = MY_M[L.m]; rows.push(`<div class="myh piece"><span class="myh-m">${myMapSVG(M)}</span><span><b>Morceau de carte : ${esc(M.nm)} (${myPieces(M.id).filter(Boolean).length}/4)</b><small>${L.how === 'lieu verrouillé' ? 'Caché au sommet du lieu conquis !' : L.how === 'voyage' ? `Trouvé en voyage (${esc(M.zn)}).` : ''}${myComplete(M.id) ? ` Carte complète : le lieu secret « ${esc(M.sec.name)} » est sur la carte du monde !` : ''}</small></span></div>`); }
@@ -499,7 +501,7 @@ function myHaulHTML(H) {
     else if (L.k === 'gvisit') { const G = MY_G[L.g]; rows.push(`<div class="myh g">${myGuardImg(G, true, 's')}<span><b>${esc(G.nm)} : confiance ${L.t}/${G.offers.length}</b><small>Il a accepté ${esc(L.of)} (${esc(L.it)}).${L.full ? ' Il vous fait entièrement confiance : choisissez sa récompense dans Quêtes.' : ` Prochaine offrande : ${esc(myOffer(G).t)}.`}</small></span></div>`); }
     else if (L.k === 'gwait') { const G = MY_G[L.g]; rows.push(`<div class="myh g wait">${myGuardImg(G, true, 's')}<span><b>${esc(G.nm)} est resté à distance.</b><small>Il espérait ${esc(L.of)}. Trouvez-en et revenez !</small></span></div>`); }
     else if (L.k === 'gcond') { const G = MY_G[L.g]; rows.push(`<div class="myh g wait">${myGuardImg(G, true, 's')}<span><b>${esc(G.nm)} ne s’est pas montré.</b><small>Il ne vient que ${esc(L.txt)}.</small></span></div>`); }
-    else if (L.k === 'secret') { const M = MY_M[L.m]; rows.push(`<div class="myh big ok"><span class="myh-i">${MY_XMARK}</span><span><b>Le trésor du lieu secret est à vous : ${esc(L.it)} !</b><small>${esc(M.sec.name)} · titre « ${esc(M.ti)} » · +${M.stones} pierres d’étoile · +${M.coins} pièces</small></span></div>`); }
+    else if (L.k === 'secret') { const M = MY_M[L.m]; rows.push(`<div class="myh big ok"><span class="myh-i">${MY_XMARK}</span><span><b>Le trésor du lieu secret est à vous : ${esc(L.it)} !</b><small>${esc(M.sec.name)} · titre « ${esc(M.ti)} » · +${M.coins} pièces · +100 XP</small></span></div>`); }
     else if (L.k === 'secretko') { const M = MY_M[L.m]; rows.push(`<div class="myh ko"><span class="myh-i">${MY_XMARK}</span><span><b>Demi-tour avant ${esc(M.sec.name)}…</b><small>Le trésor vous attend toujours. Mieux équipé, retentez l’expédition !</small></span></div>`); }
   }
   return rows.length ? `<div class="my-haul">${rows.join('')}</div>` : '';
@@ -525,7 +527,7 @@ function myRiddleBig(R, followed) {
     const used = (r.h || 0) >= i, ok = myHintOk(R, i);
     return `<li class="${used ? 'on' : ''}"><i>${i}</i><div>${used ? body : `<b>${lbl}</b><small>${ok ? 'Réduit un peu la récompense.' : `Disponible après ${i - 1} essai${i > 2 ? 's' : ''} (et l’indice ${i - 1}).`}</small>`}</div>${!used && ok ? `<button class="btn cream sm" data-myshint="${R.id}">Voir</button>` : ''}</li>`;
   };
-  return `<div class="my-big"><div class="my-bh"><span class="my-bi">${MY_SCROLL}</span><div><span class="bqc-kick">${followed ? 'Énigme suivie' : 'Énigme à suivre'} · ${MY_TIER[R.tier]}</span><p class="my-q">« ${esc(R.q)} »</p></div></div>
+  return `<div class="my-big"><div class="my-bh"><span class="my-bi">${MY_SCROLL}</span><div><span class="bqc-kick">${followed ? 'Énigme suivie' : 'Énigme à suivre'} · ${MY_TIER[R.tier]}</span>${myCall(() => qmMeta('explo', R.tier, myRwTags(R)), '')}<p class="my-q">« ${esc(R.q)} »</p></div></div>
     <ol class="my-hints">${hint(1, 'Indice 1 : un indice écrit', `<b>${esc(R.h1)}</b>`)}${hint(2, 'Indice 2 : une grande zone sur la carte', '<b>Une grande zone violette est tracée sur la carte.</b>')}${hint(3, 'Indice 3 : une zone plus petite', '<b>La zone violette s’est resserrée.</b>')}</ol>
     <p class="my-how">Trouvez l’endroit vous-même sur la carte et envoyez-y un familier : il faut arriver ${tol}. Essais : <b>${r.tries || 0}</b> · un essai raté ne coûte que du temps.</p>
     <div class="qt-rwb"><span>${myCall(() => R.rw.it ? itemIcon({ name: R.rw.it[0], cat: R.rw.it[1], sub: R.rw.it[2], rarity: 4, look: R.rw.it[4], color: R.rw.it[5] }) : R.rw.pc ? MY_XMARK : QT_TROPHY, QT_TROPHY)}</span><div><small>Récompense unique</small><b>${esc(myRwTxt(R))}</b></div></div>
@@ -533,13 +535,13 @@ function myRiddleBig(R, followed) {
 }
 function myRiddlesHTML() {
   const cur = myCur(), first = cur || MY_RIDDLES.find(R => myAvail(R) && !myRec(R.id).done);
-  let h = `<h3 class="qt-h3" id="myEnigmes">Énigmes <small>${myDoneN()}/${MY_RIDDLES.length} résolues · trouvez le lieu vous-même</small></h3>`;
+  let h = `<h3 class="qt-h3" id="myEnigmes">🧩 Énigmes <small>${myDoneN()}/${MY_RIDDLES.length} · un indice culturel, devinez le lieu célèbre</small></h3>`;
   h += first ? myRiddleBig(first, first === cur) : '<p class="qt-hint">Toutes les énigmes ouvertes sont résolues. Bravo !</p>';
   for (const tier of [1, 2, 3]) {
     const list = MY_RIDDLES.filter(R => R.tier === tier), open = myTierOpen(tier);
     h += `<div class="my-tier"><b class="my-tt t${tier}">${MY_TIER[tier]}</b><small>${list.filter(R => myRec(R.id).done).length}/${list.length}${open ? '' : ` · se débloque après ${MY_UNLOCK[tier] - myDoneN(tier - 1)} énigme${MY_UNLOCK[tier] - myDoneN(tier - 1) > 1 ? 's' : ''} ${MY_TIER[tier - 1]}${MY_UNLOCK[tier] - myDoneN(tier - 1) > 1 ? 's' : ''} de plus`}</small></div>`;
     if (!open) continue;
-    h += `<div class="my-list">${list.filter(R => R !== first).map(R => { const r = myRec(R.id); return `<div class="my-row${r.done ? ' done' : ''}"><span class="my-ri">${r.done ? '✔' : '?'}</span><div><b>${r.done ? esc(R.name) : `« ${esc(R.q.length > 70 ? R.q.slice(0, 68) + '…' : R.q)} »`}</b><small>${r.done ? `Résolue · titre « ${esc(R.rw.ti)} »` : `${r.tries ? `${r.tries} essai${r.tries > 1 ? 's' : ''} · ` : ''}${R.rw.it ? 'objet unique' : R.rw.pc ? 'morceau de carte' : 'secret d’un gardien'}`}</small></div>${r.done ? '' : `<button class="btn cream sm" data-mysfollow="${R.id}">Suivre</button>`}</div>`; }).join('')}</div>`;
+    h += `<div class="my-list">${list.filter(R => R !== first).map(R => { const r = myRec(R.id); return `<div class="my-row${r.done ? ' done' : ''}"><span class="my-ri">${r.done ? '✔' : '?'}</span><div><b>${r.done ? esc(R.name) : `« ${esc(R.q.length > 70 ? R.q.slice(0, 68) + '…' : R.q)} »`}</b><small>${r.done ? `Résolue · titre « ${esc(R.rw.ti)} »` : `${r.tries ? `${r.tries} essai${r.tries > 1 ? 's' : ''}` : ''}`}</small>${r.done ? '' : myCall(() => qmMeta('explo', R.tier, myRwTags(R)), '')}</div>${r.done ? '' : `<button class="btn cream sm" data-mysfollow="${R.id}">Suivre</button>`}</div>`; }).join('')}</div>`;
   }
   return h;
 }
@@ -563,12 +565,12 @@ function myGuardHTML(G) {
     const o = myOffer(G), c = myCond(o.c, S.sel), n = myHave(o);
     body = `<div class="my-off"><span class="my-oi">${myCall(() => cmIngIcon(o.k), '')}</span><span><small>Visite ${(g.t || 0) + 1}/${N} : il aime</small><b>${esc(o.t)}</b><small>Vous en avez ${n}${c.txt ? ` · ${esc(c.txt)}` : ''}</small></span></div><div class="my-acts"><button class="btn cream sm" data-myswhere="${G.id}">Où la trouver</button><button class="btn gold sm" data-mysgg="${G.id}">Y aller</button></div>${myWhere === G.id ? myWhereHTML(o) : ''}`;
   }
-  return `<div class="my-g${g.done ? ' done' : ''}">${myGuardImg(G, true)}<div><b>${esc(G.nm)}</b><small>${esc(G.where)}</small><span class="my-pips" aria-label="Confiance ${g.t || 0} sur ${N}">${pips}</span>${body}</div></div>`;
+  return `<div class="my-g${g.done ? ' done' : ''}">${myGuardImg(G, true)}<div><b>${esc(G.nm)}</b><small>${esc(G.where)}</small>${g.done ? '' : myCall(() => qmMeta('hist', Math.max(1, Math.min(3, N - 2)), ['Familier légendaire', 'ou Bénédiction']), '')}<span class="my-pips" aria-label="Confiance ${g.t || 0} sur ${N}">${pips}</span>${body}</div></div>`;
 }
 function myMapsHTML() {
   return `<h3 class="qt-h3" id="myCartes">Cartes déchirées <small>4 morceaux chacune</small></h3><div class="my-maps">${MY_MAPS.map(M => {
     const n = myPieces(M.id).filter(Boolean).length, full = n === 4, won = myState().x[M.id];
-    return `<div class="my-mc${full ? ' full' : ''}" id="myMap_${M.id}">${myMapSVG(M)}<b>${esc(M.nm)}</b><small>${full ? (won ? `Trésor trouvé : ${esc(M.tr[0])} ✔` : `Lieu secret révélé : ${esc(M.sec.name)}`) : `${n}/4 morceaux · en voyage (${esc(M.zn)}), énigmes${M.locks.length ? ', lieux à cadenas' : ''}`}</small>${full && !won ? `<button class="btn green sm" data-mysx="${M.id}">Expédition finale</button>` : ''}</div>`;
+    return `<div class="my-mc${full ? ' full' : ''}" id="myMap_${M.id}">${myMapSVG(M)}<b>${esc(M.nm)}</b>${won ? '' : myCall(() => qmMeta('explo', M.zone[2] > 1000 ? 3 : 2, ['Lieu secret', 'Trésor unique']), '')}<small>${full ? (won ? `Trésor trouvé : ${esc(M.tr[0])} ✔` : `Lieu secret révélé : ${esc(M.sec.name)}`) : `${n}/4 morceaux · en voyage (${esc(M.zn)}), énigmes${M.locks.length ? ', lieux à cadenas' : ''}`}</small>${full && !won ? `<button class="btn green sm" data-mysx="${M.id}">Expédition finale</button>` : ''}</div>`;
   }).join('')}</div>`;
 }
 function mySectionsHTML() {

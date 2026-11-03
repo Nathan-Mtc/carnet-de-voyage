@@ -7,7 +7,7 @@
 // 2. MAÎTRISE DES TERRAINS : 6 terrains, niveaux 1 à 10, de l'XP à chaque voyage. Chaque niveau : voyage un peu plus court,
 //    butin un peu meilleur, moins de risques ; certains niveaux sont demandés par les lieux verrouillés.
 // 3. LIEUX VERROUILLÉS : 18 lieux réels, épingle à cadenas visible quand on zoome sur la région (limite d'épingles partagée
-//    avec 38_quetes.js). Au toucher : conditions cochées ou non, récompense unique (objet, tenue, titre, pierres d'étoile).
+//    avec 38_quetes.js). Au toucher : conditions cochées ou non, récompense unique (objet légendaire, titre, pièces).
 // 4. EXPÉDITIONS À RISQUES : lieux verrouillés, voyages lointains ou en terrain difficile. 2 ou 3 choix risqués (scènes de
 //    29_aventure.js) ; sans réponse, le choix prudent est pris. Conséquences : butin perdu, demi-tour, blessure (repos obligatoire
 //    au foyer, poste Repos), raccourci secret, objet bonus. Résultat dans la fenêtre du butin.
@@ -86,6 +86,8 @@ const XP_PLACES = [
   { id: 'galapagos', name: 'Îles Galápagos', lon: -90.5, lat: -0.7, terr: 'mer', ctx: 'wild', tags: ['mer', 'ile'], need: [['g', 'jumelles', 2], ['m', 'mer', 4]], item: R4('Chemise à fleurs des Galápagos', 'v', 'haut', 'tshirt', '#7fc4a0'), title: 'Naturaliste des Galápagos', stones: 10 },
   { id: 'serengeti', name: 'Plaines du Serengeti', lon: 34.83, lat: -2.33, terr: 'desert', ctx: 'wild', tags: ['desert', 'campagne'], need: [['g', 'jumelles', 1], ['g', 'gourde', 1], ['m', 'desert', 3]], item: R4('Statue du lion du Serengeti', 'd', 'statue', null, '#e9b44a'), title: 'Ami des lions', stones: 8 },
 ];
+// v33 : les pierres d'étoile ne viennent plus que de l'onglet Défis ; un lieu verrouillé donne son objet légendaire, un titre et des pièces
+XP_PLACES.forEach(p => { p.coins = 150 + Math.round((p.stones || 8) * 40); p.stones = 0; });
 const XP_P = {}; XP_PLACES.forEach(p => { XP_P[p.id] = p; });
 
 // ---------------- état ----------------
@@ -322,8 +324,7 @@ function xpOnReturn(k, t) {
       res.first = 1; X.won[P.id] = { k, at: Date.now() };
       const it = makeItem(P.item, 0, `Récompense : ${P.name}`, P.tags, { fixed: P.item[3] }); it.xpr = 1; it.special = true; t.bag.push(it); res.item = it.name;
       (X.titles[k] = Array.isArray(X.titles[k]) ? X.titles[k] : []).push(P.title); res.title = P.title;
-      if (typeof gainStones === 'function') gainStones(P.stones); else S.stones = (S.stones || 0) + P.stones;
-      res.stones = P.stones;
+      t.coins = (t.coins || 0) + (P.coins || 0); res.coins = P.coins || 0;
     }
   }
   if (t.xpHurt) {
@@ -341,7 +342,7 @@ if (typeof collect === 'function') collect = (orig => function () {
 })(collect);
 function xpHaulHTML(R) {
   const n = xpName(R.k), P = R.P ? XP_P[R.P] : null, rows = [];
-  if (R.win && P) rows.push(`<p class="xph-big">${xpGly('etoile', '#e0a52a', 'm')}<span><b>Expédition réussie : ${esc(P.name)} !</b>${R.first ? `<small>Titre « ${esc(R.title)} » · ${esc(R.item)} · +${R.stones} pierres d’étoile</small>` : '<small>Déjà conquis : la récompense unique est déjà à vous.</small>'}</span></p>`);
+  if (R.win && P) rows.push(`<p class="xph-big">${xpGly('etoile', '#e0a52a', 'm')}<span><b>Expédition réussie : ${esc(P.name)} !</b>${R.first ? `<small>Titre « ${esc(R.title)} » · ${esc(R.item)} · +${R.coins || 0} pièces</small>` : '<small>Déjà conquis : la récompense unique est déjà à vous.</small>'}</span></p>`);
   else if (R.fail) rows.push(`<p class="xph-big fail">${xpLock('m')}<span><b>Demi-tour${P ? ` avant ${esc(P.name)}` : ''} : l’expédition a échoué.</b><small>Rien de grave ! Mieux équipé${xpE(R.k)}, ${esc(n)} pourra réessayer quand vous voulez.</small></span></p>`);
   if (R.lost) rows.push(`<p>${xpGly('lock', '#c9604f', 's')}${R.lost} objet${R.lost > 1 ? 's' : ''} perdu${R.lost > 1 ? 's' : ''} en route.</p>`);
   if (R.hurt) rows.push(`<p class="xph-hurt"><img src="${portraitURI(R.k, 'dodo')}" alt="">${esc(n)} s’est fait un petit bobo : repos au foyer pendant ${xpMin(R.hurt)}, avec un bon câlin.</p>`);
@@ -367,7 +368,7 @@ function xpCondsHTML(P, k) {
 }
 function xpRewardHTML(P) {
   const it = { name: P.item[0], cat: P.item[1], sub: P.item[2], rarity: 4, look: P.item[4], color: P.item[5] }, won = xpState().won[P.id];
-  return `<div class="xp-rw${won ? ' got' : ''}"><span class="xp-ri">${xpCall(() => itemIcon(it), '')}</span><span><b>${won ? 'Déjà conquis' : 'Récompense unique'}</b><small>${esc(it.name)} · titre « ${esc(P.title)} » · ${P.stones} pierres d’étoile</small></span></div>`;
+  return `<div class="xp-rw${won ? ' got' : ''}"><span class="xp-ri">${xpCall(() => itemIcon(it), '')}</span><span><b>${won ? 'Déjà conquis' : 'Récompense unique'}</b><small>${esc(it.name)} · titre « ${esc(P.title)} » · ${P.coins || 0} pièces</small></span></div>`;
 }
 function xpGoHTML(d, k) {
   const left = xpHurtLeft(k);

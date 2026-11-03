@@ -8,8 +8,9 @@
 //    butin et lieux à cadenas plus faciles (maîtrise demandée −2). Panneau de départ, bandeau de l'aventure, scène (avWeather).
 // 3. LIEUX ÉPHÉMÈRES : 3 par jour, 2 à 4 h, près de la maison (et un en Europe). Épingle avec compte à rebours (zoom),
 //    objet + spécialité uniques, petit événement à l'arrivée. Pas de notification : un point sur le bouton Quêtes.
-// 4. PISTES D'ANIMAUX : une espèce de la nurserie laisse des traces, 3 ou 4 étapes ; chaque bonne étape donne la direction
-//    de la suivante (vérification de distance comme les énigmes de 43_mysteres.js). Au bout : œuf d'une variante rare.
+// 4. PISTES D'ANIMAUX (v33 : des « traques ») : un animal sauvage laisse des traces dans la nature, 3 ou 4 étapes. On ne devine
+//    rien (ça, ce sont les énigmes) : une patte sur la carte montre où mènent les traces, il suffit de les suivre jusqu'au bout.
+//    Au bout : un trésor unique (moulage d'empreinte), un titre de pisteur, des pièces et de l'XP (onglet Exploration).
 // État : S.wld = { mo: {id: année}, ev: {id: 1}, seen: {id: 1}, tr: piste en cours | null, trN, trLast }.
 // Enveloppes : startTrip, fireEvent, collect, showHaul, renderVoyage, drawMarks, xpRiskK, xpIsExpe, xpConds, avWeather,
 // avRender, qtPageHTML, qtBtns. Expose window.__wld (tests).
@@ -204,7 +205,7 @@ function wdTrHint(T) {
   if (!T) return '';
   if (T.i === 0) return `Des traces fraîches de ${wdCall(() => nsLow(T.sp), T.sp)} ont été vues ${T.near ? `près de ${T.near}` : 'près de chez vous'}. Envoyez un familier à l’épingle (patte) !`;
   const a = T.pts[T.i - 1], b = T.pts[T.i], km = Math.max(5, Math.round(wdKm(a, b) / 5) * 5);
-  return `Les traces partent vers ${b.w}, vers ${wdDir(a, b)}, à ~${km} km des dernières traces. À vous de deviner l’endroit !`;
+  return `Les traces filent vers ${b.w}, ~${km} km plus vers ${wdDir(a, b)}. Une patte les marque sur la carte : suivez-les !`;
 }
 const wdSpName = sp => wdCall(() => nsLow(sp), sp);
 function wdRareGenes(sp) {
@@ -251,11 +252,12 @@ function wdOnArrive(t) {
     if (km <= wdTrTol(T, T.i)) {
       T.i++;
       if (T.i >= T.pts.length) {
-        const g = wdRareGenes(T.sp), egg = wdCall(() => nsAddEgg({ sp: T.sp, genes: g.genes, rarity: g.rarity, known: true, from: { how: 'piste', place: d.name }, ms: nsHatchMs(Math.min(3, g.rarity)) }), null);
-        wdPhoto(t, `${wdNm(k)} et le ${wdSpName(T.sp)} de la piste`, { wdtr: 1 });
-        wdCall(() => gainStones(4), 0);
-        wdJ(t, `Au bout de la piste, dans un nid de feuilles : un ${wdSpName(T.sp)} aux couleurs rares ! Il confie à ${wdNm(k)} un œuf tout chaud.`, [['egg', 'œuf rare'], ['wild', 'variante rare']]);
-        wdLog(t, { k: 'trend', sp: T.sp, egg: !!egg }); W.tr = null; W.trDone = (W.trDone || 0) + 1;
+        // v33 : récompense d'Exploration (trésor unique + titre + pièces + XP), plus d'œuf ni de pierres d'étoile
+        const sn = wdSpName(T.sp), it = wdGive(t, [`Empreinte moulée du ${sn}`, 'd', 'statue', 4, null, '#b08a5a'], `Traque : ${sn}`), ti = `Pisteur du ${sn}`;
+        const X = wdCall(() => xpState(), null); if (X) { const a = Array.isArray(X.titles[k]) ? X.titles[k] : (X.titles[k] = []); if (!a.includes(ti)) a.push(ti); }
+        const cn = 150 + 60 * T.pts.length; t.coins = (t.coins || 0) + cn; wdCall(() => xpGain(k, t.xpTerr || xpTerrOf(d), 20 * T.pts.length), 0);
+        wdJ(t, `Au bout des traces, dans un nid de feuilles : un ${sn} sauvage ! ${wdNm(k)} l’observe sans bruit, puis moule une empreinte parfaite dans la terre.`, [['wild', 'traque réussie'], ['rare', 'trésor unique']]);
+        wdLog(t, { k: 'trend', sp: T.sp, it: it.name, ti, coins: cn }); W.tr = null; W.trDone = (W.trDone || 0) + 1;
       } else {
         const h = wdTrHint(T); wdJ(t, `${wdNm(k)} retrouve les traces du ${wdSpName(T.sp)} ! ${h}`, [['wild', `piste ${T.i}/${T.pts.length}`]]);
         wdLog(t, { k: 'tr', sp: T.sp, i: T.i, n: T.pts.length, h });
@@ -371,7 +373,7 @@ function wdHaulHTML(H) {
     if (L.k === 'evko') return `<div class="wdh"><span class="wdh-i">🎪</span><span><b>${esc(L.name)} : ${L.late ? 'la fête était finie' : 'trop tôt'}.</b><small>Les lieux éphémères ne durent que quelques heures : regardez le compte à rebours sur la carte.</small></span></div>`;
     if (L.k === 'tr') return `<div class="wdh tr"><span class="wdh-i">🐾</span><span><b>Piste du ${esc(wdSpName(L.sp))} : étape ${L.i}/${L.n}</b><small>${esc(L.h)}</small></span></div>`;
     if (L.k === 'trko') return `<div class="wdh"><span class="wdh-i">🐾</span><span><b>Pas de traces ici.</b><small>${esc(L.txt)}</small></span></div>`;
-    if (L.k === 'trend') return `<div class="wdh ok"><span class="wdh-i">🥚</span><span><b>Bout de la piste : un ${esc(wdSpName(L.sp))} aux couleurs rares !</b><small>Il vous confie un œuf (nurserie) · photo souvenir · +4 pierres d’étoile</small></span></div>`;
+    if (L.k === 'trend') return `<div class="wdh ok"><span class="wdh-i">🐾</span><span><b>Traque réussie : un ${esc(wdSpName(L.sp))} sauvage !</b><small>${L.it ? `${esc(L.it)} · titre « ${esc(L.ti)} » · +${L.coins} pièces` : 'Œuf de variante rare (nurserie)'}</small></span></div>`;
     return '';
   }).join('');
   return rows ? `<div class="wd-haul">${rows}</div>` : '';
@@ -394,7 +396,7 @@ function wdDestOf(s) {
   const [ty, id] = String(s).split(':');
   if (ty === 'm') { const M = WD_M[id]; return M && { id: null, name: M.where, country: '', lat: M.lat, lon: M.lon, tags: M.tags.slice(), special: null, wdm: M.id }; }
   if (ty === 'e') { const E = wdEvById(id); return E && { id: null, name: E.name, country: '', lat: E.lat, lon: E.lon, tags: E.tags.slice(), special: null, wdev: E.id }; }
-  if (ty === 'p') { const T = wdState().tr; return T && T.i === 0 && { id: null, name: `Traces du ${wdSpName(T.sp)}`, country: '', lat: T.pts[0].lat, lon: T.pts[0].lon, tags: ['foret', 'campagne'], special: null }; }
+  if (ty === 'p') { const T = wdState().tr, P = T && T.pts[T.i]; return P && { id: null, name: `Traces du ${wdSpName(T.sp)}`, country: '', lat: P.lat, lon: P.lon, tags: ['foret', 'campagne'], special: null }; }
   return null;
 }
 function wdGo(s) {
@@ -419,7 +421,7 @@ function wdPinList() {
   const n = wdNow();
   if (z >= WD_ZOOM_EV) {
     wdEvents().filter(E => E.start <= n && n < E.end).forEach(E => { const dd = inView(E); if (dd >= 0) out.push({ key: 'e:' + E.id, lon: E.lon, lat: E.lat, ico: WD_EK[E.k].ico, lbl: `${WD_EK[E.k].nm} · ${wdDur(E.end - n)}`, cls: 'ev', d: dd - 1e4 }); });
-    const T = wdState().tr; if (T && T.i < T.pts.length) { const P = T.i === 0 ? T.pts[0] : T.pts[T.i - 1], dd = inView(P); if (dd >= 0) out.push({ key: 'p:' + T.id + T.i, go: T.i === 0, lon: P.lon, lat: P.lat, ico: '🐾', lbl: T.i === 0 ? 'Traces fraîches' : 'Dernières traces', cls: 'tr', d: dd - 5e3 }); }
+    const T = wdState().tr; if (T && T.i < T.pts.length) { const P = T.pts[T.i], dd = inView(P); if (dd >= 0) out.push({ key: 'p:' + T.id + T.i, go: true, lon: P.lon, lat: P.lat, ico: '🐾', lbl: `Traces ${T.i + 1}/${T.pts.length}`, cls: 'tr', d: dd - 5e3 }); }
   }
   if (z >= WD_ZOOM) WD_MOM.forEach(M => { const st = wdMoState(M); if (!st.season && !M.tide) return; const dd = inView(M); if (dd >= 0) out.push({ key: 'm:' + M.id, lon: M.lon, lat: M.lat, ico: M.ico, lbl: '', cls: 'mo' + (st.now ? ' now' : ''), d: dd }); });
   return out.sort((a, b) => a.d - b.d).slice(0, 4);
@@ -466,12 +468,13 @@ if (typeof qtBtns === 'function') qtBtns = (orig => function () {
 })(qtBtns);
 
 // ---------------- page Quêtes : section « Monde » et petits onglets ----------------
+const wdMoDif = M => Math.min(3, (M.tide ? 1 : M.h ? 2 : 1) + (wdKm(homeObj(), M) > 3000 ? 1 : 0));
 function wdMomentsHTML() {
   const rows = WD_MOM.map(M => ({ M, st: wdMoState(M), soon: wdMoSoon(M) }));
   const now = rows.filter(o => o.st.season || o.M.tide).sort((a, b) => (b.st.now - a.st.now) || (a.st.got - b.st.got));
   const soon = rows.filter(o => !o.st.season && !o.M.tide && o.soon <= 45).sort((a, b) => a.soon - b.soon);
-  const row = (o, s) => `<div class="wd-row${o.st.got ? ' done' : ''}${o.st.now ? ' now' : ''}"><span class="wd-ri">${o.M.ico}</span><div><b>${esc(o.M.nm)}</b><small>${esc(o.M.where)} · ${s}</small></div>${o.st.got ? '<span class="wd-ok">✔</span>' : `<button class="btn ${o.st.now ? 'green' : 'cream'} sm" data-wdgo="m:${o.M.id}">Y aller</button>`}</div>`;
-  let h = `<h4 class="wd-h4">Moments du monde <small>vraie date, heure locale du lieu</small></h4>`;
+  const row = (o, s) => `<div class="wd-row${o.st.got ? ' done' : ''}${o.st.now ? ' now' : ''}"><span class="wd-ri">${o.M.ico}</span><div><b>${esc(o.M.nm)}</b><small>${esc(o.M.where)} · ${s}</small>${o.st.got ? '' : wdCall(() => qmMeta('monde', wdMoDif(o.M), [o.M.it[1] === 'v' ? 'Tenue de saison' : 'Objet de saison', 'Photo d’album']), '')}</div>${o.st.got ? '<span class="wd-ok">✔</span>' : `<button class="btn ${o.st.now ? 'green' : 'cream'} sm" data-wdgo="m:${o.M.id}">Y aller</button>`}</div>`;
+  let h = `<h3 class="qt-h3">🌸 Moments de saison <small>vraie date, heure locale du lieu</small></h3>`;
   h += now.length ? `<p class="wd-sub">En ce moment</p>${now.map(o => row(o, o.st.got ? 'déjà vécu cette année' : o.st.now ? '<b>c’est maintenant !</b>' : esc(o.st.wait))).join('')}` : '';
   h += soon.length ? `<p class="wd-sub">Bientôt</p>${soon.map(o => row(o, `dans ${o.soon} jour${o.soon > 1 ? 's' : ''} · ${esc(o.M.when)}`)).join('')}` : '';
   if (!now.length && !soon.length) h += '<p class="qt-hint">Aucun moment rare en ce moment. Revenez bientôt !</p>';
@@ -479,26 +482,27 @@ function wdMomentsHTML() {
 }
 function wdWxHTML() {
   if (!wdWeather().length) return '';
-  return `<h4 class="wd-h4">Météo du jour</h4><div class="wd-wx">${wdWeather().map(o => { const K = WD_K[o.k]; return `<span class="wd-wc k-${o.k}">${K.ico} <b>${esc(K.nm)}</b> ${esc(o.z.de)}<small>${esc(K.eff)}</small></span>`; }).join('')}</div>`;
+  return `<h3 class="qt-h3">⛅ Météo du jour <small>elle change les risques et le butin</small></h3><div class="wd-wx">${wdWeather().map(o => { const K = WD_K[o.k]; return `<span class="wd-wc k-${o.k}">${K.ico} <b>${esc(K.nm)}</b> ${esc(o.z.de)}<small>${esc(K.eff)}</small></span>`; }).join('')}</div>`;
 }
 function wdEventsHTML() {
   const n = wdNow(), W = wdState(), l = wdEvents().filter(E => E.end > n);
-  let h = `<h4 class="wd-h4">Lieux éphémères <small>quelques heures seulement</small></h4>`;
+  let h = `<h3 class="qt-h3">🎪 Lieux éphémères <small>quelques heures seulement</small></h3>`;
   if (!l.length) return h + '<p class="qt-hint">Plus de fête aujourd’hui. Demain, de nouveaux lieux apparaîtront !</p>';
   return h + l.map(E => {
     const K = WD_EK[E.k], open = E.start <= n, got = W.ev[E.id], km = Math.round(wdKm(homeObj(), E));
-    return `<div class="wd-row ev${open ? ' now' : ''}${got ? ' done' : ''}"><span class="wd-ri">${K.ico}</span><div><b>${esc(E.name)}</b><small>${open ? `<b>ouvert · encore ${wdDur(E.end - n)}</b>` : `de ${wdHHMM(E.start)} à ${wdHHMM(E.end)}`} · ${km} km · ${esc(K.it[0])}, ${esc(K.dish[0])}</small></div>${got ? '<span class="wd-ok">✔</span>' : open ? `<button class="btn green sm" data-wdgo="e:${E.id}">Y aller</button>` : ''}</div>`;
+    return `<div class="wd-row ev${open ? ' now' : ''}${got ? ' done' : ''}"><span class="wd-ri">${K.ico}</span><div><b>${esc(E.name)}</b><small>${open ? `<b>ouvert · encore ${wdDur(E.end - n)}</b>` : `de ${wdHHMM(E.start)} à ${wdHHMM(E.end)}`} · ${km} km · ${esc(K.it[0])}, ${esc(K.dish[0])}</small>${got ? '' : wdCall(() => qmMeta('monde', E.tags[0] === 'ville' ? 2 : 1, ['Objet de saison']), '')}</div>${got ? '<span class="wd-ok">✔</span>' : open ? `<button class="btn green sm" data-wdgo="e:${E.id}">Y aller</button>` : ''}</div>`;
   }).join('');
 }
 function wdTrailHTML() {
-  const W = wdState(), T = W.tr;
-  let h = `<h4 class="wd-h4" id="wdPistes">Pistes <small>${W.trDone || 0} piste${(W.trDone || 0) > 1 ? 's' : ''} suivie${(W.trDone || 0) > 1 ? 's' : ''} jusqu’au bout</small></h4>`;
+  const W = wdState(), T = W.tr, dif = T ? Math.max(1, T.pts.length - 2) : 1;
+  let h = `<h3 class="qt-h3" id="wdPistes">🐾 Traques <small>suivez les traces d’un animal dans la nature · ${W.trDone || 0} réussie${(W.trDone || 0) > 1 ? 's' : ''}</small></h3>`;
+  const meta = wdCall(() => qmMeta('explo', dif, ['Trésor unique', 'Titre']), '');
   if (T) {
     const pips = T.pts.map((_, i) => `<i class="${i < T.i ? 'on' : ''}"></i>`).join('');
-    return h + `<div class="wd-tr"><span class="wd-ri">🐾</span><div><b>Piste du ${esc(wdSpName(T.sp))} · étape ${T.i + 1}/${T.pts.length}</b><span class="my-pips">${pips}</span><small>${esc(wdTrHint(T))}</small><small>Au bout : un œuf de variante rare.${T.tries ? ` Essais ratés : ${T.tries}.` : ''}</small><div class="my-acts">${T.i === 0 ? '<button class="btn green sm" data-wdgo="p:0">Y aller</button>' : `<button class="btn cream sm" data-wdlook="1">Voir les dernières traces</button>`}</div></div></div>`;
+    return h + `<div class="wd-tr"><span class="wd-ri">🐾</span><div><b>Traque du ${esc(wdSpName(T.sp))} · ${T.i + 1}/${T.pts.length}</b>${meta}<span class="my-pips">${pips}</span><small>${esc(wdTrHint(T))}</small><div class="my-acts"><button class="btn green sm" data-wdgo="p:0">Suivre les traces</button></div></div></div>`;
   }
   if (W.trLast === wdDay()) return h + '<p class="qt-hint">Nouvelles traces demain !</p>';
-  return h + `<div class="wd-tr"><span class="wd-ri">🐾</span><div><b>Des traces fraîches près de chez vous</b><small>Un animal sauvage rare est passé par là. Suivez-le de lieu en lieu, en 3 ou 4 étapes : à vous de deviner où mènent les traces !</small><div class="my-acts"><button class="btn gold sm" data-wdtr="1">Suivre la piste</button></div></div></div>`;
+  return h + `<div class="wd-tr"><span class="wd-ri">🐾</span><div><b>Des traces fraîches près de chez vous</b>${meta}<small>Un animal sauvage est passé par la forêt et les champs. Suivez ses traces de lieu en lieu (3 ou 4 étapes).</small><div class="my-acts"><button class="btn gold sm" data-wdtr="1">Commencer la traque</button></div></div></div>`;
 }
 function wdSectionHTML() {
   return `<section class="wd-sec"><h3 class="qt-h3" id="wdMonde">Le monde qui vit <small>météo, moments rares, fêtes, pistes</small></h3>${wdCall(wdWxHTML, '')}${wdCall(wdEventsHTML, '')}${wdCall(wdMomentsHTML, '')}${wdCall(wdTrailHTML, '')}</section>`;
@@ -538,8 +542,8 @@ document.addEventListener('click', ev => {
   if (!el || el.disabled || el.closest('#ov')) return;
   const d = el.dataset;
   if (d.wdtab) { const t = document.getElementById(d.wdtab), mb = el.closest('.mbox'); if (t && mb) { mb.scrollLeft = 0; mb.scrollTo({ top: Math.max(0, mb.scrollTop + t.getBoundingClientRect().top - mb.getBoundingClientRect().top - 84), behavior: 'smooth' }); } else if (t) t.scrollIntoView({ block: 'start' }); el.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === el)); return; }
-  if (d.wdtr) { if (!wdState().tr) { wdTrailNew(); wdCall(() => sfx('pop'), 0); toast('Piste suivie ! Une patte marque les premières traces sur la carte.'); } wdRefresh(); return; }
-  if (d.wdlook) { const T = wdState().tr; if (T && T.i > 0) { toast('Voici les dernières traces. Devinez où elles mènent, touchez l’endroit et envoyez un familier !'); wdLook(T.pts[T.i - 1]); } return; }
+  if (d.wdtr) { if (!wdState().tr) { wdTrailNew(); wdCall(() => sfx('pop'), 0); toast('Traque lancée ! Une patte marque les traces sur la carte.'); } wdRefresh(); return; }
+  if (d.wdlook) { const T = wdState().tr; if (T && T.i > 0) { wdLook(T.pts[T.i]); } return; }
   if (d.wdgo) wdGo(d.wdgo);
 });
 

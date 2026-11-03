@@ -31,7 +31,7 @@ const CF_PERKS = {
   roussette: [[1, '⭐', 'Paie +15 % les produits 3★', { k: 'pay3', p: 0.15 }],
     [3, '⭐', 'Paie +30 % les produits 3★', { k: 'pay3', p: 0.3 }]],
   pingo: [[1, '💎', '1 pierre d’étoile chaque semaine', { k: 'week', what: 'stones', n: 1 }],
-    [3, '💎', '3 pierres d’étoile chaque semaine', { k: 'week', what: 'stones', n: 3 }]],
+    [3, '💎', '2 pierres d’étoile chaque semaine', { k: 'week', what: 'stones', n: 2 }]],
   gaston: [[1, '🧰', 'Vous offre une gourde d’expédition (matériel de base)', { k: 'once', what: 'gear', g: 'gourde' }],
     [3, '🧰', '1 matériel d’expédition de base chaque semaine', { k: 'week', what: 'gear', n: 1 }]],
   ondine: [[1, '🐚', '1 coquillage chaque jour', { k: 'day', what: 'ing', ing: 'coquillage', n: 1 }],
@@ -145,7 +145,7 @@ function cfOnSale(b, it) {
   if (g >= 1) {
     let ch = (g >= 3 ? 0.2 : 0.12) * (T && T.id === 'librairie' ? 2 : 1); const ge = cfActive(c.id).find(e => e.k === 'gift'); if (ge) ch = Math.max(ch, ge.p);
     if (Math.random() < ch) {
-      if (!ge && Math.random() < 0.5) { const n = gainStones(g >= 3 ? 2 : 1); if (n) gift = stonesWord(n); }
+      if (!ge && Math.random() < 0.5) { const n = gainStones(1); /* v33 : modeste */ if (n) gift = stonesWord(n); }
       else { const r = cmRareItem(g >= 3 || ge ? 'n' : 'f'); if (r) gift = `« ${cfMk(r.def, `Cadeau de ${c.name}`).name} »`; }
     }
   }

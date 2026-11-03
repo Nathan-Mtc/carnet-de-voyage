@@ -104,7 +104,7 @@ const QT_STORIES = [
       { t: 'item', ing: 'graine', n: 1, txt: 'Donner 1 graine', story: '« Une graine trouvée en chemin, pour la comparer. »' },
       { t: 'go', place: 'Chamonix', txt: 'Monter à Chamonix', story: '« La dernière page montre le Mont-Blanc. Allons-y ! »' },
       { t: 'item', ing: 'cristal', n: 1, txt: 'Donner 1 cristal', story: '« Grand-père gardait sa graine dans un cristal. Il m’en faut un ! »' }],
-    rw: { k: 'egg', sp: 'phoque', coins: 200 } },
+    rw: { k: 'cloth', def: ['Bonnet edelweiss de grand-père', 'v', 'tete', 4, 'bonnet', '#eef2f6'], coins: 200 } },
   { id: 'canuts', who: 'roussette', title: 'Le foulard des canuts', pitch: 'Roussette veut la plus belle tenue du bal, tissée comme autrefois à Lyon.',
     steps: [{ t: 'go', place: 'Lyon', txt: 'Aller à Lyon', story: '« Les canuts tissaient la soie sur la Croix-Rousse. Je veux voir ça ! »' },
       { t: 'item', ing: 'tissu', n: 2, txt: 'Donner 2 tissus', story: '« Du tissu, beaucoup de tissu ! »' },
@@ -117,7 +117,7 @@ const QT_STORIES = [
       { t: 'go', place: 'Brocéliande', txt: 'Entrer dans la forêt de Brocéliande', story: '« La forêt des fées ! Restez sur le sentier… »' },
       { t: 'chest', n: 1, txt: 'Ouvrir un coffre', story: '« La carte parle d’un coffre. N’importe lequel vous apprendra la serrure. »' },
       { t: 'item', ing: 'papier', n: 1, txt: 'Donner 1 papier ancien', story: '« Un papier ancien pour recopier le secret. »' }],
-    rw: { k: 'secret', near: [-2.17, 48.02], coins: 250 } },
+    rw: { k: 'cloth', def: ['Cape des fées de Brocéliande', 'v', 'dos', 4, 'cape', '#5a8f6a'], coins: 250 } },
   { id: 'capitaine', who: 'ondine', title: 'Cap sur la mer', pitch: 'Capitaine Ondine prépare un grand tour des côtes.',
     steps: [{ t: 'cat', cat: 'port', txt: 'Visiter un port', story: '« Tout bon voyage commence au port. »' },
       { t: 'item', ing: 'coquillage', n: 3, txt: 'Donner 3 coquillages', story: '« Des coquillages pour décorer ma cabine. »' },
@@ -129,13 +129,13 @@ const QT_STORIES = [
       { t: 'item', ing: 'lumiere', n: 1, txt: 'Donner 1 lumière', story: '« Une lanterne pour la fête de la lune. »' },
       { t: 'go', place: 'Tokyo', txt: 'Aller à Tokyo', story: '« Mon ami nous attend à Tokyo. »' },
       { t: 'tame', n: 1, txt: 'Accueillir un nouveau compagnon', story: '« Il dit qu’un petit compagnon vous attend… »' }],
-    rw: { k: 'egg', sp: 'tanuki', coins: 250 } },
+    rw: { k: 'cloth', def: ['Écharpe de la fête de la lune', 'v', 'cou', 4, 'echarpe', '#d94f6a'], coins: 250 } },
   { id: 'epices', who: 'gaston', title: 'Le marché aux épices', pitch: 'Gaston veut ouvrir un stand d’épices et d’agrumes.',
     steps: [{ t: 'cat', cat: 'marche', txt: 'Visiter un marché', story: '« Voyons d’abord ce qui se vend ici. »' },
       { t: 'go', place: 'Marrakech', txt: 'Aller à Marrakech', story: '« Les meilleures épices viennent des souks. »' },
       { t: 'item', ing: 'agrume', n: 2, txt: 'Donner 2 agrumes', story: '« Des agrumes pour la confiture. »' },
       { t: 'go', place: 'Merzouga', txt: 'Traverser le désert jusqu’à Merzouga', story: '« Et une nuit sous les étoiles du désert ! »' }],
-    rw: { k: 'egg', sp: 'fennec', coins: 250 } },
+    rw: { k: 'rec', coins: 250 } },
   { id: 'venise', who: 'roussette', title: 'La lettre de Venise', pitch: 'Roussette est invitée au grand bal masqué de Venise.',
     steps: [{ t: 'go', place: 'Venise', txt: 'Aller à Venise', story: '« Les gondoles, les masques… vite ! »' },
       { t: 'item', ing: 'verre', n: 2, txt: 'Donner 2 verres', story: '« Du verre de Murano pour mon masque. »' },
@@ -220,14 +220,15 @@ const QT_DEFIS = [
   { id: 'leg3', title: 'Trois continents légendaires', txt: 'Rapporter un objet légendaire de 3 continents différents', n: 3, cur: () => Object.keys(qtState().log.cont).length, rw: { k: 'egg', sp: 'lemur', coins: 1500 } },
   { id: 'reg5', title: 'Le tour express', txt: 'Visiter 5 régions différentes en 7 jours', n: 5, cur: qtWeekRegs, rw: { k: 'cloth', def: ['Cape du grand tour', 'v', 'dos', 4, 'cape', '#2f7f6c'], coins: 1200 } },
   { id: 'star3', title: 'Maître artisan', txt: 'Fabriquer un produit 3 étoiles de chaque recette de base de votre commerce', n: () => Math.max(1, qtShopRecs().length), cur: () => qtShopRecs().filter(R => qtState().log.m3[R.id]).length, rw: { k: 'rec', coins: 1500 } },
-  { id: 'relic', title: 'Relique complète', txt: 'Assembler les 3 fragments d’une relique à l’atelier', n: 1, cur: () => qtCall(() => Object.keys(famState().relics).length, 0), rw: { k: 'secret', coins: 1200 } },
+  { id: 'relic', title: 'Relique complète', txt: 'Assembler les 3 fragments d’une relique à l’atelier', n: 1, cur: () => qtCall(() => Object.keys(famState().relics).length, 0), rw: { k: 'item', lbl: 'Trésor', def: ['Reliquaire doré', 'd', 'statue', 4, null, '#e0b13a'], coins: 1200 } },
   { id: 'far3', title: 'Au bout du monde', txt: 'Faire 3 voyages à plus de 5 000 km de chez vous', n: 3, cur: () => qtState().log.far, rw: { k: 'item', lbl: 'Pierre précieuse', def: ['Diamant brut', 'm', 'gemme', 4, null, '#e8f4fa'], coins: 1500 } },
   { id: 'chest5', title: 'Chasseur de coffres', txt: 'Ouvrir 5 coffres avec la bonne clé', n: 5, cur: () => qtState().log.chests, rw: { k: 'egg', sp: 'quokka', also: ['Clé ancienne', 'm', 'cle', 3, null, '#7a6a5a'], coins: 1000 } },
   { id: 'sp6', title: 'Grande famille', txt: 'Avoir des compagnons de 6 espèces différentes', n: 6, cur: qtSpecies, rw: { k: 'cloth', def: ['Couronne de fleurs du refuge', 'v', 'tete', 4, 'fleurs', '#f08aa6'], coins: 1500 } },
   { id: 'nat12', title: 'Cabinet de curiosités', txt: 'Posséder 12 objets Nature différents (insectes, coquillages…)', n: 12, cur: qtNatureN, rw: { k: 'item', lbl: 'Décoration légendaire', def: ['Vitrine de curiosités', 'd', 'statue', 4, null, '#c9a97a'], coins: 1000 } },
 ];
-// v22 : pierres d'étoile (S.stones, futur tirage) : 5 à 10 à la fin d'une histoire (selon sa longueur), 8 à 10 par défi
-QT_STORIES.forEach(q => { if (q.rw && q.rw.stones == null) q.rw.stones = Math.max(5, Math.min(10, q.steps.length + 2)); });
+// v33 : chaque histoire donne une tenue ou une recette exclusive (plus de pierres d'étoile) ; les défis restent la source des pierres
+QT_STORIES.forEach(q => { if (q.rw) q.rw.stones = 0; });
+const QT_SDIF = { gouter: 1, canuts: 1, alpes: 2, broceliande: 2, capitaine: 2, venise: 2, japon: 3, epices: 3, nord: 3 };
 QT_DEFIS.forEach((d, i) => { if (d.rw && d.rw.stones == null) d.rw.stones = [10, 8, 9, 10, 9, 8, 9, 8][i] || 8; });
 const qtDN = d => (typeof d.n === 'function' ? d.n() : d.n);
 function qtClaimDefi(id) {
@@ -241,7 +242,7 @@ function qtClaimDefi(id) {
 // ---------------- objectif du jour ----------------
 function qtDay() {
   const s = qtState(), dk = dayKey(), h = qtHome();
-  if (s.day && s.day.v === 2 && s.day.d === dk && s.day.h === S.home && !s.day.list.some(o => o.step && o.step.fn)) return s.day;
+  if (s.day && s.day.v === 3 && s.day.d === dk && s.day.h === S.home && !s.day.list.some(o => o.step && o.step.fn)) return s.day;
   const r = qtRnd('qtday' + dk + S.home), pick = a => a[Math.floor(r() * a.length)], list = [];
   try { // 1. proche : un objet d'un type de lieu du quotidien
     const cats = (typeof BQ_NEAR_CATS !== 'undefined' ? BQ_NEAR_CATS : ['marche', 'parc', 'boulangerie']).filter(c => POI_CATS[c] && LOOT[c] && c !== 'rue' && c !== 'route');
@@ -257,11 +258,11 @@ function qtDay() {
       list.push({ z: 'reg', name: x.name, rid: x.id, step: st, where: `Votre région (${R0.short}) : ${qtCall(() => rgResWhere(x), 'marchés et fermes')}`, pay: 220 + (x.rar || 0) * 40 }); }
   } catch (e) {}
   try { // 3. lointain : une spécialité d'une région à plus de 800 km
-    const far = REGIONS.filter(R => R.id !== (R0 && R0.id) && R.anchor && R.res && R.res.length && kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] }) > 800);
+    const far = REGIONS.filter(R => R.id !== (R0 && R0.id) && R.anchor && R.res && R.res.length && kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] }) > 800 && kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] }) < 2500);
     const R = pick(far.length ? far : REGIONS.filter(R => R.res && R.res.length)), x = pick(R.res.filter(x => (x.rar || 0) >= 1 && (x.rar || 0) <= 3 && x.cat !== 'n')) || pick(R.res.filter(x => (x.rar || 0) >= 1)) || R.res[0];
     list.push({ z: 'far', name: x.name, rid: x.id, step: { region: R.id }, where: `${R.name} (${Math.round(kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] })).toLocaleString('fr-FR')} km)`, pay: 400, egg: 1 });
   } catch (e) {}
-  s.day = { v: 2, d: dk, h: S.home, list }; save();
+  s.day = { v: 3, d: dk, h: S.home, list }; save();
   return s.day;
 }
 const QT_Z = { near: 'Tout près', reg: 'Dans la région', far: 'Grand voyage' };
@@ -270,11 +271,12 @@ const qtDayMatch = o => it => !!(it && !it.mk && (o.rid ? it.rid === o.rid || it
 function qtDayGive(i) {
   const D = qtDay(), o = D.list[i]; if (!o || o.done) return;
   const worn = qtWorn(), it = S.inv.find(x => qtDayMatch(o)(x) && !worn.has(x.id)); if (!it) { toast('Vous ne l’avez pas encore.'); return; }
-  S.inv.splice(S.inv.indexOf(it), 1); o.done = 1; gainCoins(o.pay);
-  if (o.egg) { try { addEgg({ sp: null, rarity: 2, from: { how: 'quete', place: 'Objectif du jour' }, hatchMs: 3 * 60e3 }); } catch (e) {} }
-  toast(`Objectif du jour rempli : +${o.pay} pièces${o.egg ? ' et un œuf !' : ''}`);
+  S.inv.splice(S.inv.indexOf(it), 1); o.done = 1; gainCoins(o.pay); const st = qtDaySt(o); qtCall(() => gainStones(st), 0);
+  toast(`Objectif du jour rempli : +${o.pay} pièces et ${qtCall(() => stonesWord(st), st + ' pierres')} !`);
   save(); qtRefreshAll();
 }
+// v33 : l'objectif du jour (onglet Défis) donne des pierres d'étoile au lieu d'un œuf
+const qtDaySt = o => (o.z === 'far' ? 3 : o.z === 'reg' ? 2 : 1);
 const qtDot = () => { const D = qtDay(); return qtState().seen !== D.d && D.list.some(o => !o.done); };
 
 // ---------------- tous les besoins du joueur ----------------
@@ -293,7 +295,7 @@ function qtNeeds(force) {
     }
   } catch (e) {}
   // objectif du jour
-  try { qtDay().list.forEach((o, i) => { if (o.done) return; const m = qtDayMatch(o), h = qtCount(m); if (h >= 1) return; add({ id: 'day:' + i, src: 'jour', it: qtDayIt(o), name: o.name, why: `Objectif du jour (${QT_Z[o.z].toLowerCase()})`, gain: `+${o.pay} pièces${o.egg ? ' + œuf' : ''}`, step: o.step, have: 0, n: 1, match: m }); }); } catch (e) {}
+  try { qtDay().list.forEach((o, i) => { if (o.done) return; const m = qtDayMatch(o), h = qtCount(m); if (h >= 1) return; add({ id: 'day:' + i, src: 'jour', it: qtDayIt(o), name: o.name, why: `Objectif du jour (${QT_Z[o.z].toLowerCase()})`, gain: `+${o.pay} pièces + ${qtDaySt(o)} pierres`, step: o.step, have: 0, n: 1, match: m }); }); } catch (e) {}
   // rêves de l'équipe
   try {
     for (const k of teamIds()) {
@@ -443,20 +445,21 @@ function qtDayHTML() {
   const rows = D.list.map((o, i) => {
     const it = qtDayIt(o), h = qtCount(qtDayMatch(o)), F = qtFam(it);
     const act = o.done ? '<span class="qt-ok">✔</span>' : h ? `<button class="btn green sm" data-qtday="${i}">Livrer</button>` : `<button class="btn gold sm" data-qtneed="day:${i}">Y aller</button>`;
-    return `<div class="qt-drow${o.done ? ' done' : ''}"><span class="qt-di" style="--fc:${F ? F.couleur : '#d9604f'}">${qtIco(it)}<i class="qtf"></i></span><div class="qt-nx"><b>${esc(o.name)}</b><span><i class="qt-z z-${o.z}">${QT_Z[o.z]}</i> ${esc(o.where)}</span></div><span class="qt-pay">${coins(o.pay)}${o.egg ? '<small>+ œuf</small>' : ''}</span>${act}</div>`;
+    return `<div class="qt-drow${o.done ? ' done' : ''}"><span class="qt-di" style="--fc:${F ? F.couleur : '#d9604f'}">${qtIco(it)}<i class="qtf"></i></span><div class="qt-nx"><b>${esc(o.name)}</b><span>${esc(o.where)}</span>${o.done ? '' : qtCall(() => qmMeta('defi', o.z === 'far' ? 3 : o.z === 'reg' ? 2 : 1, [`${qtDaySt(o)} pierre${qtDaySt(o) > 1 ? 's' : ''} d’étoile`]), '')}</div><span class="qt-pay">${coins(o.pay)}</span>${act}</div>`;
   }).join('');
-  return `<section class="qt-today" id="qtToday"><h3 class="qt-h3">Objectif du jour <small>${left ? `${left} objet${left > 1 ? 's' : ''} recherché${left > 1 ? 's' : ''}, très bien payé${left > 1 ? 's' : ''}` : 'tout est rempli, bravo !'}</small></h3>${rows || '<p class="empty">Rien aujourd’hui.</p>'}</section>`;
+  return `<section class="qt-today" id="qtToday"><h3 class="qt-h3">🔎 Objectif du jour : trouver un objet <small>${left ? `${left} à rapporter` : 'tout est rempli, bravo !'}</small></h3>${rows || '<p class="empty">Rien aujourd’hui.</p>'}</section>`;
 }
 // anciens appels (bouton du butin…) : la page Quêtes
 function qtOpenList() { qtOpenPage(); }
 
 // ---------------- page Quêtes ----------------
+const qtRwTag = rw => (rw.k === 'cloth' ? 'Tenue exclusive' : rw.k === 'rec' ? 'Recette exclusive' : rw.k === 'egg' ? 'Familier' : rw.k === 'secret' ? 'Lieu secret' : rw.lbl || 'Objet rare');
 function qtStoryHTML(q, big) {
   const s = qtState(), rec = s.st[q.id], open = qtOpen(q), c = qtCli(q.who);
   if (!open) return `<div class="qt-story locked"><span class="qt-face qt-face0">?</span><div><b>${esc(q.title)}</b><small>Terminez une autre histoire pour la débloquer.</small></div></div>`;
   if (!big) {
     const st = rec ? (rec.done ? 'Terminée ✔' : `Étape ${rec.i + 1}/${q.steps.length}`) : `${q.steps.length} étapes`;
-    return `<div class="qt-story${rec && rec.done ? ' done' : ''}">${qtFace(q.who)}<div><b>${esc(q.title)}</b><small>${esc(c.name)} · ${st}</small><span class="qt-rw"><i>${qtRwIco(q.rw)}</i>${esc(qtRwTxt(q.rw))}</span></div>${rec && rec.done ? '' : `<button class="btn cream sm" data-qtfollow="${q.id}">Suivre</button>`}</div>`;
+    return `<div class="qt-story${rec && rec.done ? ' done' : ''}">${qtFace(q.who)}<div><b>${esc(q.title)}</b><small>${esc(c.name)} · ${st}</small>${rec && rec.done ? '' : qtCall(() => qmMeta('hist', QT_SDIF[q.id] || 2, [qtRwTag(q.rw)]), '')}<span class="qt-rw"><i>${qtRwIco(q.rw)}</i>${esc(qtRwTxt(q.rw))}</span></div>${rec && rec.done ? '' : `<button class="btn cream sm" data-qtfollow="${q.id}">Suivre</button>`}</div>`;
   }
   const steps = q.steps.map((st, i) => {
     const done = rec && (rec.done || i < rec.i), cur = rec && !rec.done && i === rec.i, pr = cur ? qtStepProg(st, rec) : null;
@@ -470,12 +473,12 @@ function qtStoryHTML(q, big) {
     }
     return `<li class="${done ? 'done' : cur ? 'cur' : ''}"><i class="qt-ck">${done ? '✔' : i + 1}</i><div><b>${esc(st.txt)}${pr && pr.n > 1 ? ` <small>${pr.cur}/${pr.n}</small>` : ''}</b>${cur || done ? `<span>${esc(st.story)}</span>` : ''}</div>${act}</li>`;
   }).join('');
-  return `<div class="qt-big"><div class="qt-bh">${qtFace(q.who)}<div><span class="bqc-kick">Quête suivie</span><h3>${esc(q.title)}</h3><small>${esc(c.name)} : ${esc(q.pitch)}</small></div></div>
+  return `<div class="qt-big"><div class="qt-bh">${qtFace(q.who)}<div><span class="bqc-kick">Histoire suivie</span><h3>${esc(q.title)}</h3>${qtCall(() => qmMeta('hist', QT_SDIF[q.id] || 2, [qtRwTag(q.rw)]), '')}<small>${esc(c.name)} : ${esc(q.pitch)}</small></div></div>
     <ol class="qt-steps">${steps}</ol><div class="qt-rwb"><span>${qtRwIco(q.rw)}</span><div><small>Récompense unique</small><b>${esc(qtRwTxt(q.rw))}</b></div></div></div>`;
 }
 function qtDefiHTML(d) {
   const n = qtDN(d), cur = Math.min(n, qtCall(d.cur, 0)), got = qtState().df[d.id];
-  return `<div class="qt-defi${got ? ' done' : ''}"><span class="qt-dt">${QT_TROPHY}</span><div><b>${esc(d.title)}</b><small>${esc(d.txt)}</small><span class="qt-bar"><i style="width:${(cur / n * 100).toFixed(0)}%"></i></span><span class="qt-rw"><i>${qtRwIco(d.rw)}</i>${esc(qtRwTxt(d.rw))}</span></div>${got ? '<span class="qt-ok">✔</span>' : cur >= n ? `<button class="btn green sm" data-qtdefi="${d.id}">Récupérer</button>` : `<span class="qt-cnt">${cur}/${n}</span>`}</div>`;
+  return `<div class="qt-defi${got ? ' done' : ''}"><span class="qt-dt">${QT_TROPHY}</span><div><b>${esc(d.title)}</b><small>${esc(d.txt)}</small>${got ? '' : qtCall(() => qmMeta('defi', 3, [`${d.rw.stones || 8} pierres d’étoile`]), '')}<span class="qt-bar"><i style="width:${(cur / n * 100).toFixed(0)}%"></i></span><span class="qt-rw"><i>${qtRwIco(d.rw)}</i>${esc(qtRwTxt(d.rw))}</span></div>${got ? '<span class="qt-ok">✔</span>' : cur >= n ? `<button class="btn green sm" data-qtdefi="${d.id}">Récupérer</button>` : `<span class="qt-cnt">${cur}/${n}</span>`}</div>`;
 }
 function qtPageHTML() {
   const s = qtState(), f = QT_BY[s.follow];
@@ -491,7 +494,7 @@ function qtOpenPage() { qtPageOn = true; try { const s = qtState(); s.seen = qtD
 function qtRefreshAll() {
   qtNeedC.t = 0;
   const m = $('modal');
-  if (m && !m.hidden) { if (m.querySelector('.qt-page h2') && qtPageOn && m.querySelector('.qt-stories')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtPageHTML()); mb.scrollTop = y; } }
+  if (m && !m.hidden) { if (m.querySelector('.qt-page h2') && qtPageOn) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtPageHTML()); mb.scrollTop = y; } }
   try { renderTripCard(); } catch (e) {}
   qtMapUpdate(); qtBtns();
   try { if (typeof poiStateCheck === 'function') poiStateCheck(); } catch (e) {}
@@ -582,7 +585,7 @@ try { GAME.addUses(it => qtCall(() => qtNeeds().filter(n => n.match && n.match(i
 if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
   const r = orig.apply(this, arguments);
   try {
-    const row = `<section class="msec"><header><h3>Quêtes</h3></header><div class="mrow"><span class="mri">${QT_SCROLL}</span><div><b>Objectif du jour, histoires et défis</b><span>${qtDoneN()}/${QT_STORIES.length} histoires · ${Object.keys(qtState().df).length}/${QT_DEFIS.length} défis</span></div><button class="btn cream sm" data-qtpage="1">Voir</button></div></section>`;
+    const row = `<section class="msec"><header><h3>Quêtes</h3></header><div class="mrow"><span class="mri">${QT_SCROLL}</span><div><b>Histoires, exploration, monde et défis</b><span>${qtDoneN()}/${QT_STORIES.length} histoires · ${Object.keys(qtState().df).length}/${QT_DEFIS.length} défis</span></div><button class="btn cream sm" data-qtpage="1">Voir</button></div></section>`;
     const first = box.querySelector('.msec'); if (first) first.insertAdjacentHTML('afterend', row); else box.insertAdjacentHTML('beforeend', row);
   } catch (e) { console.error('quêtes menu', e); }
   return r;

@@ -24421,7 +24421,7 @@ const QT_STORIES = [
       { t: 'item', ing: 'graine', n: 1, txt: 'Donner 1 graine', story: '« Une graine trouvée en chemin, pour la comparer. »' },
       { t: 'go', place: 'Chamonix', txt: 'Monter à Chamonix', story: '« La dernière page montre le Mont-Blanc. Allons-y ! »' },
       { t: 'item', ing: 'cristal', n: 1, txt: 'Donner 1 cristal', story: '« Grand-père gardait sa graine dans un cristal. Il m’en faut un ! »' }],
-    rw: { k: 'egg', sp: 'phoque', coins: 200 } },
+    rw: { k: 'cloth', def: ['Bonnet edelweiss de grand-père', 'v', 'tete', 4, 'bonnet', '#eef2f6'], coins: 200 } },
   { id: 'canuts', who: 'roussette', title: 'Le foulard des canuts', pitch: 'Roussette veut la plus belle tenue du bal, tissée comme autrefois à Lyon.',
     steps: [{ t: 'go', place: 'Lyon', txt: 'Aller à Lyon', story: '« Les canuts tissaient la soie sur la Croix-Rousse. Je veux voir ça ! »' },
       { t: 'item', ing: 'tissu', n: 2, txt: 'Donner 2 tissus', story: '« Du tissu, beaucoup de tissu ! »' },
@@ -24434,7 +24434,7 @@ const QT_STORIES = [
       { t: 'go', place: 'Brocéliande', txt: 'Entrer dans la forêt de Brocéliande', story: '« La forêt des fées ! Restez sur le sentier… »' },
       { t: 'chest', n: 1, txt: 'Ouvrir un coffre', story: '« La carte parle d’un coffre. N’importe lequel vous apprendra la serrure. »' },
       { t: 'item', ing: 'papier', n: 1, txt: 'Donner 1 papier ancien', story: '« Un papier ancien pour recopier le secret. »' }],
-    rw: { k: 'secret', near: [-2.17, 48.02], coins: 250 } },
+    rw: { k: 'cloth', def: ['Cape des fées de Brocéliande', 'v', 'dos', 4, 'cape', '#5a8f6a'], coins: 250 } },
   { id: 'capitaine', who: 'ondine', title: 'Cap sur la mer', pitch: 'Capitaine Ondine prépare un grand tour des côtes.',
     steps: [{ t: 'cat', cat: 'port', txt: 'Visiter un port', story: '« Tout bon voyage commence au port. »' },
       { t: 'item', ing: 'coquillage', n: 3, txt: 'Donner 3 coquillages', story: '« Des coquillages pour décorer ma cabine. »' },
@@ -24446,13 +24446,13 @@ const QT_STORIES = [
       { t: 'item', ing: 'lumiere', n: 1, txt: 'Donner 1 lumière', story: '« Une lanterne pour la fête de la lune. »' },
       { t: 'go', place: 'Tokyo', txt: 'Aller à Tokyo', story: '« Mon ami nous attend à Tokyo. »' },
       { t: 'tame', n: 1, txt: 'Accueillir un nouveau compagnon', story: '« Il dit qu’un petit compagnon vous attend… »' }],
-    rw: { k: 'egg', sp: 'tanuki', coins: 250 } },
+    rw: { k: 'cloth', def: ['Écharpe de la fête de la lune', 'v', 'cou', 4, 'echarpe', '#d94f6a'], coins: 250 } },
   { id: 'epices', who: 'gaston', title: 'Le marché aux épices', pitch: 'Gaston veut ouvrir un stand d’épices et d’agrumes.',
     steps: [{ t: 'cat', cat: 'marche', txt: 'Visiter un marché', story: '« Voyons d’abord ce qui se vend ici. »' },
       { t: 'go', place: 'Marrakech', txt: 'Aller à Marrakech', story: '« Les meilleures épices viennent des souks. »' },
       { t: 'item', ing: 'agrume', n: 2, txt: 'Donner 2 agrumes', story: '« Des agrumes pour la confiture. »' },
       { t: 'go', place: 'Merzouga', txt: 'Traverser le désert jusqu’à Merzouga', story: '« Et une nuit sous les étoiles du désert ! »' }],
-    rw: { k: 'egg', sp: 'fennec', coins: 250 } },
+    rw: { k: 'rec', coins: 250 } },
   { id: 'venise', who: 'roussette', title: 'La lettre de Venise', pitch: 'Roussette est invitée au grand bal masqué de Venise.',
     steps: [{ t: 'go', place: 'Venise', txt: 'Aller à Venise', story: '« Les gondoles, les masques… vite ! »' },
       { t: 'item', ing: 'verre', n: 2, txt: 'Donner 2 verres', story: '« Du verre de Murano pour mon masque. »' },
@@ -24537,14 +24537,15 @@ const QT_DEFIS = [
   { id: 'leg3', title: 'Trois continents légendaires', txt: 'Rapporter un objet légendaire de 3 continents différents', n: 3, cur: () => Object.keys(qtState().log.cont).length, rw: { k: 'egg', sp: 'lemur', coins: 1500 } },
   { id: 'reg5', title: 'Le tour express', txt: 'Visiter 5 régions différentes en 7 jours', n: 5, cur: qtWeekRegs, rw: { k: 'cloth', def: ['Cape du grand tour', 'v', 'dos', 4, 'cape', '#2f7f6c'], coins: 1200 } },
   { id: 'star3', title: 'Maître artisan', txt: 'Fabriquer un produit 3 étoiles de chaque recette de base de votre commerce', n: () => Math.max(1, qtShopRecs().length), cur: () => qtShopRecs().filter(R => qtState().log.m3[R.id]).length, rw: { k: 'rec', coins: 1500 } },
-  { id: 'relic', title: 'Relique complète', txt: 'Assembler les 3 fragments d’une relique à l’atelier', n: 1, cur: () => qtCall(() => Object.keys(famState().relics).length, 0), rw: { k: 'secret', coins: 1200 } },
+  { id: 'relic', title: 'Relique complète', txt: 'Assembler les 3 fragments d’une relique à l’atelier', n: 1, cur: () => qtCall(() => Object.keys(famState().relics).length, 0), rw: { k: 'item', lbl: 'Trésor', def: ['Reliquaire doré', 'd', 'statue', 4, null, '#e0b13a'], coins: 1200 } },
   { id: 'far3', title: 'Au bout du monde', txt: 'Faire 3 voyages à plus de 5 000 km de chez vous', n: 3, cur: () => qtState().log.far, rw: { k: 'item', lbl: 'Pierre précieuse', def: ['Diamant brut', 'm', 'gemme', 4, null, '#e8f4fa'], coins: 1500 } },
   { id: 'chest5', title: 'Chasseur de coffres', txt: 'Ouvrir 5 coffres avec la bonne clé', n: 5, cur: () => qtState().log.chests, rw: { k: 'egg', sp: 'quokka', also: ['Clé ancienne', 'm', 'cle', 3, null, '#7a6a5a'], coins: 1000 } },
   { id: 'sp6', title: 'Grande famille', txt: 'Avoir des compagnons de 6 espèces différentes', n: 6, cur: qtSpecies, rw: { k: 'cloth', def: ['Couronne de fleurs du refuge', 'v', 'tete', 4, 'fleurs', '#f08aa6'], coins: 1500 } },
   { id: 'nat12', title: 'Cabinet de curiosités', txt: 'Posséder 12 objets Nature différents (insectes, coquillages…)', n: 12, cur: qtNatureN, rw: { k: 'item', lbl: 'Décoration légendaire', def: ['Vitrine de curiosités', 'd', 'statue', 4, null, '#c9a97a'], coins: 1000 } },
 ];
-// v22 : pierres d'étoile (S.stones, futur tirage) : 5 à 10 à la fin d'une histoire (selon sa longueur), 8 à 10 par défi
-QT_STORIES.forEach(q => { if (q.rw && q.rw.stones == null) q.rw.stones = Math.max(5, Math.min(10, q.steps.length + 2)); });
+// v33 : chaque histoire donne une tenue ou une recette exclusive (plus de pierres d'étoile) ; les défis restent la source des pierres
+QT_STORIES.forEach(q => { if (q.rw) q.rw.stones = 0; });
+const QT_SDIF = { gouter: 1, canuts: 1, alpes: 2, broceliande: 2, capitaine: 2, venise: 2, japon: 3, epices: 3, nord: 3 };
 QT_DEFIS.forEach((d, i) => { if (d.rw && d.rw.stones == null) d.rw.stones = [10, 8, 9, 10, 9, 8, 9, 8][i] || 8; });
 const qtDN = d => (typeof d.n === 'function' ? d.n() : d.n);
 function qtClaimDefi(id) {
@@ -24558,7 +24559,7 @@ function qtClaimDefi(id) {
 // ---------------- objectif du jour ----------------
 function qtDay() {
   const s = qtState(), dk = dayKey(), h = qtHome();
-  if (s.day && s.day.v === 2 && s.day.d === dk && s.day.h === S.home && !s.day.list.some(o => o.step && o.step.fn)) return s.day;
+  if (s.day && s.day.v === 3 && s.day.d === dk && s.day.h === S.home && !s.day.list.some(o => o.step && o.step.fn)) return s.day;
   const r = qtRnd('qtday' + dk + S.home), pick = a => a[Math.floor(r() * a.length)], list = [];
   try { // 1. proche : un objet d'un type de lieu du quotidien
     const cats = (typeof BQ_NEAR_CATS !== 'undefined' ? BQ_NEAR_CATS : ['marche', 'parc', 'boulangerie']).filter(c => POI_CATS[c] && LOOT[c] && c !== 'rue' && c !== 'route');
@@ -24574,11 +24575,11 @@ function qtDay() {
       list.push({ z: 'reg', name: x.name, rid: x.id, step: st, where: `Votre région (${R0.short}) : ${qtCall(() => rgResWhere(x), 'marchés et fermes')}`, pay: 220 + (x.rar || 0) * 40 }); }
   } catch (e) {}
   try { // 3. lointain : une spécialité d'une région à plus de 800 km
-    const far = REGIONS.filter(R => R.id !== (R0 && R0.id) && R.anchor && R.res && R.res.length && kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] }) > 800);
+    const far = REGIONS.filter(R => R.id !== (R0 && R0.id) && R.anchor && R.res && R.res.length && kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] }) > 800 && kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] }) < 2500);
     const R = pick(far.length ? far : REGIONS.filter(R => R.res && R.res.length)), x = pick(R.res.filter(x => (x.rar || 0) >= 1 && (x.rar || 0) <= 3 && x.cat !== 'n')) || pick(R.res.filter(x => (x.rar || 0) >= 1)) || R.res[0];
     list.push({ z: 'far', name: x.name, rid: x.id, step: { region: R.id }, where: `${R.name} (${Math.round(kmBetween(h, { lon: R.anchor[0], lat: R.anchor[1] })).toLocaleString('fr-FR')} km)`, pay: 400, egg: 1 });
   } catch (e) {}
-  s.day = { v: 2, d: dk, h: S.home, list }; save();
+  s.day = { v: 3, d: dk, h: S.home, list }; save();
   return s.day;
 }
 const QT_Z = { near: 'Tout près', reg: 'Dans la région', far: 'Grand voyage' };
@@ -24587,11 +24588,12 @@ const qtDayMatch = o => it => !!(it && !it.mk && (o.rid ? it.rid === o.rid || it
 function qtDayGive(i) {
   const D = qtDay(), o = D.list[i]; if (!o || o.done) return;
   const worn = qtWorn(), it = S.inv.find(x => qtDayMatch(o)(x) && !worn.has(x.id)); if (!it) { toast('Vous ne l’avez pas encore.'); return; }
-  S.inv.splice(S.inv.indexOf(it), 1); o.done = 1; gainCoins(o.pay);
-  if (o.egg) { try { addEgg({ sp: null, rarity: 2, from: { how: 'quete', place: 'Objectif du jour' }, hatchMs: 3 * 60e3 }); } catch (e) {} }
-  toast(`Objectif du jour rempli : +${o.pay} pièces${o.egg ? ' et un œuf !' : ''}`);
+  S.inv.splice(S.inv.indexOf(it), 1); o.done = 1; gainCoins(o.pay); const st = qtDaySt(o); qtCall(() => gainStones(st), 0);
+  toast(`Objectif du jour rempli : +${o.pay} pièces et ${qtCall(() => stonesWord(st), st + ' pierres')} !`);
   save(); qtRefreshAll();
 }
+// v33 : l'objectif du jour (onglet Défis) donne des pierres d'étoile au lieu d'un œuf
+const qtDaySt = o => (o.z === 'far' ? 3 : o.z === 'reg' ? 2 : 1);
 const qtDot = () => { const D = qtDay(); return qtState().seen !== D.d && D.list.some(o => !o.done); };
 
 // ---------------- tous les besoins du joueur ----------------
@@ -24610,7 +24612,7 @@ function qtNeeds(force) {
     }
   } catch (e) {}
   // objectif du jour
-  try { qtDay().list.forEach((o, i) => { if (o.done) return; const m = qtDayMatch(o), h = qtCount(m); if (h >= 1) return; add({ id: 'day:' + i, src: 'jour', it: qtDayIt(o), name: o.name, why: `Objectif du jour (${QT_Z[o.z].toLowerCase()})`, gain: `+${o.pay} pièces${o.egg ? ' + œuf' : ''}`, step: o.step, have: 0, n: 1, match: m }); }); } catch (e) {}
+  try { qtDay().list.forEach((o, i) => { if (o.done) return; const m = qtDayMatch(o), h = qtCount(m); if (h >= 1) return; add({ id: 'day:' + i, src: 'jour', it: qtDayIt(o), name: o.name, why: `Objectif du jour (${QT_Z[o.z].toLowerCase()})`, gain: `+${o.pay} pièces + ${qtDaySt(o)} pierres`, step: o.step, have: 0, n: 1, match: m }); }); } catch (e) {}
   // rêves de l'équipe
   try {
     for (const k of teamIds()) {
@@ -24760,20 +24762,21 @@ function qtDayHTML() {
   const rows = D.list.map((o, i) => {
     const it = qtDayIt(o), h = qtCount(qtDayMatch(o)), F = qtFam(it);
     const act = o.done ? '<span class="qt-ok">✔</span>' : h ? `<button class="btn green sm" data-qtday="${i}">Livrer</button>` : `<button class="btn gold sm" data-qtneed="day:${i}">Y aller</button>`;
-    return `<div class="qt-drow${o.done ? ' done' : ''}"><span class="qt-di" style="--fc:${F ? F.couleur : '#d9604f'}">${qtIco(it)}<i class="qtf"></i></span><div class="qt-nx"><b>${esc(o.name)}</b><span><i class="qt-z z-${o.z}">${QT_Z[o.z]}</i> ${esc(o.where)}</span></div><span class="qt-pay">${coins(o.pay)}${o.egg ? '<small>+ œuf</small>' : ''}</span>${act}</div>`;
+    return `<div class="qt-drow${o.done ? ' done' : ''}"><span class="qt-di" style="--fc:${F ? F.couleur : '#d9604f'}">${qtIco(it)}<i class="qtf"></i></span><div class="qt-nx"><b>${esc(o.name)}</b><span>${esc(o.where)}</span>${o.done ? '' : qtCall(() => qmMeta('defi', o.z === 'far' ? 3 : o.z === 'reg' ? 2 : 1, [`${qtDaySt(o)} pierre${qtDaySt(o) > 1 ? 's' : ''} d’étoile`]), '')}</div><span class="qt-pay">${coins(o.pay)}</span>${act}</div>`;
   }).join('');
-  return `<section class="qt-today" id="qtToday"><h3 class="qt-h3">Objectif du jour <small>${left ? `${left} objet${left > 1 ? 's' : ''} recherché${left > 1 ? 's' : ''}, très bien payé${left > 1 ? 's' : ''}` : 'tout est rempli, bravo !'}</small></h3>${rows || '<p class="empty">Rien aujourd’hui.</p>'}</section>`;
+  return `<section class="qt-today" id="qtToday"><h3 class="qt-h3">🔎 Objectif du jour : trouver un objet <small>${left ? `${left} à rapporter` : 'tout est rempli, bravo !'}</small></h3>${rows || '<p class="empty">Rien aujourd’hui.</p>'}</section>`;
 }
 // anciens appels (bouton du butin…) : la page Quêtes
 function qtOpenList() { qtOpenPage(); }
 
 // ---------------- page Quêtes ----------------
+const qtRwTag = rw => (rw.k === 'cloth' ? 'Tenue exclusive' : rw.k === 'rec' ? 'Recette exclusive' : rw.k === 'egg' ? 'Familier' : rw.k === 'secret' ? 'Lieu secret' : rw.lbl || 'Objet rare');
 function qtStoryHTML(q, big) {
   const s = qtState(), rec = s.st[q.id], open = qtOpen(q), c = qtCli(q.who);
   if (!open) return `<div class="qt-story locked"><span class="qt-face qt-face0">?</span><div><b>${esc(q.title)}</b><small>Terminez une autre histoire pour la débloquer.</small></div></div>`;
   if (!big) {
     const st = rec ? (rec.done ? 'Terminée ✔' : `Étape ${rec.i + 1}/${q.steps.length}`) : `${q.steps.length} étapes`;
-    return `<div class="qt-story${rec && rec.done ? ' done' : ''}">${qtFace(q.who)}<div><b>${esc(q.title)}</b><small>${esc(c.name)} · ${st}</small><span class="qt-rw"><i>${qtRwIco(q.rw)}</i>${esc(qtRwTxt(q.rw))}</span></div>${rec && rec.done ? '' : `<button class="btn cream sm" data-qtfollow="${q.id}">Suivre</button>`}</div>`;
+    return `<div class="qt-story${rec && rec.done ? ' done' : ''}">${qtFace(q.who)}<div><b>${esc(q.title)}</b><small>${esc(c.name)} · ${st}</small>${rec && rec.done ? '' : qtCall(() => qmMeta('hist', QT_SDIF[q.id] || 2, [qtRwTag(q.rw)]), '')}<span class="qt-rw"><i>${qtRwIco(q.rw)}</i>${esc(qtRwTxt(q.rw))}</span></div>${rec && rec.done ? '' : `<button class="btn cream sm" data-qtfollow="${q.id}">Suivre</button>`}</div>`;
   }
   const steps = q.steps.map((st, i) => {
     const done = rec && (rec.done || i < rec.i), cur = rec && !rec.done && i === rec.i, pr = cur ? qtStepProg(st, rec) : null;
@@ -24787,12 +24790,12 @@ function qtStoryHTML(q, big) {
     }
     return `<li class="${done ? 'done' : cur ? 'cur' : ''}"><i class="qt-ck">${done ? '✔' : i + 1}</i><div><b>${esc(st.txt)}${pr && pr.n > 1 ? ` <small>${pr.cur}/${pr.n}</small>` : ''}</b>${cur || done ? `<span>${esc(st.story)}</span>` : ''}</div>${act}</li>`;
   }).join('');
-  return `<div class="qt-big"><div class="qt-bh">${qtFace(q.who)}<div><span class="bqc-kick">Quête suivie</span><h3>${esc(q.title)}</h3><small>${esc(c.name)} : ${esc(q.pitch)}</small></div></div>
+  return `<div class="qt-big"><div class="qt-bh">${qtFace(q.who)}<div><span class="bqc-kick">Histoire suivie</span><h3>${esc(q.title)}</h3>${qtCall(() => qmMeta('hist', QT_SDIF[q.id] || 2, [qtRwTag(q.rw)]), '')}<small>${esc(c.name)} : ${esc(q.pitch)}</small></div></div>
     <ol class="qt-steps">${steps}</ol><div class="qt-rwb"><span>${qtRwIco(q.rw)}</span><div><small>Récompense unique</small><b>${esc(qtRwTxt(q.rw))}</b></div></div></div>`;
 }
 function qtDefiHTML(d) {
   const n = qtDN(d), cur = Math.min(n, qtCall(d.cur, 0)), got = qtState().df[d.id];
-  return `<div class="qt-defi${got ? ' done' : ''}"><span class="qt-dt">${QT_TROPHY}</span><div><b>${esc(d.title)}</b><small>${esc(d.txt)}</small><span class="qt-bar"><i style="width:${(cur / n * 100).toFixed(0)}%"></i></span><span class="qt-rw"><i>${qtRwIco(d.rw)}</i>${esc(qtRwTxt(d.rw))}</span></div>${got ? '<span class="qt-ok">✔</span>' : cur >= n ? `<button class="btn green sm" data-qtdefi="${d.id}">Récupérer</button>` : `<span class="qt-cnt">${cur}/${n}</span>`}</div>`;
+  return `<div class="qt-defi${got ? ' done' : ''}"><span class="qt-dt">${QT_TROPHY}</span><div><b>${esc(d.title)}</b><small>${esc(d.txt)}</small>${got ? '' : qtCall(() => qmMeta('defi', 3, [`${d.rw.stones || 8} pierres d’étoile`]), '')}<span class="qt-bar"><i style="width:${(cur / n * 100).toFixed(0)}%"></i></span><span class="qt-rw"><i>${qtRwIco(d.rw)}</i>${esc(qtRwTxt(d.rw))}</span></div>${got ? '<span class="qt-ok">✔</span>' : cur >= n ? `<button class="btn green sm" data-qtdefi="${d.id}">Récupérer</button>` : `<span class="qt-cnt">${cur}/${n}</span>`}</div>`;
 }
 function qtPageHTML() {
   const s = qtState(), f = QT_BY[s.follow];
@@ -24808,7 +24811,7 @@ function qtOpenPage() { qtPageOn = true; try { const s = qtState(); s.seen = qtD
 function qtRefreshAll() {
   qtNeedC.t = 0;
   const m = $('modal');
-  if (m && !m.hidden) { if (m.querySelector('.qt-page h2') && qtPageOn && m.querySelector('.qt-stories')) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtPageHTML()); mb.scrollTop = y; } }
+  if (m && !m.hidden) { if (m.querySelector('.qt-page h2') && qtPageOn) { const mb = m.querySelector('.mbox'), y = mb.scrollTop; showModal(qtPageHTML()); mb.scrollTop = y; } }
   try { renderTripCard(); } catch (e) {}
   qtMapUpdate(); qtBtns();
   try { if (typeof poiStateCheck === 'function') poiStateCheck(); } catch (e) {}
@@ -24899,7 +24902,7 @@ try { GAME.addUses(it => qtCall(() => qtNeeds().filter(n => n.match && n.match(i
 if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
   const r = orig.apply(this, arguments);
   try {
-    const row = `<section class="msec"><header><h3>Quêtes</h3></header><div class="mrow"><span class="mri">${QT_SCROLL}</span><div><b>Objectif du jour, histoires et défis</b><span>${qtDoneN()}/${QT_STORIES.length} histoires · ${Object.keys(qtState().df).length}/${QT_DEFIS.length} défis</span></div><button class="btn cream sm" data-qtpage="1">Voir</button></div></section>`;
+    const row = `<section class="msec"><header><h3>Quêtes</h3></header><div class="mrow"><span class="mri">${QT_SCROLL}</span><div><b>Histoires, exploration, monde et défis</b><span>${qtDoneN()}/${QT_STORIES.length} histoires · ${Object.keys(qtState().df).length}/${QT_DEFIS.length} défis</span></div><button class="btn cream sm" data-qtpage="1">Voir</button></div></section>`;
     const first = box.querySelector('.msec'); if (first) first.insertAdjacentHTML('afterend', row); else box.insertAdjacentHTML('beforeend', row);
   } catch (e) { console.error('quêtes menu', e); }
   return r;
@@ -25716,7 +25719,7 @@ window.__fw = { state: fwState, work: fwWork, catchUp: fwCatchUp, who: fwWho, li
 // 2. MAÎTRISE DES TERRAINS : 6 terrains, niveaux 1 à 10, de l'XP à chaque voyage. Chaque niveau : voyage un peu plus court,
 //    butin un peu meilleur, moins de risques ; certains niveaux sont demandés par les lieux verrouillés.
 // 3. LIEUX VERROUILLÉS : 18 lieux réels, épingle à cadenas visible quand on zoome sur la région (limite d'épingles partagée
-//    avec 38_quetes.js). Au toucher : conditions cochées ou non, récompense unique (objet, tenue, titre, pierres d'étoile).
+//    avec 38_quetes.js). Au toucher : conditions cochées ou non, récompense unique (objet légendaire, titre, pièces).
 // 4. EXPÉDITIONS À RISQUES : lieux verrouillés, voyages lointains ou en terrain difficile. 2 ou 3 choix risqués (scènes de
 //    29_aventure.js) ; sans réponse, le choix prudent est pris. Conséquences : butin perdu, demi-tour, blessure (repos obligatoire
 //    au foyer, poste Repos), raccourci secret, objet bonus. Résultat dans la fenêtre du butin.
@@ -25795,6 +25798,8 @@ const XP_PLACES = [
   { id: 'galapagos', name: 'Îles Galápagos', lon: -90.5, lat: -0.7, terr: 'mer', ctx: 'wild', tags: ['mer', 'ile'], need: [['g', 'jumelles', 2], ['m', 'mer', 4]], item: R4('Chemise à fleurs des Galápagos', 'v', 'haut', 'tshirt', '#7fc4a0'), title: 'Naturaliste des Galápagos', stones: 10 },
   { id: 'serengeti', name: 'Plaines du Serengeti', lon: 34.83, lat: -2.33, terr: 'desert', ctx: 'wild', tags: ['desert', 'campagne'], need: [['g', 'jumelles', 1], ['g', 'gourde', 1], ['m', 'desert', 3]], item: R4('Statue du lion du Serengeti', 'd', 'statue', null, '#e9b44a'), title: 'Ami des lions', stones: 8 },
 ];
+// v33 : les pierres d'étoile ne viennent plus que de l'onglet Défis ; un lieu verrouillé donne son objet légendaire, un titre et des pièces
+XP_PLACES.forEach(p => { p.coins = 150 + Math.round((p.stones || 8) * 40); p.stones = 0; });
 const XP_P = {}; XP_PLACES.forEach(p => { XP_P[p.id] = p; });
 
 // ---------------- état ----------------
@@ -26031,8 +26036,7 @@ function xpOnReturn(k, t) {
       res.first = 1; X.won[P.id] = { k, at: Date.now() };
       const it = makeItem(P.item, 0, `Récompense : ${P.name}`, P.tags, { fixed: P.item[3] }); it.xpr = 1; it.special = true; t.bag.push(it); res.item = it.name;
       (X.titles[k] = Array.isArray(X.titles[k]) ? X.titles[k] : []).push(P.title); res.title = P.title;
-      if (typeof gainStones === 'function') gainStones(P.stones); else S.stones = (S.stones || 0) + P.stones;
-      res.stones = P.stones;
+      t.coins = (t.coins || 0) + (P.coins || 0); res.coins = P.coins || 0;
     }
   }
   if (t.xpHurt) {
@@ -26050,7 +26054,7 @@ if (typeof collect === 'function') collect = (orig => function () {
 })(collect);
 function xpHaulHTML(R) {
   const n = xpName(R.k), P = R.P ? XP_P[R.P] : null, rows = [];
-  if (R.win && P) rows.push(`<p class="xph-big">${xpGly('etoile', '#e0a52a', 'm')}<span><b>Expédition réussie : ${esc(P.name)} !</b>${R.first ? `<small>Titre « ${esc(R.title)} » · ${esc(R.item)} · +${R.stones} pierres d’étoile</small>` : '<small>Déjà conquis : la récompense unique est déjà à vous.</small>'}</span></p>`);
+  if (R.win && P) rows.push(`<p class="xph-big">${xpGly('etoile', '#e0a52a', 'm')}<span><b>Expédition réussie : ${esc(P.name)} !</b>${R.first ? `<small>Titre « ${esc(R.title)} » · ${esc(R.item)} · +${R.coins || 0} pièces</small>` : '<small>Déjà conquis : la récompense unique est déjà à vous.</small>'}</span></p>`);
   else if (R.fail) rows.push(`<p class="xph-big fail">${xpLock('m')}<span><b>Demi-tour${P ? ` avant ${esc(P.name)}` : ''} : l’expédition a échoué.</b><small>Rien de grave ! Mieux équipé${xpE(R.k)}, ${esc(n)} pourra réessayer quand vous voulez.</small></span></p>`);
   if (R.lost) rows.push(`<p>${xpGly('lock', '#c9604f', 's')}${R.lost} objet${R.lost > 1 ? 's' : ''} perdu${R.lost > 1 ? 's' : ''} en route.</p>`);
   if (R.hurt) rows.push(`<p class="xph-hurt"><img src="${portraitURI(R.k, 'dodo')}" alt="">${esc(n)} s’est fait un petit bobo : repos au foyer pendant ${xpMin(R.hurt)}, avec un bon câlin.</p>`);
@@ -26076,7 +26080,7 @@ function xpCondsHTML(P, k) {
 }
 function xpRewardHTML(P) {
   const it = { name: P.item[0], cat: P.item[1], sub: P.item[2], rarity: 4, look: P.item[4], color: P.item[5] }, won = xpState().won[P.id];
-  return `<div class="xp-rw${won ? ' got' : ''}"><span class="xp-ri">${xpCall(() => itemIcon(it), '')}</span><span><b>${won ? 'Déjà conquis' : 'Récompense unique'}</b><small>${esc(it.name)} · titre « ${esc(P.title)} » · ${P.stones} pierres d’étoile</small></span></div>`;
+  return `<div class="xp-rw${won ? ' got' : ''}"><span class="xp-ri">${xpCall(() => itemIcon(it), '')}</span><span><b>${won ? 'Déjà conquis' : 'Récompense unique'}</b><small>${esc(it.name)} · titre « ${esc(P.title)} » · ${P.coins || 0} pièces</small></span></div>`;
 }
 function xpGoHTML(d, k) {
   const left = xpHurtLeft(k);
@@ -26348,7 +26352,7 @@ const CF_PERKS = {
   roussette: [[1, '⭐', 'Paie +15 % les produits 3★', { k: 'pay3', p: 0.15 }],
     [3, '⭐', 'Paie +30 % les produits 3★', { k: 'pay3', p: 0.3 }]],
   pingo: [[1, '💎', '1 pierre d’étoile chaque semaine', { k: 'week', what: 'stones', n: 1 }],
-    [3, '💎', '3 pierres d’étoile chaque semaine', { k: 'week', what: 'stones', n: 3 }]],
+    [3, '💎', '2 pierres d’étoile chaque semaine', { k: 'week', what: 'stones', n: 2 }]],
   gaston: [[1, '🧰', 'Vous offre une gourde d’expédition (matériel de base)', { k: 'once', what: 'gear', g: 'gourde' }],
     [3, '🧰', '1 matériel d’expédition de base chaque semaine', { k: 'week', what: 'gear', n: 1 }]],
   ondine: [[1, '🐚', '1 coquillage chaque jour', { k: 'day', what: 'ing', ing: 'coquillage', n: 1 }],
@@ -26462,7 +26466,7 @@ function cfOnSale(b, it) {
   if (g >= 1) {
     let ch = (g >= 3 ? 0.2 : 0.12) * (T && T.id === 'librairie' ? 2 : 1); const ge = cfActive(c.id).find(e => e.k === 'gift'); if (ge) ch = Math.max(ch, ge.p);
     if (Math.random() < ch) {
-      if (!ge && Math.random() < 0.5) { const n = gainStones(g >= 3 ? 2 : 1); if (n) gift = stonesWord(n); }
+      if (!ge && Math.random() < 0.5) { const n = gainStones(1); /* v33 : modeste */ if (n) gift = stonesWord(n); }
       else { const r = cmRareItem(g >= 3 || ge ? 'n' : 'f'); if (r) gift = `« ${cfMk(r.def, `Cadeau de ${c.name}`).name} »`; }
     }
   }
@@ -26669,7 +26673,7 @@ window.__cf = { PERKS: CF_PERKS, active: cfActive, dur: R => cmDur(typeof R === 
 //    Le joueur suit une énigme, trouve LUI-MÊME l'endroit sur la carte et y envoie un familier (case « Chercher ici » au départ).
 //    Verdict à l'arrivée : à moins de X km (30, 20 ou 15 km selon le niveau). Raté : « Ce n'est pas ici… le vent souffle vers l'ouest ».
 //    3 indices : un texte, puis une zone large, puis une zone plus petite (cercle décalé, jamais centré sur la réponse). L'indice 2
-//    demande 1 essai, l'indice 3 en demande 2. Chaque indice réduit un peu les pierres et les pièces. Récompense UNIQUE à chaque fois.
+//    demande 1 essai, l'indice 3 en demande 2. Chaque indice réduit un peu les pièces. Récompense UNIQUE à chaque fois (v33 : plus de pierres d'étoile).
 // 2. GARDIENS : 10 créatures rares (dessin des clients + cape dorée et aura). Découverts par une rumeur (voyage proche) ou une énigme.
 //    3 à 5 visites, chacune avec SON offrande (et parfois une condition : nuit, matériel, niveau de terrain). Puis : familier rare
 //    (une espèce cousine qu'il vous confie) ou bénédiction permanente, au choix.
@@ -26686,7 +26690,8 @@ const MY_TIER = ['', 'facile', 'moyen', 'difficile'];
 const MY_TOL = [0, 30, 20, 15];           // km : distance maximale pour réussir
 const MY_RBIG = [0, 150, 350, 800];       // km : rayon de la zone large (indice 2)
 const MY_RSMALL = [0, 40, 90, 200];       // km : rayon de la petite zone (indice 3)
-const MY_STONES = [0, 3, 6, 10], MY_COINS = [0, 80, 200, 450];
+// v33 : plus de pierres d'étoile ici (réservées à l'onglet Défis) ; pièces et XP du familier plus généreuses en Exploration
+const MY_STONES = [0, 0, 0, 0], MY_COINS = [0, 150, 350, 700], MY_XPB = [0, 30, 50, 80];
 const MY_HOME_KM = 30;
 const MR4 = (n, cat, sub, look, col) => [n, cat, sub, 4, look, col];
 const MY_RIDDLES = [
@@ -26780,7 +26785,7 @@ const MY_MAPS = [
   { id: 'dragon', nm: 'Carte du dragon de jade', zone: [108, 28, 3200], zn: 'l’Asie', locks: ['everest'],
     sec: { name: 'Grotte du dragon de jade (baie d’Ha Long)', lon: 107.18, lat: 20.91, tags: ['mer', 'ile'] }, tr: MR4('Dragon de jade', 'd', 'statue', null, '#3fae7a'), ti: 'Ami du dragon de jade', stones: 40, coins: 3000 },
 ];
-const MY_M = {}; MY_MAPS.forEach(M => { M.rid = MY_RIDDLES.filter(R => R.rw.pc === M.id).map(R => R.id); MY_M[M.id] = M; });
+const MY_M = {}; MY_MAPS.forEach(M => { M.coins += M.stones * 40; M.stones = 0; M.rid = MY_RIDDLES.filter(R => R.rw.pc === M.id).map(R => R.id); MY_M[M.id] = M; });
 
 // ---------------- état et outils ----------------
 function myState() {
@@ -26831,15 +26836,16 @@ function myCheck(R, d) {
   const heat = km < tol * 4 ? 'Vous brûlez !' : km < 300 ? 'Vous chauffez…' : km < 1500 ? 'C’est encore loin.' : 'C’est très, très loin d’ici.';
   return { ok: false, km, txt: `Ce n’est pas ici… le vent souffle vers ${myDir(d, R)}. ${heat}` };
 }
-// récompense (les indices réduisent les pierres et les pièces, jamais l'objet unique)
-function myRwVals(R) { const h = myRec(R.id).h || 0, b = MY_STONES[R.tier]; return { stones: Math.max(1, b - h * Math.ceil(b / 4)), coins: Math.round(MY_COINS[R.tier] * (1 - 0.2 * h)), h }; }
+// récompense (les indices réduisent les pièces, jamais l'objet unique)
+const myRwTags = R => [R.rw.it ? 'Trésor unique' : R.rw.pc ? 'Morceau de carte' : 'Secret de gardien', 'Titre'];
+function myRwVals(R) { const h = myRec(R.id).h || 0; return { stones: 0, coins: Math.round(MY_COINS[R.tier] * (1 - 0.2 * h)), xp: MY_XPB[R.tier], h }; }
 function myRwTxt(R) {
   const v = myRwVals(R), a = [];
   if (R.rw.it) a.push(R.rw.it[0]);
   if (R.rw.pc) a.push(`un morceau de la ${MY_M[R.rw.pc].nm.toLowerCase()}`);
   if (R.rw.gd) a.push('le secret d’un gardien légendaire');
   a.push(`le titre « ${R.rw.ti} »`);
-  return `${a.join(' · ')} · ${v.stones} pierre${v.stones > 1 ? 's' : ''} d’étoile · ${v.coins} pièces`;
+  return `${a.join(' · ')} · ${v.coins} pièces · +${v.xp} XP`;
 }
 
 // ---------------- dessins ----------------
@@ -27039,7 +27045,7 @@ function myGoHTML(d, k) {
     const o = myOffer(G), c = myCond(o.c, k), n = myHave(o), g = myGRec(G.id);
     h += `<div class="mygo g">${myGuardImg(G, true, 's')}<span class="mygo-x"><b>${esc(G.nm)} · confiance ${g.t || 0}/${G.offers.length}</b><small>Offrande : ${esc(o.t)} · vous en avez <b class="${n ? 'ok' : 'no'}">${n}</b>${c.txt ? ` · ${esc(c.txt)} <b class="${c.ok ? 'ok' : 'no'}">${c.ok ? '✓' : '✗'}</b>` : ''}</small></span></div>`;
   }
-  if (d.mysx) { const M = MY_M[d.mysx], won = myState().x[M.id]; h += `<div class="mygo sec"><span class="mygo-i">${MY_XMARK}</span><span class="mygo-x"><b>Lieu secret : expédition finale</b><small>${won ? 'Trésor déjà trouvé.' : `Trésor unique : ${esc(M.tr[0])} · titre « ${esc(M.ti)} » · ${M.stones} pierres d’étoile · ${M.coins} pièces`}</small></span></div>`; }
+  if (d.mysx) { const M = MY_M[d.mysx], won = myState().x[M.id]; h += `<div class="mygo sec"><span class="mygo-i">${MY_XMARK}</span><span class="mygo-x"><b>Lieu secret : expédition finale</b><small>${won ? 'Trésor déjà trouvé.' : `Trésor unique : ${esc(M.tr[0])} · titre « ${esc(M.ti)} » · ${M.coins} pièces`}</small></span></div>`; }
   return h;
 }
 if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
@@ -27072,7 +27078,7 @@ function myOnArrive(t) {
       if (R.rw.pc) { const i = myAddPiece(R.rw.pc); if (i >= 0) got.push(`morceau ${i + 1}/4 de la ${MY_M[R.rw.pc].nm.toLowerCase()}`); }
       if (R.rw.gd && myDiscover(R.rw.gd, 'énigme')) got.push(`le secret de ${MY_G[R.rw.gd].nm.toLowerCase()}`);
       const X = myCall(() => xpState(), null); if (X) (X.titles[k] = Array.isArray(X.titles[k]) ? X.titles[k] : []).push(R.rw.ti);
-      myCall(() => gainStones(v.stones), 0); t.coins = (t.coins || 0) + v.coins;
+      t.coins = (t.coins || 0) + v.coins; myCall(() => xpGain(k, t.xpTerr || xpTerrOf(d), v.xp), 0);
       myJ(t, `Trouvé ! C’est bien ici : ${R.name}. Sous une pierre plate, un petit coffret attendait ${n}.`, [['rare', 'énigme résolue'], ['place', R.rw.ti]]);
       myLog(t, { k: 'ok', id: R.id, got, stones: v.stones, coins: v.coins, h: v.h });
     } else {
@@ -27140,7 +27146,7 @@ if (typeof collect === 'function') collect = (orig => function () {
           X.x[M.id] = { k, at: Date.now() };
           const it = makeItem(M.tr, 0, `Trésor : ${M.sec.name}`, M.sec.tags, { fixed: 4 }); it.special = true; it.mys = 1; t.bag.push(it);
           const XS = myCall(() => xpState(), null); if (XS) (XS.titles[k] = Array.isArray(XS.titles[k]) ? XS.titles[k] : []).push(M.ti);
-          myCall(() => gainStones(M.stones), 0); t.coins = (t.coins || 0) + M.coins;
+          t.coins = (t.coins || 0) + M.coins; myCall(() => xpGain(k, t.xpTerr || xpTerrOf(t.dest), 100), 0);
           log.push({ k: 'secret', m: M.id, it: it.name });
         } else if (t.xpFail) log.push({ k: 'secretko', m: M.id });
       }
@@ -27154,7 +27160,7 @@ if (typeof collect === 'function') collect = (orig => function () {
 function myHaulHTML(H) {
   const n = myNm(H.k), rows = [];
   for (const L of H.log) {
-    if (L.k === 'ok') { const R = MY_R[L.id]; rows.push(`<div class="myh big ok"><span class="myh-i">${MY_SCROLL}</span><span><b>J’ai trouvé ! Énigme résolue : ${esc(R.name)}</b><small>« ${esc(R.q)} »</small><small class="myh-rw">${L.got.map(esc).join(' · ')}${L.got.length ? ' · ' : ''}titre « ${esc(R.rw.ti)} » · +${L.stones} pierre${L.stones > 1 ? 's' : ''} d’étoile · +${L.coins} pièces${L.h ? ` <em>(${L.h} indice${L.h > 1 ? 's' : ''})</em>` : ' <em>sans indice, bravo !</em>'}</small></span></div>`); }
+    if (L.k === 'ok') { const R = MY_R[L.id]; rows.push(`<div class="myh big ok"><span class="myh-i">${MY_SCROLL}</span><span><b>J’ai trouvé ! Énigme résolue : ${esc(R.name)}</b><small>« ${esc(R.q)} »</small><small class="myh-rw">${L.got.map(esc).join(' · ')}${L.got.length ? ' · ' : ''}titre « ${esc(R.rw.ti)} » · +${L.coins} pièces${L.h ? ` <em>(${L.h} indice${L.h > 1 ? 's' : ''})</em>` : ' <em>sans indice, bravo !</em>'}</small></span></div>`); }
     else if (L.k === 'ko') rows.push(`<div class="myh ko"><span class="myh-i">${MY_SCROLL}</span><span><b>${esc(L.txt)}</b><small>Aucune pénalité : réessayez quand vous voulez. Essai n° ${L.tries}.${myHintOk(MY_R[L.id], (myRec(L.id).h || 0) + 1) ? ' Un nouvel indice est disponible dans Quêtes.' : ''}</small></span></div>`);
     else if (L.k === 'noarr') rows.push(`<div class="myh ko"><span class="myh-i">${MY_SCROLL}</span><span><b>${esc(n)} n’a pas pu chercher la réponse de l’énigme.</b><small>Le voyage s’est arrêté avant l’arrivée. Retentez votre chance !</small></span></div>`);
     else if (L.k === 'piece') { const M = MY_M[L.m]; rows.push(`<div class="myh piece"><span class="myh-m">${myMapSVG(M)}</span><span><b>Morceau de carte : ${esc(M.nm)} (${myPieces(M.id).filter(Boolean).length}/4)</b><small>${L.how === 'lieu verrouillé' ? 'Caché au sommet du lieu conquis !' : L.how === 'voyage' ? `Trouvé en voyage (${esc(M.zn)}).` : ''}${myComplete(M.id) ? ` Carte complète : le lieu secret « ${esc(M.sec.name)} » est sur la carte du monde !` : ''}</small></span></div>`); }
@@ -27162,7 +27168,7 @@ function myHaulHTML(H) {
     else if (L.k === 'gvisit') { const G = MY_G[L.g]; rows.push(`<div class="myh g">${myGuardImg(G, true, 's')}<span><b>${esc(G.nm)} : confiance ${L.t}/${G.offers.length}</b><small>Il a accepté ${esc(L.of)} (${esc(L.it)}).${L.full ? ' Il vous fait entièrement confiance : choisissez sa récompense dans Quêtes.' : ` Prochaine offrande : ${esc(myOffer(G).t)}.`}</small></span></div>`); }
     else if (L.k === 'gwait') { const G = MY_G[L.g]; rows.push(`<div class="myh g wait">${myGuardImg(G, true, 's')}<span><b>${esc(G.nm)} est resté à distance.</b><small>Il espérait ${esc(L.of)}. Trouvez-en et revenez !</small></span></div>`); }
     else if (L.k === 'gcond') { const G = MY_G[L.g]; rows.push(`<div class="myh g wait">${myGuardImg(G, true, 's')}<span><b>${esc(G.nm)} ne s’est pas montré.</b><small>Il ne vient que ${esc(L.txt)}.</small></span></div>`); }
-    else if (L.k === 'secret') { const M = MY_M[L.m]; rows.push(`<div class="myh big ok"><span class="myh-i">${MY_XMARK}</span><span><b>Le trésor du lieu secret est à vous : ${esc(L.it)} !</b><small>${esc(M.sec.name)} · titre « ${esc(M.ti)} » · +${M.stones} pierres d’étoile · +${M.coins} pièces</small></span></div>`); }
+    else if (L.k === 'secret') { const M = MY_M[L.m]; rows.push(`<div class="myh big ok"><span class="myh-i">${MY_XMARK}</span><span><b>Le trésor du lieu secret est à vous : ${esc(L.it)} !</b><small>${esc(M.sec.name)} · titre « ${esc(M.ti)} » · +${M.coins} pièces · +100 XP</small></span></div>`); }
     else if (L.k === 'secretko') { const M = MY_M[L.m]; rows.push(`<div class="myh ko"><span class="myh-i">${MY_XMARK}</span><span><b>Demi-tour avant ${esc(M.sec.name)}…</b><small>Le trésor vous attend toujours. Mieux équipé, retentez l’expédition !</small></span></div>`); }
   }
   return rows.length ? `<div class="my-haul">${rows.join('')}</div>` : '';
@@ -27188,7 +27194,7 @@ function myRiddleBig(R, followed) {
     const used = (r.h || 0) >= i, ok = myHintOk(R, i);
     return `<li class="${used ? 'on' : ''}"><i>${i}</i><div>${used ? body : `<b>${lbl}</b><small>${ok ? 'Réduit un peu la récompense.' : `Disponible après ${i - 1} essai${i > 2 ? 's' : ''} (et l’indice ${i - 1}).`}</small>`}</div>${!used && ok ? `<button class="btn cream sm" data-myshint="${R.id}">Voir</button>` : ''}</li>`;
   };
-  return `<div class="my-big"><div class="my-bh"><span class="my-bi">${MY_SCROLL}</span><div><span class="bqc-kick">${followed ? 'Énigme suivie' : 'Énigme à suivre'} · ${MY_TIER[R.tier]}</span><p class="my-q">« ${esc(R.q)} »</p></div></div>
+  return `<div class="my-big"><div class="my-bh"><span class="my-bi">${MY_SCROLL}</span><div><span class="bqc-kick">${followed ? 'Énigme suivie' : 'Énigme à suivre'} · ${MY_TIER[R.tier]}</span>${myCall(() => qmMeta('explo', R.tier, myRwTags(R)), '')}<p class="my-q">« ${esc(R.q)} »</p></div></div>
     <ol class="my-hints">${hint(1, 'Indice 1 : un indice écrit', `<b>${esc(R.h1)}</b>`)}${hint(2, 'Indice 2 : une grande zone sur la carte', '<b>Une grande zone violette est tracée sur la carte.</b>')}${hint(3, 'Indice 3 : une zone plus petite', '<b>La zone violette s’est resserrée.</b>')}</ol>
     <p class="my-how">Trouvez l’endroit vous-même sur la carte et envoyez-y un familier : il faut arriver ${tol}. Essais : <b>${r.tries || 0}</b> · un essai raté ne coûte que du temps.</p>
     <div class="qt-rwb"><span>${myCall(() => R.rw.it ? itemIcon({ name: R.rw.it[0], cat: R.rw.it[1], sub: R.rw.it[2], rarity: 4, look: R.rw.it[4], color: R.rw.it[5] }) : R.rw.pc ? MY_XMARK : QT_TROPHY, QT_TROPHY)}</span><div><small>Récompense unique</small><b>${esc(myRwTxt(R))}</b></div></div>
@@ -27196,13 +27202,13 @@ function myRiddleBig(R, followed) {
 }
 function myRiddlesHTML() {
   const cur = myCur(), first = cur || MY_RIDDLES.find(R => myAvail(R) && !myRec(R.id).done);
-  let h = `<h3 class="qt-h3" id="myEnigmes">Énigmes <small>${myDoneN()}/${MY_RIDDLES.length} résolues · trouvez le lieu vous-même</small></h3>`;
+  let h = `<h3 class="qt-h3" id="myEnigmes">🧩 Énigmes <small>${myDoneN()}/${MY_RIDDLES.length} · un indice culturel, devinez le lieu célèbre</small></h3>`;
   h += first ? myRiddleBig(first, first === cur) : '<p class="qt-hint">Toutes les énigmes ouvertes sont résolues. Bravo !</p>';
   for (const tier of [1, 2, 3]) {
     const list = MY_RIDDLES.filter(R => R.tier === tier), open = myTierOpen(tier);
     h += `<div class="my-tier"><b class="my-tt t${tier}">${MY_TIER[tier]}</b><small>${list.filter(R => myRec(R.id).done).length}/${list.length}${open ? '' : ` · se débloque après ${MY_UNLOCK[tier] - myDoneN(tier - 1)} énigme${MY_UNLOCK[tier] - myDoneN(tier - 1) > 1 ? 's' : ''} ${MY_TIER[tier - 1]}${MY_UNLOCK[tier] - myDoneN(tier - 1) > 1 ? 's' : ''} de plus`}</small></div>`;
     if (!open) continue;
-    h += `<div class="my-list">${list.filter(R => R !== first).map(R => { const r = myRec(R.id); return `<div class="my-row${r.done ? ' done' : ''}"><span class="my-ri">${r.done ? '✔' : '?'}</span><div><b>${r.done ? esc(R.name) : `« ${esc(R.q.length > 70 ? R.q.slice(0, 68) + '…' : R.q)} »`}</b><small>${r.done ? `Résolue · titre « ${esc(R.rw.ti)} »` : `${r.tries ? `${r.tries} essai${r.tries > 1 ? 's' : ''} · ` : ''}${R.rw.it ? 'objet unique' : R.rw.pc ? 'morceau de carte' : 'secret d’un gardien'}`}</small></div>${r.done ? '' : `<button class="btn cream sm" data-mysfollow="${R.id}">Suivre</button>`}</div>`; }).join('')}</div>`;
+    h += `<div class="my-list">${list.filter(R => R !== first).map(R => { const r = myRec(R.id); return `<div class="my-row${r.done ? ' done' : ''}"><span class="my-ri">${r.done ? '✔' : '?'}</span><div><b>${r.done ? esc(R.name) : `« ${esc(R.q.length > 70 ? R.q.slice(0, 68) + '…' : R.q)} »`}</b><small>${r.done ? `Résolue · titre « ${esc(R.rw.ti)} »` : `${r.tries ? `${r.tries} essai${r.tries > 1 ? 's' : ''}` : ''}`}</small>${r.done ? '' : myCall(() => qmMeta('explo', R.tier, myRwTags(R)), '')}</div>${r.done ? '' : `<button class="btn cream sm" data-mysfollow="${R.id}">Suivre</button>`}</div>`; }).join('')}</div>`;
   }
   return h;
 }
@@ -27226,12 +27232,12 @@ function myGuardHTML(G) {
     const o = myOffer(G), c = myCond(o.c, S.sel), n = myHave(o);
     body = `<div class="my-off"><span class="my-oi">${myCall(() => cmIngIcon(o.k), '')}</span><span><small>Visite ${(g.t || 0) + 1}/${N} : il aime</small><b>${esc(o.t)}</b><small>Vous en avez ${n}${c.txt ? ` · ${esc(c.txt)}` : ''}</small></span></div><div class="my-acts"><button class="btn cream sm" data-myswhere="${G.id}">Où la trouver</button><button class="btn gold sm" data-mysgg="${G.id}">Y aller</button></div>${myWhere === G.id ? myWhereHTML(o) : ''}`;
   }
-  return `<div class="my-g${g.done ? ' done' : ''}">${myGuardImg(G, true)}<div><b>${esc(G.nm)}</b><small>${esc(G.where)}</small><span class="my-pips" aria-label="Confiance ${g.t || 0} sur ${N}">${pips}</span>${body}</div></div>`;
+  return `<div class="my-g${g.done ? ' done' : ''}">${myGuardImg(G, true)}<div><b>${esc(G.nm)}</b><small>${esc(G.where)}</small>${g.done ? '' : myCall(() => qmMeta('hist', Math.max(1, Math.min(3, N - 2)), ['Familier légendaire', 'ou Bénédiction']), '')}<span class="my-pips" aria-label="Confiance ${g.t || 0} sur ${N}">${pips}</span>${body}</div></div>`;
 }
 function myMapsHTML() {
   return `<h3 class="qt-h3" id="myCartes">Cartes déchirées <small>4 morceaux chacune</small></h3><div class="my-maps">${MY_MAPS.map(M => {
     const n = myPieces(M.id).filter(Boolean).length, full = n === 4, won = myState().x[M.id];
-    return `<div class="my-mc${full ? ' full' : ''}" id="myMap_${M.id}">${myMapSVG(M)}<b>${esc(M.nm)}</b><small>${full ? (won ? `Trésor trouvé : ${esc(M.tr[0])} ✔` : `Lieu secret révélé : ${esc(M.sec.name)}`) : `${n}/4 morceaux · en voyage (${esc(M.zn)}), énigmes${M.locks.length ? ', lieux à cadenas' : ''}`}</small>${full && !won ? `<button class="btn green sm" data-mysx="${M.id}">Expédition finale</button>` : ''}</div>`;
+    return `<div class="my-mc${full ? ' full' : ''}" id="myMap_${M.id}">${myMapSVG(M)}<b>${esc(M.nm)}</b>${won ? '' : myCall(() => qmMeta('explo', M.zone[2] > 1000 ? 3 : 2, ['Lieu secret', 'Trésor unique']), '')}<small>${full ? (won ? `Trésor trouvé : ${esc(M.tr[0])} ✔` : `Lieu secret révélé : ${esc(M.sec.name)}`) : `${n}/4 morceaux · en voyage (${esc(M.zn)}), énigmes${M.locks.length ? ', lieux à cadenas' : ''}`}</small>${full && !won ? `<button class="btn green sm" data-mysx="${M.id}">Expédition finale</button>` : ''}</div>`;
   }).join('')}</div>`;
 }
 function mySectionsHTML() {
@@ -27352,8 +27358,9 @@ window.__mys = {
 //    butin et lieux à cadenas plus faciles (maîtrise demandée −2). Panneau de départ, bandeau de l'aventure, scène (avWeather).
 // 3. LIEUX ÉPHÉMÈRES : 3 par jour, 2 à 4 h, près de la maison (et un en Europe). Épingle avec compte à rebours (zoom),
 //    objet + spécialité uniques, petit événement à l'arrivée. Pas de notification : un point sur le bouton Quêtes.
-// 4. PISTES D'ANIMAUX : une espèce de la nurserie laisse des traces, 3 ou 4 étapes ; chaque bonne étape donne la direction
-//    de la suivante (vérification de distance comme les énigmes de 43_mysteres.js). Au bout : œuf d'une variante rare.
+// 4. PISTES D'ANIMAUX (v33 : des « traques ») : un animal sauvage laisse des traces dans la nature, 3 ou 4 étapes. On ne devine
+//    rien (ça, ce sont les énigmes) : une patte sur la carte montre où mènent les traces, il suffit de les suivre jusqu'au bout.
+//    Au bout : un trésor unique (moulage d'empreinte), un titre de pisteur, des pièces et de l'XP (onglet Exploration).
 // État : S.wld = { mo: {id: année}, ev: {id: 1}, seen: {id: 1}, tr: piste en cours | null, trN, trLast }.
 // Enveloppes : startTrip, fireEvent, collect, showHaul, renderVoyage, drawMarks, xpRiskK, xpIsExpe, xpConds, avWeather,
 // avRender, qtPageHTML, qtBtns. Expose window.__wld (tests).
@@ -27548,7 +27555,7 @@ function wdTrHint(T) {
   if (!T) return '';
   if (T.i === 0) return `Des traces fraîches de ${wdCall(() => nsLow(T.sp), T.sp)} ont été vues ${T.near ? `près de ${T.near}` : 'près de chez vous'}. Envoyez un familier à l’épingle (patte) !`;
   const a = T.pts[T.i - 1], b = T.pts[T.i], km = Math.max(5, Math.round(wdKm(a, b) / 5) * 5);
-  return `Les traces partent vers ${b.w}, vers ${wdDir(a, b)}, à ~${km} km des dernières traces. À vous de deviner l’endroit !`;
+  return `Les traces filent vers ${b.w}, ~${km} km plus vers ${wdDir(a, b)}. Une patte les marque sur la carte : suivez-les !`;
 }
 const wdSpName = sp => wdCall(() => nsLow(sp), sp);
 function wdRareGenes(sp) {
@@ -27595,11 +27602,12 @@ function wdOnArrive(t) {
     if (km <= wdTrTol(T, T.i)) {
       T.i++;
       if (T.i >= T.pts.length) {
-        const g = wdRareGenes(T.sp), egg = wdCall(() => nsAddEgg({ sp: T.sp, genes: g.genes, rarity: g.rarity, known: true, from: { how: 'piste', place: d.name }, ms: nsHatchMs(Math.min(3, g.rarity)) }), null);
-        wdPhoto(t, `${wdNm(k)} et le ${wdSpName(T.sp)} de la piste`, { wdtr: 1 });
-        wdCall(() => gainStones(4), 0);
-        wdJ(t, `Au bout de la piste, dans un nid de feuilles : un ${wdSpName(T.sp)} aux couleurs rares ! Il confie à ${wdNm(k)} un œuf tout chaud.`, [['egg', 'œuf rare'], ['wild', 'variante rare']]);
-        wdLog(t, { k: 'trend', sp: T.sp, egg: !!egg }); W.tr = null; W.trDone = (W.trDone || 0) + 1;
+        // v33 : récompense d'Exploration (trésor unique + titre + pièces + XP), plus d'œuf ni de pierres d'étoile
+        const sn = wdSpName(T.sp), it = wdGive(t, [`Empreinte moulée du ${sn}`, 'd', 'statue', 4, null, '#b08a5a'], `Traque : ${sn}`), ti = `Pisteur du ${sn}`;
+        const X = wdCall(() => xpState(), null); if (X) { const a = Array.isArray(X.titles[k]) ? X.titles[k] : (X.titles[k] = []); if (!a.includes(ti)) a.push(ti); }
+        const cn = 150 + 60 * T.pts.length; t.coins = (t.coins || 0) + cn; wdCall(() => xpGain(k, t.xpTerr || xpTerrOf(d), 20 * T.pts.length), 0);
+        wdJ(t, `Au bout des traces, dans un nid de feuilles : un ${sn} sauvage ! ${wdNm(k)} l’observe sans bruit, puis moule une empreinte parfaite dans la terre.`, [['wild', 'traque réussie'], ['rare', 'trésor unique']]);
+        wdLog(t, { k: 'trend', sp: T.sp, it: it.name, ti, coins: cn }); W.tr = null; W.trDone = (W.trDone || 0) + 1;
       } else {
         const h = wdTrHint(T); wdJ(t, `${wdNm(k)} retrouve les traces du ${wdSpName(T.sp)} ! ${h}`, [['wild', `piste ${T.i}/${T.pts.length}`]]);
         wdLog(t, { k: 'tr', sp: T.sp, i: T.i, n: T.pts.length, h });
@@ -27715,7 +27723,7 @@ function wdHaulHTML(H) {
     if (L.k === 'evko') return `<div class="wdh"><span class="wdh-i">🎪</span><span><b>${esc(L.name)} : ${L.late ? 'la fête était finie' : 'trop tôt'}.</b><small>Les lieux éphémères ne durent que quelques heures : regardez le compte à rebours sur la carte.</small></span></div>`;
     if (L.k === 'tr') return `<div class="wdh tr"><span class="wdh-i">🐾</span><span><b>Piste du ${esc(wdSpName(L.sp))} : étape ${L.i}/${L.n}</b><small>${esc(L.h)}</small></span></div>`;
     if (L.k === 'trko') return `<div class="wdh"><span class="wdh-i">🐾</span><span><b>Pas de traces ici.</b><small>${esc(L.txt)}</small></span></div>`;
-    if (L.k === 'trend') return `<div class="wdh ok"><span class="wdh-i">🥚</span><span><b>Bout de la piste : un ${esc(wdSpName(L.sp))} aux couleurs rares !</b><small>Il vous confie un œuf (nurserie) · photo souvenir · +4 pierres d’étoile</small></span></div>`;
+    if (L.k === 'trend') return `<div class="wdh ok"><span class="wdh-i">🐾</span><span><b>Traque réussie : un ${esc(wdSpName(L.sp))} sauvage !</b><small>${L.it ? `${esc(L.it)} · titre « ${esc(L.ti)} » · +${L.coins} pièces` : 'Œuf de variante rare (nurserie)'}</small></span></div>`;
     return '';
   }).join('');
   return rows ? `<div class="wd-haul">${rows}</div>` : '';
@@ -27738,7 +27746,7 @@ function wdDestOf(s) {
   const [ty, id] = String(s).split(':');
   if (ty === 'm') { const M = WD_M[id]; return M && { id: null, name: M.where, country: '', lat: M.lat, lon: M.lon, tags: M.tags.slice(), special: null, wdm: M.id }; }
   if (ty === 'e') { const E = wdEvById(id); return E && { id: null, name: E.name, country: '', lat: E.lat, lon: E.lon, tags: E.tags.slice(), special: null, wdev: E.id }; }
-  if (ty === 'p') { const T = wdState().tr; return T && T.i === 0 && { id: null, name: `Traces du ${wdSpName(T.sp)}`, country: '', lat: T.pts[0].lat, lon: T.pts[0].lon, tags: ['foret', 'campagne'], special: null }; }
+  if (ty === 'p') { const T = wdState().tr, P = T && T.pts[T.i]; return P && { id: null, name: `Traces du ${wdSpName(T.sp)}`, country: '', lat: P.lat, lon: P.lon, tags: ['foret', 'campagne'], special: null }; }
   return null;
 }
 function wdGo(s) {
@@ -27763,7 +27771,7 @@ function wdPinList() {
   const n = wdNow();
   if (z >= WD_ZOOM_EV) {
     wdEvents().filter(E => E.start <= n && n < E.end).forEach(E => { const dd = inView(E); if (dd >= 0) out.push({ key: 'e:' + E.id, lon: E.lon, lat: E.lat, ico: WD_EK[E.k].ico, lbl: `${WD_EK[E.k].nm} · ${wdDur(E.end - n)}`, cls: 'ev', d: dd - 1e4 }); });
-    const T = wdState().tr; if (T && T.i < T.pts.length) { const P = T.i === 0 ? T.pts[0] : T.pts[T.i - 1], dd = inView(P); if (dd >= 0) out.push({ key: 'p:' + T.id + T.i, go: T.i === 0, lon: P.lon, lat: P.lat, ico: '🐾', lbl: T.i === 0 ? 'Traces fraîches' : 'Dernières traces', cls: 'tr', d: dd - 5e3 }); }
+    const T = wdState().tr; if (T && T.i < T.pts.length) { const P = T.pts[T.i], dd = inView(P); if (dd >= 0) out.push({ key: 'p:' + T.id + T.i, go: true, lon: P.lon, lat: P.lat, ico: '🐾', lbl: `Traces ${T.i + 1}/${T.pts.length}`, cls: 'tr', d: dd - 5e3 }); }
   }
   if (z >= WD_ZOOM) WD_MOM.forEach(M => { const st = wdMoState(M); if (!st.season && !M.tide) return; const dd = inView(M); if (dd >= 0) out.push({ key: 'm:' + M.id, lon: M.lon, lat: M.lat, ico: M.ico, lbl: '', cls: 'mo' + (st.now ? ' now' : ''), d: dd }); });
   return out.sort((a, b) => a.d - b.d).slice(0, 4);
@@ -27810,12 +27818,13 @@ if (typeof qtBtns === 'function') qtBtns = (orig => function () {
 })(qtBtns);
 
 // ---------------- page Quêtes : section « Monde » et petits onglets ----------------
+const wdMoDif = M => Math.min(3, (M.tide ? 1 : M.h ? 2 : 1) + (wdKm(homeObj(), M) > 3000 ? 1 : 0));
 function wdMomentsHTML() {
   const rows = WD_MOM.map(M => ({ M, st: wdMoState(M), soon: wdMoSoon(M) }));
   const now = rows.filter(o => o.st.season || o.M.tide).sort((a, b) => (b.st.now - a.st.now) || (a.st.got - b.st.got));
   const soon = rows.filter(o => !o.st.season && !o.M.tide && o.soon <= 45).sort((a, b) => a.soon - b.soon);
-  const row = (o, s) => `<div class="wd-row${o.st.got ? ' done' : ''}${o.st.now ? ' now' : ''}"><span class="wd-ri">${o.M.ico}</span><div><b>${esc(o.M.nm)}</b><small>${esc(o.M.where)} · ${s}</small></div>${o.st.got ? '<span class="wd-ok">✔</span>' : `<button class="btn ${o.st.now ? 'green' : 'cream'} sm" data-wdgo="m:${o.M.id}">Y aller</button>`}</div>`;
-  let h = `<h4 class="wd-h4">Moments du monde <small>vraie date, heure locale du lieu</small></h4>`;
+  const row = (o, s) => `<div class="wd-row${o.st.got ? ' done' : ''}${o.st.now ? ' now' : ''}"><span class="wd-ri">${o.M.ico}</span><div><b>${esc(o.M.nm)}</b><small>${esc(o.M.where)} · ${s}</small>${o.st.got ? '' : wdCall(() => qmMeta('monde', wdMoDif(o.M), [o.M.it[1] === 'v' ? 'Tenue de saison' : 'Objet de saison', 'Photo d’album']), '')}</div>${o.st.got ? '<span class="wd-ok">✔</span>' : `<button class="btn ${o.st.now ? 'green' : 'cream'} sm" data-wdgo="m:${o.M.id}">Y aller</button>`}</div>`;
+  let h = `<h3 class="qt-h3">🌸 Moments de saison <small>vraie date, heure locale du lieu</small></h3>`;
   h += now.length ? `<p class="wd-sub">En ce moment</p>${now.map(o => row(o, o.st.got ? 'déjà vécu cette année' : o.st.now ? '<b>c’est maintenant !</b>' : esc(o.st.wait))).join('')}` : '';
   h += soon.length ? `<p class="wd-sub">Bientôt</p>${soon.map(o => row(o, `dans ${o.soon} jour${o.soon > 1 ? 's' : ''} · ${esc(o.M.when)}`)).join('')}` : '';
   if (!now.length && !soon.length) h += '<p class="qt-hint">Aucun moment rare en ce moment. Revenez bientôt !</p>';
@@ -27823,26 +27832,27 @@ function wdMomentsHTML() {
 }
 function wdWxHTML() {
   if (!wdWeather().length) return '';
-  return `<h4 class="wd-h4">Météo du jour</h4><div class="wd-wx">${wdWeather().map(o => { const K = WD_K[o.k]; return `<span class="wd-wc k-${o.k}">${K.ico} <b>${esc(K.nm)}</b> ${esc(o.z.de)}<small>${esc(K.eff)}</small></span>`; }).join('')}</div>`;
+  return `<h3 class="qt-h3">⛅ Météo du jour <small>elle change les risques et le butin</small></h3><div class="wd-wx">${wdWeather().map(o => { const K = WD_K[o.k]; return `<span class="wd-wc k-${o.k}">${K.ico} <b>${esc(K.nm)}</b> ${esc(o.z.de)}<small>${esc(K.eff)}</small></span>`; }).join('')}</div>`;
 }
 function wdEventsHTML() {
   const n = wdNow(), W = wdState(), l = wdEvents().filter(E => E.end > n);
-  let h = `<h4 class="wd-h4">Lieux éphémères <small>quelques heures seulement</small></h4>`;
+  let h = `<h3 class="qt-h3">🎪 Lieux éphémères <small>quelques heures seulement</small></h3>`;
   if (!l.length) return h + '<p class="qt-hint">Plus de fête aujourd’hui. Demain, de nouveaux lieux apparaîtront !</p>';
   return h + l.map(E => {
     const K = WD_EK[E.k], open = E.start <= n, got = W.ev[E.id], km = Math.round(wdKm(homeObj(), E));
-    return `<div class="wd-row ev${open ? ' now' : ''}${got ? ' done' : ''}"><span class="wd-ri">${K.ico}</span><div><b>${esc(E.name)}</b><small>${open ? `<b>ouvert · encore ${wdDur(E.end - n)}</b>` : `de ${wdHHMM(E.start)} à ${wdHHMM(E.end)}`} · ${km} km · ${esc(K.it[0])}, ${esc(K.dish[0])}</small></div>${got ? '<span class="wd-ok">✔</span>' : open ? `<button class="btn green sm" data-wdgo="e:${E.id}">Y aller</button>` : ''}</div>`;
+    return `<div class="wd-row ev${open ? ' now' : ''}${got ? ' done' : ''}"><span class="wd-ri">${K.ico}</span><div><b>${esc(E.name)}</b><small>${open ? `<b>ouvert · encore ${wdDur(E.end - n)}</b>` : `de ${wdHHMM(E.start)} à ${wdHHMM(E.end)}`} · ${km} km · ${esc(K.it[0])}, ${esc(K.dish[0])}</small>${got ? '' : wdCall(() => qmMeta('monde', E.tags[0] === 'ville' ? 2 : 1, ['Objet de saison']), '')}</div>${got ? '<span class="wd-ok">✔</span>' : open ? `<button class="btn green sm" data-wdgo="e:${E.id}">Y aller</button>` : ''}</div>`;
   }).join('');
 }
 function wdTrailHTML() {
-  const W = wdState(), T = W.tr;
-  let h = `<h4 class="wd-h4" id="wdPistes">Pistes <small>${W.trDone || 0} piste${(W.trDone || 0) > 1 ? 's' : ''} suivie${(W.trDone || 0) > 1 ? 's' : ''} jusqu’au bout</small></h4>`;
+  const W = wdState(), T = W.tr, dif = T ? Math.max(1, T.pts.length - 2) : 1;
+  let h = `<h3 class="qt-h3" id="wdPistes">🐾 Traques <small>suivez les traces d’un animal dans la nature · ${W.trDone || 0} réussie${(W.trDone || 0) > 1 ? 's' : ''}</small></h3>`;
+  const meta = wdCall(() => qmMeta('explo', dif, ['Trésor unique', 'Titre']), '');
   if (T) {
     const pips = T.pts.map((_, i) => `<i class="${i < T.i ? 'on' : ''}"></i>`).join('');
-    return h + `<div class="wd-tr"><span class="wd-ri">🐾</span><div><b>Piste du ${esc(wdSpName(T.sp))} · étape ${T.i + 1}/${T.pts.length}</b><span class="my-pips">${pips}</span><small>${esc(wdTrHint(T))}</small><small>Au bout : un œuf de variante rare.${T.tries ? ` Essais ratés : ${T.tries}.` : ''}</small><div class="my-acts">${T.i === 0 ? '<button class="btn green sm" data-wdgo="p:0">Y aller</button>' : `<button class="btn cream sm" data-wdlook="1">Voir les dernières traces</button>`}</div></div></div>`;
+    return h + `<div class="wd-tr"><span class="wd-ri">🐾</span><div><b>Traque du ${esc(wdSpName(T.sp))} · ${T.i + 1}/${T.pts.length}</b>${meta}<span class="my-pips">${pips}</span><small>${esc(wdTrHint(T))}</small><div class="my-acts"><button class="btn green sm" data-wdgo="p:0">Suivre les traces</button></div></div></div>`;
   }
   if (W.trLast === wdDay()) return h + '<p class="qt-hint">Nouvelles traces demain !</p>';
-  return h + `<div class="wd-tr"><span class="wd-ri">🐾</span><div><b>Des traces fraîches près de chez vous</b><small>Un animal sauvage rare est passé par là. Suivez-le de lieu en lieu, en 3 ou 4 étapes : à vous de deviner où mènent les traces !</small><div class="my-acts"><button class="btn gold sm" data-wdtr="1">Suivre la piste</button></div></div></div>`;
+  return h + `<div class="wd-tr"><span class="wd-ri">🐾</span><div><b>Des traces fraîches près de chez vous</b>${meta}<small>Un animal sauvage est passé par la forêt et les champs. Suivez ses traces de lieu en lieu (3 ou 4 étapes).</small><div class="my-acts"><button class="btn gold sm" data-wdtr="1">Commencer la traque</button></div></div></div>`;
 }
 function wdSectionHTML() {
   return `<section class="wd-sec"><h3 class="qt-h3" id="wdMonde">Le monde qui vit <small>météo, moments rares, fêtes, pistes</small></h3>${wdCall(wdWxHTML, '')}${wdCall(wdEventsHTML, '')}${wdCall(wdMomentsHTML, '')}${wdCall(wdTrailHTML, '')}</section>`;
@@ -27882,8 +27892,8 @@ document.addEventListener('click', ev => {
   if (!el || el.disabled || el.closest('#ov')) return;
   const d = el.dataset;
   if (d.wdtab) { const t = document.getElementById(d.wdtab), mb = el.closest('.mbox'); if (t && mb) { mb.scrollLeft = 0; mb.scrollTo({ top: Math.max(0, mb.scrollTop + t.getBoundingClientRect().top - mb.getBoundingClientRect().top - 84), behavior: 'smooth' }); } else if (t) t.scrollIntoView({ block: 'start' }); el.parentNode.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === el)); return; }
-  if (d.wdtr) { if (!wdState().tr) { wdTrailNew(); wdCall(() => sfx('pop'), 0); toast('Piste suivie ! Une patte marque les premières traces sur la carte.'); } wdRefresh(); return; }
-  if (d.wdlook) { const T = wdState().tr; if (T && T.i > 0) { toast('Voici les dernières traces. Devinez où elles mènent, touchez l’endroit et envoyez un familier !'); wdLook(T.pts[T.i - 1]); } return; }
+  if (d.wdtr) { if (!wdState().tr) { wdTrailNew(); wdCall(() => sfx('pop'), 0); toast('Traque lancée ! Une patte marque les traces sur la carte.'); } wdRefresh(); return; }
+  if (d.wdlook) { const T = wdState().tr; if (T && T.i > 0) { wdLook(T.pts[T.i]); } return; }
   if (d.wdgo) wdGo(d.wdgo);
 });
 
@@ -28190,7 +28200,7 @@ function eqContractsOnReturn(t, out) {
       const mul = c.rev ? 1.5 : 1, coinsN = Math.round(D.coins * mul), st = Math.round(D.stones * mul);
       let beat = 0;
       if (E.riv.cid === c.id) { E.riv.cid = null; E.riv.l = (E.riv.l || 0) + 1; E.riv.last = { k: 'lose', t: D.t, at: Date.now() }; beat = 3; }
-      eqCall(() => gainCoins(coinsN), 0); eqCall(() => gainStones(st + beat), 0);
+      eqCall(() => gainCoins(coinsN), 0); eqCall(() => gainStones(st + beat), 0); eqCall(() => xpGain(t.comp, terr, 60), 0); // XP du familier en bonus
       eqHist({ t: D.t, res: 'ok' });
       out.push({ k: 'cok', t: D.t, cid: c.cid, coins: coinsN, stones: st + beat, beat: !!beat });
     } else out.push({ k: 'cstep', t: D.t, cur, n });
@@ -28333,7 +28343,7 @@ function eqOnReturn(k, t) {
       E.wsp[d.eqsp] = who || k;
       const it = eqCall(() => makeItem(P.it, 0, `Lieu réservé : ${P.name}`, P.tags, { fixed: 4 }), null);
       if (it) { it.special = true; it.xpr = 1; t.bag.push(it); }
-      eqAddTitle(who || k, P.ti); eqCall(() => gainStones(8), 0);
+      eqAddTitle(who || k, P.ti); t.coins = (t.coins || 0) + 300; // v33 : plus de pierres d'étoile (Exploration)
       out.push({ k: 'spw', sp: d.eqsp, it: P.it[0], ti: P.ti });
     }
   }
@@ -28354,7 +28364,7 @@ function eqHaulHTML(H) {
     if (o.k === 'plus') return `<p><span class="eqh-i">${EQ_ICO_BAG}</span><span>+${o.n} objet${o.n > 1 ? 's' : ''} (${esc(o.why)})</span></p>`;
     if (o.k === 'coins') return `<p><span class="eqh-i">${CM_COIN}</span><span>+${o.n} pièces (${esc(o.why)})</span></p>`;
     if (o.k === 'duo') return `<p class="eqh-duo"><img src="${portraitURI(H.k, 'rire')}" alt=""><img src="${portraitURI(o.p, 'rire')}" alt=""><span>Amitié ${esc(eqNm(H.k))} et ${esc(eqNm(o.p))} : <b>${o.n} voyage${o.n > 1 ? 's' : ''} ensemble</b> · ${esc(eqAmiNm(o.lv1))}${o.lv1 > o.lv0 ? ' <b class="ok">nouveau palier !</b>' : ''}</span></p>`;
-    if (o.k === 'spw') return `<p class="eqh-big"><span class="eqh-i">${eqSpIco(o.sp, 'm')}</span><span><b>Lieu réservé conquis !</b><small>${esc(o.it)} · titre « ${esc(o.ti)} » · +8 pierres d’étoile</small></span></p>`;
+    if (o.k === 'spw') return `<p class="eqh-big"><span class="eqh-i">${eqSpIco(o.sp, 'm')}</span><span><b>Lieu réservé conquis !</b><small>${esc(o.it)} · titre « ${esc(o.ti)} » · +300 pièces</small></span></p>`;
     if (o.k === 'del') return `<p class="eqh-big">${eqCliImg(o.cid, 'joie')}<span><b>Livraison réussie à ${esc(o.city)} !</b><small>${esc(eqCliNm(o.cid))} vous remercie : +${o.coins} pièces · +4 amitié · +2 pierres d’étoile</small></span></p>`;
     if (o.k === 'delko') return `<p>Livraison pas encore faite : le produit est revenu dans le sac. Il reste du temps !</p>`;
     if (o.k === 'cok') return `<p class="eqh-big">${eqCliImg(o.cid, 'joie')}<span><b>Contrat rempli : ${esc(o.t)} !</b><small>+${o.coins} pièces · +${o.stones} pierres d’étoile${o.beat ? ' · Gaspard le renard est battu !' : ''}</small></span></p>`;
@@ -28485,7 +28495,7 @@ function eqConHTML(c) {
   let det = '';
   if (D.ty === 'lieux') det = `<div class="eqc-l">${D.L.map(([nm], i) => `<span class="${c.got[i] ? 'ok' : ''}">${c.got[i] ? '✓' : ''}${esc(nm)}${c.got[i] ? '' : ` <button class="eqc-go" data-eqcgo="${c.id}:${i}">Y aller</button>`}</span>`).join('')}</div>`;
   else if (D.ty === 'cont' && c.got.length) det = `<small>Déjà : ${esc(c.got.join(', '))}</small>`;
-  return `<div class="eqc${raced ? ' raced' : ''}">${eqCliImg(c.cid)}<div><b>${esc(D.t)}</b><small>Pour ${esc(eqCliNm(c.cid))} · reste ${eqLeft(c.end - Date.now())} · ${Math.round(D.coins * mul)} pièces + ${Math.round(D.stones * mul)} pierres${c.rev ? ' · revanche' : ''}</small>
+  return `<div class="eqc${raced ? ' raced' : ''}">${eqCliImg(c.cid)}<div><b>${esc(D.t)}</b><small>Pour ${esc(eqCliNm(c.cid))} · ⏱ ${eqLeft(c.end - Date.now())} · ${Math.round(D.coins * mul)} pièces${c.rev ? ' · revanche' : ''}</small>${eqCall(() => qmMeta('defi', D.ty === 'terr' || D.ty === 'rare' ? 2 : 3, [`${Math.round(D.stones * mul)} pierres d’étoile`]), '')}
     <span class="eqc-bar" aria-label="Vous : ${cur} sur ${n}"><i style="width:${(cur / n * 100).toFixed(0)}%"></i><em>Vous ${cur}/${n}</em></span>
     ${raced ? `<span class="eqc-bar riv" aria-label="Gaspard"><i style="width:${(eqRivP() * 100).toFixed(0)}%"></i><em>Gaspard ${Math.round(eqRivP() * 100)} %</em></span>` : ''}${det}</div></div>`;
 }
@@ -28494,20 +28504,22 @@ function eqSecHTML() {
   const E = eqState(), R = E.riv, now = Date.now();
   let h = `<section class="eq-sec"><h3 class="qt-h3" id="eqContrats">Contrats <small>collectionneurs pressés, grosses récompenses</small></h3>`;
   h += E.con.length ? E.con.map(eqConHTML).join('') : '<p class="qt-hint">Pas de contrat pour l’instant : un collectionneur passera après votre prochain voyage.</p>';
-  const raced = R.cid && E.con.find(c => c.id === R.cid), canRev = R.last && R.last.k === 'win' && now >= (R.rev || 0) && !R.cid;
-  h += `<h3 class="qt-h3" id="eqRival">Rival <small>${R.w || 0} victoire${(R.w || 0) > 1 ? 's' : ''} pour lui · ${R.l || 0} pour vous</small></h3><div class="eqr">${eqRivalImg(raced ? 'content' : R.last && R.last.k === 'win' ? 'joie' : 'content')}<div><b>Gaspard le renard</b>`;
+  void R; void now;
+  h += eqRivalHTML() + '</section>';
+  return h;
+}
+function eqRivalHTML() {
+  const E = eqState(), R = E.riv, now = Date.now(), raced = R.cid && E.con.find(c => c.id === R.cid), canRev = R.last && R.last.k === 'win' && now >= (R.rev || 0) && !R.cid;
+  let h = `<div class="eqr" id="eqRival">${eqRivalImg(raced ? 'content' : R.last && R.last.k === 'win' ? 'joie' : 'content')}<div><b>Rival : Gaspard le renard <small>${R.w || 0} victoire${(R.w || 0) > 1 ? 's' : ''} pour lui · ${R.l || 0} pour vous</small></b>`;
   if (raced) h += `<small>Il court après le même contrat : « ${esc(eqCDef(raced).t)} ». S’il arrive avant vous, c’est perdu !</small><span class="eqc-bar riv"><i style="width:${(eqRivP() * 100).toFixed(0)}%"></i><em>${Math.round(eqRivP() * 100)} %</em></span>`;
   else if (R.last && R.last.k === 'win') h += `<small>Il vous a doublé sur « ${esc(R.last.t)} ». ${canRev ? '' : `Revanche possible dans ${eqLeft(R.rev - now)}.`}</small>${canRev ? `<button class="btn gold sm" data-eqrev="1" ${E.con.length >= 2 ? 'disabled' : ''}>Revanche ! (récompense ×1,5)</button>${E.con.length >= 2 ? '<small>Terminez d’abord un contrat.</small>' : ''}` : ''}`;
   else if (R.last && R.last.k === 'lose') h += `<small>Battu sur « ${esc(R.last.t)} » ! Il rumine sa défaite… et reviendra.</small>`;
   else h += '<small>Un explorateur rival, rusé et rapide. Il vise parfois les mêmes trésors que vous.</small>';
-  h += '</div></div>';
-  const D = E.del;
-  if (D) h += `<h3 class="qt-h3" id="eqLivr">Livraison urgente</h3>${eqDelCardHTML(D)}`;
-  return h + '</section>';
+  return h + '</div></div>';
 }
 function eqDelCardHTML(D) {
   const it = eqDelItem(D, []);
-  return `<div class="eqc del">${eqCliImg(D.cid)}<div><b>${esc(eqCliNm(D.cid))} : 1 ${esc(eqLow(eqRName(D.rid)))} pour ${esc(D.who)} à ${esc(D.city)}</b><small>${D.st === 'sent' ? `En route avec ${esc(eqNm(D.by))}…` : `Avant ${eqLeft(D.end - Date.now())} · ${it ? 'en stock ✓' : 'à préparer au comptoir'}`} · ${eqDelRw(D, S.sel)} pièces, +4 amitié</small>${D.st === 'open' ? `<button class="btn gold sm" data-eqdel="1">Y aller</button>` : ''}</div></div>`;
+  return `<div class="eqc del">${eqCliImg(D.cid)}<div><b>Apporter 1 ${esc(eqLow(eqRName(D.rid)))} à ${esc(D.city)}</b><small>Pour ${esc(D.who)}, de la part de ${esc(eqCliNm(D.cid))}</small>${eqCall(() => qmMeta('defi', 2, ['2 pierres d’étoile']), '')}<small>${D.st === 'sent' ? `En route avec ${esc(eqNm(D.by))}…` : `Avant ${eqLeft(D.end - Date.now())} · ${it ? 'en stock ✓' : 'à préparer au comptoir'}`} · ${eqDelRw(D, S.sel)} pièces, +4 amitié</small>${D.st === 'open' ? `<button class="btn gold sm" data-eqdel="1">Y aller</button>` : ''}</div></div>`;
 }
 if (typeof qtPageHTML === 'function') qtPageHTML = (orig => function () {
   const h = orig.apply(this, arguments);
@@ -28649,6 +28661,176 @@ window.__eq = {
   riskTrip: k => (S.trips[k] && S.trips[k].xpe ? xpRisk(S.trips[k], 0.35) : 0), secHTML: eqSecHTML, fiche: eqFicheHTML, continent: eqContinent,
   api: () => ({ S, plan, startTrip, collect, tick, openSheet, renderPanel, makeItem, qtPageHTML, renderTalents, cmRecipesHTML, cfClientsHTML, showModal }),
 };
+
+// ================= PAGE QUÊTES EN 4 MODES (v33) =================
+// Le joueur : « Dans les onglets de quête, on retrouve des éléments similaires et des doublons. On doit bien voir la différence
+// entre les modes : récompenses pas identiques, difficulté pas similaire. »
+// La page Quêtes est reconstruite ici en 4 onglets bien distincts (chacun n'affiche QUE son contenu, sans défilement vers une section) :
+//   📖 Histoires   (histoires + gardiens)                         → tenues, recettes exclusives, familiers légendaires
+//   🧭 Exploration (énigmes, traques, cartes déchirées, cadenas)  → titres, trésors uniques, lieux secrets
+//   🌸 Monde       (météo, lieux éphémères, moments de saison)    → objets de saison, photos d'album
+//   🏆 Défis       (objectif du jour, livraison, défis + contrats + rival) → SEULE source de pierres d'étoile
+// Pièces et XP du familier : en bonus partout (plus généreux en Exploration et en Défis).
+// Chaque carte porte une pastille de difficulté (1 à 3 ●) et une étiquette du type de récompense (couleur de l'onglet) : qmMeta().
+// Les anciennes enveloppes de qtPageHTML (43, 44, 45) sont remplacées : qtPageHTML est réécrite ici et appelle leurs fonctions HTML.
+// Expose window.__qm (tests).
+
+const QM_MODES = [
+  { id: 'hist', ico: '📖', nm: 'Histoires', pitch: 'Suivez le fil, rencontrez des personnages.', rw: 'Tenues, recettes exclusives, familiers légendaires.' },
+  { id: 'explo', ico: '🧭', nm: 'Exploration', pitch: 'Cherchez par vous-même.', rw: 'Titres, trésors uniques, lieux secrets.' },
+  { id: 'monde', ico: '🌸', nm: 'Monde', pitch: 'Soyez au bon endroit au bon moment.', rw: 'Objets de saison, photos d’album.' },
+  { id: 'defi', ico: '🏆', nm: 'Défis', pitch: 'Dur et répétable.', rw: 'Pierres d’étoile.' },
+];
+const QM_BY = {}; QM_MODES.forEach(M => { QM_BY[M.id] = M; });
+const qmCall = (f, d) => { try { return f(); } catch (e) { return d; } };
+const qmTuto = () => qmCall(() => tuOn(), false);
+let qmTab = 'hist', qmSnap = {}, qmAllLocks = false;
+
+// pastille de difficulté + étiquettes du type de récompense (même couleur que l'onglet)
+function qmMeta(mode, dif, tags) {
+  const d = Math.max(1, Math.min(3, Math.round(dif || 1)));
+  return `<span class="qm-meta"><i class="qm-dif" title="Difficulté ${d} sur 3" aria-label="Difficulté ${d} sur 3">${'●'.repeat(d)}<em>${'●'.repeat(3 - d)}</em></i>${(tags || []).filter(Boolean).map(t => `<i class="qm-tag qm-${mode}">${esc(t)}</i>`).join('')}</span>`;
+}
+
+// ---------------- points rouges des onglets ----------------
+function qmDotsLive() {
+  const o = {};
+  o.hist = qmCall(() => MY_GUARDS.some(G => { const g = myGRec(G.id); return g.d && !g.done && (g.t || 0) >= G.offers.length; }), false);
+  o.explo = qmCall(() => MY_MAPS.some(M => myComplete(M.id) && !myState().x[M.id]), false);
+  return o;
+}
+const qmDot = id => !!(qmSnap[id] || qmDotsLive()[id]);
+
+// ---------------- contenu de chaque onglet ----------------
+function qmHistHTML() {
+  const s = qtState(), f = QT_BY[s.follow];
+  let h = f ? qtStoryHTML(f, true) : '<p class="qt-hint">Touchez « Suivre » sur une histoire : son étape s’affiche sur la carte.</p>';
+  h += `<h3 class="qt-h3">Histoires <small>${qtDoneN()}/${QT_STORIES.length} terminées</small></h3><div class="qt-stories">${QT_STORIES.filter(q => q !== f).map(q => qtStoryHTML(q)).join('')}</div>`;
+  if (!qmTuto() && typeof MY_GUARDS !== 'undefined') {
+    const known = MY_GUARDS.filter(G => myGRec(G.id).d), un = MY_GUARDS.length - known.length;
+    h += `<h3 class="qt-h3" id="myGardiens">🦌 Gardiens légendaires <small>${known.length}/${MY_GUARDS.length} · gagnez leur confiance</small></h3><div class="my-gs">${known.map(myGuardHTML).join('')}</div>`;
+    if (un) h += `<p class="qt-hint qm-small">${un} gardien${un > 1 ? 's' : ''} encore inconnu${un > 1 ? 's' : ''} : en voyage, écoutez les rumeurs.</p>`;
+  }
+  return h;
+}
+function qmLockDif(P) { const s = P.need.reduce((a, n) => a + (n[0] === 'g' ? n[2] * 1.5 : n[2] / 2), 0); return s <= 4 ? 1 : s <= 7 ? 2 : 3; }
+function qmLocksHTML() {
+  if (typeof XP_PLACES === 'undefined') return '';
+  const X = xpState(), won = XP_PLACES.filter(P => X.won[P.id]).length;
+  const rows = XP_PLACES.filter(P => !X.won[P.id]).map(P => {
+    const cs = qmCall(() => xpConds(P, S.sel), []), ok = cs.filter(c => c.ok).length;
+    return { P, cs, ok, r: cs.length ? ok / cs.length : 0 };
+  }).sort((a, b) => b.r - a.r || qmLockDif(a.P) - qmLockDif(b.P));
+  const show = qmAllLocks ? rows : rows.slice(0, 5);
+  let h = `<h3 class="qt-h3" id="qmLocks">🔒 Lieux verrouillés <small>${won}/${XP_PLACES.length} conquis · conditions pour ${esc(qmCall(() => CHARS[S.sel].name, 'votre familier'))}</small></h3>`;
+  h += show.map(({ P, cs }) => `<div class="qm-lock"><span class="qm-li">🔒</span><div><b>${esc(P.name)}</b>${qmMeta('explo', qmLockDif(P), [P.item[2] === 'outil' ? 'Matériel légendaire' : 'Trésor légendaire', 'Titre'])}<span class="qm-conds">${cs.map(c => `<i class="${c.ok ? 'ok' : 'no'}">${c.ok ? '✓' : '✗'} ${esc(c.lbl)}</i>`).join('')}</span></div><button class="btn cream sm" data-qmlock="${P.id}">Voir sur la carte</button></div>`).join('');
+  if (rows.length > 5) h += `<button class="qm-more" data-qmmore="1">${qmAllLocks ? 'Voir moins' : `Voir les ${rows.length - 5} autres`}</button>`;
+  return h;
+}
+function qmExploHTML() {
+  if (qmTuto() || typeof myRiddlesHTML !== 'function') return '<p class="qt-hint">L’exploration s’ouvre après le tutoriel.</p>';
+  return `<section class="my-sec">${qmCall(myRiddlesHTML, '')}${qmCall(wdTrailHTML, '')}${qmCall(() => myMapsHTML().replace('Cartes déchirées <small>', '🗺️ Cartes déchirées <small>'), '')}</section>${qmCall(qmLocksHTML, '')}`;
+}
+function qmMondeHTML() {
+  if (qmTuto() || typeof wdWxHTML !== 'function') return '<p class="qt-hint">Le monde s’éveille après le tutoriel.</p>';
+  return `<section class="wd-sec">${qmCall(wdWxHTML, '')}${qmCall(wdEventsHTML, '')}${qmCall(wdMomentsHTML, '')}</section>`;
+}
+function qmDefiHTML() {
+  let h = qmCall(qtDayHTML, '');
+  const tu = qmTuto(), E = !tu && typeof eqState === 'function' ? qmCall(() => { eqTick(); return eqState(); }, null) : null;
+  if (E && E.del) h += `<h3 class="qt-h3" id="eqLivr">📦 Livraison : apporter votre produit dans une autre ville</h3>${qmCall(() => eqDelCardHTML(E.del), '')}`;
+  const open = QT_DEFIS.filter(d => !qtState().df[d.id]).length;
+  h += `<h3 class="qt-h3" id="qmDefis">🏆 Défis <small>${E && E.con.length ? `${E.con.length} contrat${E.con.length > 1 ? 's' : ''} pressé${E.con.length > 1 ? 's' : ''} · ` : ''}${open} au long cours</small></h3>`;
+  if (E) h += `<section class="eq-sec">${E.con.map(eqConHTML).join('')}${E.con.length || (E.riv && E.riv.last) ? qmCall(eqRivalHTML, '') : ''}</section>`;
+  h += `<div class="qt-defis">${QT_DEFIS.map(qtDefiHTML).join('')}</div>`;
+  return h;
+}
+const QM_HTML = { hist: qmHistHTML, explo: qmExploHTML, monde: qmMondeHTML, defi: qmDefiHTML };
+
+// ---------------- la page ----------------
+qtPageHTML = function () {
+  if (!QM_BY[qmTab]) qmTab = 'hist';
+  const M = QM_BY[qmTab];
+  if (qmTab === 'monde') qmCall(() => { const W = wdState(); wdEvNow().forEach(E => { W.seen[E.id] = 1; }); }, 0);
+  delete qmSnap[qmTab];
+  const tabs = QM_MODES.map(T => `<button class="qm-t qm-${T.id}${T.id === qmTab ? ' on' : ''}" data-qmtab="${T.id}" aria-pressed="${T.id === qmTab}"><span>${T.ico}</span>${T.nm}${T.id !== qmTab && qmDot(T.id) ? '<i class="qm-dot" aria-label="nouveau"></i>' : ''}</button>`).join('');
+  let body = '';
+  try { body = QM_HTML[qmTab](); } catch (e) { console.error('quêtes onglet', e); }
+  return `<div class="qt-page qm-page qm-on-${qmTab}"><div class="qt-top"><h2>Quêtes</h2><button class="qt-x" data-closemodal="1" aria-label="Fermer">✕</button></div>
+    <nav class="qm-tabs" aria-label="Modes de quête">${tabs}</nav>
+    <p class="qm-pitch qm-${qmTab}"><b>${M.pitch}</b><span>→ ${M.rw}</span><small>Pièces et XP en bonus</small></p>
+    <div class="qm-body" data-qmbody="${qmTab}">${body}</div>
+    <div class="qt-acts"><button class="btn green" data-closemodal="1">Fermer</button></div></div>`;
+};
+qtOpenPage = function () {
+  // points rouges : ce qui était nouveau AVANT l'ouverture (l'objectif du jour et les fêtes sont alors marqués « vus »)
+  qmSnap = { defi: qmCall(qtDot, false), monde: qmCall(() => wdDot(), false) };
+  const live = qmDotsLive();
+  if (!qmSnap[qmTab] && !live[qmTab]) { const t = QM_MODES.find(T => qmSnap[T.id] || live[T.id]); if (t) qmTab = t.id; }
+  qtPageOn = true;
+  try { const s = qtState(); s.seen = qtDay().d; save(); } catch (e) {}
+  qmCall(() => { const W = wdState(); wdEvNow().forEach(E => { W.seen[E.id] = 1; }); save(); }, 0);
+  showModal(qtPageHTML()); qtBtns();
+  const mb = document.querySelector('#modal .mbox'); if (mb) mb.scrollTop = 0;
+};
+try { window.__qt.page = qtOpenPage; window.__qt.list = qtOpenPage; } catch (e) {}
+function qmShow(id) {
+  if (!QM_BY[id]) return;
+  qmTab = id; qtPageOn = true;
+  const m = $('modal'); if (!m || m.hidden || !m.querySelector('.qt-page')) return qtOpenPage();
+  showModal(qtPageHTML()); const mb = m.querySelector('.mbox'); if (mb) mb.scrollTop = 0;
+}
+function qmLockGo(id) {
+  const P = typeof XP_P !== 'undefined' ? XP_P[id] : null; if (!P) return;
+  const m = $('modal'); if (m) m.hidden = true; qtPageOn = false;
+  qmCall(() => closeSheet(), 0);
+  qmCall(() => { xpOpen = P.id; xpPinSig = ''; }, 0);
+  qmCall(() => map.flyTo({ center: [P.lon, P.lat], zoom: 6, essential: true }), 0);
+  setTimeout(() => qmCall(() => { xpPinSig = ''; xpMapUpdate(); }, 0), 1600);
+}
+document.addEventListener('click', ev => {
+  const el = ev.target.closest && ev.target.closest('[data-qmtab],[data-qmlock],[data-qmmore]');
+  if (!el || el.disabled) return;
+  const d = el.dataset;
+  if (d.qmtab) { qmCall(() => sfx('pop'), 0); return qmShow(d.qmtab); }
+  if (d.qmlock) return qmLockGo(d.qmlock);
+  if (d.qmmore) { qmAllLocks = !qmAllLocks; const m = $('modal'), mb = m && m.querySelector('.mbox'), y = mb ? mb.scrollTop : 0; showModal(qtPageHTML()); if (mb) mb.scrollTop = y; }
+});
+window.__qm = { tab: qmShow, cur: () => qmTab, html: () => qtPageHTML(), meta: qmMeta, dots: () => Object.assign({}, qmSnap, qmDotsLive()), MODES: QM_MODES };
+
+// ---------------- styles ----------------
+(function qmCSS() {
+  const st = document.createElement('style'); st.id = 'qmCSS';
+  st.textContent = `
+.qm-page{--qh:#7a52c0;--qhb:#efe6fb;--qx:#1f7f77;--qxb:#dcf2ee;--qm:#c4487a;--qmb:#fde4ee;--qd:#a8720a;--qdb:#fdf0d0;max-width:100%;overflow-x:hidden}
+.qm-page *{max-width:100%}
+.qm-page .qt-top{margin:0 0 8px;top:-18px;padding:8px 46px 8px;border-radius:0}.qm-page .qt-x{right:2px;top:50%;transform:translateY(-50%)}
+.qm-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:2px 0 8px}
+.qm-t{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:5px 2px 6px;border-radius:14px;border:2.5px solid var(--c);background:#fffaf0;color:var(--c);font:800 11.5px/1.1 var(--display,inherit);cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;box-shadow:0 2px 0 rgba(74,53,40,.25)}
+.qm-t span{font-size:19px;line-height:1.1}
+.qm-t.on{background:var(--c);color:#fff;box-shadow:0 2px 0 rgba(74,53,40,.45)}
+.qm-t.qm-hist{--c:var(--qh)}.qm-t.qm-explo{--c:var(--qx)}.qm-t.qm-monde{--c:var(--qm)}.qm-t.qm-defi{--c:var(--qd)}
+.qm-dot{position:absolute;right:5px;top:4px;width:11px;height:11px;border-radius:50%;background:#e5484d;border:2px solid #fff}
+.qm-pitch{margin:0 0 8px;padding:7px 10px;border-radius:12px;border-left:5px solid var(--c);background:var(--cb);display:flex;flex-direction:column;gap:1px;font:600 12.5px/1.3 var(--body,inherit)}
+.qm-pitch b{font:800 14px/1.2 var(--display,inherit);color:var(--c)}.qm-pitch span{font-weight:800}.qm-pitch small{font-size:11px;opacity:.7}
+.qm-pitch.qm-hist{--c:var(--qh);--cb:var(--qhb)}.qm-pitch.qm-explo{--c:var(--qx);--cb:var(--qxb)}.qm-pitch.qm-monde{--c:var(--qm);--cb:var(--qmb)}.qm-pitch.qm-defi{--c:var(--qd);--cb:var(--qdb)}
+.qm-body{min-width:0}.qm-body .qt-h3:first-child{margin-top:4px}
+.qm-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:2px 0 1px;font-style:normal}
+.qm-dif{font:800 10px/1 system-ui,sans-serif;letter-spacing:1px;color:#4a3528;font-style:normal;white-space:nowrap}.qm-dif em{font-style:normal;opacity:.22}
+.qm-tag{font:800 10.5px/1.5 var(--display,inherit);font-style:normal;padding:0 7px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qm-tag.qm-hist{background:var(--qhb,#efe6fb);color:var(--qh,#7a52c0)}.qm-tag.qm-explo{background:var(--qxb,#dcf2ee);color:var(--qx,#1f7f77)}.qm-tag.qm-monde{background:var(--qmb,#fde4ee);color:var(--qm,#c4487a)}.qm-tag.qm-defi{background:var(--qdb,#fdf0d0);color:var(--qd,#a8720a)}
+.qm-page .qt-story,.qm-page .qt-defi,.qm-page .my-row,.qm-page .wd-row,.qm-page .eqc,.qm-page .my-g,.qm-page .qt-drow,.qm-lock{min-width:0}
+.qm-page .qt-story>div,.qm-page .qt-defi>div,.qm-page .my-row>div,.qm-page .wd-row>div,.qm-page .eqc>div,.qm-page .my-g>div{min-width:0;overflow-wrap:anywhere}
+.qm-lock{display:flex;align-items:center;gap:8px;background:#fffaf0;border:2px solid rgba(74,53,40,.3);border-radius:14px;padding:6px 8px;margin-bottom:6px}
+.qm-lock>div{flex:1;min-width:0;display:flex;flex-direction:column;font:600 12px/1.25 var(--body,inherit)}.qm-lock b{font:800 13.5px/1.2 var(--display,inherit)}
+.qm-li{font-size:20px;flex:none}
+.qm-lock .btn{flex:none;max-width:92px;white-space:normal;line-height:1.1}
+.qm-conds{display:flex;flex-wrap:wrap;gap:3px 6px;margin-top:2px}.qm-conds i{font-style:normal;font-size:11px;font-weight:700}.qm-conds .ok{color:#2f7f3a}.qm-conds .no{color:#b0482f}
+.qm-more{display:block;margin:0 auto 6px;border:none;background:none;color:var(--qx);font:800 12.5px var(--display,inherit);text-decoration:underline;cursor:pointer}
+.qm-small{font-size:12px;padding:6px 9px}
+`;
+  document.head.appendChild(st);
+})();
 
 })();
 </script>
