@@ -97,6 +97,7 @@ const FAM_NATURE = [
   ['Dent de requin fossile', 'coquillage', ['mer', 'desert'], '', '', 3, '#8a8a8a'],
   ['Ammonite', 'coquillage', ['montagne', 'desert'], '', '', 3, '#c9a07a'],
 ];
+try { ING.insecte = [['insecte', 'scarabee'], 'Insecte']; } catch (e) {} // v36 : offrandes aux gardiens, appâts (fennec, lémurien)
 const FAM_NAT_BY = {}; FAM_NATURE.forEach(d => { FAM_NAT_BY[d[0]] = d; });
 // pierres précieuses : [clé, brute, taillée, zones, rareté, couleur] ; zones : eur, afr, asie, ase (Asie du Sud-Est), oce, amn, ams
 const FAM_GEMS = [
@@ -137,7 +138,9 @@ const FAM_KEY_BY = { 'Clé en bois': 'bois', 'Clé en fer': 'fer', 'Clé en or':
 const famChestName = l => 'Coffre ' + FAM_LOCKS[l].de;
 const famKeyName = l => 'Clé ' + (FAM_LOCKS[l].kde || FAM_LOCKS[l].de);
 // exceptions écrites à la main (nom → famille)
-const FAM_EXC = { 'Pousse de bambou': 'jardin', 'Lunettes anti-sable': 'equipement', 'Raquettes à neige': 'equipement', 'Gourde de refuge': 'equipement', 'Carte des marées': 'equipement', 'Plan du métro': 'equipement', 'Hamac tressé': 'materiaux', 'Écaille de brochet': 'nature', 'Écaille de sirène': 'tresors' };
+// v36 : « Lunettes anti-sable », « Raquettes à neige », « Gourde de refuge », « Carte des marées », « Plan du métro » ne sont plus
+// rangés dans Équipement (ce ne sont pas des outils) : ils suivent leur matière (papier, bois, plastique…).
+const FAM_EXC = { 'Pousse de bambou': 'jardin', 'Hamac tressé': 'materiaux', 'Écaille de brochet': 'nature', 'Écaille de sirène': 'tresors' };
 
 // ---------------- classement ----------------
 const famName = it => String((it && it.name) || '').replace(/ \(chef-d’œuvre\)$/, '');

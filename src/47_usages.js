@@ -27,6 +27,8 @@ const US_K = {
   // bonus de commerce des vêtements
   prep: { nom: 'Préparation', c: '#e0784a', g: '<circle cx="10" cy="11" r="5.8" fill="#fff"/><path d="M10 7.8 V11 L12.4 12.4" stroke="#e0784a" stroke-width="1.6" fill="none" stroke-linecap="round"/><rect x="8.4" y="2.6" width="3.2" height="2" rx=".8" fill="#fff"/>' },
   pay: { nom: 'Clients', c: '#d9a520', g: '<circle cx="10" cy="10" r="5.8" fill="#fff"/><path d="M8 8.2 h3.4 a1.6 1.6 0 0 1 0 3.2 h-2.8 a1.6 1.6 0 0 0 0 3.2 H12" stroke="#d9a520" stroke-width="1.4" fill="none" stroke-linecap="round" transform="translate(0 -1.6)"/>' },
+  // v36 : décoration à poser au foyer (confort, 49_foyer3d.js)
+  confort: { nom: 'Confort', c: '#c9739a', g: '<path d="M4 15.5 V10.5 a2 2 0 0 1 4 0 V12 H12 V10.5 a2 2 0 0 1 4 0 V15.5Z" fill="#fff"/><path d="M6 8.5 V7 a2.5 2.5 0 0 1 2.5 -2.5 H11.5 A2.5 2.5 0 0 1 14 7 V8.5" stroke="#fff" stroke-width="1.6" fill="none"/>' },
   tous: { nom: 'Tous terrains', c: '#7f9a6a', g: '<circle cx="10" cy="10" r="5.6" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M10 4 L11.6 10 L10 16 L8.4 10Z" fill="#fff"/>' },
 };
 const usPill = (k, cls = '', title = '') => { const K = US_K[k]; if (!K) return ''; return `<i class="uspill ${cls}" style="--pc:${K.c}"${title ? ` title="${esc(title)}"` : ''} aria-hidden="true"><svg viewBox="0 0 20 20">${K.g}</svg></i>`; };
@@ -44,7 +46,7 @@ function usIngMatch(key, it) {
   if (!it || it.tresor || it.mk) return false;
   if (key === 'far') return usCall(() => cmIsFar(it), false) && it.cat !== 'v';
   if (String(key).startsWith('r:')) return it.rid === key.slice(2);
-  return !!(ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'));
+  return !!(ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n') && ingExtra(key, it));
 }
 const usDefItem = def => ({ name: def[0], cat: def[1], sub: def[2], rarity: def[3] || 0, look: def[4] || null, color: def[5] || null });
 const usIco = def => usCall(() => itemIcon(usDefItem(def)), '');
@@ -92,6 +94,7 @@ function usKinds(it) {
   for (const u of raw) {
     if (!u) continue;
     const k = u.kind, txt = String(u.txt || '');
+    if (k === 'decorer' || k === 'confort') { K.add('confort'); continue; }
     if (US_K[k] && k !== 'vendre' && k !== 'recycler') { K.add(k); continue; }
     if (k === 'batiment') K.add('construire');
     else if (k === 'nourrir' || k === 'attirer' || k === 'eclore') K.add('familier');
@@ -105,26 +108,28 @@ function usKinds(it) {
   if (it.cat === 'n' && !it.mk) K.add('familier');
   if (usGearOf([it.name]) || usCall(() => famToolOf(it), null)) K.add('expedition');
   if (usCall(() => famSeedOf(it), null)) K.add('planter');
-  const order = ['porter', 'cuisiner', 'construire', 'expedition', 'familier', 'planter', 'offrande'];
+  if (it.cat === 'd' || usCall(() => f3IsDeco(it), false)) K.add('confort');
+  const order = ['porter', 'cuisiner', 'construire', 'expedition', 'familier', 'planter', 'offrande', 'confort'];
   const out = order.filter(k => K.has(k));
   usCache.set(ck, out);
   return out;
 }
 // onglets du sac
-const US_TABS = [['tout', 'Tout'], ['cuisiner', 'Cuisiner'], ['construire', 'Construire'], ['partir', 'Partir'], ['familier', 'Familiers'], ['porter', 'Porter'], ['autre', 'Autres / à vendre']];
-const US_TAB_ICO = { cuisiner: 'cuisiner', construire: 'construire', partir: 'expedition', familier: 'familier', porter: 'porter', autre: 'vendre' };
+const US_TABS = [['tout', 'Tout'], ['cuisiner', 'Cuisiner'], ['construire', 'Construire'], ['partir', 'Partir'], ['familier', 'Familiers'], ['porter', 'Porter'], ['confort', 'Confort'], ['autre', 'Autres / à vendre']];
+const US_TAB_ICO = { cuisiner: 'cuisiner', construire: 'construire', partir: 'expedition', familier: 'familier', porter: 'porter', confort: 'confort', autre: 'vendre' };
 const US_TAB_HINT = {
   cuisiner: 'Ingrédients : préparez des plats au commerce, puis vendez-les aux clients.',
   construire: 'Matériaux : fabriquez à l’atelier, construisez au village.',
   partir: 'Matériel, outils et offrandes : pour les expéditions et les gardiens.',
   familier: 'Pour nourrir, attirer ou faire éclore vos familiers.',
   porter: 'Chaque vêtement porté donne un bonus. 3 pièces d’un même ensemble : gros bonus !',
+  confort: 'Décorations, statues, trophées et reliques : posez-les au foyer (« Poser chez moi ») pour gagner du confort.',
   autre: 'Collection, trésors et surplus : à garder, ou à vendre au marché.',
 };
-const US_TAB_EMPTY = { cuisiner: 'Aucun ingrédient pour vos recettes pour l’instant : marchés et vergers en regorgent.', construire: 'Aucun matériau : bois, laine, pierres… se trouvent partout en voyage.', partir: 'Aucun matériel d’expédition : fabriquez-en à l’atelier.', familier: 'Rien pour vos familiers : la nourriture se trouve partout.', porter: 'Aucun vêtement : chaque paysage a les siens.', autre: 'Rien d’autre : tout a un usage !' };
+const US_TAB_EMPTY = { cuisiner: 'Aucun ingrédient pour vos recettes pour l’instant : marchés et vergers en regorgent.', construire: 'Aucun matériau : bois, laine, pierres… se trouvent partout en voyage.', partir: 'Aucun matériel d’expédition : fabriquez-en à l’atelier.', familier: 'Rien pour vos familiers : la nourriture se trouve partout.', porter: 'Aucun vêtement : chaque paysage a les siens.', confort: 'Aucune décoration dans le sac : elles sont peut-être déjà posées au foyer.', autre: 'Rien d’autre : tout a un usage !' };
 function usTabsOf(it) {
   const k = usKinds(it), t = new Set();
-  k.forEach(x => { if (x === 'cuisiner' || x === 'construire' || x === 'familier' || x === 'porter') t.add(x); if (x === 'expedition' || x === 'offrande') t.add('partir'); });
+  k.forEach(x => { if (x === 'cuisiner' || x === 'construire' || x === 'familier' || x === 'porter') t.add(x); if (x === 'expedition' || x === 'offrande') t.add('partir'); if (x === 'confort') t.add('confort'); });
   if (!t.size) t.add('autre');
   return t;
 }

@@ -355,13 +355,19 @@ function renderBag(box) {
 const sellPrice = it => Math.round(value(it) * (hasEff(S.sel, 'nego') ? 0.75 : 0.6));
 
 // ---- Atelier
-function ingCount(key) { const subs = ING[key][0]; return S.inv.filter(i => subs.includes(i.sub) && (i.cat === 'm' || i.cat === 'n')).length; }
+// v36 : contraintes en plus de la sous-catégorie (pierre TAILLÉE, matériel PRO précis : recettes légendaires)
+function ingExtra(key, i) {
+  if (key === 'gemme') return !!(i && i.cut);
+  if (typeof key === 'string' && key.startsWith('xgp_')) { try { const G = XP_G[key.slice(4)]; return !!(G && String(i.name || '').replace(/ \(chef-d’œuvre\)$/, '') === G[1][1]); } catch (e) { return false; } }
+  return true;
+}
+const ingIt = (key, i) => !!(ING[key] && ING[key][0].includes(i.sub) && (i.cat === 'm' || i.cat === 'n') && ingExtra(key, i));
+function ingCount(key) { return S.inv.filter(i => ingIt(key, i)).length; }
 function canCraft(r) { return r.ing.every(([key, n]) => ingCount(key) >= n) && S.coins >= r.coins; }
 function craft(id) {
   const r = RECIPES.find(x => x.id === id); if (!r || !canCraft(r)) return;
   for (const [key, n] of r.ing) {
-    const subs = ING[key][0];
-    const cands = S.inv.filter(i => subs.includes(i.sub) && (i.cat === 'm' || i.cat === 'n')).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); // spécialités régionales en dernier
+    const cands = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); // spécialités régionales en dernier
     cands.slice(0, n).forEach(c => S.inv.splice(S.inv.indexOf(c), 1));
   }
   S.coins -= r.coins;

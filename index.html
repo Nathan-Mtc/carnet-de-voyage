@@ -2444,7 +2444,7 @@ Object.assign(TAGL, Object.fromEntries(Object.entries(POI_CATS).map(([k, v]) => 
 Object.assign(FOOD_TASTE.panda, { love: ['pomme', 'fruit', 'pain'] });
 Object.assign(FOOD_TASTE.capy, { love: ['agrume', 'boisson'] });
 Object.assign(FOOD_TASTE.axo, { love: ['mer', 'glace'] });
-Object.assign(ING, { tissu: [['tissu', 'laine'], 'Tissu'], metal: [['metal', 'medaille'], 'Métal'], verre: [['verre', 'cristal'], 'Verre'], bois: [['bois'], 'Bois'], farine: [['farine'], 'Farine'] });
+Object.assign(ING, { tissu: [['tissu', 'laine'], 'Tissu'], metal: [['metal', 'plastique', 'medaille'], 'Métal ou plastique'], verre: [['verre', 'cristal'], 'Verre'], bois: [['bois'], 'Bois'], farine: [['farine'], 'Farine'] });
 RECIPES.push(
   { id: 'painmaison', kind: 'Cuisine', out: ['Pain de campagne maison', 'n', 'pain', 2, null, '#c98a4f'], ing: [['farine', 2]], coins: 0 },
   { id: 'capecousue', kind: 'Vêtement', out: ['Cape cousue main', 'v', 'dos', 2, 'cape', '#c9604f'], ing: [['tissu', 3]], coins: 10 },
@@ -2452,7 +2452,6 @@ RECIPES.push(
   { id: 'bonnettric', kind: 'Vêtement', out: ['Bonnet tricoté', 'v', 'tete', 2, 'bonnet', '#e9a03a'], ing: [['tissu', 2]], coins: 5 },
   { id: 'lanverre', kind: 'Décoration', out: ['Lanterne de verre', 'd', 'lanterne', 2, null, '#bfe3f6'], ing: [['verre', 2], ['metal', 1]], coins: 10 },
   { id: 'mobile', kind: 'Décoration', out: ['Mobile de coquillages', 'd', 'bocal', 2, null, '#f6cdb8'], ing: [['coquillage', 2], ['bois', 1]], coins: 5 },
-  { id: 'statuebois', kind: 'Décoration', out: ['Statuette sculptée', 'd', 'statue', 3, null, '#c99a6a'], ing: [['bois', 4]], coins: 20 },
 );
 // Ingrédients et recettes des nouveaux lieux
 Object.assign(ING, { fromage: [['fromage'], 'Fromage'], legume: [['legume'], 'Légume'], boisson: [['boisson'], 'Boisson'], pain: [['pain'], 'Pain'], plat: [['plat'], 'Plat cuisiné'], glace: [['glace'], 'Glace'], plastique: [['plastique'], 'Plastique'], fleur: [['fleur'], 'Fleur'] });
@@ -5038,13 +5037,19 @@ function renderBag(box) {
 const sellPrice = it => Math.round(value(it) * (hasEff(S.sel, 'nego') ? 0.75 : 0.6));
 
 // ---- Atelier
-function ingCount(key) { const subs = ING[key][0]; return S.inv.filter(i => subs.includes(i.sub) && (i.cat === 'm' || i.cat === 'n')).length; }
+// v36 : contraintes en plus de la sous-catégorie (pierre TAILLÉE, matériel PRO précis : recettes légendaires)
+function ingExtra(key, i) {
+  if (key === 'gemme') return !!(i && i.cut);
+  if (typeof key === 'string' && key.startsWith('xgp_')) { try { const G = XP_G[key.slice(4)]; return !!(G && String(i.name || '').replace(/ \(chef-d’œuvre\)$/, '') === G[1][1]); } catch (e) { return false; } }
+  return true;
+}
+const ingIt = (key, i) => !!(ING[key] && ING[key][0].includes(i.sub) && (i.cat === 'm' || i.cat === 'n') && ingExtra(key, i));
+function ingCount(key) { return S.inv.filter(i => ingIt(key, i)).length; }
 function canCraft(r) { return r.ing.every(([key, n]) => ingCount(key) >= n) && S.coins >= r.coins; }
 function craft(id) {
   const r = RECIPES.find(x => x.id === id); if (!r || !canCraft(r)) return;
   for (const [key, n] of r.ing) {
-    const subs = ING[key][0];
-    const cands = S.inv.filter(i => subs.includes(i.sub) && (i.cat === 'm' || i.cat === 'n')).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); // spécialités régionales en dernier
+    const cands = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); // spécialités régionales en dernier
     cands.slice(0, n).forEach(c => S.inv.splice(S.inv.indexOf(c), 1));
   }
   S.coins -= r.coins;
@@ -12042,14 +12047,14 @@ const NS_BAITS = {
   capy: { subs: { agrume: 1, legume: 0.5 }, names: { 'Nénuphar': 1.1, 'Roseau': 1, 'Clémentine': 1.2 } },
   axo: { subs: { mer: 0.6 }, names: { 'Crevettes grises': 1.2, 'Perche grillée': 1, 'Écaille de brochet': 1, 'Truite arc-en-ciel': 1.4, 'Nénuphar': 0.6 } },
   renard: { subs: { fromage: 1 }, names: { 'Saumon fumé': 1.4, 'Lichen des rennes': 1.2, 'Gruyère': 1.2 } },
-  fennec: { subs: { sucre: 0.5 }, names: { 'Dattes': 1.4, 'Datte du souk': 1.4, 'Figue de barbarie': 1.2, 'Loukoum à la rose': 1 } },
+  fennec: { subs: { sucre: 0.5, insecte: 1, scarabee: 1 }, names: { 'Grillon champêtre': 1.4, 'Dattes': 1.4, 'Datte du souk': 1.4, 'Figue de barbarie': 1.2, 'Loukoum à la rose': 1 } },
   tanuki: { subs: { boisson: 1, pain: 0.8, plat: 0.6 }, names: { 'Thé matcha': 1.4, 'Mochi': 1.2, 'Thé au jasmin': 1.2 } },
   paresseux: { subs: { legume: 0.6 }, names: { 'Mangue': 1.2, 'Ananas': 1, 'Noix de coco': 1, 'Fruit de la passion': 1.4, 'Mangue de Casamance': 1.2, 'Fruit du dragon': 1.2, 'Feuille de palmier': 1, 'Hamac tressé': 1 } },
-  lemur: { subs: { fruit: 1, agrume: 0.6 }, names: { 'Litchi': 1.4, 'Gousse de vanille': 1.2 } },
+  lemur: { subs: { fruit: 1, agrume: 0.6, insecte: 0.8 }, names: { 'Phasme feuille': 1.3, 'Papillon lune': 1.2, 'Litchi': 1.4, 'Gousse de vanille': 1.2 } },
   phoque: { subs: { mer: 1 }, names: { 'Saumon fumé': 1.2, 'Sardines du port': 1.4, 'Crevettes grises': 1 } },
   quokka: { subs: { feuille: 0.6, pomme: 0.6 }, names: { 'Feuille d’eucalyptus': 1.4, 'Noix de macadamia': 1.2, 'Pomme du verger': 1 } },
 };
-const NS_BAIT_HINT = { panda: 'pommes, noisettes, pousses de bambou', capy: 'agrumes, nénuphars', axo: 'crevettes, petits poissons d’eau douce', renard: 'fromage, saumon fumé', fennec: 'dattes, figues, douceurs', tanuki: 'thé, pain, mochi', paresseux: 'fruits tropicaux, feuilles de palmier', lemur: 'fruits, litchis, vanille', phoque: 'poisson, sardines, fruits de mer', quokka: 'feuilles d’eucalyptus, pommes' };
+const NS_BAIT_HINT = { panda: 'pommes, noisettes, pousses de bambou', capy: 'agrumes, nénuphars', axo: 'crevettes, petits poissons d’eau douce', renard: 'fromage, saumon fumé', fennec: 'insectes (grillons, scarabées), dattes, figues', tanuki: 'thé, pain, mochi', paresseux: 'fruits tropicaux, feuilles de palmier', lemur: 'fruits, litchis, vanille, insectes', phoque: 'poisson, sardines, fruits de mer', quokka: 'feuilles d’eucalyptus, pommes' };
 function nsBaitPower(it, sp) {
   const B = NS_BAITS[sp]; if (!B || !it) return 0;
   const byName = B.names[it.name] || B.names[String(it.name || '').replace(/ \(chef-d’œuvre\)$/, '')] || 0;
@@ -20253,14 +20258,18 @@ const FY_EFF = {
   plante: ['joy', 0.2, 'bonheur qui dure (+20 %)'], herbier: ['joy', 0.15, 'bonheur qui dure (+15 %)'],
   lampe: ['night', 0.3, '+30 % de forme la nuit'], lanterne: ['night', 0.3, '+30 % de forme la nuit'],
   gamelle: ['meal', 0.5, '+50 % de bonheur au repas'], bocal: ['hug', 0.5, '+50 % aux câlins'],
-  mappemonde: ['trip', 0.04, 'voyages 4 % plus courts'], cartemur: ['trip', 0.06, 'voyages 6 % plus courts'],
-  statue: ['xp', 0, 'trophée : + d’expérience (confort)'],
+  mappemonde: ['trip', 0.08, 'voyages 8 % plus courts'], cartemur: ['trip', 0.1, 'voyages 10 % plus courts'],
+  jouet: ['hug', 1, 'un câlin compte double'],
+  // v36 : plus de « statue : + d'expérience » (valeur 0, jamais appliquée) ; statues, trophées et reliques donnent du CONFORT (49_foyer3d.js)
 };
 const FY_PHOTO_EFF = ['joy', 0.1, 'souvenir : bonheur qui dure (+10 %)'];
-function fyEffOf(v) { if (!v) return null; if (v.photo) return FY_PHOTO_EFF; if (v.item && v.item.cat === 'd') return FY_EFF[v.item.sub] || null; return v.item ? ['xp', 0, '+ de confort (expérience)'] : null; }
+const fySubOf = it => (/^Jouet en bois/.test(String(it.name || '')) ? 'jouet' : it.sub); // v36 : le jouet de l'animalerie
+function fyEffOf(v) { if (!v) return null; if (v.photo) return FY_PHOTO_EFF; if (v.item && v.item.cat === 'd') return FY_EFF[fySubOf(v.item)] || null; return null; }
 function fyMods() {
   const m = { rest: 0, night: 0, joy: 0, meal: 0, hug: 0, trip: 0, xp: 0 };
   for (const v of Object.values(fyState() && S.house)) { const e = fyEffOf(v); if (e) m[e[0]] += e[1]; }
+  // v36 : les décos posées dans la vue 3D (S.f3d) gardent leur petit bonus particulier
+  try { if (S.f3d && S.f3d.d) for (const it of Object.values(S.f3d.d)) { const e = it && fyEffOf({ item: it }); if (e) m[e[0]] += e[1]; } } catch (e) {}
   for (const k in m) m[k] = Math.min(FY_KIND[k][1], m[k]);
   return m;
 }
@@ -22419,6 +22428,7 @@ const FAM_NATURE = [
   ['Dent de requin fossile', 'coquillage', ['mer', 'desert'], '', '', 3, '#8a8a8a'],
   ['Ammonite', 'coquillage', ['montagne', 'desert'], '', '', 3, '#c9a07a'],
 ];
+try { ING.insecte = [['insecte', 'scarabee'], 'Insecte']; } catch (e) {} // v36 : offrandes aux gardiens, appâts (fennec, lémurien)
 const FAM_NAT_BY = {}; FAM_NATURE.forEach(d => { FAM_NAT_BY[d[0]] = d; });
 // pierres précieuses : [clé, brute, taillée, zones, rareté, couleur] ; zones : eur, afr, asie, ase (Asie du Sud-Est), oce, amn, ams
 const FAM_GEMS = [
@@ -22459,7 +22469,9 @@ const FAM_KEY_BY = { 'Clé en bois': 'bois', 'Clé en fer': 'fer', 'Clé en or':
 const famChestName = l => 'Coffre ' + FAM_LOCKS[l].de;
 const famKeyName = l => 'Clé ' + (FAM_LOCKS[l].kde || FAM_LOCKS[l].de);
 // exceptions écrites à la main (nom → famille)
-const FAM_EXC = { 'Pousse de bambou': 'jardin', 'Lunettes anti-sable': 'equipement', 'Raquettes à neige': 'equipement', 'Gourde de refuge': 'equipement', 'Carte des marées': 'equipement', 'Plan du métro': 'equipement', 'Hamac tressé': 'materiaux', 'Écaille de brochet': 'nature', 'Écaille de sirène': 'tresors' };
+// v36 : « Lunettes anti-sable », « Raquettes à neige », « Gourde de refuge », « Carte des marées », « Plan du métro » ne sont plus
+// rangés dans Équipement (ce ne sont pas des outils) : ils suivent leur matière (papier, bois, plastique…).
+const FAM_EXC = { 'Pousse de bambou': 'jardin', 'Hamac tressé': 'materiaux', 'Écaille de brochet': 'nature', 'Écaille de sirène': 'tresors' };
 
 // ---------------- classement ----------------
 const famName = it => String((it && it.name) || '').replace(/ \(chef-d’œuvre\)$/, '');
@@ -24365,7 +24377,7 @@ const qtFam = it => qtCall(() => FAM[famOf(it)], null);
 const qtIco = it => qtCall(() => itemIcon(it), '');
 const qtResIt = x => ({ name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar || 0, color: x.color, rid: x.id });
 const qtIngIt = k => qtCall(() => bqSampleIng(k), { name: '', cat: 'm', sub: 'pierre', rarity: 0 });
-const qtIngMatch = k => it => !!(it && !it.mk && ING[k] && ING[k][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'));
+const qtIngMatch = k => it => !!(it && !it.mk && ING[k] && ING[k][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n') && ingExtra(k, it));
 const qtCount = m => S.inv.filter(it => it && m(it)).length;
 const qtHomeReg = () => qtCall(() => regionAt(qtHome().lon, qtHome().lat), null);
 const QT_SCROLL = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 7 H29 a4 4 0 0 1 4 4 V31 a3 3 0 0 1 -3 3 H11 a4 4 0 0 1 -4 -4 V9Z" fill="#fff3d6" stroke="#5b4636" stroke-width="2.2" stroke-linejoin="round"/><path d="M13 14 H27 M13 19 H27 M13 24 H22" stroke="#c98a5a" stroke-width="2.2" stroke-linecap="round"/><circle cx="29" cy="30" r="5" fill="#e0607e" stroke="#5b4636" stroke-width="2"/></svg>';
@@ -25791,6 +25803,9 @@ const xpGIco = (g, tier) => { try { const d = xpGearDef(g, tier); return itemIco
   ['crampons', 2, [['metal', 3], ['cristal', 1], ['pierre', 2]], 80], ['palmes', 2, [['verre', 2], ['metal', 2], ['coquillage', 2]], 80], ['lampe', 2, [['metal', 2], ['lumiere', 2], ['verre', 1]], 80],
   ['gourde', 2, [['metal', 2], ['cristal', 1], ['tissu', 2]], 80], ['manteau', 2, [['laine', 4], ['plume', 2], ['tissu', 2]], 90], ['jumelles', 2, [['verre', 3], ['metal', 2], ['cristal', 1]], 90],
 ].forEach(([g, tier, ing, c]) => { try { RECIPES.push({ id: `xg_${g}${tier}`, kind: 'Équipement', out: xpGearDef(g, tier), ing, coins: c }); } catch (e) {} });
+// v36 : matériel LÉGENDAIRE = matériel pro + 1 pierre précieuse taillée (atelier › Trésors : « Tailler »)
+try { ING.gemme = [['gemme'], 'Pierre précieuse taillée']; } catch (e) {}
+XP_GEAR.forEach(G => { try { ING['xgp_' + G[0]] = [['outil'], G[1][1]]; RECIPES.push({ id: `xg_${G[0]}3`, kind: 'Équipement', out: xpGearDef(G[0], 3), ing: [['xgp_' + G[0], 1], ['gemme', 1]], coins: 150 }); } catch (e) {} });
 // magasin : le matériel de base (2 articles par jour, rayon « Objets fabriqués »)
 const XP_SHOP = ['crampons', 'palmes', 'gourde', 'manteau', 'jumelles'];
 try { XP_SHOP.forEach(g => BQ_CAT.push({ key: 'xg_' + g, k: 't', lvl: 0, def: xpGearDef(g, 1) })); } catch (e) {}
@@ -26774,19 +26789,19 @@ const MY_GUARDS = [
     offers: [{ k: 'plume', t: 'une plume pour son nid' }, { k: 'flocon', t: 'un flocon éternel', c: { night: 1 } }, { k: 'mer', t: 'un poisson de la baie' }, { k: 'cristal', t: 'un cristal de glace', c: { g: ['jumelles', 1] } }] },
   { id: 'canard', nm: 'Le canard mandarin', sp: 'canard', where: 'Kyoto (rivière Kamo)', lon: 135.77, lat: 35.01, tags: ['ville', 'monument'], csp: 'tanuki', cn: 'Sakura', bless: 'or', aura: '#ffe0ec',
     rum: 'Une marchande de thé de Kyoto parle d’un canard aux plumes d’or qui glisse sur la rivière à l’aube…',
-    offers: [{ k: 'graine', t: 'des graines de lotus' }, { k: 'feuille', t: 'un pétale de cerisier', c: { night: 1 } }, { k: 'sucre', t: 'un mochi bien sucré' }] },
+    offers: [{ k: 'insecte', t: 'une libellule (un insecte)' }, { k: 'feuille', t: 'un pétale de cerisier', c: { night: 1 } }, { k: 'sucre', t: 'un mochi bien sucré' }] },
   { id: 'tortue', nm: 'La tortue géante', sp: 'tortue', where: 'Îles Galápagos', lon: -90.35, lat: -0.74, tags: ['mer', 'ile'], csp: 'capy', cn: 'Darwin', bless: 'prud', aura: '#e6ffd8',
     rum: 'Un vieux marin raconte qu’une tortue de deux cents ans attend les voyageurs patients sur une île volcanique du Pacifique…',
     offers: [{ k: 'feuille', t: 'des feuilles de cactus' }, { k: 'fruit', t: 'des goyaves bien mûres' }, { k: 'agrume', t: 'un agrume juteux' }, { k: 'coquillage', t: 'un coquillage pour sa carapace', c: { g: ['palmes', 1] } }, { k: 'sable', t: 'du sable chaud', c: { m: ['mer', 3] } }] },
   { id: 'loutre', nm: 'La loutre géante', sp: 'loutre', where: 'Amazonie (Manaus)', lon: -60.0, lat: -3.1, tags: ['foret', 'lac'], csp: 'paresseux', cn: 'Yara', bless: 'chance', aura: '#d8fff0',
     rum: 'Un piroguier raconte qu’une loutre grande comme un homme rit dans les rivières d’Amazonie…',
-    offers: [{ k: 'mer', t: 'un poisson de rivière' }, { k: 'coquillage', t: 'un coquillage brillant' }, { k: 'fruit', t: 'des fruits de la forêt', c: { g: ['jumelles', 1] } }, { k: 'bois', t: 'un bâton pour jouer' }] },
+    offers: [{ k: 'mer', t: 'un poisson de rivière' }, { k: 'coquillage', t: 'un coquillage brillant' }, { k: 'fruit', t: 'des fruits de la forêt', c: { g: ['jumelles', 1] } }, { k: 'insecte', t: 'un papillon (un insecte, comme le morpho bleu)' }] },
   { id: 'manchot', nm: 'Le manchot royal', sp: 'pingouin', where: 'Patagonie (Punta Tombo)', lon: -65.22, lat: -44.05, tags: ['mer', 'neige'], csp: 'phoque', cn: 'Pinpin', bless: 'or', aura: '#fff1c8',
     rum: 'Les gauchos de Patagonie parlent d’un manchot à collier d’or qui salue les bateaux…',
     offers: [{ k: 'mer', t: 'un poisson d’argent' }, { k: 'coquillage', t: 'un galet rond pour son nid' }, { k: 'flocon', t: 'un flocon éternel', c: { m: ['mer', 3] } }] },
   { id: 'grenouille', nm: 'La grenouille dorée', sp: 'grenouille', where: 'Panama (El Valle)', lon: -80.13, lat: 8.6, tags: ['foret'], csp: 'axo', cn: 'Doré', bless: 'flair', aura: '#fff3a8',
     rum: 'Un guide de Panama raconte qu’une grenouille dorée, presque disparue, fait signe de la patte au bord d’un ruisseau…',
-    offers: [{ k: 'feuille', t: 'une feuille de bananier' }, { k: 'fruit', t: 'un fruit sauvage', c: { night: 1 } }, { k: 'lumiere', t: 'une luciole', c: { night: 1 } }, { k: 'cristal', t: 'une goutte de rosée cristallisée', c: { m: ['foret', 4] } }, { k: 'champignon', t: 'un champignon lumineux' }] },
+    offers: [{ k: 'feuille', t: 'une feuille de bananier' }, { k: 'fruit', t: 'un fruit sauvage', c: { night: 1 } }, { k: 'insecte', t: 'une luciole (un insecte)', c: { night: 1 } }, { k: 'cristal', t: 'une goutte de rosée cristallisée', c: { m: ['foret', 4] } }, { k: 'champignon', t: 'un champignon lumineux' }] },
 ];
 const MY_G = {}; MY_GUARDS.forEach(G => { MY_G[G.id] = G; });
 const MY_G_VISIT = 60, MY_G_RUM = 1200; // km
@@ -26947,7 +26962,9 @@ function myChoose(gid, how) {
   }
   g.at = Date.now(); save(); return true;
 }
-const myBless = kind => MY_GUARDS.filter(G => G.bless === kind && myGRec(G.id).done === 'bless').length;
+// v36 : une offrande précieuse (pierre taillée) rend la bénédiction 50 % plus forte
+const myBless = kind => MY_GUARDS.filter(G => G.bless === kind && myGRec(G.id).done === 'bless').reduce((a, G) => a + (myGRec(G.id).gem ? 1.5 : 1), 0);
+const myGemOk = it => !!(it && it.cut && it.sub === 'gemme' && !it.special && !it.mys && !it.qt);
 
 // ---------------- aller sur la carte ----------------
 function myFree() { if (S.trips[S.sel]) { toast(`${myNm(S.sel)} est déjà en voyage. Choisissez un autre compagnon en haut.`); return false; } return true; }
@@ -27114,10 +27131,11 @@ function myOnArrive(t) {
     else {
       const m = myOfferMatch(o), low = a => a.filter(m).sort((x, y) => (x.rarity || 0) - (y.rarity || 0))[0]; let it = low(S.inv), from = S.inv;
       if (!it) { it = low(t.bag); from = t.bag; }
+      let gem = false; if (!it) { it = S.inv.filter(myGemOk).sort((x, y) => (x.rarity || 0) - (y.rarity || 0))[0]; from = S.inv; gem = !!it; }
       if (it) {
-        from.splice(from.indexOf(it), 1); g.t = (g.t || 0) + 1; g.last = Date.now();
+        from.splice(from.indexOf(it), 1); g.t = (g.t || 0) + 1; g.last = Date.now(); if (gem) g.gem = (g.gem || 0) + 1;
         const full = g.t >= G.offers.length;
-        myJ(t, `${G.nm} sort doucement de sa cachette. ${n} pose ${o.t} devant lui… Il s’approche et accepte l’offrande !${full ? ' Il a désormais toute confiance en vous.' : ''}`, [['friend', `confiance ${g.t}/${G.offers.length}`]]);
+        myJ(t, `${G.nm} sort doucement de sa cachette. ${n} pose ${o.t} devant lui… Il s’approche et accepte l’offrande${gem ? ` précieuse (${it.name}) : sa bénédiction sera plus forte` : ''} !${full ? ' Il a désormais toute confiance en vous.' : ''}`, [['friend', `confiance ${g.t}/${G.offers.length}`]]);
         myLog(t, { k: 'gvisit', g: G.id, t: g.t, of: o.t, it: it.name, full });
       } else { myJ(t, `${G.nm} observe ${n} de loin… Il espérait ${o.t}.`, [['wild', 'sans offrande']]); myLog(t, { k: 'gwait', g: G.id, of: o.t }); }
     }
@@ -27247,7 +27265,7 @@ function myGuardHTML(G) {
   const pips = Array.from({ length: N }, (_, i) => `<i class="${i < (g.t || 0) ? 'on' : ''}"></i>`).join('');
   let body = '';
   if (g.done === 'comp') body = `<small class="my-gd">Il vous a confié ${esc(myCall(() => S.comps[g.cid].name, G.cn))}, un familier rare.</small>`;
-  else if (g.done === 'bless') body = `<small class="my-gd">Bénédiction : <b>${esc(MY_BLESS[G.bless][0])}</b> · ${esc(MY_BLESS[G.bless][1])}</small>`;
+  else if (g.done === 'bless') body = `<small class="my-gd">Bénédiction : <b>${esc(MY_BLESS[G.bless][0])}</b> · ${esc(MY_BLESS[G.bless][1])}${g.gem ? ' · <b>renforcée (×1,5) par une pierre taillée</b>' : ''}</small>`;
   else if ((g.t || 0) >= N) body = `<small>Il vous fait entièrement confiance. Choisissez :</small><div class="my-acts"><button class="btn green sm" data-mysch="${G.id}:comp">Familier rare (${esc(myCall(() => spName(G.csp), G.csp).toLowerCase())})</button><button class="btn gold sm" data-mysch="${G.id}:bless">Bénédiction : ${esc(MY_BLESS[G.bless][1])}</button></div>`;
   else {
     const o = myOffer(G), c = myCond(o.c, S.sel), n = myHave(o);
@@ -27279,6 +27297,7 @@ function myRefresh() {
 }
 
 // ---------------- « Sert à… » : offrandes ----------------
+try { GAME.addUses(it => myCall(() => myGemOk(it) && MY_GUARDS.some(G => { const g = myGRec(G.id); return g.d && !g.done && (g.t || 0) < G.offers.length; }) ? [{ txt: 'Offrande précieuse pour un gardien : bénédiction plus forte', kind: 'recette' }] : [], [])); } catch (e) {}
 try { GAME.addUses(it => myCall(() => MY_GUARDS.filter(G => { const g = myGRec(G.id); return g.d && !g.done && (g.t || 0) < G.offers.length && myOfferMatch(myOffer(G))(it); }).slice(0, 1).map(G => ({ txt: `Offrande pour ${G.nm.toLowerCase()} (${G.where})`, kind: 'recette' })), [])); } catch (e) {}
 
 // ---------------- clics ----------------
@@ -27365,7 +27384,7 @@ document.addEventListener('click', ev => {
 window.__mys = {
   state: myState, RIDDLES: MY_RIDDLES, GUARDS: MY_GUARDS, MAPS: MY_MAPS, follow: myFollow, hint: myHint, check: (id, d) => myCheck(MY_R[id], d), zone: id => myZone(MY_R[id]),
   discover: myDiscover, piece: myAddPiece, choose: myChoose, bless: myBless, mapUpdate: myMapUpdate, svg: id => myMapSVG(MY_M[id]), p: myP, secretDest: id => mySecDest(MY_M[id]),
-  goSecret: myGoSecret, goGuard: myGoGuard, search: mySearch, refresh: myRefresh,
+  goSecret: myGoSecret, goGuard: myGoGuard, search: mySearch, refresh: myRefresh, arrive: myOnArrive,
   api: () => ({ S, plan, startTrip, collect, tick, openSheet, closeSheet, drawMarks, choosePlace, poiDest, map, PLACES, makeItem, showModal, qtPageHTML }),
 };
 
@@ -29149,6 +29168,8 @@ const US_K = {
   // bonus de commerce des vêtements
   prep: { nom: 'Préparation', c: '#e0784a', g: '<circle cx="10" cy="11" r="5.8" fill="#fff"/><path d="M10 7.8 V11 L12.4 12.4" stroke="#e0784a" stroke-width="1.6" fill="none" stroke-linecap="round"/><rect x="8.4" y="2.6" width="3.2" height="2" rx=".8" fill="#fff"/>' },
   pay: { nom: 'Clients', c: '#d9a520', g: '<circle cx="10" cy="10" r="5.8" fill="#fff"/><path d="M8 8.2 h3.4 a1.6 1.6 0 0 1 0 3.2 h-2.8 a1.6 1.6 0 0 0 0 3.2 H12" stroke="#d9a520" stroke-width="1.4" fill="none" stroke-linecap="round" transform="translate(0 -1.6)"/>' },
+  // v36 : décoration à poser au foyer (confort, 49_foyer3d.js)
+  confort: { nom: 'Confort', c: '#c9739a', g: '<path d="M4 15.5 V10.5 a2 2 0 0 1 4 0 V12 H12 V10.5 a2 2 0 0 1 4 0 V15.5Z" fill="#fff"/><path d="M6 8.5 V7 a2.5 2.5 0 0 1 2.5 -2.5 H11.5 A2.5 2.5 0 0 1 14 7 V8.5" stroke="#fff" stroke-width="1.6" fill="none"/>' },
   tous: { nom: 'Tous terrains', c: '#7f9a6a', g: '<circle cx="10" cy="10" r="5.6" fill="none" stroke="#fff" stroke-width="1.8"/><path d="M10 4 L11.6 10 L10 16 L8.4 10Z" fill="#fff"/>' },
 };
 const usPill = (k, cls = '', title = '') => { const K = US_K[k]; if (!K) return ''; return `<i class="uspill ${cls}" style="--pc:${K.c}"${title ? ` title="${esc(title)}"` : ''} aria-hidden="true"><svg viewBox="0 0 20 20">${K.g}</svg></i>`; };
@@ -29166,7 +29187,7 @@ function usIngMatch(key, it) {
   if (!it || it.tresor || it.mk) return false;
   if (key === 'far') return usCall(() => cmIsFar(it), false) && it.cat !== 'v';
   if (String(key).startsWith('r:')) return it.rid === key.slice(2);
-  return !!(ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'));
+  return !!(ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n') && ingExtra(key, it));
 }
 const usDefItem = def => ({ name: def[0], cat: def[1], sub: def[2], rarity: def[3] || 0, look: def[4] || null, color: def[5] || null });
 const usIco = def => usCall(() => itemIcon(usDefItem(def)), '');
@@ -29214,6 +29235,7 @@ function usKinds(it) {
   for (const u of raw) {
     if (!u) continue;
     const k = u.kind, txt = String(u.txt || '');
+    if (k === 'decorer' || k === 'confort') { K.add('confort'); continue; }
     if (US_K[k] && k !== 'vendre' && k !== 'recycler') { K.add(k); continue; }
     if (k === 'batiment') K.add('construire');
     else if (k === 'nourrir' || k === 'attirer' || k === 'eclore') K.add('familier');
@@ -29227,26 +29249,28 @@ function usKinds(it) {
   if (it.cat === 'n' && !it.mk) K.add('familier');
   if (usGearOf([it.name]) || usCall(() => famToolOf(it), null)) K.add('expedition');
   if (usCall(() => famSeedOf(it), null)) K.add('planter');
-  const order = ['porter', 'cuisiner', 'construire', 'expedition', 'familier', 'planter', 'offrande'];
+  if (it.cat === 'd' || usCall(() => f3IsDeco(it), false)) K.add('confort');
+  const order = ['porter', 'cuisiner', 'construire', 'expedition', 'familier', 'planter', 'offrande', 'confort'];
   const out = order.filter(k => K.has(k));
   usCache.set(ck, out);
   return out;
 }
 // onglets du sac
-const US_TABS = [['tout', 'Tout'], ['cuisiner', 'Cuisiner'], ['construire', 'Construire'], ['partir', 'Partir'], ['familier', 'Familiers'], ['porter', 'Porter'], ['autre', 'Autres / à vendre']];
-const US_TAB_ICO = { cuisiner: 'cuisiner', construire: 'construire', partir: 'expedition', familier: 'familier', porter: 'porter', autre: 'vendre' };
+const US_TABS = [['tout', 'Tout'], ['cuisiner', 'Cuisiner'], ['construire', 'Construire'], ['partir', 'Partir'], ['familier', 'Familiers'], ['porter', 'Porter'], ['confort', 'Confort'], ['autre', 'Autres / à vendre']];
+const US_TAB_ICO = { cuisiner: 'cuisiner', construire: 'construire', partir: 'expedition', familier: 'familier', porter: 'porter', confort: 'confort', autre: 'vendre' };
 const US_TAB_HINT = {
   cuisiner: 'Ingrédients : préparez des plats au commerce, puis vendez-les aux clients.',
   construire: 'Matériaux : fabriquez à l’atelier, construisez au village.',
   partir: 'Matériel, outils et offrandes : pour les expéditions et les gardiens.',
   familier: 'Pour nourrir, attirer ou faire éclore vos familiers.',
   porter: 'Chaque vêtement porté donne un bonus. 3 pièces d’un même ensemble : gros bonus !',
+  confort: 'Décorations, statues, trophées et reliques : posez-les au foyer (« Poser chez moi ») pour gagner du confort.',
   autre: 'Collection, trésors et surplus : à garder, ou à vendre au marché.',
 };
-const US_TAB_EMPTY = { cuisiner: 'Aucun ingrédient pour vos recettes pour l’instant : marchés et vergers en regorgent.', construire: 'Aucun matériau : bois, laine, pierres… se trouvent partout en voyage.', partir: 'Aucun matériel d’expédition : fabriquez-en à l’atelier.', familier: 'Rien pour vos familiers : la nourriture se trouve partout.', porter: 'Aucun vêtement : chaque paysage a les siens.', autre: 'Rien d’autre : tout a un usage !' };
+const US_TAB_EMPTY = { cuisiner: 'Aucun ingrédient pour vos recettes pour l’instant : marchés et vergers en regorgent.', construire: 'Aucun matériau : bois, laine, pierres… se trouvent partout en voyage.', partir: 'Aucun matériel d’expédition : fabriquez-en à l’atelier.', familier: 'Rien pour vos familiers : la nourriture se trouve partout.', porter: 'Aucun vêtement : chaque paysage a les siens.', confort: 'Aucune décoration dans le sac : elles sont peut-être déjà posées au foyer.', autre: 'Rien d’autre : tout a un usage !' };
 function usTabsOf(it) {
   const k = usKinds(it), t = new Set();
-  k.forEach(x => { if (x === 'cuisiner' || x === 'construire' || x === 'familier' || x === 'porter') t.add(x); if (x === 'expedition' || x === 'offrande') t.add('partir'); });
+  k.forEach(x => { if (x === 'cuisiner' || x === 'construire' || x === 'familier' || x === 'porter') t.add(x); if (x === 'expedition' || x === 'offrande') t.add('partir'); if (x === 'confort') t.add('confort'); });
   if (!t.size) t.add('autre');
   return t;
 }
@@ -29660,7 +29684,7 @@ const PG_B = [
     cost: [[['verre', 4], ['bois', 4]], [['verre', 7], ['bois', 6], ['metal', 2]], [['verre', 10], ['metal', 5], ['pierre', 4]]] },
   { id: 'atelier', w: 'maison', nm: 'Atelier agrandi', eff: l => `${15 * l} % de chances de fabriquer en double`,
     cost: [[['bois', 5], ['metal', 3]], [['bois', 8], ['metal', 5], ['pierre', 3]], [['bois', 12], ['metal', 8], ['verre', 3]]] },
-  { id: 'cheminee', w: 'maison', nm: 'Cheminée', eff: l => `Repos ${['', '1,5', '2', '2,5'][l]}× plus rapide`,
+  { id: 'cheminee', w: 'maison', nm: 'Cheminée', eff: l => `Repos ${['', '1,5', '2', '2,5'][l]}× plus rapide · familier reposé : −${10 + 5 * l} % de risques`,
     cost: [[['pierre', 6], ['metal', 2]], [['pierre', 10], ['metal', 3], ['bois', 4]], [['pierre', 14], ['metal', 5], ['verre', 2]]] },
   { id: 'repas', w: 'maison', nm: 'Coin repas', eff: l => `Nourrir un familier : +${25 * l} % d’XP`,
     cost: [[['bois', 4], ['tissu', 2]], [['bois', 6], ['tissu', 4], ['pierre', 3]], [['bois', 10], ['tissu', 6], ['verre', 3]]] },
@@ -30319,7 +30343,10 @@ function f3Fits(it, slot) {
   return true;
 }
 const f3Match = (it, slot) => { const s = F3_SLOT[slot]; return !!(s && it && (s[8].includes(it.sub) || s[9].test(it.name || ''))); };
-const f3Pts = (it, slot) => Math.max(1, Math.min(5, (it.rarity | 0) + 1)) + (slot && f3Match(it, slot) ? 2 : 0);
+// v36 : TROPHÉES (reliques, trésors uniques, objets légendaires, statues rares) : points de confort doublés
+const f3Trophy = it => !!(it && (it.relic || it.tresor || (it.rarity | 0) >= 4 || (it.sub === 'statue' && (it.rarity | 0) >= 3)));
+const f3Base = it => Math.max(1, Math.min(5, (it.rarity | 0) + 1)) * (f3Trophy(it) ? 2 : 1);
+const f3Pts = (it, slot) => f3Base(it) + (slot && f3Match(it, slot) ? 2 : 0);
 
 // ---------------- confort ----------------
 const F3_LV = [['Simple', 0, 0], ['Douillet', 4, 0.04], ['Cosy', 10, 0.08], ['Chaleureux', 18, 0.12], ['Paradis', 28, 0.16]];
@@ -30337,8 +30364,9 @@ function f3Eff(c) {
 const f3Pct = p => Math.round(p * 100);
 function f3EffTxt(E) {
   E = E || f3Eff();
-  if (!E.p) return `${E.nm} : posez des décos pour gagner du confort`;
-  return `${E.nm} : +${f3Pct(E.p)} % de butin, −${f3Pct(E.p)} % de risques, repos +${f3Pct(2 * E.p)} %`;
+  const rl = f3Call(() => f3Relics().map(f3RelicTxt), []).map(x => ` · ${x}`).join('');
+  if (!E.p) return `${E.nm} : posez des décos pour gagner du confort${rl}`;
+  return `${E.nm} : +${f3Pct(E.p)} % de butin, −${f3Pct(E.p)} % de risques, repos +${f3Pct(2 * E.p)} %${rl}`;
 }
 function f3EffShort(E) {
   E = E || f3Eff();
@@ -30625,7 +30653,7 @@ const f3RM = () => f3Call(() => reduceMotion(), false);
 function f3HudHTML() {
   const E = f3Eff(), seg = F3_LV.map((L, i) => `<i class="${i <= E.i ? 'on' : ''}"></i>`).join('');
   const fill = E.next ? Math.round(((E.c - F3_LV[E.i][1]) / (F3_LV[E.i + 1][1] - F3_LV[E.i][1])) * 100) : 100;
-  return `<div class="f3-hud"><div class="f3-cf" aria-label="Confort ${E.c}, niveau ${esc(E.nm)}"><span class="f3-cft"><svg viewBox="0 0 24 24" aria-hidden="true">${FY_IC.sofa}</svg><b>Confort ${E.c}</b><em>${esc(E.nm)}</em></span><span class="f3-gauge"><span class="f3-lv">${seg}</span><span class="f3-bar"><i style="width:${fill}%"></i></span>${E.next ? `<small class="f3-nx">+${E.next.need} → ${esc(E.next.nm)}</small>` : ''}</span><small class="f3-eff" title="${esc(f3EffTxt(E))}">${esc(f3EffShort(E))}</small></div>
+  return `<div class="f3-hud"><div class="f3-cf" aria-label="Confort ${E.c}, niveau ${esc(E.nm)}"><span class="f3-cft"><svg viewBox="0 0 24 24" aria-hidden="true">${FY_IC.sofa}</svg><b>Confort ${E.c}</b><em>${esc(E.nm)}</em></span><span class="f3-gauge"><span class="f3-lv">${seg}</span><span class="f3-bar"><i style="width:${fill}%"></i></span>${E.next ? `<small class="f3-nx">+${E.next.need} → ${esc(E.next.nm)}</small>` : ''}</span><small class="f3-eff" title="${esc(f3EffTxt(E))}">${esc(f3EffShort(E))}</small>${f3Call(() => f3Relics().map(id => `<small class="f3-rel">${esc(f3RelicTxt(id))}</small>`).join(''), '')}</div>
     <button class="f3-dec${f3Edit ? ' on' : ''}" data-f3edit="1" aria-pressed="${f3Edit}">${f3Edit ? 'Terminé' : 'Décorer'}</button></div>`;
 }
 function f3PickHTML() {
@@ -30753,14 +30781,107 @@ try { if (typeof US_K !== 'undefined' && !US_K.decorer) US_K.decorer = { nom: 'D
 const F3_ICO = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 19 L20 7 L34 19 V34 H6Z" fill="#fff3e2" stroke="#5b4636" stroke-width="2" stroke-linejoin="round"/><path d="M20 30 C14 26 12 23.5 12 21 A3.6 3.6 0 0 1 20 19.6 A3.6 3.6 0 0 1 28 21 C28 23.5 26 26 20 30Z" fill="#f39ab0" stroke="#5b4636" stroke-width="1.6"/></svg>';
 GAME.addUses(it => {
   if (!f3IsDeco(it)) return [];
-  const b = Math.max(1, Math.min(5, (it.rarity | 0) + 1)), best = F3_SLOTS.find(s => f3Match(it, s[0]));
-  return [{ txt: `Poser chez moi : +${b} confort${best ? ` (+${b + 2} ${best[7].toLowerCase()})` : ''}`, kind: 'decorer' }];
+  const b = f3Base(it), best = F3_SLOTS.find(s => f3Match(it, s[0])), e = f3Call(() => fyEffOf({ item: it }), null);
+  const out = [{ txt: `Poser chez moi : +${b} confort${f3Trophy(it) ? ' (trophée ×2)' : ''}${best ? ` (+${b + 2} ${best[7].toLowerCase()})` : ''}${e ? ` · ${e[2]}` : ''}`, kind: 'decorer' }];
+  if (it.relic && F3_RELIC[it.relic]) out.push({ txt: `Relique exposée chez vous : ${f3RelicTxt(it.relic).replace(/^[^:]+: /, '')}${f3Relics().includes(it.relic) ? ' (active)' : ''}`, kind: 'confort' });
+  return out;
 });
 GAME.addAction(it => {
   if (!f3IsDeco(it) || !S.inv.includes(it)) return [];
   const sl = f3BestSlot(it);
   return [{ label: 'Poser chez moi', kind: 'decorer', ico: F3_ICO, ready: !!sl, hint: sl ? `+${f3Pts(it, sl)} confort · ${F3_SLOT[sl][7].toLowerCase()}` : 'Tous les emplacements sont pris', run: () => f3AutoPlace(it.id) }];
 });
+
+// ================= v36 (audit des objets) : RELIQUES, ÉNERGIE, BONUS AFFICHÉS AU DÉPART =================
+// RELIQUES : chaque artefact réuni (famAssemble, it.relic), exposé au foyer (vue 3D S.f3d ou ancienne maison S.house),
+//   donne un bonus permanent sur un terrain : appliqué dans xpRiskK (risques) et collect (butin).
+// ÉNERGIE : au départ, un familier reposé (énergie ≥ 70) rapporte 1 objet de plus et a −10 % de risques
+//   (−5 % de plus par niveau de Cheminée, 48_progression.js) ; fatigué (< 30), il rapporte 1 objet de moins.
+//   Mémorisé sur le voyage (t.nrgB, t.nrgCh) : clés facultatives, anciennes sauvegardes compatibles.
+const F3_RELIC = { pharaon: ['desert', 'risk', 0.2], laurier: ['mer', 'risk', 0.2], soleil: ['montagne', 'loot', 0.2], jade: ['ville', 'loot', 0.2] };
+const F3_TW = { montagne: 'en montagne', mer: 'en mer', foret: 'en forêt', ville: 'en ville', desert: 'au désert', froid: 'dans le grand froid' };
+function f3Relics() {
+  const ids = new Set();
+  try { for (const it of Object.values(f3State().d)) if (it && it.relic && F3_RELIC[it.relic]) ids.add(it.relic); } catch (e) {}
+  try { for (const v of Object.values(S.house || {})) if (v && v.item && v.item.relic && F3_RELIC[v.item.relic]) ids.add(v.item.relic); } catch (e) {}
+  return [...ids];
+}
+function f3RelicTxt(id) {
+  const R = F3_RELIC[id], nm = f3Call(() => FAM_RELICS.find(x => x.id === id).nom, id);
+  return R ? `${nm} : ${R[1] === 'risk' ? `−${f3Pct(R[2])} % de risques` : `+${f3Pct(R[2])} % de chances d’un objet en plus`} ${F3_TW[R[0]]}` : nm;
+}
+const f3RelicSum = (terr, kind) => f3Relics().reduce((a, id) => a + (F3_RELIC[id][0] === terr && F3_RELIC[id][1] === kind ? F3_RELIC[id][2] : 0), 0);
+function f3Nrg(k) {
+  const t = S.trips && S.trips[k];
+  if (t && t.nrgB != null) return { b: t.nrgB, ch: t.nrgCh | 0, n: null };
+  const n = f3Call(() => fyC(k).nrg, 50), ch = f3Lvl('cheminee');
+  return { b: n >= 70 ? 1 : n < 30 ? -1 : 0, ch, n: Math.round(n) };
+}
+const f3NrgRisk = N => (N.b > 0 ? 0.1 + 0.05 * N.ch : 0);
+if (typeof xpRiskK === 'function') xpRiskK = (orig => function (k, c) {
+  const r = orig.apply(this, arguments);
+  try {
+    if (r > 0 && k && c) {
+      let m = 1 - f3RelicSum(c.terr, 'risk');
+      const N = f3Nrg(k); m *= N.b > 0 ? 1 - f3NrgRisk(N) : N.b < 0 ? 1.1 : 1;
+      if (m !== 1) return Math.max(0.03, Math.min(0.9, r * m));
+    }
+  } catch (e) {}
+  return r;
+})(xpRiskK);
+if (typeof startTrip === 'function') startTrip = (orig => function () {
+  const k = S.sel, before = S.trips && S.trips[k];
+  let N = null; try { if (k && S.comps && S.comps[k] && !before) N = f3Nrg(k); } catch (e) {}
+  const r = orig.apply(this, arguments);
+  try { const t = S.trips[k]; if (N && t && t !== before && !t.tuto) { t.nrgB = N.b; t.nrgCh = N.ch; save(); } } catch (e) { console.error('foyer énergie', e); }
+  return r;
+})(startTrip);
+let f3Msgs = [];
+if (typeof collect === 'function') collect = (orig => function () {
+  f3Msgs = [];
+  try {
+    const k = S.sel, t = S.trips && S.trips[k];
+    if (t && t.done && !t.tuto && !t.f3n && Array.isArray(t.bag)) {
+      t.f3n = 1;
+      const tags = (t.dest && t.dest.tags && t.dest.tags.length) ? t.dest.tags : ['campagne'], one = () => f3Call(() => lootFor(tags, t.luck || 0, t.dest ? t.dest.name : '', 1, k)[0], null);
+      if (t.nrgB > 0) { const b = one(); if (b) { t.bag.push(b); f3Msgs.push(`Bien reposé au départ : « ${b.name} » en plus !`); } }
+      else if (t.nrgB < 0 && t.bag.length > 1) { const c = t.bag.filter(x => x && !x.special && !x.tresor && !x.mys && !x.qt).sort((a, b) => (a.rarity || 0) - (b.rarity || 0))[0]; if (c) { t.bag.splice(t.bag.indexOf(c), 1); f3Msgs.push('Parti fatigué : un objet de moins. Laissez-le se reposer au foyer avant le prochain départ.'); } }
+      const terr = t.xpTerr || f3Call(() => xpTerrOf(t.dest), ''), p = f3RelicSum(terr, 'loot');
+      if (p > 0 && (Math.random() < p || (window.__f3 && __f3.forceLoot))) { const b = one(); if (b) { t.bag.push(b); f3Msgs.push(`Relique exposée (${F3_TW[terr] || ''}) : « ${b.name} » en plus !`); } }
+      if (f3Msgs.length) f3Msgs.k = k;
+    }
+  } catch (e) { console.error('foyer reliques/énergie', e); }
+  return orig.apply(this, arguments);
+})(collect);
+if (typeof showHaul === 'function') showHaul = (orig => function (h) {
+  try { if (f3Msgs.length && h && h.comp === f3Msgs.k) { h.extra = (h.extra || []).concat(f3Msgs); f3Msgs = []; } } catch (e) {}
+  return orig.apply(this, arguments);
+})(showHaul);
+// panneau de départ : ce que le foyer apporte VRAIMENT à ce voyage
+const F3_TRIPNM = { mappemonde: 'Mappemonde', cartemur: 'Carte murale' };
+function f3GoHTML(k, d) {
+  const L = [], N = f3Nrg(k), nm = f3Call(() => CHARS[k].name, '');
+  if (N.b > 0) L.push(`<span class="ok"><b>Énergie ${N.n}/100 : reposé</b> → +1 objet au retour, −${f3Pct(f3NrgRisk(N))} % de risques${N.ch ? ' (Cheminée)' : ''}</span>`);
+  else if (N.b < 0) L.push(`<span class="ko"><b>Énergie ${N.n}/100 : fatigué</b> → 1 objet de moins. ${esc(nm)} devrait se reposer au foyer.</span>`);
+  else L.push(`<span><b>Énergie ${N.n}/100</b> · à 70 ou plus : +1 objet et −${f3Pct(0.1 + 0.05 * N.ch)} % de risques</span>`);
+  const seen = new Set(), items = [].concat(Object.values(f3State().d), Object.values(S.house || {}).map(v => v && v.item)).filter(Boolean);
+  for (const it of items) { const e = f3Call(() => fyEffOf({ item: it }), null); if (e && e[0] === 'trip' && !seen.has(it.sub)) { seen.add(it.sub); L.push(`<span>${esc(F3_TRIPNM[it.sub] || it.name)} : −${f3Pct(e[1])} % de trajet</span>`); } }
+  const E = f3Eff(); if (E.p) L.push(`<span>Foyer ${esc(E.nm.toLowerCase())} : +${f3Pct(E.p)} % de butin, −${f3Pct(E.p)} % de risques</span>`);
+  const terr = f3Call(() => xpTerrOf(d), '');
+  f3Relics().forEach(id => { if (F3_RELIC[id][0] === terr) L.push(`<span class="ok">${esc(f3RelicTxt(id))}</span>`); });
+  return `<div class="f3-go" id="f3Go">${L.join('')}</div>`;
+}
+if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try {
+    const k = S.sel, d = typeof plan !== 'undefined' ? plan.dest : null;
+    if (box && d && CHARS[k] && S.comps[k] && !S.trips[k] && !f3Call(() => tuOn(), false)) {
+      const gb = box.querySelector('.gobar');
+      if (gb) gb.insertAdjacentHTML('beforebegin', f3GoHTML(k, d)); else box.insertAdjacentHTML('beforeend', f3GoHTML(k, d));
+    }
+  } catch (e) { console.error('foyer départ', e); }
+  return r;
+})(renderVoyage);
 
 // ---------------- style ----------------
 (function f3CSS() {
@@ -30845,6 +30966,8 @@ GAME.addAction(it => {
 .f3-gauge{display:flex;align-items:center;gap:6px}
 .f3-lv{display:flex;gap:2px}.f3-lv i{width:9px;height:9px;border-radius:50%;border:1.5px solid ${F3_L};background:#fff}.f3-lv i.on{background:#e5587f}
 .f3-bar{flex:1;height:7px;border-radius:5px;background:#eadccb;border:1.5px solid ${F3_L};overflow:hidden}.f3-bar i{display:block;height:100%;background:linear-gradient(90deg,#f6c445,#e5587f)}
+.f3-rel{display:block;font:800 11px/1.25 var(--display,inherit);color:#8a5a1a}
+.f3-go{margin:6px 0;padding:7px 10px;border:2px solid #eadccb;border-radius:12px;background:#fffaf0;display:flex;flex-direction:column;gap:3px;font-size:12.5px;line-height:1.3;color:#5b4636}.f3-go b{font-family:var(--display,inherit)}.f3-go .ok{color:#2f7f5a}.f3-go .ko{color:#b0503a}
 .f3-eff{font:700 11.5px/1.25 var(--display,inherit);color:#6a4f3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.f3-nx{flex:none;font:800 10.5px/1 var(--display,inherit);color:#a0607a}
 .f3-dec{flex:none;font:800 14px/1 var(--display,inherit);color:#fff;background:#e5587f;border:2.5px solid ${F3_L};border-radius:14px;padding:10px 12px;box-shadow:0 3px 0 ${F3_L};cursor:pointer}
 .f3-dec.on{background:#3a8f5a}
@@ -30887,6 +31010,489 @@ window.__f3 = {
   state: f3State, comfort: f3Comfort, eff: f3Eff, effTxt: f3EffTxt, place: f3Place, take: f3Take, autoPlace: f3AutoPlace, bestSlot: f3BestSlot, stock: f3Stock, isDeco: f3IsDeco,
   SLOTS: F3_SLOTS, yaw: () => f3Yaw, setYaw: y => { f3Yaw = y; f3Apply(); }, pitch: () => f3Pitch, edit: v => { f3Edit = !!v; f3Pick = null; f3Refresh(); }, pick: id => { f3Pick = id; f3Refresh(); },
   risk: (k, terr) => xpRiskK(k, { terr: terr || 'foret' }, false, 0.35), forceP: null, forceLoot: false,
+  relics: () => f3Relics(), relicTxt: f3RelicTxt, nrg: k => f3Nrg(k), goHTML: (k, d) => f3GoHTML(k, d), pts: f3Pts, trophy: f3Trophy,
+  T: () => ({ craft, RECIPES, CM_R: typeof CM_R !== 'undefined' ? CM_R : {}, usesOf: it => GAME.usesOf(it), FY_EFF, fyMods, plan, openSheet, ING }),
+};
+
+// ================= v36 : DIFFICULTÉ, PORTÉE DE VOYAGE ET FICHE AVANT LE DÉPART =================
+// Le joueur : « Le jeu n'est pas assez dur. Il faut que les bonus aient du sens et qu'on sente la progression en arrivant
+// à faire des choses qu'on n'arrivait pas à faire. » RÈGLE : on bloque PAR LA PRÉPARATION, jamais par un simple niveau.
+// 1. PORTÉE : chaque familier a une portée (50 km au départ) qui grandit avec niveau, stade, matériel (la BOUSSOLE devient
+//    du matériel d'expédition équipable), provisions, confort, spécialité, vêtements d'explorateur, duo. Au-delà : départ
+//    refusé avec la raison et quoi faire. Cercle discret sur la carte, lieux hors portée estompés.
+//    Exceptions : tutoriel, lieux du quotidien, livraison urgente acceptée, étape de la quête suivie, objectifs du jour
+//    « tout près » et « dans la région ». L'objectif « grand voyage » (800 à 2 500 km) reste un objectif à préparer.
+// 2. TERRAINS DURS : risque de base sans préparation (montagne 80 %, grand froid 85 %, désert 75 %, mer 70 %), le bon
+//    matériel le divise par 4 à 12. Les terrains durs deviennent des expéditions dès 60 km ; sans préparation, même
+//    l'option prudente peut échouer (risque − 30 %).
+// 3. RESSOURCES : trouvailles multiples −30 %, objets rares relancés 30 % du temps (sauf objets utiles aux quêtes,
+//    à l'objectif du jour et aux recettes ; jamais pendant les 5 premiers voyages). ÉPUISEMENT : 100/70/45/25 % du butin
+//    selon les visites des 3 dernières heures.
+// 4. FICHE AVANT LE DÉPART : stats en barres, ce qu'il porte et son effet ici, risque avant/après, portée, trouvailles,
+//    conseils cliquables. Remplace les lignes éparpillées (canfind, risques de 41 et 45, conseil de provisions).
+// État : S.dif = { ex: { "lon:lat": [horodatages] } }. Enveloppes : xpIsExpe, xpRiskK, avChoose, avChance, lootFor,
+// startTrip, collect, showHaul, renderVoyage, drawMarks. Tests : window.__df.
+
+const dfCall = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch (e) { return d; } };
+const dfTuto = () => dfCall(() => tuOn(), false);
+const dfNm = k => (k && CHARS[k] ? CHARS[k].name : '');
+function dfState() {
+  if (!S.dif || typeof S.dif !== 'object' || Array.isArray(S.dif)) S.dif = {};
+  const D = S.dif;
+  if (!D.ex || typeof D.ex !== 'object' || Array.isArray(D.ex)) D.ex = {};
+  return D;
+}
+
+// ---------------- la boussole devient du matériel d'expédition (2 cases par familier) ----------------
+try {
+  const G = ['boussole', ['Boussole', 'Boussole pro', 'Boussole légendaire'], 'Tous terrains : voyager beaucoup plus loin', '#c9a35a', [], '', 'boussole'];
+  if (!XP_G.boussole) { XP_GEAR.push(G); XP_G.boussole = G; G[1].forEach((n, i) => { XP_GBY[n] = { g: 'boussole', tier: i + 1 }; }); XP_GBY['Boussole de l’épave'] = { g: 'boussole', tier: 3 }; }
+} catch (e) { console.error('difficulté boussole', e); }
+
+// ---------------- terrains ----------------
+const DF_T = { montagne: 0.8, froid: 0.85, desert: 0.75, mer: 0.7, foret: 0.35, ville: 0.3 };
+const DF_HARD = { montagne: 1, froid: 1, desert: 1, mer: 1 };
+const DF_GEARX = [1, 0.385, 0.333, 0.267]; // × [1, .65, .45, .3] de 41 = [1, .25, .15, .08]
+const dfTerr = d => dfCall(() => xpTerrOf(d), 'foret');
+const dfKm = d => dfCall(() => kmExact(homeObj(), d), dfCall(() => kmBetween(homeObj(), d), 0));
+function dfHardTrip(d) {
+  if (!d || d.poi) return false;
+  const terr = dfTerr(d), tg = d.tags || [];
+  if (!DF_HARD[terr]) return false;
+  if (terr === 'mer' && (tg.includes('ville') || tg.includes('monument'))) return false; // une ville au bord de la mer reste une ville
+  return dfKm(d) >= 60;
+}
+if (typeof xpIsExpe === 'function') xpIsExpe = (orig => function (d) {
+  if (orig.apply(this, arguments)) return true;
+  return dfCall(() => dfHardTrip(d), false);
+})(xpIsExpe);
+if (typeof xpRiskK === 'function') xpRiskK = (orig => function (k, c, miss, base) {
+  if (!c || !(base > 0)) return orig.apply(this, arguments);
+  const nb = Math.min(0.95, base * (DF_T[c.terr] || 0.35) / 0.35);
+  let r = orig.call(this, k, c, miss, nb);
+  if (r > 0) { r *= DF_GEARX[dfCall(() => xpGearFor(k, c), 0)] || 1; r = Math.max(0.03, Math.min(0.9, r)); }
+  return r;
+})(xpRiskK);
+const dfNoPrep = (c, miss) => Math.min(0.9, (DF_T[c.terr] || 0.35) * (miss ? 1.6 : 1) + (miss ? 0.3 : 0));
+function dfRiskOf(k, d) {
+  if (!d || !dfCall(() => xpIsExpe(d), false)) return null;
+  const c = xpCtxOf(d), P = d.xpl ? XP_P[d.xpl] : null, miss = P ? xpMiss(P, k).length > 0 : false;
+  return { r: xpRiskK(k, c, miss, 0.35), no: dfNoPrep(c, miss), c, miss };
+}
+// sans préparation, même la prudence peut échouer
+let dfFail = false;
+if (typeof avChance === 'function') avChance = (orig => function () { return dfFail ? 0 : orig.apply(this, arguments); })(avChance);
+if (typeof avChoose === 'function') avChoose = (orig => function (t, j, oi, auto) {
+  let opt = null, patched = false;
+  try {
+    if (t && j && j.xp && !j.resolved && t.xpe && !t.xpe.miss) {
+      const node = avNode(j); opt = node && node.o[oi];
+      if (opt && opt.p == null && !opt.need && node.xft) {
+        const r = xpRiskK(t.comp, t.xpe, false, 0.35), pf = Math.max(0, r - 0.3);
+        if (pf > 0 && Math.random() < pf) { opt.p = 1; opt.f = R_(node.xft, node.xf || 'xback'); patched = true; dfFail = true; }
+      }
+    }
+  } catch (e) {}
+  try { return orig.apply(this, arguments); } finally { dfFail = false; if (patched) { delete opt.p; delete opt.f; } }
+})(avChoose);
+
+// ---------------- portée ----------------
+const DF_BASE = 50, DF_WORLD = 3000;
+const DF_COMP = [[0, 1], [100, 1.3], [200, 1.6], [400, 2.2]]; // boussole : km ajoutés, puis multiplicateur
+const DF_EXPLO = ['explorateur', 'rando', 'godillots', 'gilet', 'sac', 'veste', 'carquois'];
+const DF_PAL = [[150, 'Autour de la maison'], [400, 'Votre région'], [1000, 'Grand voisinage'], [2500, 'France entière'], [DF_WORLD, 'Europe'], [1e9, 'Monde entier']];
+const dfPalier = km => (DF_PAL.find(p => km < p[0]) || DF_PAL[DF_PAL.length - 1])[1];
+function dfProv(k) { return k === S.sel ? dfCall(() => eqCount(eqPlanProv()), {}) : {}; }
+function dfDuo(k) { return k === S.sel ? dfCall(() => eqPlanDuo(), null) : null; }
+// o : { comp: palier de boussole forcé, end: plats d'endurance en plus }
+function dfRange(k, d, o = {}) {
+  const c = d ? dfCall(() => xpCtxOf(d), null) : null, terr = c ? c.terr : null, parts = [];
+  const add = (id, lbl, km) => { km = Math.round(km); if (km > 0) parts.push({ id, lbl, km }); };
+  add('base', 'Départ', DF_BASE);
+  const lv = (S.prog[k] && S.prog[k].lvl) || 1; add('lvl', `Niveau ${lv}`, Math.min(240, (lv - 1) * 8));
+  const st = dfCall(() => eqStage(k), 1); add('stade', st === 3 ? 'Stade légendaire' : 'Stade aguerri', [0, 0, 100, 300][st] || 0);
+  if (dfCall(() => pgPowOf(k), '') === 'endu') add('pouv', 'Pouvoir Endurance', 60 * dfCall(() => pgPowN(k), 0));
+  let ct = 0;
+  dfCall(() => xpEqItems(k), []).forEach(it => {
+    const G = xpGearOf(it); if (!G) return;
+    if (G.g === 'boussole') { ct = Math.max(ct, G.tier); return; }
+    const D = XP_G[G.g]; if (c && (D[4].includes(c.terr) || (D[5] === 'cave' && (c.cave || c.night)) || (D[5] === 'wild' && c.wild))) add('g:' + it.id, it.name, 80 * G.tier);
+  });
+  if (o.comp != null) ct = o.comp;
+  const P = dfProv(k), ne = (P.end || 0) + (o.end || 0);
+  add('end', `${ne} plat${ne > 1 ? 's' : ''} d’endurance`, 90 * ne);
+  add('prov', 'Autres provisions', 30 * ((P.chaud || 0) + (P.frais || 0) + (P.moral || 0)));
+  if (dfDuo(k)) add('duo', 'Duo', 50);
+  add('conf', 'Confort du foyer', 500 * dfCall(() => f3Eff().p, 0));
+  const sp = dfCall(() => EQ_SP[eqSpec(k)], null);
+  if (sp) add('spec', sp.nm, terr && sp.terr && sp.terr.includes(terr) ? 150 : 60);
+  let wear = 0;
+  dfCall(() => usWornItems(k), []).forEach(it => { const f = dfCall(() => usFormOf(it), ''), b = dfCall(() => usWearOf(it), null); if (DF_EXPLO.includes(f)) wear += 40; else if (b && terr && (b.t === terr || b.t === '*')) wear += 20; });
+  if (dfCall(() => usSetsOf(k), []).some(x => x.on && x.St.id === 'explo')) wear += 150;
+  add('wear', 'Vêtements d’explorateur', wear);
+  const sum = parts.reduce((a, p) => a + p.km, 0), C = DF_COMP[Math.max(0, Math.min(3, ct))];
+  const km = Math.round((sum + C[0]) * C[1]);
+  if (ct) parts.push({ id: 'comp', lbl: xpGName('boussole', ct), km: km - sum });
+  return { km, world: km >= DF_WORLD, parts, comp: ct, sum };
+}
+function dfExempt(d) {
+  if (!d || dfTuto() || d.poi) return true;
+  if (dfCall(() => eqDelFor(d), null)) return true;
+  const R = dfCall(() => regionAt(d.lon, d.lat), null), Z = dfCall(() => rgZoneAt(d.lon, d.lat), null);
+  return dfCall(() => qtNeeds(), []).some(n => {
+    if (!(n.src === 'quete' || (n.src === 'jour' && !/grand voyage/i.test(n.why || '')))) return false;
+    const s = n.step || {}; return !!((s.region && R && s.region === R.id) || (s.zone && Z && s.zone === Z.id));
+  });
+}
+const dfCompItem = k => (S.inv || []).filter(it => { const G = xpGearOf(it); return G && G.g === 'boussole'; }).sort((a, b) => xpGearOf(b).tier - xpGearOf(a).tier).find(it => { const by = dfCall(() => xpWornBy(it.id), null); return !by || by === k; }) || null;
+function dfCheck(k, d) {
+  const dist = Math.round(dfKm(d)), R = dfRange(k, d), ex = dfExempt(d);
+  const ok = ex || R.world || dist <= R.km;
+  let msg = '';
+  if (!ok) {
+    const opts = [];
+    const stock = dfCall(() => eqStock(), {}), endIn = Object.keys(stock).filter(r => eqKindOf(r) === 'end').reduce((a, r) => a + stock[r], 0) - (dfProv(k).end || 0);
+    for (let n = 1; n <= 3 - dfCall(() => eqPlanProv().length, 0); n++) if (dfRange(k, d, { end: n }).km >= dist) { opts.push(`emportez ${n} plat${n > 1 ? 's' : ''} d’endurance${endIn < n ? ' (à préparer au comptoir)' : ''}`); break; }
+    if (R.comp < 1 && dfRange(k, d, { comp: 1 }).km >= dist) opts.push(dfCompItem(k) ? 'équipez la boussole' : 'fabriquez et équipez une boussole');
+    if (!opts.length && R.comp < 1) { const kk = dfRange(k, d, { comp: 1, end: 3 - dfCall(() => eqPlanProv().length, 0) }).km; if (kk >= dist) opts.push('combinez boussole et plats d’endurance'); }
+    const how = opts.length ? opts.join(' ou ') : `faites grandir ${dfNm(k)} (stade, matériel, vêtements d’explorateur) ou visez plus près`;
+    msg = `Trop loin : ${dist.toLocaleString('fr-FR')} km pour une portée de ${R.km.toLocaleString('fr-FR')} km. ${how.charAt(0).toUpperCase() + how.slice(1)}.`;
+  }
+  return { ok, ex: ex && !(R.world || dist <= R.km), dist, R, msg };
+}
+
+// ---------------- épuisement ----------------
+const DF_EXF = [1, 0.7, 0.45, 0.25], DF_REGROW = 3 * 3600e3;
+const dfKey = d => `${(Math.round(+d.lon * 100) / 100).toFixed(2)}:${(Math.round(+d.lat * 100) / 100).toFixed(2)}`;
+function dfExInfo(d) {
+  if (!d || !isFinite(+d.lon)) return { n: 0, f: 1, back: 0 };
+  const now = Date.now(), a = (dfState().ex[dfKey(d)] || []).filter(ts => now - ts < DF_REGROW);
+  return { n: a.length, f: DF_EXF[Math.min(3, a.length)], back: a.length ? Math.max(...a) + DF_REGROW - now : 0 };
+}
+function dfVisit(d) {
+  const D = dfState(), now = Date.now(), key = dfKey(d);
+  for (const kk of Object.keys(D.ex)) { D.ex[kk] = (D.ex[kk] || []).filter(ts => now - ts < DF_REGROW); if (!D.ex[kk].length) delete D.ex[kk]; }
+  (D.ex[key] = D.ex[key] || []).push(now);
+}
+const dfLeft = ms => dfCall(() => xpMin(ms), Math.ceil(ms / 6e4) + ' min');
+
+// ---------------- butin plus rare ----------------
+const dfLootOn = () => !dfTuto() && ((S.stats && S.stats.trips) || 0) >= 5;
+const dfNeeded = (it, N) => N.some(n => n && typeof n.match === 'function' && dfCall(() => n.match(it), false));
+if (typeof lootFor === 'function') lootFor = (orig => function (tags, luck, place, n = 1, comp = null) {
+  if (!dfLootOn()) return orig.apply(this, arguments);
+  const L = (+luck || 0) * 0.75, out = orig.call(this, tags, L, place, n, comp);
+  try {
+    if (!Array.isArray(out)) return out;
+    const N = dfCall(() => qtNeeds(), []);
+    // trouvailles multiples : environ 30 % de moins (jamais un objet utile)
+    if (out.length >= 2) {
+      const x = out.length * 0.7, keep = Math.max(1, Math.floor(x) + (Math.random() < x % 1 ? 1 : 0));
+      let drop = out.length - keep;
+      for (let i = out.length - 1; i >= 0 && drop > 0; i--) if (!out[i].special && !dfNeeded(out[i], N)) { out.splice(i, 1); drop--; }
+    }
+    // objets rares : 30 % relancés
+    for (let i = 0; i < out.length; i++) {
+      const it = out[i];
+      if (it && (it.rarity || 0) >= 2 && !it.special && !dfNeeded(it, N) && Math.random() < 0.3) { const b = orig.call(this, tags, L, place, 1, comp); if (b && b[0]) out[i] = b[0]; }
+    }
+  } catch (e) { console.error('difficulté butin', e); }
+  return out;
+})(lootFor);
+
+// ---------------- départ et retour ----------------
+if (typeof startTrip === 'function') startTrip = (orig => function () {
+  const k = S.sel, d = plan.dest;
+  if (d && CHARS[k] && !S.trips[k] && !dfTuto()) {
+    const C = dfCall(() => dfCheck(k, d), { ok: true });
+    if (!C.ok) { toast(C.msg); dfCall(() => renderPanel(), 0); return; }
+  }
+  const before = S.trips[k], ex = d ? dfExInfo(d) : null;
+  const r = orig.apply(this, arguments);
+  try { const t = S.trips[k]; if (t && t !== before && !t.tuto && d && !dfTuto()) { t.dfEx = ex.f; t.dfExN = ex.n; dfVisit(d); save(); } } catch (e) { console.error('difficulté départ', e); }
+  return r;
+})(startTrip);
+let dfHaul = null;
+if (typeof collect === 'function') collect = (orig => function () {
+  dfHaul = null;
+  try {
+    const k = S.sel, t = S.trips[k];
+    if (t && t.done && !t.tuto && !t.dfL && t.dfEx < 1 && Array.isArray(t.bag)) {
+      t.dfL = 1;
+      const N = dfCall(() => qtNeeds(), []), cand = t.bag.filter(it => !it.special && !it.xpr && !it.mk && !it.edition && !dfNeeded(it, N));
+      const n = Math.round(cand.length * (1 - t.dfEx));
+      cand.sort(() => Math.random() - 0.5).slice(0, n).forEach(it => { const i = t.bag.indexOf(it); if (i >= 0) t.bag.splice(i, 1); });
+      t.dfLost = n;
+      dfHaul = { k, txt: `Lieu épuisé (${t.dfExN + 1}e visite en 3 h) : ${n} objet${n > 1 ? 's' : ''} en moins. Il repousse en quelques heures.` };
+    }
+  } catch (e) { console.error('difficulté retour', e); }
+  return orig.apply(this, arguments);
+})(collect);
+if (typeof showHaul === 'function') showHaul = (orig => function (h) {
+  try { if (dfHaul && h && h.comp === dfHaul.k) { h.extra = (h.extra || []).concat([dfHaul.txt]); dfHaul = null; } } catch (e) {}
+  return orig.apply(this, arguments);
+})(showHaul);
+
+// ---------------- fiche avant le départ ----------------
+const DF_SVG = {
+  endu: '<path d="M7 3h6v8.5l5.2 2.6c1.3.7 1 2.9-.6 2.9H6.5c-.8 0-1.5-.7-1.5-1.5V5c0-1.1.9-2 2-2z" fill="#fff"/><path d="M5 19.5h14" stroke="#fff" stroke-width="2" stroke-linecap="round"/>',
+  flair: '<path d="M12 2.5l2.3 7.2 7.2 2.3-7.2 2.3L12 21.5l-2.3-7.2L2.5 12l7.2-2.3z" fill="#fff"/>',
+  robu: '<path d="M12 2.5l8 3v6c0 5-3.4 8.8-8 10.5C7.4 20.3 4 16.5 4 11.5v-6z" fill="#fff"/><path d="M8.5 12l2.5 2.5 4.5-5" stroke="#5f8fb8" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+  far: '<circle cx="12" cy="12" r="8" fill="none" stroke="#fff" stroke-width="2.2" stroke-dasharray="3 2.5"/><circle cx="12" cy="12" r="2.6" fill="#fff"/>',
+};
+const dfGly = (g, col) => `<i class="dfg" style="--c:${col}" aria-hidden="true"><svg viewBox="0 0 24 24">${DF_SVG[g]}</svg></i>`;
+const dfPct = r => `${Math.round(r * 100)} %`;
+const dfRC = r => (r < 0.2 ? 'ok' : r < 0.45 ? 'mid' : 'bad');
+const dfPos = km => Math.max(0.02, Math.min(1, Math.log(Math.max(DF_BASE, km) / DF_BASE) / Math.log(DF_WORLD / DF_BASE)));
+function dfFlair(k, d, c) {
+  const P = dfProv(k), n = dfCall(() => pgPowN(k), 0), pw = dfCall(() => pgPowOf(k), '');
+  let L = dfCall(() => lvlLuck(k), 0) + 0.06 * (dfCall(() => xpLvl(k, c.terr), 1) - 1) + [0, 0.3, 0.5, 0.8][dfCall(() => xpGearFor(k, c), 0)] + 0.4 * (P.moral || 0);
+  if (pw === 'etoile') L += 0.5 * n;
+  if (dfCall(() => eqSpec(k), '') === 'photo') L += 0.4;
+  if (dfDuo(k)) L += 0.3;
+  const loot = dfCall(() => usLootP(k, c.terr), 0) + dfCall(() => f3Eff().p, 0), objs = (pw === 'flair' ? n : 0) + (P.moral || 0);
+  return { L, loot, objs, rare: Math.round(L * 60) };
+}
+// simulations (rien n'est sauvegardé)
+function dfWithEq(k, slot, id, fn) { const a = xpEq(k), old = a.slice(); a[slot] = id; try { return fn(); } finally { a[0] = old[0]; a[1] = old[1]; } }
+function dfWithProv(rid, fn) { const p = dfCall(() => eqPlanProv(), []), old = p.slice(); p.push(rid); try { return fn(); } finally { plan.eqProv = old; } }
+function dfUseful(it, c) { const G = xpGearOf(it); if (!G) return false; if (G.g === 'boussole') return true; const D = XP_G[G.g]; return !!(c && (D[4].includes(c.terr) || (D[5] === 'cave' && (c.cave || c.night)) || (D[5] === 'wild' && c.wild))); }
+function dfSlotFor(k, c) { const a = xpEq(k), items = xpEqItems(k); for (let i = 0; i < 2; i++) if (!a[i]) return i; for (let i = 0; i < 2; i++) if (!dfUseful(items[i], c)) return i; return 1; }
+function dfWearHTML(k, d, c, risk) {
+  const chips = [], terr = c.terr, R = dfRange(k, d), rk = () => { const x = dfRiskOf(k, d); return x ? x.r : 0; };
+  const chip = (ico, nm, fx, on) => `<span class="dfw${on ? '' : ' off'}"><span class="dfw-i">${ico}</span><span class="dfw-t"><b>${esc(nm)}</b><small>${fx}</small></span></span>`;
+  xpEqItems(k).forEach((it, slot) => {
+    if (!it) return; const G = xpGearOf(it), fx = [];
+    if (G.g === 'boussole') { const p = R.parts.find(x => x.id === 'comp'); if (p) fx.push(`+${p.km.toLocaleString('fr-FR')} km`); }
+    else if (dfUseful(it, c)) {
+      const p = R.parts.find(x => x.id === 'g:' + it.id); if (p) fx.push(`+${p.km} km`);
+      if (risk) { const w = dfWithEq(k, slot, null, rk); if (w > risk.r + 0.004) fx.push(`−${Math.round((1 - risk.r / w) * 100)} % de risques`); }
+    }
+    chips.push(chip(itemIcon(it), it.name, fx.length ? fx.join(' · ') : 'rien ici', fx.length));
+  });
+  const P = dfCall(() => eqPlanProv(), []);
+  P.forEach((rid, i) => {
+    const kd = eqKindOf(rid), fx = kd === 'end' ? '+90 km' : kd === 'moral' ? '+1 objet · +30 km' : (kd === 'chaud' && (terr === 'froid' || terr === 'montagne')) || (kd === 'frais' && terr === 'desert') ? `moins de risques · +30 km` : '+30 km';
+    chips.push(chip(eqRIco(rid, 'dfp' + i), eqRName(rid), fx, true));
+  });
+  dfCall(() => usWornItems(k), []).forEach(it => {
+    const b = dfCall(() => usWearOf(it), null), f = dfCall(() => usFormOf(it), ''), fx = [];
+    if (DF_EXPLO.includes(f)) fx.push('+40 km');
+    if (b && b.t !== 'cm' && (b.t === terr || b.t === '*')) { fx.push(b.k === 'risk' ? `−${Math.round(b.v * 100)} % de risques` : `+${Math.round(b.v * 100)} % de butin`); if (!DF_EXPLO.includes(f)) fx.push('+20 km'); }
+    chips.push(chip(itemIcon(it), it.name, fx.length ? fx.join(' · ') : 'rien ici', fx.length));
+  });
+  dfCall(() => usSetsOf(k), []).filter(x => x.on).forEach(x => {
+    const fx = x.St.fx.filter(([t]) => t === terr || t === '*').map(([, kk, v]) => (kk === 'risk' ? `−${Math.round(v * 100)} % de risques` : kk === 'loot' ? `+${Math.round(v * 100)} % de butin` : '')).filter(Boolean);
+    if (x.St.id === 'explo') fx.push('+150 km');
+    chips.push(chip(`<b class="dfw-set">${x.n}/4</b>`, 'Ensemble ' + x.St.nom, fx.length ? fx.join(' · ') : 'rien ici', fx.length));
+  });
+  if (!chips.length) return `<p class="df-none">Rien d’équipé. Matériel et vêtements : Compagnons › Talents.</p>`;
+  return `<div class="dfws">${chips.join('')}</div>`;
+}
+function dfLootHTML(d) {
+  if (d.poi) return '';
+  let tbl = dfCall(() => lootTable(d.tags || ['campagne']), []);
+  const common = tbl.slice().sort((a, b) => b.p - a.p).filter(x => x.d[3] < 2).slice(0, 4), rare = tbl.filter(x => x.d[3] >= 2).sort((a, b) => b.d[3] - a.d[3]).slice(0, 2);
+  const ic = (x, r) => { const it = { name: x.d[0], cat: x.d[1], sub: x.d[2], rarity: x.d[3], look: x.d[4], color: x.d[5] }; const seen = S.dex && S.dex[it.name]; return `<span class="dfl${r ? ' rare' : ''}" title="${esc(seen || it.rarity < 3 ? it.name : 'Objet rare encore inconnu')} · ${esc(dfCall(() => RARITY[it.rarity], ''))}" style="--rc:${dfCall(() => RARC[it.rarity], '#ccc')}">${itemIcon(it)}</span>`; };
+  let h = common.map(x => ic(x, 0)).join('') + rare.map(x => ic(x, 1)).join('');
+  if (d.special) h += `<span class="dfl rare sp" title="Souvenir unique">${S.found[d.name] ? itemIcon({ name: d.special[0], cat: d.special[1], sub: d.special[2], rarity: 3, look: d.special[4], color: d.special[5] }) : '<b>?</b>'}</span>`;
+  return h ? `<div class="dfls">${h}</div>` : '';
+}
+function dfTips(k, d, C, risk) {
+  const out = [], c = risk ? risk.c : dfCall(() => xpCtxOf(d), { terr: 'foret' });
+  const stock = dfCall(() => eqStock(), {}), plan3 = dfCall(() => eqPlanProv().length, 0) < 3, used = r => dfCall(() => eqPlanProv(), []).filter(x => x === r).length;
+  const inStock = kind => Object.keys(stock).find(r => eqKindOf(r) === kind && stock[r] - used(r) > 0);
+  if (!C.ok) {
+    const ci = dfCompItem(k);
+    if (C.R.comp < 1) { const g = dfRange(k, d, { comp: 1 }).km - C.R.km; out.push(ci ? { a: 'eq', v: ci.id, t: `Équiper la boussole`, fx: `+${g} km` } : { a: 'hint', v: 'Boussole : atelier › Équipement (1 métal + 1 verre), ou au magasin. Puis équipez-la sur la fiche du familier.', t: 'Fabriquer une boussole', fx: `+${g} km` }); }
+    const er = plan3 && inStock('end');
+    out.push(er ? { a: 'prov', v: er, t: `Emporter 1 ${eqRName(er).toLowerCase()}`, fx: '+90 km' } : { a: 'hint', v: 'Plats d’endurance : préparez au comptoir un plat (gâteau du voyageur, tartes, pains…). Chaque plat emporté : +90 km.', t: 'Préparer des plats d’endurance', fx: '+90 km chacun' });
+  }
+  if (risk && risk.r >= 0.3 && out.length < 2) {
+    const want = Object.keys(XP_G).filter(g => g !== 'boussole' && XP_G[g][4].includes(c.terr));
+    const own = (S.inv || []).filter(it => { const G = xpGearOf(it); if (!G || !want.includes(G.g)) return false; const by = dfCall(() => xpWornBy(it.id), null); return (!by || by === k) && !xpEq(k).includes(it.id); }).sort((a, b) => xpGearOf(b).tier - xpGearOf(a).tier)[0];
+    if (own) { const s = dfSlotFor(k, c), nr = dfWithEq(k, s, own.id, () => { const x = dfRiskOf(k, d); return x ? x.r : 0; }); out.push({ a: 'eq', v: own.id, t: `Équiper : ${own.name}`, fx: `${dfPct(risk.r)} → ${dfPct(nr)}` }); }
+    else if (want.length && !xpEqItems(k).some(it => dfUseful(it, c) && xpGearOf(it).g !== 'boussole')) out.push({ a: 'hint', v: `${xpGName(want[0], 1)} : atelier › Équipement, ou au magasin. Puis équipez-les sur la fiche du familier.`, t: `Fabriquer : ${xpGName(want[0], 1).toLowerCase()}`, fx: `${dfPct(risk.r)} → ${dfPct(Math.max(0.03, risk.r * 0.25))}` });
+    const kind = c.terr === 'desert' ? 'frais' : (c.terr === 'froid' || c.terr === 'montagne') ? 'chaud' : null, pr = kind && plan3 && inStock(kind);
+    if (pr && out.length < 2) { const nr = dfWithProv(pr, () => { const x = dfRiskOf(k, d); return x ? x.r : 0; }); if (nr < risk.r - 0.004) out.push({ a: 'prov', v: pr, t: `Emporter 1 ${eqRName(pr).toLowerCase()}`, fx: `${dfPct(risk.r)} → ${dfPct(nr)}` }); }
+  }
+  return out.slice(0, 2);
+}
+function dfCardHTML(k, d) {
+  const C = dfCheck(k, d), risk = dfRiskOf(k, d), c = risk ? risk.c : dfCall(() => xpCtxOf(d), { terr: 'foret' }), T = XP_T[c.terr] || XP_T.foret;
+  const F = dfFlair(k, d, c), ex = dfExInfo(d), lv = dfCall(() => xpLvl(k, c.terr), 1), R = C.R;
+  const r = risk ? risk.r : 0, circ = 2 * Math.PI * 25;
+  const ring = `<div class="dfring ${risk ? dfRC(r) : 'ok'}" role="img" aria-label="Risque de ce voyage : ${risk ? dfPct(r) : 'aucun'}"><svg viewBox="0 0 60 60"><circle cx="30" cy="30" r="25" class="bg"/><circle cx="30" cy="30" r="25" class="fg" stroke-dasharray="${(circ * (risk ? Math.max(0.03, r) : 1)).toFixed(1)} ${circ.toFixed(1)}" transform="rotate(-90 30 30)"/></svg><b>${risk ? dfPct(r) : '0 %'}</b><small>risque</small></div>`;
+  const kmTxt = R.world ? 'Monde entier' : `${R.km.toLocaleString('fr-FR')} km`;
+  const endBar = `<span class="dfbar end${C.ok ? '' : ' no'}"><i style="width:${(R.world ? 100 : dfPos(R.km) * 100).toFixed(0)}%"></i><em style="left:${(dfPos(C.dist) * 100).toFixed(0)}%" title="Destination : ${C.dist} km"></em></span>`;
+  const flBar = `<span class="dfbar fl"><i style="width:${Math.round(Math.min(1, 0.12 + F.L / 3 + F.loot) * 100)}%"></i></span>`;
+  const rbBar = `<span class="dfbar rb ${risk ? dfRC(r) : 'ok'}"><i style="width:${Math.round((1 - r) * 100)}%"></i></span>`;
+  const st = dfCall(() => eqTitle(k), '');
+  let h = `<section class="dfc${C.ok ? '' : ' far'}" aria-label="Fiche de ${esc(dfNm(k))} pour ce voyage">`;
+  h += `<div class="dfc-top"><img class="dfc-pic" src="${portraitURI(k)}" alt="" width="46" height="50"><div class="dfc-who"><b>${esc(dfNm(k))}</b><small>${esc(st)} · niv. ${(S.prog[k] && S.prog[k].lvl) || 1}</small><span class="dfc-ter" style="--tc:${T[3]}">${xpTIco(c.terr, 's')}${esc(T[1])} niv. ${lv}</span></div>${ring}</div>`;
+  if (!C.ok) h += `<p class="dfc-far">${dfGly('far', '#c9604f')}<span><b>Trop loin : ${C.dist.toLocaleString('fr-FR')} km pour une portée de ${R.km.toLocaleString('fr-FR')} km</b><small>${esc(C.msg.replace(/^Trop loin[^.]*\.\s*/, ''))}</small></span></p>`;
+  h += `<div class="dfst">`;
+  h += `<div class="dfs">${dfGly('endu', '#c9853a')}<span class="dfs-n">Endurance</span>${endBar}<span class="dfs-v ${C.ok ? 'ok' : 'no'}">${C.dist.toLocaleString('fr-FR')} / ${esc(kmTxt)} ${C.ok ? '✓' : '✗'}</span></div>`;
+  h += `<div class="dfs">${dfGly('flair', '#d9a520')}<span class="dfs-n">Flair</span>${flBar}<span class="dfs-v">${F.loot > 0.004 ? `+${Math.round(F.loot * 100)} % butin` : 'butin normal'}${F.objs ? ` · +${F.objs} obj.` : ''}${F.rare ? ` · rares +${F.rare} %` : ''}</span></div>`;
+  h += `<div class="dfs">${dfGly('robu', '#5f8fb8')}<span class="dfs-n">Robustesse</span>${rbBar}<span class="dfs-v">${risk ? `${dfPct(1 - r)}` : 'pas de risque ici'}</span></div>`;
+  h += `</div>`;
+  if (C.ex) h += `<p class="dfc-note">Hors de sa portée (${R.km.toLocaleString('fr-FR')} km), mais autorisé : c’est une étape de quête ou une livraison.</p>`;
+  else h += `<p class="dfc-note">Portée : <b>${esc(kmTxt)}</b> · ${esc(dfPalier(R.km))}${R.parts.length > 1 ? ` <span class="dfc-pts">${R.parts.filter(p => p.id !== 'base').map(p => `${esc(p.lbl)} +${p.km.toLocaleString('fr-FR')}`).join(' · ')}</span>` : ''}</p>`;
+  if (risk) h += `<div class="dfc-cmp"><span>Sans préparation <b class="bad">${dfPct(risk.no)}</b></span><span class="arr">→</span><span>avec votre équipement <b class="${dfRC(r)}">${dfPct(r)}</b></span></div>`;
+  h += `<h4 class="dfh">Ce qu’${eqCall2(k) ? 'elle' : 'il'} porte</h4>` + dfWearHTML(k, d, c, risk);
+  const loot = dfLootHTML(d);
+  if (loot || ex.n) h += `<h4 class="dfh">À trouver ici${ex.n ? ` <span class="dfex">Lieu épuisé : ${Math.round(ex.f * 100)} % du butin · revient dans ${esc(dfLeft(ex.back))}</span>` : ''}</h4>${loot}`;
+  const tips = dfTips(k, d, C, risk);
+  if (tips.length) h += `<div class="dftips">${tips.map((x, i) => `<button class="dftip" data-dftip="${i}" data-a="${x.a}" data-v="${esc(x.v)}"><span>${esc(x.t)}</span><b>${esc(x.fx)}</b></button>`).join('')}</div>`;
+  return h + `</section>`;
+}
+const eqCall2 = k => dfCall(() => !!compE(k), false);
+if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try {
+    const k = S.sel, d = plan.dest;
+    if (!box || !d || S.trips[k] || !CHARS[k] || dfTuto() || box.querySelector('.eqdl.busy')) return r;
+    // les lignes éparpillées sont rassemblées dans la fiche
+    box.querySelectorAll('.canfind, .xpgo.mini, .xpgo .xp-risk, .eqp-fx, .eqp-adv').forEach(e => e.remove());
+    const anchor = box.querySelector('.trjline') || box.querySelector('.dhead, .poihead');
+    const html = dfCardHTML(k, d);
+    if (anchor) anchor.insertAdjacentHTML('afterend', html); else box.insertAdjacentHTML('afterbegin', html);
+    const C = dfCheck(k, d), b = box.querySelector('#goBtn');
+    if (b && !C.ok) { b.disabled = true; b.textContent = 'Trop loin'; b.classList.add('df-off'); }
+  } catch (e) { console.error('difficulté fiche', e); }
+  return r;
+})(renderVoyage);
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-dftip]'); if (!el) return;
+  const k = S.sel, d = plan.dest, a = el.dataset.a, v = el.dataset.v; if (!CHARS[k] || !d) return;
+  if (a === 'eq') { const c = dfCall(() => xpCtxOf(d), null); if (xpEquip(k, dfSlotFor(k, c), v)) dfCall(() => sfx('pop'), 0); }
+  else if (a === 'prov') { const p = dfCall(() => eqPlanProv(), null); if (p && p.length < 3) p.push(v); }
+  else if (a === 'hint') { toast(v); return; }
+  const b = $('panelBody'), y = b ? b.scrollTop : 0; dfCall(() => renderPanel(), 0); if (b) b.scrollTop = y;
+  dfCall(() => dfMapUpdate(true), 0);
+});
+
+// ---------------- carte : cercle de portée, lieux hors portée, lieux épuisés ----------------
+let dfSig = '';
+function dfMapUpdate(force) {
+  if (typeof map === 'undefined' || !map || !mapReady || !map.getStyle) return;
+  const k = S.sel, h = homeObj(), on = !!(CHARS[k] && !S.trips[k] && !dfTuto() && !document.body.classList.contains('firstrun'));
+  const R = on ? dfRange(k, plan.dest || null) : null, show = !!(R && !R.world);
+  const sig = [show ? R.km : 0, h.lon, h.lat].join('|');
+  if (!map.getSource('dfRange')) {
+    try {
+      map.addSource('dfRange', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      const bef = map.getLayer('route-shadow') ? 'route-shadow' : undefined;
+      map.addLayer({ id: 'dfRangeF', type: 'fill', source: 'dfRange', paint: { 'fill-color': '#2f7f6c', 'fill-opacity': 0.07 } }, bef);
+      map.addLayer({ id: 'dfRangeL', type: 'line', source: 'dfRange', paint: { 'line-color': '#2f7f6c', 'line-width': 2.5, 'line-opacity': 0.75, 'line-dasharray': [2, 2] } }, bef);
+      dfSig = '';
+    } catch (e) { return; }
+  }
+  if (sig !== dfSig || force) {
+    dfSig = sig;
+    const g = show ? d3.geoCircle().center([h.lon, h.lat]).radius(R.km / 111.195).precision(2)() : null;
+    if (g) g.coordinates = g.coordinates.map(ring => ring.slice().reverse()); // sens trigonométrique pour MapLibre
+    dfCall(() => map.getSource('dfRange').setData({ type: 'FeatureCollection', features: g ? [{ type: 'Feature', properties: {}, geometry: g }] : [] }), 0);
+  }
+  // lieux hors portée estompés
+  for (const p of PLACES) { const o = ovEls['p' + p.id]; if (o) o.el.classList.toggle('dffar', !!(show && kmBetween(h, p) > R.km)); }
+  // lieux épuisés (épingles des lieux et des lieux du quotidien)
+  const D = dfState(), now = Date.now(), hot = new Set(Object.keys(D.ex).filter(kk => (D.ex[kk] || []).some(ts => now - ts < DF_REGROW)));
+  for (const [key, o] of Object.entries(ovEls)) {
+    if (!/^[pq]/.test(key) || !o || !o.el) continue;
+    const lon = o.lon != null ? o.lon : o.poi && o.poi.lon, lat = o.lat != null ? o.lat : o.poi && o.poi.lat;
+    const kk = isFinite(+lon) && isFinite(+lat) ? dfKey({ lon, lat }) : '', ex = hot.has(kk);
+    o.el.classList.toggle('dfexp', ex);
+    if (ex) { const I = dfExInfo({ lon, lat }); o.el.dataset.dfex = `Lieu épuisé : revient dans ${dfLeft(I.back)}`; o.el.title = o.el.dataset.dfex; } else if (o.el.dataset.dfex) { delete o.el.dataset.dfex; o.el.removeAttribute('title'); }
+  }
+}
+if (typeof drawMarks === 'function') drawMarks = (orig => function () { const r = orig.apply(this, arguments); dfCall(() => dfMapUpdate(), 0); return r; })(drawMarks);
+setInterval(() => { if (!document.hidden) dfCall(() => dfMapUpdate(), 0); }, 3000);
+
+// ---------------- « Comment ça marche » ----------------
+if (typeof cmHowHTML === 'function') cmHowHTML = (orig => function () {
+  const h = orig.apply(this, arguments);
+  try {
+    const add = `<div class="xp-how"><p>${dfGly('far', '#2f7f6c')}<span><b>Portée</b> : chaque familier part à 50 km au début. Boussole, plats d’endurance, matériel, vêtements d’explorateur, confort du foyer et croissance l’agrandissent (cercle sur la carte).</span></p><p>${dfGly('robu', '#5f8fb8')}<span><b>Terrains durs</b> : sans le bon matériel, la montagne, le froid, le désert et la mer sont très risqués.</span></p></div>`;
+    const at = h.lastIndexOf('<button class="btn green" data-closemodal');
+    return at >= 0 ? h.slice(0, at) + add + h.slice(at) : h;
+  } catch (e) { return h; }
+})(cmHowHTML);
+
+// ---------------- style ----------------
+(function dfCSS() {
+  const st = document.createElement('style'); st.id = 'dfCSS';
+  st.textContent = `
+.dfc{margin:8px 0 10px;padding:10px 11px 11px;border:2.5px solid var(--ink,#4a3528);border-radius:20px;background:linear-gradient(180deg,#fffdf6,#fff6e6);box-shadow:0 3px 0 rgba(74,53,40,.18);display:flex;flex-direction:column;gap:7px}
+.dfc.far{background:linear-gradient(180deg,#fff6f1,#ffece4);border-color:#c9604f}
+.dfc-top{display:flex;align-items:center;gap:9px}
+.dfc .dfc-top img.dfc-pic{width:46px!important;height:50px!important;max-width:46px;object-fit:contain;flex:none;margin:-4px 0;position:static;transform:none}
+.dfc .dfc-top .livep{width:46px!important;height:50px!important;max-width:46px;flex:none;overflow:hidden;position:static;transform:none;margin:-4px 0}.dfc .dfc-top .livep svg,.dfc .dfc-top .livep img{width:100%!important;height:100%!important}
+.dfc-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.dfc-who b{font:800 17px/1.05 var(--display,inherit);color:var(--ink,#4a3528)}
+.dfc-who small{font:600 12px var(--body,inherit);color:var(--ink2,#7a6250);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dfc-ter{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;margin-top:2px;padding:1px 8px 1px 2px;border-radius:999px;background:color-mix(in srgb,var(--tc) 18%,#fff);border:1.5px solid var(--tc);font:800 11.5px var(--display,inherit);color:var(--ink,#4a3528)}
+.dfc-ter .rgb{--sz:18px}
+.dfring{position:relative;width:66px;height:66px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.dfring svg{position:absolute;inset:0;width:100%;height:100%}
+.dfring circle{fill:none;stroke-width:7}.dfring .bg{stroke:#efe4d2}.dfring .fg{stroke-linecap:round;stroke:#3f9a5f}
+.dfring.mid .fg{stroke:#e0952f}.dfring.bad .fg{stroke:#d0463f}
+.dfring b{position:relative;font:800 17px/1 var(--display,inherit);color:var(--ink,#4a3528)}
+.dfring small{position:relative;font:700 9.5px var(--body,inherit);color:var(--ink2,#7a6250);text-transform:uppercase;letter-spacing:.04em}
+.dfc-far{margin:0;display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:12px;background:#fff;border:1.8px solid #e3a191}
+.dfc-far b{display:block;font:800 13.5px/1.2 var(--display,inherit);color:#a8352f}.dfc-far small{display:block;font-size:12px;line-height:1.3;color:#7a4a3a;margin-top:1px}
+.dfg{width:22px;height:22px;border-radius:50%;background:var(--c);border:1.6px solid var(--ink,#4a3528);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.dfg svg{width:15px;height:15px}
+.dfst{display:flex;flex-direction:column;gap:5px}
+.dfs{display:grid;grid-template-columns:22px 74px minmax(40px,1fr) auto;align-items:center;gap:6px}
+.dfs-n{font:800 12.5px var(--display,inherit);color:var(--ink,#4a3528)}
+.dfs-v{font:700 11.5px var(--body,inherit);color:var(--ink2,#7a6250);text-align:right;white-space:nowrap}
+.dfs-v.ok{color:#2f7f4c}.dfs-v.no{color:#b8403a}
+.dfbar{position:relative;height:10px;border-radius:6px;background:#efe4d2;border:1.5px solid rgba(74,53,40,.25)}
+.dfbar i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;background:#c9853a}
+.dfbar.fl i{background:#e2b23a}.dfbar.rb i{background:#3f9a5f}.dfbar.rb.mid i{background:#e0952f}.dfbar.rb.bad i{background:#d0463f}
+.dfbar.end.no i{background:#d9a07a}
+.dfbar em{position:absolute;top:-4px;width:3px;height:16px;margin-left:-1.5px;border-radius:2px;background:var(--ink,#4a3528)}
+.dfbar.end.no em{background:#c9403a}
+.dfc-note{margin:0;font-size:12px;line-height:1.35;color:var(--ink2,#7a6250)}
+.dfc-note b{color:var(--ink,#4a3528)}
+.dfc-pts{display:block;font-size:11px;color:#9a8470}
+.dfc-cmp{display:flex;align-items:center;justify-content:center;gap:8px;padding:5px 8px;border-radius:12px;background:#fff;border:1.5px dashed #d8c6aa;font:700 12px var(--body,inherit);color:var(--ink2,#7a6250)}
+.dfc-cmp b{font:800 15px var(--display,inherit);padding:0 6px;border-radius:999px;color:#fff;background:#3f9a5f}
+.dfc-cmp b.mid{background:#e0952f}.dfc-cmp b.bad{background:#d0463f}
+.dfc-cmp .arr{font:800 16px var(--display,inherit);color:var(--ink,#4a3528)}
+.dfh{margin:2px 0 -2px;font:800 11.5px var(--display,inherit);letter-spacing:.05em;text-transform:uppercase;color:var(--ink2,#7a6250);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dfex{text-transform:none;letter-spacing:0;font:800 11px var(--body,inherit);color:#8a5a2a;background:#f6e3c6;border:1.5px solid #d9a868;border-radius:999px;padding:0 7px}
+.dfws{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.dfw{display:flex;align-items:center;gap:6px;min-width:0;padding:3px 6px 3px 3px;border-radius:12px;background:#fff;border:1.6px solid #e2d3bd}
+.dfw.off{opacity:.5;filter:grayscale(.7);background:#f7f2ea}
+.dfw-i{width:30px;height:30px;flex:none;display:flex;align-items:center;justify-content:center}.dfw-i svg{width:30px;height:30px}
+.dfw-set{font:800 12px var(--display,inherit);color:#8a6fc4}
+.dfw-t{min-width:0;display:flex;flex-direction:column}
+.dfw-t b{font:800 11.5px/1.15 var(--display,inherit);color:var(--ink,#4a3528);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dfw-t small{font:700 11px/1.2 var(--body,inherit);color:#2f7f4c}
+.dfw.off .dfw-t small{color:#8a7a6a}
+.df-none{margin:0;font-size:12px;color:var(--ink2,#7a6250)}
+.dfls{display:flex;gap:6px;flex-wrap:wrap}
+.dfl{width:40px;height:40px;border-radius:12px;background:#fff;border:2px solid color-mix(in srgb,var(--rc) 60%,#e2d3bd);display:flex;align-items:center;justify-content:center;padding:3px}
+.dfl svg{width:100%;height:100%}
+.dfl.rare{background:radial-gradient(circle,#fff8d8 30%,#ffe9a6);border-color:#e0a52a;box-shadow:0 0 0 2px rgba(224,165,42,.25),0 0 10px rgba(242,193,78,.7)}
+.dfl.sp b{font:800 18px var(--display,inherit);color:#b07a1a}
+.dftips{display:flex;flex-direction:column;gap:5px}
+.dftip{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:7px 10px;border-radius:14px;border:2px solid var(--ink,#4a3528);background:#e8f6ee;cursor:pointer;font:800 13px var(--display,inherit);color:var(--ink,#4a3528);box-shadow:0 2.5px 0 rgba(74,53,40,.3);text-align:left}
+.dftip b{flex:none;padding:1px 8px;border-radius:999px;background:#2f7f6c;color:#fff;font:800 12px var(--display,inherit)}
+.dftip:active{transform:translateY(2px);box-shadow:none}
+#goBtn.df-off{filter:grayscale(.6);opacity:.75}
+.ovm.dffar{opacity:.4;filter:grayscale(.5)}
+.ovm.dfexp{filter:saturate(.45)}
+.ovm.dfexp::before{content:'zz';position:absolute;left:8px;top:-22px;font:800 10px var(--display,inherit);color:#7a6a5a;background:#f3ecdf;border:1.5px solid #b9a58a;border-radius:999px;padding:0 4px;pointer-events:none;z-index:2}
+`;
+  document.head.appendChild(st);
+})();
+
+window.__df = {
+  state: dfState, range: dfRange, check: dfCheck, risk: dfRiskOf, exInfo: dfExInfo, visit: dfVisit, exempt: dfExempt, mapUpdate: dfMapUpdate, T: DF_T,
+  api: () => ({ S, plan, startTrip, collect, tick, renderPanel, openSheet, lootFor, xpEquip, xpEq, map: typeof map !== 'undefined' ? map : null }),
 };
 
 })();

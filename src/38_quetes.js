@@ -35,7 +35,7 @@ const qtFam = it => qtCall(() => FAM[famOf(it)], null);
 const qtIco = it => qtCall(() => itemIcon(it), '');
 const qtResIt = x => ({ name: x.name, cat: x.cat, sub: x.sub, rarity: x.rar || 0, color: x.color, rid: x.id });
 const qtIngIt = k => qtCall(() => bqSampleIng(k), { name: '', cat: 'm', sub: 'pierre', rarity: 0 });
-const qtIngMatch = k => it => !!(it && !it.mk && ING[k] && ING[k][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n'));
+const qtIngMatch = k => it => !!(it && !it.mk && ING[k] && ING[k][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n') && ingExtra(k, it));
 const qtCount = m => S.inv.filter(it => it && m(it)).length;
 const qtHomeReg = () => qtCall(() => regionAt(qtHome().lon, qtHome().lat), null);
 const QT_SCROLL = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 7 H29 a4 4 0 0 1 4 4 V31 a3 3 0 0 1 -3 3 H11 a4 4 0 0 1 -4 -4 V9Z" fill="#fff3d6" stroke="#5b4636" stroke-width="2.2" stroke-linejoin="round"/><path d="M13 14 H27 M13 19 H27 M13 24 H22" stroke="#c98a5a" stroke-width="2.2" stroke-linecap="round"/><circle cx="29" cy="30" r="5" fill="#e0607e" stroke="#5b4636" stroke-width="2"/></svg>';

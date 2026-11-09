@@ -91,14 +91,14 @@ const NS_BAITS = {
   capy: { subs: { agrume: 1, legume: 0.5 }, names: { 'Nénuphar': 1.1, 'Roseau': 1, 'Clémentine': 1.2 } },
   axo: { subs: { mer: 0.6 }, names: { 'Crevettes grises': 1.2, 'Perche grillée': 1, 'Écaille de brochet': 1, 'Truite arc-en-ciel': 1.4, 'Nénuphar': 0.6 } },
   renard: { subs: { fromage: 1 }, names: { 'Saumon fumé': 1.4, 'Lichen des rennes': 1.2, 'Gruyère': 1.2 } },
-  fennec: { subs: { sucre: 0.5 }, names: { 'Dattes': 1.4, 'Datte du souk': 1.4, 'Figue de barbarie': 1.2, 'Loukoum à la rose': 1 } },
+  fennec: { subs: { sucre: 0.5, insecte: 1, scarabee: 1 }, names: { 'Grillon champêtre': 1.4, 'Dattes': 1.4, 'Datte du souk': 1.4, 'Figue de barbarie': 1.2, 'Loukoum à la rose': 1 } },
   tanuki: { subs: { boisson: 1, pain: 0.8, plat: 0.6 }, names: { 'Thé matcha': 1.4, 'Mochi': 1.2, 'Thé au jasmin': 1.2 } },
   paresseux: { subs: { legume: 0.6 }, names: { 'Mangue': 1.2, 'Ananas': 1, 'Noix de coco': 1, 'Fruit de la passion': 1.4, 'Mangue de Casamance': 1.2, 'Fruit du dragon': 1.2, 'Feuille de palmier': 1, 'Hamac tressé': 1 } },
-  lemur: { subs: { fruit: 1, agrume: 0.6 }, names: { 'Litchi': 1.4, 'Gousse de vanille': 1.2 } },
+  lemur: { subs: { fruit: 1, agrume: 0.6, insecte: 0.8 }, names: { 'Phasme feuille': 1.3, 'Papillon lune': 1.2, 'Litchi': 1.4, 'Gousse de vanille': 1.2 } },
   phoque: { subs: { mer: 1 }, names: { 'Saumon fumé': 1.2, 'Sardines du port': 1.4, 'Crevettes grises': 1 } },
   quokka: { subs: { feuille: 0.6, pomme: 0.6 }, names: { 'Feuille d’eucalyptus': 1.4, 'Noix de macadamia': 1.2, 'Pomme du verger': 1 } },
 };
-const NS_BAIT_HINT = { panda: 'pommes, noisettes, pousses de bambou', capy: 'agrumes, nénuphars', axo: 'crevettes, petits poissons d’eau douce', renard: 'fromage, saumon fumé', fennec: 'dattes, figues, douceurs', tanuki: 'thé, pain, mochi', paresseux: 'fruits tropicaux, feuilles de palmier', lemur: 'fruits, litchis, vanille', phoque: 'poisson, sardines, fruits de mer', quokka: 'feuilles d’eucalyptus, pommes' };
+const NS_BAIT_HINT = { panda: 'pommes, noisettes, pousses de bambou', capy: 'agrumes, nénuphars', axo: 'crevettes, petits poissons d’eau douce', renard: 'fromage, saumon fumé', fennec: 'insectes (grillons, scarabées), dattes, figues', tanuki: 'thé, pain, mochi', paresseux: 'fruits tropicaux, feuilles de palmier', lemur: 'fruits, litchis, vanille, insectes', phoque: 'poisson, sardines, fruits de mer', quokka: 'feuilles d’eucalyptus, pommes' };
 function nsBaitPower(it, sp) {
   const B = NS_BAITS[sp]; if (!B || !it) return 0;
   const byName = B.names[it.name] || B.names[String(it.name || '').replace(/ \(chef-d’œuvre\)$/, '')] || 0;

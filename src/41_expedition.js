@@ -59,6 +59,9 @@ const xpGIco = (g, tier) => { try { const d = xpGearDef(g, tier); return itemIco
   ['crampons', 2, [['metal', 3], ['cristal', 1], ['pierre', 2]], 80], ['palmes', 2, [['verre', 2], ['metal', 2], ['coquillage', 2]], 80], ['lampe', 2, [['metal', 2], ['lumiere', 2], ['verre', 1]], 80],
   ['gourde', 2, [['metal', 2], ['cristal', 1], ['tissu', 2]], 80], ['manteau', 2, [['laine', 4], ['plume', 2], ['tissu', 2]], 90], ['jumelles', 2, [['verre', 3], ['metal', 2], ['cristal', 1]], 90],
 ].forEach(([g, tier, ing, c]) => { try { RECIPES.push({ id: `xg_${g}${tier}`, kind: 'Équipement', out: xpGearDef(g, tier), ing, coins: c }); } catch (e) {} });
+// v36 : matériel LÉGENDAIRE = matériel pro + 1 pierre précieuse taillée (atelier › Trésors : « Tailler »)
+try { ING.gemme = [['gemme'], 'Pierre précieuse taillée']; } catch (e) {}
+XP_GEAR.forEach(G => { try { ING['xgp_' + G[0]] = [['outil'], G[1][1]]; RECIPES.push({ id: `xg_${G[0]}3`, kind: 'Équipement', out: xpGearDef(G[0], 3), ing: [['xgp_' + G[0], 1], ['gemme', 1]], coins: 150 }); } catch (e) {} });
 // magasin : le matériel de base (2 articles par jour, rayon « Objets fabriqués »)
 const XP_SHOP = ['crampons', 'palmes', 'gourde', 'manteau', 'jumelles'];
 try { XP_SHOP.forEach(g => BQ_CAT.push({ key: 'xg_' + g, k: 't', lvl: 0, def: xpGearDef(g, 1) })); } catch (e) {}

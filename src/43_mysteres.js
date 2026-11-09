@@ -87,19 +87,19 @@ const MY_GUARDS = [
     offers: [{ k: 'plume', t: 'une plume pour son nid' }, { k: 'flocon', t: 'un flocon éternel', c: { night: 1 } }, { k: 'mer', t: 'un poisson de la baie' }, { k: 'cristal', t: 'un cristal de glace', c: { g: ['jumelles', 1] } }] },
   { id: 'canard', nm: 'Le canard mandarin', sp: 'canard', where: 'Kyoto (rivière Kamo)', lon: 135.77, lat: 35.01, tags: ['ville', 'monument'], csp: 'tanuki', cn: 'Sakura', bless: 'or', aura: '#ffe0ec',
     rum: 'Une marchande de thé de Kyoto parle d’un canard aux plumes d’or qui glisse sur la rivière à l’aube…',
-    offers: [{ k: 'graine', t: 'des graines de lotus' }, { k: 'feuille', t: 'un pétale de cerisier', c: { night: 1 } }, { k: 'sucre', t: 'un mochi bien sucré' }] },
+    offers: [{ k: 'insecte', t: 'une libellule (un insecte)' }, { k: 'feuille', t: 'un pétale de cerisier', c: { night: 1 } }, { k: 'sucre', t: 'un mochi bien sucré' }] },
   { id: 'tortue', nm: 'La tortue géante', sp: 'tortue', where: 'Îles Galápagos', lon: -90.35, lat: -0.74, tags: ['mer', 'ile'], csp: 'capy', cn: 'Darwin', bless: 'prud', aura: '#e6ffd8',
     rum: 'Un vieux marin raconte qu’une tortue de deux cents ans attend les voyageurs patients sur une île volcanique du Pacifique…',
     offers: [{ k: 'feuille', t: 'des feuilles de cactus' }, { k: 'fruit', t: 'des goyaves bien mûres' }, { k: 'agrume', t: 'un agrume juteux' }, { k: 'coquillage', t: 'un coquillage pour sa carapace', c: { g: ['palmes', 1] } }, { k: 'sable', t: 'du sable chaud', c: { m: ['mer', 3] } }] },
   { id: 'loutre', nm: 'La loutre géante', sp: 'loutre', where: 'Amazonie (Manaus)', lon: -60.0, lat: -3.1, tags: ['foret', 'lac'], csp: 'paresseux', cn: 'Yara', bless: 'chance', aura: '#d8fff0',
     rum: 'Un piroguier raconte qu’une loutre grande comme un homme rit dans les rivières d’Amazonie…',
-    offers: [{ k: 'mer', t: 'un poisson de rivière' }, { k: 'coquillage', t: 'un coquillage brillant' }, { k: 'fruit', t: 'des fruits de la forêt', c: { g: ['jumelles', 1] } }, { k: 'bois', t: 'un bâton pour jouer' }] },
+    offers: [{ k: 'mer', t: 'un poisson de rivière' }, { k: 'coquillage', t: 'un coquillage brillant' }, { k: 'fruit', t: 'des fruits de la forêt', c: { g: ['jumelles', 1] } }, { k: 'insecte', t: 'un papillon (un insecte, comme le morpho bleu)' }] },
   { id: 'manchot', nm: 'Le manchot royal', sp: 'pingouin', where: 'Patagonie (Punta Tombo)', lon: -65.22, lat: -44.05, tags: ['mer', 'neige'], csp: 'phoque', cn: 'Pinpin', bless: 'or', aura: '#fff1c8',
     rum: 'Les gauchos de Patagonie parlent d’un manchot à collier d’or qui salue les bateaux…',
     offers: [{ k: 'mer', t: 'un poisson d’argent' }, { k: 'coquillage', t: 'un galet rond pour son nid' }, { k: 'flocon', t: 'un flocon éternel', c: { m: ['mer', 3] } }] },
   { id: 'grenouille', nm: 'La grenouille dorée', sp: 'grenouille', where: 'Panama (El Valle)', lon: -80.13, lat: 8.6, tags: ['foret'], csp: 'axo', cn: 'Doré', bless: 'flair', aura: '#fff3a8',
     rum: 'Un guide de Panama raconte qu’une grenouille dorée, presque disparue, fait signe de la patte au bord d’un ruisseau…',
-    offers: [{ k: 'feuille', t: 'une feuille de bananier' }, { k: 'fruit', t: 'un fruit sauvage', c: { night: 1 } }, { k: 'lumiere', t: 'une luciole', c: { night: 1 } }, { k: 'cristal', t: 'une goutte de rosée cristallisée', c: { m: ['foret', 4] } }, { k: 'champignon', t: 'un champignon lumineux' }] },
+    offers: [{ k: 'feuille', t: 'une feuille de bananier' }, { k: 'fruit', t: 'un fruit sauvage', c: { night: 1 } }, { k: 'insecte', t: 'une luciole (un insecte)', c: { night: 1 } }, { k: 'cristal', t: 'une goutte de rosée cristallisée', c: { m: ['foret', 4] } }, { k: 'champignon', t: 'un champignon lumineux' }] },
 ];
 const MY_G = {}; MY_GUARDS.forEach(G => { MY_G[G.id] = G; });
 const MY_G_VISIT = 60, MY_G_RUM = 1200; // km
@@ -260,7 +260,9 @@ function myChoose(gid, how) {
   }
   g.at = Date.now(); save(); return true;
 }
-const myBless = kind => MY_GUARDS.filter(G => G.bless === kind && myGRec(G.id).done === 'bless').length;
+// v36 : une offrande précieuse (pierre taillée) rend la bénédiction 50 % plus forte
+const myBless = kind => MY_GUARDS.filter(G => G.bless === kind && myGRec(G.id).done === 'bless').reduce((a, G) => a + (myGRec(G.id).gem ? 1.5 : 1), 0);
+const myGemOk = it => !!(it && it.cut && it.sub === 'gemme' && !it.special && !it.mys && !it.qt);
 
 // ---------------- aller sur la carte ----------------
 function myFree() { if (S.trips[S.sel]) { toast(`${myNm(S.sel)} est déjà en voyage. Choisissez un autre compagnon en haut.`); return false; } return true; }
@@ -427,10 +429,11 @@ function myOnArrive(t) {
     else {
       const m = myOfferMatch(o), low = a => a.filter(m).sort((x, y) => (x.rarity || 0) - (y.rarity || 0))[0]; let it = low(S.inv), from = S.inv;
       if (!it) { it = low(t.bag); from = t.bag; }
+      let gem = false; if (!it) { it = S.inv.filter(myGemOk).sort((x, y) => (x.rarity || 0) - (y.rarity || 0))[0]; from = S.inv; gem = !!it; }
       if (it) {
-        from.splice(from.indexOf(it), 1); g.t = (g.t || 0) + 1; g.last = Date.now();
+        from.splice(from.indexOf(it), 1); g.t = (g.t || 0) + 1; g.last = Date.now(); if (gem) g.gem = (g.gem || 0) + 1;
         const full = g.t >= G.offers.length;
-        myJ(t, `${G.nm} sort doucement de sa cachette. ${n} pose ${o.t} devant lui… Il s’approche et accepte l’offrande !${full ? ' Il a désormais toute confiance en vous.' : ''}`, [['friend', `confiance ${g.t}/${G.offers.length}`]]);
+        myJ(t, `${G.nm} sort doucement de sa cachette. ${n} pose ${o.t} devant lui… Il s’approche et accepte l’offrande${gem ? ` précieuse (${it.name}) : sa bénédiction sera plus forte` : ''} !${full ? ' Il a désormais toute confiance en vous.' : ''}`, [['friend', `confiance ${g.t}/${G.offers.length}`]]);
         myLog(t, { k: 'gvisit', g: G.id, t: g.t, of: o.t, it: it.name, full });
       } else { myJ(t, `${G.nm} observe ${n} de loin… Il espérait ${o.t}.`, [['wild', 'sans offrande']]); myLog(t, { k: 'gwait', g: G.id, of: o.t }); }
     }
@@ -560,7 +563,7 @@ function myGuardHTML(G) {
   const pips = Array.from({ length: N }, (_, i) => `<i class="${i < (g.t || 0) ? 'on' : ''}"></i>`).join('');
   let body = '';
   if (g.done === 'comp') body = `<small class="my-gd">Il vous a confié ${esc(myCall(() => S.comps[g.cid].name, G.cn))}, un familier rare.</small>`;
-  else if (g.done === 'bless') body = `<small class="my-gd">Bénédiction : <b>${esc(MY_BLESS[G.bless][0])}</b> · ${esc(MY_BLESS[G.bless][1])}</small>`;
+  else if (g.done === 'bless') body = `<small class="my-gd">Bénédiction : <b>${esc(MY_BLESS[G.bless][0])}</b> · ${esc(MY_BLESS[G.bless][1])}${g.gem ? ' · <b>renforcée (×1,5) par une pierre taillée</b>' : ''}</small>`;
   else if ((g.t || 0) >= N) body = `<small>Il vous fait entièrement confiance. Choisissez :</small><div class="my-acts"><button class="btn green sm" data-mysch="${G.id}:comp">Familier rare (${esc(myCall(() => spName(G.csp), G.csp).toLowerCase())})</button><button class="btn gold sm" data-mysch="${G.id}:bless">Bénédiction : ${esc(MY_BLESS[G.bless][1])}</button></div>`;
   else {
     const o = myOffer(G), c = myCond(o.c, S.sel), n = myHave(o);
@@ -592,6 +595,7 @@ function myRefresh() {
 }
 
 // ---------------- « Sert à… » : offrandes ----------------
+try { GAME.addUses(it => myCall(() => myGemOk(it) && MY_GUARDS.some(G => { const g = myGRec(G.id); return g.d && !g.done && (g.t || 0) < G.offers.length; }) ? [{ txt: 'Offrande précieuse pour un gardien : bénédiction plus forte', kind: 'recette' }] : [], [])); } catch (e) {}
 try { GAME.addUses(it => myCall(() => MY_GUARDS.filter(G => { const g = myGRec(G.id); return g.d && !g.done && (g.t || 0) < G.offers.length && myOfferMatch(myOffer(G))(it); }).slice(0, 1).map(G => ({ txt: `Offrande pour ${G.nm.toLowerCase()} (${G.where})`, kind: 'recette' })), [])); } catch (e) {}
 
 // ---------------- clics ----------------
@@ -678,6 +682,6 @@ document.addEventListener('click', ev => {
 window.__mys = {
   state: myState, RIDDLES: MY_RIDDLES, GUARDS: MY_GUARDS, MAPS: MY_MAPS, follow: myFollow, hint: myHint, check: (id, d) => myCheck(MY_R[id], d), zone: id => myZone(MY_R[id]),
   discover: myDiscover, piece: myAddPiece, choose: myChoose, bless: myBless, mapUpdate: myMapUpdate, svg: id => myMapSVG(MY_M[id]), p: myP, secretDest: id => mySecDest(MY_M[id]),
-  goSecret: myGoSecret, goGuard: myGoGuard, search: mySearch, refresh: myRefresh,
+  goSecret: myGoSecret, goGuard: myGoGuard, search: mySearch, refresh: myRefresh, arrive: myOnArrive,
   api: () => ({ S, plan, startTrip, collect, tick, openSheet, closeSheet, drawMarks, choosePlace, poiDest, map, PLACES, makeItem, showModal, qtPageHTML }),
 };

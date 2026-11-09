@@ -29,7 +29,7 @@ const PG_B = [
     cost: [[['verre', 4], ['bois', 4]], [['verre', 7], ['bois', 6], ['metal', 2]], [['verre', 10], ['metal', 5], ['pierre', 4]]] },
   { id: 'atelier', w: 'maison', nm: 'Atelier agrandi', eff: l => `${15 * l} % de chances de fabriquer en double`,
     cost: [[['bois', 5], ['metal', 3]], [['bois', 8], ['metal', 5], ['pierre', 3]], [['bois', 12], ['metal', 8], ['verre', 3]]] },
-  { id: 'cheminee', w: 'maison', nm: 'Cheminée', eff: l => `Repos ${['', '1,5', '2', '2,5'][l]}× plus rapide`,
+  { id: 'cheminee', w: 'maison', nm: 'Cheminée', eff: l => `Repos ${['', '1,5', '2', '2,5'][l]}× plus rapide · familier reposé : −${10 + 5 * l} % de risques`,
     cost: [[['pierre', 6], ['metal', 2]], [['pierre', 10], ['metal', 3], ['bois', 4]], [['pierre', 14], ['metal', 5], ['verre', 2]]] },
   { id: 'repas', w: 'maison', nm: 'Coin repas', eff: l => `Nourrir un familier : +${25 * l} % d’XP`,
     cost: [[['bois', 4], ['tissu', 2]], [['bois', 6], ['tissu', 4], ['pierre', 3]], [['bois', 10], ['tissu', 6], ['verre', 3]]] },

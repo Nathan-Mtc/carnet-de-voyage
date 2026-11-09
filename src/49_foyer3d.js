@@ -59,7 +59,10 @@ function f3Fits(it, slot) {
   return true;
 }
 const f3Match = (it, slot) => { const s = F3_SLOT[slot]; return !!(s && it && (s[8].includes(it.sub) || s[9].test(it.name || ''))); };
-const f3Pts = (it, slot) => Math.max(1, Math.min(5, (it.rarity | 0) + 1)) + (slot && f3Match(it, slot) ? 2 : 0);
+// v36 : TROPHÉES (reliques, trésors uniques, objets légendaires, statues rares) : points de confort doublés
+const f3Trophy = it => !!(it && (it.relic || it.tresor || (it.rarity | 0) >= 4 || (it.sub === 'statue' && (it.rarity | 0) >= 3)));
+const f3Base = it => Math.max(1, Math.min(5, (it.rarity | 0) + 1)) * (f3Trophy(it) ? 2 : 1);
+const f3Pts = (it, slot) => f3Base(it) + (slot && f3Match(it, slot) ? 2 : 0);
 
 // ---------------- confort ----------------
 const F3_LV = [['Simple', 0, 0], ['Douillet', 4, 0.04], ['Cosy', 10, 0.08], ['Chaleureux', 18, 0.12], ['Paradis', 28, 0.16]];
@@ -77,8 +80,9 @@ function f3Eff(c) {
 const f3Pct = p => Math.round(p * 100);
 function f3EffTxt(E) {
   E = E || f3Eff();
-  if (!E.p) return `${E.nm} : posez des décos pour gagner du confort`;
-  return `${E.nm} : +${f3Pct(E.p)} % de butin, −${f3Pct(E.p)} % de risques, repos +${f3Pct(2 * E.p)} %`;
+  const rl = f3Call(() => f3Relics().map(f3RelicTxt), []).map(x => ` · ${x}`).join('');
+  if (!E.p) return `${E.nm} : posez des décos pour gagner du confort${rl}`;
+  return `${E.nm} : +${f3Pct(E.p)} % de butin, −${f3Pct(E.p)} % de risques, repos +${f3Pct(2 * E.p)} %${rl}`;
 }
 function f3EffShort(E) {
   E = E || f3Eff();
@@ -365,7 +369,7 @@ const f3RM = () => f3Call(() => reduceMotion(), false);
 function f3HudHTML() {
   const E = f3Eff(), seg = F3_LV.map((L, i) => `<i class="${i <= E.i ? 'on' : ''}"></i>`).join('');
   const fill = E.next ? Math.round(((E.c - F3_LV[E.i][1]) / (F3_LV[E.i + 1][1] - F3_LV[E.i][1])) * 100) : 100;
-  return `<div class="f3-hud"><div class="f3-cf" aria-label="Confort ${E.c}, niveau ${esc(E.nm)}"><span class="f3-cft"><svg viewBox="0 0 24 24" aria-hidden="true">${FY_IC.sofa}</svg><b>Confort ${E.c}</b><em>${esc(E.nm)}</em></span><span class="f3-gauge"><span class="f3-lv">${seg}</span><span class="f3-bar"><i style="width:${fill}%"></i></span>${E.next ? `<small class="f3-nx">+${E.next.need} → ${esc(E.next.nm)}</small>` : ''}</span><small class="f3-eff" title="${esc(f3EffTxt(E))}">${esc(f3EffShort(E))}</small></div>
+  return `<div class="f3-hud"><div class="f3-cf" aria-label="Confort ${E.c}, niveau ${esc(E.nm)}"><span class="f3-cft"><svg viewBox="0 0 24 24" aria-hidden="true">${FY_IC.sofa}</svg><b>Confort ${E.c}</b><em>${esc(E.nm)}</em></span><span class="f3-gauge"><span class="f3-lv">${seg}</span><span class="f3-bar"><i style="width:${fill}%"></i></span>${E.next ? `<small class="f3-nx">+${E.next.need} → ${esc(E.next.nm)}</small>` : ''}</span><small class="f3-eff" title="${esc(f3EffTxt(E))}">${esc(f3EffShort(E))}</small>${f3Call(() => f3Relics().map(id => `<small class="f3-rel">${esc(f3RelicTxt(id))}</small>`).join(''), '')}</div>
     <button class="f3-dec${f3Edit ? ' on' : ''}" data-f3edit="1" aria-pressed="${f3Edit}">${f3Edit ? 'Terminé' : 'Décorer'}</button></div>`;
 }
 function f3PickHTML() {
@@ -493,14 +497,107 @@ try { if (typeof US_K !== 'undefined' && !US_K.decorer) US_K.decorer = { nom: 'D
 const F3_ICO = '<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M6 19 L20 7 L34 19 V34 H6Z" fill="#fff3e2" stroke="#5b4636" stroke-width="2" stroke-linejoin="round"/><path d="M20 30 C14 26 12 23.5 12 21 A3.6 3.6 0 0 1 20 19.6 A3.6 3.6 0 0 1 28 21 C28 23.5 26 26 20 30Z" fill="#f39ab0" stroke="#5b4636" stroke-width="1.6"/></svg>';
 GAME.addUses(it => {
   if (!f3IsDeco(it)) return [];
-  const b = Math.max(1, Math.min(5, (it.rarity | 0) + 1)), best = F3_SLOTS.find(s => f3Match(it, s[0]));
-  return [{ txt: `Poser chez moi : +${b} confort${best ? ` (+${b + 2} ${best[7].toLowerCase()})` : ''}`, kind: 'decorer' }];
+  const b = f3Base(it), best = F3_SLOTS.find(s => f3Match(it, s[0])), e = f3Call(() => fyEffOf({ item: it }), null);
+  const out = [{ txt: `Poser chez moi : +${b} confort${f3Trophy(it) ? ' (trophée ×2)' : ''}${best ? ` (+${b + 2} ${best[7].toLowerCase()})` : ''}${e ? ` · ${e[2]}` : ''}`, kind: 'decorer' }];
+  if (it.relic && F3_RELIC[it.relic]) out.push({ txt: `Relique exposée chez vous : ${f3RelicTxt(it.relic).replace(/^[^:]+: /, '')}${f3Relics().includes(it.relic) ? ' (active)' : ''}`, kind: 'confort' });
+  return out;
 });
 GAME.addAction(it => {
   if (!f3IsDeco(it) || !S.inv.includes(it)) return [];
   const sl = f3BestSlot(it);
   return [{ label: 'Poser chez moi', kind: 'decorer', ico: F3_ICO, ready: !!sl, hint: sl ? `+${f3Pts(it, sl)} confort · ${F3_SLOT[sl][7].toLowerCase()}` : 'Tous les emplacements sont pris', run: () => f3AutoPlace(it.id) }];
 });
+
+// ================= v36 (audit des objets) : RELIQUES, ÉNERGIE, BONUS AFFICHÉS AU DÉPART =================
+// RELIQUES : chaque artefact réuni (famAssemble, it.relic), exposé au foyer (vue 3D S.f3d ou ancienne maison S.house),
+//   donne un bonus permanent sur un terrain : appliqué dans xpRiskK (risques) et collect (butin).
+// ÉNERGIE : au départ, un familier reposé (énergie ≥ 70) rapporte 1 objet de plus et a −10 % de risques
+//   (−5 % de plus par niveau de Cheminée, 48_progression.js) ; fatigué (< 30), il rapporte 1 objet de moins.
+//   Mémorisé sur le voyage (t.nrgB, t.nrgCh) : clés facultatives, anciennes sauvegardes compatibles.
+const F3_RELIC = { pharaon: ['desert', 'risk', 0.2], laurier: ['mer', 'risk', 0.2], soleil: ['montagne', 'loot', 0.2], jade: ['ville', 'loot', 0.2] };
+const F3_TW = { montagne: 'en montagne', mer: 'en mer', foret: 'en forêt', ville: 'en ville', desert: 'au désert', froid: 'dans le grand froid' };
+function f3Relics() {
+  const ids = new Set();
+  try { for (const it of Object.values(f3State().d)) if (it && it.relic && F3_RELIC[it.relic]) ids.add(it.relic); } catch (e) {}
+  try { for (const v of Object.values(S.house || {})) if (v && v.item && v.item.relic && F3_RELIC[v.item.relic]) ids.add(v.item.relic); } catch (e) {}
+  return [...ids];
+}
+function f3RelicTxt(id) {
+  const R = F3_RELIC[id], nm = f3Call(() => FAM_RELICS.find(x => x.id === id).nom, id);
+  return R ? `${nm} : ${R[1] === 'risk' ? `−${f3Pct(R[2])} % de risques` : `+${f3Pct(R[2])} % de chances d’un objet en plus`} ${F3_TW[R[0]]}` : nm;
+}
+const f3RelicSum = (terr, kind) => f3Relics().reduce((a, id) => a + (F3_RELIC[id][0] === terr && F3_RELIC[id][1] === kind ? F3_RELIC[id][2] : 0), 0);
+function f3Nrg(k) {
+  const t = S.trips && S.trips[k];
+  if (t && t.nrgB != null) return { b: t.nrgB, ch: t.nrgCh | 0, n: null };
+  const n = f3Call(() => fyC(k).nrg, 50), ch = f3Lvl('cheminee');
+  return { b: n >= 70 ? 1 : n < 30 ? -1 : 0, ch, n: Math.round(n) };
+}
+const f3NrgRisk = N => (N.b > 0 ? 0.1 + 0.05 * N.ch : 0);
+if (typeof xpRiskK === 'function') xpRiskK = (orig => function (k, c) {
+  const r = orig.apply(this, arguments);
+  try {
+    if (r > 0 && k && c) {
+      let m = 1 - f3RelicSum(c.terr, 'risk');
+      const N = f3Nrg(k); m *= N.b > 0 ? 1 - f3NrgRisk(N) : N.b < 0 ? 1.1 : 1;
+      if (m !== 1) return Math.max(0.03, Math.min(0.9, r * m));
+    }
+  } catch (e) {}
+  return r;
+})(xpRiskK);
+if (typeof startTrip === 'function') startTrip = (orig => function () {
+  const k = S.sel, before = S.trips && S.trips[k];
+  let N = null; try { if (k && S.comps && S.comps[k] && !before) N = f3Nrg(k); } catch (e) {}
+  const r = orig.apply(this, arguments);
+  try { const t = S.trips[k]; if (N && t && t !== before && !t.tuto) { t.nrgB = N.b; t.nrgCh = N.ch; save(); } } catch (e) { console.error('foyer énergie', e); }
+  return r;
+})(startTrip);
+let f3Msgs = [];
+if (typeof collect === 'function') collect = (orig => function () {
+  f3Msgs = [];
+  try {
+    const k = S.sel, t = S.trips && S.trips[k];
+    if (t && t.done && !t.tuto && !t.f3n && Array.isArray(t.bag)) {
+      t.f3n = 1;
+      const tags = (t.dest && t.dest.tags && t.dest.tags.length) ? t.dest.tags : ['campagne'], one = () => f3Call(() => lootFor(tags, t.luck || 0, t.dest ? t.dest.name : '', 1, k)[0], null);
+      if (t.nrgB > 0) { const b = one(); if (b) { t.bag.push(b); f3Msgs.push(`Bien reposé au départ : « ${b.name} » en plus !`); } }
+      else if (t.nrgB < 0 && t.bag.length > 1) { const c = t.bag.filter(x => x && !x.special && !x.tresor && !x.mys && !x.qt).sort((a, b) => (a.rarity || 0) - (b.rarity || 0))[0]; if (c) { t.bag.splice(t.bag.indexOf(c), 1); f3Msgs.push('Parti fatigué : un objet de moins. Laissez-le se reposer au foyer avant le prochain départ.'); } }
+      const terr = t.xpTerr || f3Call(() => xpTerrOf(t.dest), ''), p = f3RelicSum(terr, 'loot');
+      if (p > 0 && (Math.random() < p || (window.__f3 && __f3.forceLoot))) { const b = one(); if (b) { t.bag.push(b); f3Msgs.push(`Relique exposée (${F3_TW[terr] || ''}) : « ${b.name} » en plus !`); } }
+      if (f3Msgs.length) f3Msgs.k = k;
+    }
+  } catch (e) { console.error('foyer reliques/énergie', e); }
+  return orig.apply(this, arguments);
+})(collect);
+if (typeof showHaul === 'function') showHaul = (orig => function (h) {
+  try { if (f3Msgs.length && h && h.comp === f3Msgs.k) { h.extra = (h.extra || []).concat(f3Msgs); f3Msgs = []; } } catch (e) {}
+  return orig.apply(this, arguments);
+})(showHaul);
+// panneau de départ : ce que le foyer apporte VRAIMENT à ce voyage
+const F3_TRIPNM = { mappemonde: 'Mappemonde', cartemur: 'Carte murale' };
+function f3GoHTML(k, d) {
+  const L = [], N = f3Nrg(k), nm = f3Call(() => CHARS[k].name, '');
+  if (N.b > 0) L.push(`<span class="ok"><b>Énergie ${N.n}/100 : reposé</b> → +1 objet au retour, −${f3Pct(f3NrgRisk(N))} % de risques${N.ch ? ' (Cheminée)' : ''}</span>`);
+  else if (N.b < 0) L.push(`<span class="ko"><b>Énergie ${N.n}/100 : fatigué</b> → 1 objet de moins. ${esc(nm)} devrait se reposer au foyer.</span>`);
+  else L.push(`<span><b>Énergie ${N.n}/100</b> · à 70 ou plus : +1 objet et −${f3Pct(0.1 + 0.05 * N.ch)} % de risques</span>`);
+  const seen = new Set(), items = [].concat(Object.values(f3State().d), Object.values(S.house || {}).map(v => v && v.item)).filter(Boolean);
+  for (const it of items) { const e = f3Call(() => fyEffOf({ item: it }), null); if (e && e[0] === 'trip' && !seen.has(it.sub)) { seen.add(it.sub); L.push(`<span>${esc(F3_TRIPNM[it.sub] || it.name)} : −${f3Pct(e[1])} % de trajet</span>`); } }
+  const E = f3Eff(); if (E.p) L.push(`<span>Foyer ${esc(E.nm.toLowerCase())} : +${f3Pct(E.p)} % de butin, −${f3Pct(E.p)} % de risques</span>`);
+  const terr = f3Call(() => xpTerrOf(d), '');
+  f3Relics().forEach(id => { if (F3_RELIC[id][0] === terr) L.push(`<span class="ok">${esc(f3RelicTxt(id))}</span>`); });
+  return `<div class="f3-go" id="f3Go">${L.join('')}</div>`;
+}
+if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  try {
+    const k = S.sel, d = typeof plan !== 'undefined' ? plan.dest : null;
+    if (box && d && CHARS[k] && S.comps[k] && !S.trips[k] && !f3Call(() => tuOn(), false)) {
+      const gb = box.querySelector('.gobar');
+      if (gb) gb.insertAdjacentHTML('beforebegin', f3GoHTML(k, d)); else box.insertAdjacentHTML('beforeend', f3GoHTML(k, d));
+    }
+  } catch (e) { console.error('foyer départ', e); }
+  return r;
+})(renderVoyage);
 
 // ---------------- style ----------------
 (function f3CSS() {
@@ -585,6 +682,8 @@ GAME.addAction(it => {
 .f3-gauge{display:flex;align-items:center;gap:6px}
 .f3-lv{display:flex;gap:2px}.f3-lv i{width:9px;height:9px;border-radius:50%;border:1.5px solid ${F3_L};background:#fff}.f3-lv i.on{background:#e5587f}
 .f3-bar{flex:1;height:7px;border-radius:5px;background:#eadccb;border:1.5px solid ${F3_L};overflow:hidden}.f3-bar i{display:block;height:100%;background:linear-gradient(90deg,#f6c445,#e5587f)}
+.f3-rel{display:block;font:800 11px/1.25 var(--display,inherit);color:#8a5a1a}
+.f3-go{margin:6px 0;padding:7px 10px;border:2px solid #eadccb;border-radius:12px;background:#fffaf0;display:flex;flex-direction:column;gap:3px;font-size:12.5px;line-height:1.3;color:#5b4636}.f3-go b{font-family:var(--display,inherit)}.f3-go .ok{color:#2f7f5a}.f3-go .ko{color:#b0503a}
 .f3-eff{font:700 11.5px/1.25 var(--display,inherit);color:#6a4f3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.f3-nx{flex:none;font:800 10.5px/1 var(--display,inherit);color:#a0607a}
 .f3-dec{flex:none;font:800 14px/1 var(--display,inherit);color:#fff;background:#e5587f;border:2.5px solid ${F3_L};border-radius:14px;padding:10px 12px;box-shadow:0 3px 0 ${F3_L};cursor:pointer}
 .f3-dec.on{background:#3a8f5a}
@@ -627,4 +726,6 @@ window.__f3 = {
   state: f3State, comfort: f3Comfort, eff: f3Eff, effTxt: f3EffTxt, place: f3Place, take: f3Take, autoPlace: f3AutoPlace, bestSlot: f3BestSlot, stock: f3Stock, isDeco: f3IsDeco,
   SLOTS: F3_SLOTS, yaw: () => f3Yaw, setYaw: y => { f3Yaw = y; f3Apply(); }, pitch: () => f3Pitch, edit: v => { f3Edit = !!v; f3Pick = null; f3Refresh(); }, pick: id => { f3Pick = id; f3Refresh(); },
   risk: (k, terr) => xpRiskK(k, { terr: terr || 'foret' }, false, 0.35), forceP: null, forceLoot: false,
+  relics: () => f3Relics(), relicTxt: f3RelicTxt, nrg: k => f3Nrg(k), goHTML: (k, d) => f3GoHTML(k, d), pts: f3Pts, trophy: f3Trophy,
+  T: () => ({ craft, RECIPES, CM_R: typeof CM_R !== 'undefined' ? CM_R : {}, usesOf: it => GAME.usesOf(it), FY_EFF, fyMods, plan, openSheet, ING }),
 };

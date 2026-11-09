@@ -190,7 +190,7 @@ Object.assign(TAGL, Object.fromEntries(Object.entries(POI_CATS).map(([k, v]) => 
 Object.assign(FOOD_TASTE.panda, { love: ['pomme', 'fruit', 'pain'] });
 Object.assign(FOOD_TASTE.capy, { love: ['agrume', 'boisson'] });
 Object.assign(FOOD_TASTE.axo, { love: ['mer', 'glace'] });
-Object.assign(ING, { tissu: [['tissu', 'laine'], 'Tissu'], metal: [['metal', 'medaille'], 'Métal'], verre: [['verre', 'cristal'], 'Verre'], bois: [['bois'], 'Bois'], farine: [['farine'], 'Farine'] });
+Object.assign(ING, { tissu: [['tissu', 'laine'], 'Tissu'], metal: [['metal', 'plastique', 'medaille'], 'Métal ou plastique'], verre: [['verre', 'cristal'], 'Verre'], bois: [['bois'], 'Bois'], farine: [['farine'], 'Farine'] });
 RECIPES.push(
   { id: 'painmaison', kind: 'Cuisine', out: ['Pain de campagne maison', 'n', 'pain', 2, null, '#c98a4f'], ing: [['farine', 2]], coins: 0 },
   { id: 'capecousue', kind: 'Vêtement', out: ['Cape cousue main', 'v', 'dos', 2, 'cape', '#c9604f'], ing: [['tissu', 3]], coins: 10 },
@@ -198,7 +198,6 @@ RECIPES.push(
   { id: 'bonnettric', kind: 'Vêtement', out: ['Bonnet tricoté', 'v', 'tete', 2, 'bonnet', '#e9a03a'], ing: [['tissu', 2]], coins: 5 },
   { id: 'lanverre', kind: 'Décoration', out: ['Lanterne de verre', 'd', 'lanterne', 2, null, '#bfe3f6'], ing: [['verre', 2], ['metal', 1]], coins: 10 },
   { id: 'mobile', kind: 'Décoration', out: ['Mobile de coquillages', 'd', 'bocal', 2, null, '#f6cdb8'], ing: [['coquillage', 2], ['bois', 1]], coins: 5 },
-  { id: 'statuebois', kind: 'Décoration', out: ['Statuette sculptée', 'd', 'statue', 3, null, '#c99a6a'], ing: [['bois', 4]], coins: 20 },
 );
 // Ingrédients et recettes des nouveaux lieux
 Object.assign(ING, { fromage: [['fromage'], 'Fromage'], legume: [['legume'], 'Légume'], boisson: [['boisson'], 'Boisson'], pain: [['pain'], 'Pain'], plat: [['plat'], 'Plat cuisiné'], glace: [['glace'], 'Glace'], plastique: [['plastique'], 'Plastique'], fleur: [['fleur'], 'Fleur'] });

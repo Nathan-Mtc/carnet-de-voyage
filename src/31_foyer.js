@@ -55,14 +55,18 @@ const FY_EFF = {
   plante: ['joy', 0.2, 'bonheur qui dure (+20 %)'], herbier: ['joy', 0.15, 'bonheur qui dure (+15 %)'],
   lampe: ['night', 0.3, '+30 % de forme la nuit'], lanterne: ['night', 0.3, '+30 % de forme la nuit'],
   gamelle: ['meal', 0.5, '+50 % de bonheur au repas'], bocal: ['hug', 0.5, '+50 % aux câlins'],
-  mappemonde: ['trip', 0.04, 'voyages 4 % plus courts'], cartemur: ['trip', 0.06, 'voyages 6 % plus courts'],
-  statue: ['xp', 0, 'trophée : + d’expérience (confort)'],
+  mappemonde: ['trip', 0.08, 'voyages 8 % plus courts'], cartemur: ['trip', 0.1, 'voyages 10 % plus courts'],
+  jouet: ['hug', 1, 'un câlin compte double'],
+  // v36 : plus de « statue : + d'expérience » (valeur 0, jamais appliquée) ; statues, trophées et reliques donnent du CONFORT (49_foyer3d.js)
 };
 const FY_PHOTO_EFF = ['joy', 0.1, 'souvenir : bonheur qui dure (+10 %)'];
-function fyEffOf(v) { if (!v) return null; if (v.photo) return FY_PHOTO_EFF; if (v.item && v.item.cat === 'd') return FY_EFF[v.item.sub] || null; return v.item ? ['xp', 0, '+ de confort (expérience)'] : null; }
+const fySubOf = it => (/^Jouet en bois/.test(String(it.name || '')) ? 'jouet' : it.sub); // v36 : le jouet de l'animalerie
+function fyEffOf(v) { if (!v) return null; if (v.photo) return FY_PHOTO_EFF; if (v.item && v.item.cat === 'd') return FY_EFF[fySubOf(v.item)] || null; return null; }
 function fyMods() {
   const m = { rest: 0, night: 0, joy: 0, meal: 0, hug: 0, trip: 0, xp: 0 };
   for (const v of Object.values(fyState() && S.house)) { const e = fyEffOf(v); if (e) m[e[0]] += e[1]; }
+  // v36 : les décos posées dans la vue 3D (S.f3d) gardent leur petit bonus particulier
+  try { if (S.f3d && S.f3d.d) for (const it of Object.values(S.f3d.d)) { const e = it && fyEffOf({ item: it }); if (e) m[e[0]] += e[1]; } } catch (e) {}
   for (const k in m) m[k] = Math.min(FY_KIND[k][1], m[k]);
   return m;
 }
