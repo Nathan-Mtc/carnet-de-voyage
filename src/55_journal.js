@@ -24,7 +24,7 @@ function jrOrganize() {
   const m = document.querySelector('#modal .mbox'); if (!m || !m.querySelector('.hhead') || m.dataset.jr === '1') return;
   m.dataset.jr = '1';
   const btn = [...m.children].reverse().find(e => e.matches('button[data-closemodal]'));
-  const keep = e => e.matches('.hhead, .hbig, .haul, .jr-wrap') || e === btn || /Ce que vous rapportez/.test(e.textContent || '');
+  const keep = e => e.matches('.hhead, .hbig, .haul, .jr-wrap, .obsum') || e === btn || /Ce que vous rapportez/.test(e.textContent || '');
   const notes = [];
   [...m.children].forEach(e => {
     if (keep(e)) return;
@@ -36,7 +36,7 @@ function jrOrganize() {
   const ranked = notes.map(n => ({ n, k: jrKind(n.textContent || '') }));
   // Le moment fort : le premier élément important, dans l'ordre de JR_CATS (le plus marquant d'abord)
   for (const c of JR_CATS) { if (!c[2]) continue; const r = ranked.find(x => x.k === c); if (r) { hero = r; heroT = c[2]; break; } }
-  ranked.forEach(r => { if (r !== hero) box[r.k[3]].push(r.n); });
+  ranked.forEach(r => { if (r === hero) return; if (r.k[3] === 'bonus') { r.n.remove(); return; } box[r.k[3]].push(r.n); }); // v41 : les petits bonus disparaissent
   const wrap = document.createElement('div'); wrap.className = 'jr-wrap';
   if (hero) {
     const h = document.createElement('div'); h.className = 'jr-hero' + (hero.k[0] === 'echec' ? ' bad' : '');
@@ -54,14 +54,52 @@ function jrOrganize() {
   });
   if (btn) m.insertBefore(wrap, btn); else m.appendChild(wrap);
 }
+// v41 : « ce qui sert maintenant » : les objets utilisables tout de suite passent devant, avec un ✔,
+// et « Ce que vous rapportez » se réduit à UN bouton, l'action la plus utile.
+function jrUseNow(it) {
+  const cm = typeof usCmRecipes === 'function' ? (usCmRecipes(it) || []).find(x => x.ok) : null;
+  if (cm) return { t: 'Préparer : ' + cm.R.def[0], run: () => usCook(cm.R.id) };
+  const at = typeof usAtRecipes === 'function' ? (usAtRecipes(it) || []).find(x => x.ok && (typeof usGearOf !== 'function' || usGearOf(x.r.out))) : null;
+  if (at) return { t: 'Fabriquer : ' + at.r.out[0], run: () => usCraft(at.r.id) };
+  return null;
+}
+let jrAct = null;
+function jrItems() {
+  const m = document.querySelector('#modal .mbox'), haul = m && m.querySelector('.haul'); if (!haul) return;
+  if (!haul.dataset.jri) { haul.dataset.jri = '1'; jrAct = null;
+  const cards = [...haul.children], useful = [];
+  cards.forEach(c => {
+    const it = (S.inv || []).find(i => i.id === c.dataset.fiche); const u = it && jrUseNow(it);
+    if (u) { c.classList.add('jr-now'); useful.push(c); if (!jrAct) jrAct = u; }
+  });
+  useful.reverse().forEach(c => haul.prepend(c)); }
+  const sum = m.querySelector('.obsum');
+  if (sum && !sum.dataset.jr) { sum.dataset.jr = '1';
+    let b = jrAct ? null : sum.querySelector('.obsa button');
+    const label = jrAct ? jrAct.t : b ? b.textContent : '';
+    sum.innerHTML = label ? `<button class="btn green jr-one" data-jrone="1">${esc(label)}</button>` : '';
+    if (b && !jrAct) { const keep = b; sum.querySelector('.jr-one').onclick = () => keep.click(); }
+    if (!label) sum.remove();
+  }
+}
+document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-jrone]'); if (!b || !jrAct) return; ev.stopPropagation(); try { jrAct.run(); } catch (e) {} b.disabled = true; b.textContent = '✔ ' + b.textContent; }, true);
 if (typeof showHaul === 'function') showHaul = (orig => function () {
   const r = orig.apply(this, arguments);
-  try { jrOrganize(); setTimeout(() => { const m = document.querySelector('#modal .mbox'); if (m) { m.dataset.jr = ''; m.querySelectorAll(':scope > .jr-wrap').forEach(w => { [...w.querySelectorAll('.jr-in')].forEach(n => m.insertBefore(n, w)); w.remove(); }); jrOrganize(); } }, 120); } catch (e) { console.error('journal', e); }
+  try { jrOrganize(); jrItems(); setTimeout(() => { const m = document.querySelector('#modal .mbox'); if (m) { m.dataset.jr = ''; m.querySelectorAll(':scope > .jr-wrap').forEach(w => { [...w.querySelectorAll('.jr-in')].forEach(n => m.insertBefore(n, w)); w.remove(); }); jrOrganize(); jrItems(); } }, 120); } catch (e) { console.error('journal', e); }
   return r;
 })(showHaul);
 {
   const st = document.createElement('style');
-  st.textContent = `.jr-wrap{width:100%;display:flex;flex-direction:column;gap:8px;margin:4px 0 8px;text-align:left}
+  st.textContent = `.haul .hcard{position:relative}
+.haul .hcard .hnew{left:auto!important;right:4px!important}
+.haul .hcard .obu,.haul .hcard .hr{display:none!important}
+.haul .hcard .rgp{position:absolute;top:5px;left:5px;padding:0!important;margin:0!important;background:none!important;border:0!important;z-index:2}
+.haul .hcard .rgp>span{display:none}.haul .hcard .rgp .rgb{width:22px;height:22px;display:grid;place-items:center}
+.haul .hcard.jr-now{border-color:#5fb36b!important;box-shadow:0 0 0 2px #d8f0d8}
+.haul .hcard.jr-now::after{content:'✔';position:absolute;bottom:6px;right:6px;width:20px;height:20px;border-radius:50%;background:#5fb36b;color:#fff;font:800 12px/20px system-ui;text-align:center}
+.obsum{padding:6px!important;background:none!important;border:0!important;box-shadow:none!important}
+.jr-one{width:100%}
+.jr-wrap{width:100%;display:flex;flex-direction:column;gap:8px;margin:4px 0 8px;text-align:left}
 .jr-hero{position:relative;padding:12px 14px 12px;border-radius:16px;background:linear-gradient(135deg,#fff4d6,#ffe6b8);border:2.5px solid #c9902a;box-shadow:0 3px 0 rgba(120,80,20,.25)}
 .jr-hero.bad{background:linear-gradient(135deg,#f3eef8,#e4dcef);border-color:#7f6aa8}
 .jr-ht{display:block;font:800 16px var(--display,system-ui);color:#5b3a12;margin-bottom:4px}.jr-hero.bad .jr-ht{color:#3f2f63}
