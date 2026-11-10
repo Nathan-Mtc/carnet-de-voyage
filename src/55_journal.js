@@ -123,3 +123,31 @@ if (typeof showHaul === 'function') showHaul = (orig => function () {
 .jr-body li.jr-in{background:#fff7dc;border:1.5px solid #ecd59a;border-radius:10px;padding:6px 9px}`;
   document.head.appendChild(st);
 }
+
+// ---- v43 : après « Utiliser » depuis la fiche d'un objet du butin, on REVIENT au butin (au lieu de tout fermer),
+// pour revoir ce qu'on a rapporté. L'objet utilisé porte un petit « ✔ utilisé ».
+let jrSnap = null, jrUsedId = null;
+window.addEventListener('click', ev => {
+  const t = ev.target; if (!t.closest) return;
+  const card = t.closest('#modal .haul .hcard[data-fiche]');
+  if (card) { const m = document.querySelector('#modal .mbox'); jrSnap = m ? m.innerHTML : null; jrUsedId = card.dataset.fiche; return; }
+  if (t.closest('[data-closemodal]') && !t.closest('.fiche')) { jrSnap = null; return; }
+  const act = t.closest('#modal .fiche [data-usact], #modal .fiche [data-usres]');
+  if (!act || !jrSnap) return;
+  const snap = jrSnap, used = jrUsedId, label = (act.innerText || '').replace(/\s+/g, ' ').trim();
+  setTimeout(() => {
+    const mod = document.getElementById('modal'); if (!mod) return;
+    const box = mod.querySelector('.mbox');
+    // si une autre fenêtre utile s'est ouverte (atelier, magasin…), on la laisse ; sinon on revient au butin
+    if (!mod.hidden && box && !box.querySelector('.fiche') && !box.querySelector('.hhead')) return;
+    box.innerHTML = snap; mod.hidden = false;
+    const c = box.querySelector(`.hcard[data-fiche="${used}"]`); if (c) c.classList.add('jr-used');
+    jrSnap = box.innerHTML;
+    if (label && typeof toast === 'function') toast('✔ ' + label);
+  }, 80);
+}, true);
+{
+  const st = document.createElement('style');
+  st.textContent = `.haul .hcard.jr-used::before{content:'✔ utilisé';position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-8deg);z-index:3;background:#5fb36b;color:#fff;font:800 11px/1 system-ui;padding:4px 8px;border-radius:999px;box-shadow:0 2px 0 rgba(0,0,0,.2)}`;
+  document.head.appendChild(st);
+}
