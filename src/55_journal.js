@@ -75,11 +75,19 @@ function jrItems() {
   useful.reverse().forEach(c => haul.prepend(c)); }
   const sum = m.querySelector('.obsum');
   if (sum && !sum.dataset.jr) { sum.dataset.jr = '1';
-    let b = jrAct ? null : sum.querySelector('.obsa button');
-    const label = jrAct ? jrAct.t : b ? b.textContent : '';
-    sum.innerHTML = label ? `<button class="btn green jr-one" data-jrone="1">${esc(label)}</button>` : '';
-    if (b && !jrAct) { const keep = b; sum.querySelector('.jr-one').onclick = () => keep.click(); }
-    if (!label) sum.remove();
+    // Sans action « utile maintenant », on garde le VRAI bouton du module 23 (déplacé, pas copié, pour qu'il marche)
+    // en choisissant le plus parlant, avec un libellé clair qui nomme l'objet.
+    const PRI = ['craft', 'wear', 'order', 'bait', 'reve'];
+    const bs = jrAct ? [] : [...sum.querySelectorAll('.obsa button')];
+    const b = bs.sort((x, y) => (PRI.indexOf(x.dataset.obgo) + 1 || 9) - (PRI.indexOf(y.dataset.obgo) + 1 || 9))[0] || null;
+    if (jrAct) sum.innerHTML = `<button class="btn green jr-one" data-jrone="1">${esc(jrAct.t)}</button>`;
+    else if (b) {
+      const it = (S.inv || []).find(i => i.id === b.dataset.obid), nm = it ? it.name : '';
+      const L = { bait: `Emporter l’appât : ${nm}`, wear: b.textContent + (nm ? ` (${nm})` : ''), craft: (() => { const r = typeof RECIPES !== 'undefined' && RECIPES.find(x => x.id === b.dataset.obarg); return r ? `Fabriquer : ${r.out[0]}` : b.textContent; })() };
+      if (['bait', 'wear', 'craft'].includes(b.dataset.obgo)) b.textContent = L[b.dataset.obgo];
+      else if (!PRI.includes(b.dataset.obgo)) b.textContent = nm ? `Œuf : réchauffer avec ${nm} (éclosion plus rapide)` : b.textContent;
+      b.className = 'btn green jr-one'; sum.innerHTML = ''; sum.appendChild(b);
+    } else sum.remove();
   }
 }
 document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-jrone]'); if (!b || !jrAct) return; ev.stopPropagation(); try { jrAct.run(); } catch (e) {} b.disabled = true; b.textContent = '✔ ' + b.textContent; }, true);
