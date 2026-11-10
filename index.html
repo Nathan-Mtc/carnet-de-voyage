@@ -32893,7 +32893,8 @@ if (typeof styListHTML === 'function') styListHTML = (orig => function (n) {
     if (!C.gear || !s.miss || !/^Il manque du matériel/.test(s.miss) || styStep(N) !== 3) return h;
     const P = styTarget(N), k = (P && styWho(N, styDest(N, P), true).k) || S.sel, box = prepNeedHTML([C.gear], { k, why: `pour ${CHARS[k] ? CHARS[k].name : ''}` });
     const at = h.indexOf('class="sty-miss"'), end = at >= 0 ? h.indexOf('</small>', at) : -1;
-    return box && end >= 0 ? h.slice(0, end + 8) + box + h.slice(end + 8) : h;
+    const st = at >= 0 ? h.lastIndexOf('<', at) : -1;
+    return box && end >= 0 && st >= 0 ? h.slice(0, st) + box + h.slice(end + 8) : h; // v38b : l'encadré remplace le vieux texte rouge
   } catch (e) { console.error('préparation histoire', e); return h; }
 })(styListHTML);
 
@@ -33111,7 +33112,7 @@ if (typeof dfMapUpdate === 'function') dfMapUpdate = (orig => function () {
   st.textContent = `
 .pp-need{margin:8px 0;padding:8px 10px;border:2px dashed #e0a52a;border-radius:12px;background:#fff8e6;display:flex;flex-direction:column;gap:6px;text-align:left}
 .pp-need .pp-h{font-size:13px;color:#7a4a1a}.pp-need .pp-h small{font-weight:600;color:#8a7a6a}
-.pp-row{display:flex;align-items:center;gap:8px}.pp-ico{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center}.pp-ico svg{width:34px;height:34px}
+.pp-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.pp-row .pp-nm{flex:1 1 110px;min-width:0}.pp-row .btn{margin-left:auto}.pp-ico{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center}.pp-ico svg{width:34px;height:34px}
 .pp-nm{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.15}.pp-nm b{font-size:13px}.pp-nm small{font-size:11px;color:#8a7a6a}
 .pp-row .btn{flex:0 0 auto;min-height:36px}.pp-ok{color:#3f9a5f;font-size:13px}.pp-none{font-size:11px;color:#8a7a6a}
 .pp-haul{margin:8px 0}.pp-haul p{margin:4px 0;font-size:13px}
