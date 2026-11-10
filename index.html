@@ -29521,7 +29521,8 @@ GAME.addAction(it => {
 
 // ================= LA FICHE : objet → résultats, Utiliser, Vendre, Recycler =================
 let US_ACTS = [];
-const US_MAIN_ORDER = ['porter', 'expedition', 'planter', 'coffre', 'offrande', 'cuisiner', 'construire', 'familier'];
+const US_MAIN_ORDER = ['construire', 'cuisiner', 'porter', 'expedition', 'coffre', 'planter', 'familier', 'offrande']; // v42 : ce qui se fait TOUT DE SUITE d'abord ; l'offrande (lointaine) en dernier
+const US_VERB = { construire: 'Fabriquer', cuisiner: 'Cuisiner', porter: 'Porter', expedition: 'Équiper', coffre: 'Ouvrir', planter: 'Planter', familier: 'Nourrir', offrande: 'Offrir' };
 function usActsFor(it) {
   const all = usCall(() => GAME.actionsOf(it), []) || [], seen = new Map();
   all.forEach(a => { if (a && a.label && typeof a.run === 'function') seen.set(String(a.label).toLowerCase(), a); }); // le dernier déclaré l'emporte (ex. 48_progression.js)
@@ -29530,7 +29531,8 @@ function usActsFor(it) {
 function usMainOf(acts, it) {
   const use = acts.filter(a => a.kind !== 'vendre' && a.kind !== 'recycler' && a.kind !== 'quete');
   const rank = a => { const i = US_MAIN_ORDER.indexOf(a.kind); return i < 0 ? 50 : i; };
-  return use.filter(a => a.ready).sort((a, b) => rank(a) - rank(b))[0] || use.sort((a, b) => rank(a) - rank(b))[0] || null;
+  const rdy = use.filter(a => a.ready).sort((a, b) => (!!b.out - !!a.out) || rank(a) - rank(b));
+  return rdy[0] || null; // v42 : « Utiliser » seulement si c'est faisable maintenant
 }
 function usFicheHTML(it) {
   US_ACTS = usActsFor(it);
@@ -29544,7 +29546,7 @@ function usFicheHTML(it) {
     h += '</div></div>';
   }
   const btns = [];
-  if (main) btns.push(`<button class="btn green sm usmain" data-usact="${idx(main)}">${usPill(US_K[main.kind] ? main.kind : 'construire', 's')}<span>Utiliser<small>${esc(main.label)}</small></span></button>`);
+  if (main) btns.push(`<button class="btn green sm usmain" data-usact="${idx(main)}">${usPill(US_K[main.kind] ? main.kind : 'construire', 's')}<span>${esc(main.out && main.kind !== 'planter' ? (main.kind === 'cuisiner' ? 'Cuisiner : ' : 'Fabriquer : ') + main.label : (US_VERB[main.kind] && !/^(Porter|Équiper|Nourrir|Ouvrir)/.test(main.label) ? US_VERB[main.kind] + ' : ' : '') + main.label)}</span></button>`);
   if (sell) btns.push(`<button class="btn cream sm ussell" data-usact="${idx(sell)}">${usPill('vendre', 's')}<span>Vendre ≈ ${usCall(() => coins(sellPrice(it)), '')}</span></button>`);
   if (rec) btns.push(`<button class="btn cream sm usrec" data-usact="${idx(rec)}" title="Devient : ${esc(rec.out[0])}">${usPill('recycler', 's')}<span>Recycler</span><span class="usrb">${usIco(rec.out)}</span></button>`);
   if (btns.length) h += `<div class="usbtns">${btns.join('')}</div>`;
@@ -29560,6 +29562,7 @@ if (typeof openFiche === 'function') openFiche = (orig => function (id) {
     if (at && at.classList.contains('famtop')) at.insertAdjacentHTML('beforebegin', html); else if (at) at.insertAdjacentHTML('afterend', html); else f.insertAdjacentHTML('afterbegin', html);
     // pas de doublons : le bouton du bandeau et la vente rapide sont remplacés par « Utiliser » et « Vendre »
     f.querySelectorAll('.famtop .famtb, .obff [data-sellq]').forEach(b => b.remove());
+    f.querySelectorAll('.famtop').forEach(b => b.remove()); // v42 : doublon de la rangée de résultats
     // la liste détaillée des usages reste disponible, repliée
     const sec = f.querySelector('.obsec');
     if (sec && f.querySelector('.usflow, .usbtns')) { const h3 = sec.querySelector('h3'); const d = document.createElement('details'); d.className = 'obsec usdet'; d.innerHTML = `<summary>${h3 ? h3.textContent : 'À quoi ça sert'}</summary>`; if (h3) h3.remove(); while (sec.firstChild) d.appendChild(sec.firstChild); sec.replaceWith(d); }
