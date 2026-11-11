@@ -5253,7 +5253,7 @@ document.addEventListener('click', ev => {
   if (hc) { const k = hc.dataset.hc; if (CHARS[k]) reactionPopup(k, 'amour', pick(CHARS[k].lines.pet)); return; }
   const el = ev.target.closest('button'); if (!el || el.disabled) return;
   const d = el.dataset;
-  if (el.closest('.fiche')) { $('modal').hidden = true; if (d.fclose) return; } // une action dans la fiche ferme la fiche
+  if (el.closest('.fiche') && !el.closest('#cfMiss') && !(el.classList.contains('usres') && !el.classList.contains('ok'))) { $('modal').hidden = true; if (d.fclose) return; } // une action dans la fiche ferme la fiche (sauf l'encadré « Il manque » et les résultats pas encore faisables)
   if (d.fiche) return openFiche(d.fiche);
   if (d.sel) { if (d.sel !== S.sel) selectComp(d.sel); hudFlyTo(d.sel); return; } // v19 : toucher un portrait le choisit et centre la carte sur lui
   if (d.refuge) { if (typeof openCompagnons === 'function') openCompagnons('refuge'); return; }
@@ -29476,6 +29476,31 @@ function usCook(rid) {
   if (cmState().sl.filter(Boolean).length > n0) toast(`En préparation : « ${R.def[0]} » (${Math.round(cmDur(R))} s). Il ira sur le comptoir.`);
   usAfter();
 }
+// v46 : l'encadré « Il manque » du comptoir (42_fideles.js), aussi pour les recettes d'atelier, dans la fiche
+function usMissAtHTML(r) {
+  const miss = r.ing.filter(([k, n]) => ingCount(k) < n); if (!miss.length) return '';
+  if (typeof CF_GO !== 'undefined' && CF_GO.length > 200) CF_GO.length = 0;
+  const rows = miss.map(([k, n]) => {
+    const h = ingCount(k), nm = (ING[k] && ING[k][1]) || k;
+    let locs = [], buy = null; try { locs = cfLocs(k); } catch (e) {} try { buy = cfShop(k); } catch (e) {}
+    const lr = locs.map(L => { const i = CF_GO.push({ step: L.step, name: nm, why: r.out[0] }) - 1; return `<div class="cf-loc"><span class="cf-pin">${typeof btIco === 'function' ? btIco(L.step && L.step.region ? 'reg' : 'lieu') : '📍'}</span><span class="cf-lx"><b>${esc(L.label)}</b><small>${esc(L.sub || '')}${L.km != null && typeof fmtDist === 'function' ? ' · ' + fmtDist(L.km) : ''}</small></span><button class="btn gold sm" data-cfgo="${i}">Y aller</button></div>`; }).join('');
+    return `<div class="cf-mi"><div class="cf-mih"><span class="cf-ii">${usCall(() => itemIcon({ name: nm, cat: 'm', sub: (ING[k] && ING[k][0] && ING[k][0][0]) || '', col: '#c9a26b' }), '')}</span><span class="cf-mx"><b>${esc(nm)}</b><span>Vous en avez <b class="cf-cnt">${h}/${n}</b></span></span></div>
+      ${lr ? `<div class="cf-locs"><small class="cf-lt">Où le trouver, au plus près :</small>${lr}</div>` : '<p class="cf-lt">En voyage : événements, marchands ambulants et marché mondial.</p>'}
+      ${buy ? `<button class="btn cream sm cf-buy" data-cfbuy="${buy.kind}:${esc(buy.key)}">Acheter ${buy.where} (≈ ${buy.price} pièces)</button>` : ''}</div>`;
+  }).join('');
+  return `<div class="cf-miss" id="cfMiss"><div class="cf-mh"><b>Il manque pour « ${esc(r.out[0])} »</b><button class="cf-x" data-cfx="1" aria-label="Fermer">✕</button></div>${rows}</div>`;
+}
+function usShowMiss(btn, a) {
+  const f = btn.closest('.fiche') || document.querySelector('#modal .fiche'); if (!f) return;
+  const old = document.getElementById('cfMiss'); const same = old && old.dataset.for === a.label; if (old) old.remove();
+  f.querySelectorAll('.usres.ussel').forEach(e => e.classList.remove('ussel'));
+  if (same) return; // deuxième toucher : on referme
+  let html = '';
+  try { html = a.cmr ? cfMissHTML(a.cmr) : a.atr ? usMissAtHTML(a.atr) : ''; } catch (e) { console.error('il manque', e); }
+  if (!html) { toast(`${a.label} : pas encore possible.`); return; }
+  const flow = f.querySelector('.usflow'); (flow || btn).insertAdjacentHTML('afterend', html);
+  const box = document.getElementById('cfMiss'); if (box) { box.dataset.for = a.label; btn.classList.add('ussel'); try { box.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
+}
 // v45 : ce qui manque pour une recette d'atelier, en clair
 function usMissTxt(r) {
   try {
@@ -29525,9 +29550,9 @@ GAME.addAction(it => {
   const out = []; if (!it || !S.inv.includes(it)) return out;
   // recettes du commerce (avec le produit en image)
   const cms = usCmRecipes(it).slice(0, 4), cmN = new Set(cms.map(x => x.R.def[0]));
-  cms.forEach(({ R, ok, here }) => out.push({ label: R.def[0], kind: R.def[1] === 'n' ? 'cuisiner' : 'construire', out: R.def, ready: ok, hint: here ? `${R.ing.map(([k, n]) => `${n} ${usCall(() => cmIngName(k), k).toLowerCase()}`).join(' + ')}` : 'Dans un autre commerce', run: () => usCook(R.id) }));
+  cms.forEach(({ R, ok, here }) => out.push({ cmr: R.id, label: R.def[0], kind: R.def[1] === 'n' ? 'cuisiner' : 'construire', out: R.def, ready: ok, hint: here ? `${R.ing.map(([k, n]) => `${n} ${usCall(() => cmIngName(k), k).toLowerCase()}`).join(' + ')}` : 'Dans un autre commerce', run: () => usCook(R.id) }));
   // atelier (vêtements, matériel d'expédition, objets)
-  usAtRecipes(it).filter(x => !cmN.has(x.r.out[0])).slice(0, 4).forEach(({ r, ok }) => out.push({ label: r.out[0], kind: usOutKind(r.out), out: r.out, ready: ok, miss: ok ? '' : usMissTxt(r), run: () => usCraft(r.id) }));
+  usAtRecipes(it).filter(x => !cmN.has(x.r.out[0])).slice(0, 4).forEach(({ r, ok }) => out.push({ atr: r, label: r.out[0], kind: usOutKind(r.out), out: r.out, ready: ok, miss: ok ? '' : usMissTxt(r), run: () => usCraft(r.id) }));
   // bâtiments du village
   usCall(() => VILLAGE_BUILDINGS.filter(b => !villageBuilt(b.id) && b.cost.some(([k]) => usIngMatch(k, it))).slice(0, 2), []).forEach(b => out.push({ label: b.name, kind: 'construire', ico: usCall(() => obIco('batiment'), ''), run: () => obGo('village') }));
   // vêtement, matériel, graine, coffre, clé
@@ -29603,7 +29628,7 @@ if (typeof openFiche === 'function') openFiche = (orig => function (id) {
 document.addEventListener('click', ev => {
   const b = ev.target.closest && ev.target.closest('[data-usact]'); if (!b || b.disabled) return;
   const a = US_ACTS[+b.dataset.usact]; if (!a) return;
-  if (b.classList.contains('usres') && !a.ready && a.miss) { ev.stopPropagation(); toast(`${a.label} : il manque ${a.miss}.`); return; } // v45 : pas de fabrication « grisée »
+  if (b.classList.contains('usres') && !a.ready) { ev.stopPropagation(); usShowMiss(b, a); return; } // v46 : on montre ce qui manque, comme au comptoir, sans fermer
   const m = $('modal'); if (m && b.closest('#modal')) m.hidden = true;
   try { a.run(); } catch (e) { console.error('usages action', e); }
 });
@@ -29654,6 +29679,7 @@ if (typeof renderWardrobe === 'function') renderWardrobe = (orig => function (k)
 .usri{position:relative;width:40px;height:40px;display:block}.usri>svg{width:40px;height:40px}
 .usri .usrk{position:absolute;left:-3px;bottom:-3px}
 .usok{position:absolute;right:-4px;top:-4px;width:15px;height:15px;border-radius:50%;background:#4f9f63;color:#fff;font-size:10px;line-height:15px;text-align:center;border:1.5px solid ${US_INK}}
+.usres.ussel{outline:3px solid #c0503a;outline-offset:1px}
 .usres .usmiss{display:block;font:700 9.5px/1.15 system-ui;color:#c0503a;max-width:76px;white-space:normal;margin-top:2px;font-style:normal}
 .usres small{font-size:10.5px;line-height:1.1;max-width:54px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
 .usbtns{display:flex;gap:6px;flex-wrap:wrap}
