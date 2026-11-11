@@ -6,7 +6,7 @@
 // L'en-tête (destination) et le bouton « Partir » restent visibles dans les deux onglets.
 // Les éléments sont DÉPLACÉS (jamais recopiés) : leurs gestionnaires continuent de marcher.
 // L'alerte de risque au toucher de « Partir » (59) est gardée.
-let dptTab = 'lieu', dptDest = null;
+let dptTab = 'prep', dptDest = null;
 function dptSplit(box) {
   const d = plan.dest;
   if (!box || !d || box.querySelector('.dpt-tabs')) return;
@@ -14,7 +14,7 @@ function dptSplit(box) {
   if (!head || !gb) return;
   // nouvelle destination → on ouvre « Le lieu » ; « Me guider » en cours → « Préparation »
   const key = d.id || d.name;
-  if (key !== dptDest) { dptDest = key; dptTab = 'lieu'; }
+  if (key !== dptDest) { dptDest = key; dptTab = 'prep'; } // le joueur veut toujours arriver sur « Préparation »
   let guiding = false; try { guiding = !!gdOn(); } catch (e) {}
   if (guiding) dptTab = 'prep';
   // contenu de « Le lieu »
