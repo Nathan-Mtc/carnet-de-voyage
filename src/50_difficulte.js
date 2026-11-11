@@ -360,7 +360,7 @@ document.addEventListener('click', ev => {
 let dfSig = '';
 function dfMapUpdate(force) {
   if (typeof map === 'undefined' || !map || !mapReady || !map.getStyle) return;
-  const k = S.sel, h = homeObj(), on = !!(CHARS[k] && !S.trips[k] && !dfTuto() && !document.body.classList.contains('firstrun'));
+  const k = S.sel, h = homeObj(), on = !!(CHARS[k] && !S.trips[k] && (!dfTuto() || dfCall(() => tuRangeOn(), false)) && !document.body.classList.contains('firstrun'));
   const R = on ? dfRange(k, plan.dest || null) : null, show = !!(R && !R.world);
   const sig = [show ? R.km : 0, h.lon, h.lat].join('|');
   if (!map.getSource('dfRange')) {

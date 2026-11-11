@@ -12,7 +12,7 @@
 // Enveloppes : nextAction, renderActionCard, QM_HTML.hist. Tests : window.__sty.
 
 const styCall = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch (e) { return d; } };
-const styTuto = () => styCall(() => tuOn(), false) || styCall(() => document.body.classList.contains('firstrun'), false);
+const styTuto = () => styCall(() => tuOn() && !tuStoryOn(), false) || styCall(() => document.body.classList.contains('firstrun'), false);
 const STY_SEASON = 1;
 
 // ---------------- les lieux réels par type (s'ajoutent à PLACES et XP_PLACES) ----------------

@@ -14203,8 +14203,11 @@ window.__objets = {
 // chemin (carte d'action, sac, menu…) est suivi, et un rechargement reprend à la bonne étape.
 // Le jeu « cale » ce qu'il faut pour que chaque étape soit réalisable : la première commande demande un objet du lieu
 // du quartier visité, le premier voyage contient forcément un choix (et patiente pendant qu'on répond), le premier retour
-// rapporte forcément l'objet demandé, un vêtement et un œuf à éclosion très courte.
-// État sauvegardé : S.tuto = { on, done, i (étape), f (drapeaux), k (compagnon guide), o (commande), trip, egg, cloth, replay }.
+// rapporte forcément l'objet demandé et un œuf à éclosion très courte.
+// v41 : après le commerce, la PORTÉE (le cercle de la carte, 50_difficulte.js), le MATÉRIEL (une boussole offerte, équipée dans
+// Compagnons › Talents, 41_expedition.js : le cercle grandit, « Désormais accessible » comme 53_preparation.js), puis le carnet
+// d'Augustine trouvé au grenier lance la BD du chapitre 1 (51_histoire.js) et la bulle montre la checklist de l'histoire.
+// État sauvegardé : S.tuto = { on, done, i (étape), f (drapeaux), k (compagnon guide), o (commande), trip, egg, replay, v: 2 }.
 // Menu : « Revoir le tutoriel ». « Passer le tutoriel » : petit lien dans la bulle, avec confirmation intégrée.
 
 // ---------------- état ----------------
@@ -14212,8 +14215,10 @@ window.__objets = {
   try {
     if (!S.tuto || typeof S.tuto !== 'object') {
       // nouvelle partie (l'œuf mystère attend) : le tutoriel suivra ; ancienne sauvegarde : rien, mais « Revoir » au menu
-      S.tuto = S.firstRun ? { on: 1, i: 0, f: {} } : { done: 1 };
+      S.tuto = S.firstRun ? { on: 1, i: 0, f: {}, v: 2 } : { done: 1 };
     }
+    // v41 : le tutoriel a changé d'étapes ; un tutoriel en cours d'une ancienne version reprend au début (les étapes déjà faites se sautent seules)
+    if (S.tuto.on && S.tuto.v !== 2) { S.tuto.v = 2; S.tuto.i = 0; }
     if (!S.tuto.f || typeof S.tuto.f !== 'object') S.tuto.f = {};
     if (typeof S.tuto.i !== 'number') S.tuto.i = 0;
   } catch (e) { console.error('tuto', e); }
@@ -14282,94 +14287,85 @@ function tuSetup() {
 // done() : l'étape est faite (on passe à la suivante) · go() : { el, txt, dim, ok } à éclairer maintenant
 // tuNav(tab, sub) : le bouton à toucher pour aller à un écran (ou null si on y est déjà)
 function tuNav(t, sub, allowModal) {
-  if (!allowModal && tuModal()) { const b = tuSel('#modal [data-fclose]', '#modal [data-closemodal]', '#modal .stgb [data-stg="no"]'); if (b) return { el: b, txt: 'Ferme d’abord cette fenêtre.' }; }
-  if (tab !== t) return { el: tuSel(`#nav [data-nav="${t}"]`), txt: null };
+  if (!allowModal && tuModal()) { const b = tuSel('#modal [data-fclose]', '#modal [data-closemodal]', '#modal .stgb [data-stg="no"]'); if (b) return { el: b, txt: 'Fermez d’abord cette fenêtre.', nav: 1 }; }
+  if (tab !== t) return { el: tuSel(`#nav [data-nav="${t}"]`), txt: null, nav: 1 };
   if (sub) {
     const cur = getSub(t);
-    if (cur !== sub) return { el: t === 'boutique' ? tuSel(`[data-bsub="${sub}"]`) : tuSel(`#panelBody .subtabs [data-sub="${sub}"]`), txt: null };
+    if (cur !== sub) return { el: t === 'boutique' ? tuSel(`[data-bsub="${sub}"]`) : tuSel(`#panelBody .subtabs [data-sub="${sub}"]`), txt: null, nav: 1 };
   }
   return null;
 }
 const tuReqTxt = () => { const o = tuOrder(); if (!o) return { who: 'Le client', what: 'sa commande', where: '' }; const c = BQC(o.client), r = o.req[0]; return { who: c ? c.name : 'Le client', what: bqReqLabel(r).toLowerCase(), where: bqReqWhere(r).toLowerCase(), c }; };
 const tuDur = () => { const d = DURS.find(x => x.key === 'eclair') || DURS[0]; return d.label; };
+// la portée : un repère invisible posé sur le cercle de la carte (le projecteur l'entoure), et la carte cadrée dessus
+function tuRangeKm() { try { return dfRange(tuK(), null).km; } catch (e) { return 50; } }
+let tuFitSig = '';
+function tuRangeEl(km, sig) {
+  try {
+    if (typeof map === 'undefined' || !map || !mapReady) return null;
+    const h = homeObj(), dLat = km / 111.195, dLon = dLat / Math.max(0.2, Math.cos(h.lat * Math.PI / 180));
+    if (tuFitSig !== sig) { tuFitSig = sig; map.fitBounds([[h.lon - dLon, h.lat - dLat], [h.lon + dLon, h.lat + dLat]], { padding: { top: 110, bottom: 330, left: 34, right: 34 }, duration: tuReduce() ? 0 : 900 }); try { dfMapUpdate(true); } catch (e) {} }
+    const el = tuBuild(); let m = el.querySelector('.tu-rmark');
+    if (!m) { m = document.createElement('div'); m.className = 'tu-rmark'; el.appendChild(m); }
+    const mr = map.getContainer().getBoundingClientRect(), gr = el.getBoundingClientRect();
+    const a = map.project([h.lon - dLon, h.lat + dLat]), b = map.project([h.lon + dLon, h.lat - dLat]);
+    const L = Math.max(4, mr.left - gr.left + a.x), T = Math.max(60, mr.top - gr.top + a.y), R = Math.min(gr.width - 4, mr.left - gr.left + b.x), B = Math.min(gr.height - 200, mr.top - gr.top + b.y);
+    if (R - L < 30 || B - T < 30) return null;
+    Object.assign(m.style, { left: L + 'px', top: T + 'px', width: (R - L) + 'px', height: (B - T) + 'px' });
+    return m;
+  } catch (e) { return null; }
+}
+// un lieu que la nouvelle portée permet d'atteindre (« Désormais accessible »)
+function tuNewPlace(km0, km1) {
+  try { const h = homeObj(); const L = PLACES.map(p => ({ p, d: kmBetween(h, p) })).filter(o => o.d > km0 && o.d <= km1).sort((x, y) => y.d - x.d); return L[0] ? L[0].p.name : ''; } catch (e) { return ''; }
+}
+const tuCompOwned = () => { const k = tuK(); return (S.inv || []).find(it => { const G = xpGearOf(it); if (!G || G.g !== 'boussole') return false; const by = xpWornBy(it.id); return !by || by === k; }) || null; };
+const tuCompOn = () => { try { return xpTierOf(tuK(), 'boussole') >= 1; } catch (e) { return false; } };
+const tuStoryRead = () => { try { return styStep(1) !== 0 || styState().n > 1; } catch (e) { return true; } };
+const tuOnMap = txt => { const n = tuNav('carte'); return n ? { ...n, txt: n.txt || txt } : null; };
 const TU_STEPS = [
-  { id: 'client', num: 3,
-    done: () => tuStepPast('commande') || (tab === 'boutique' && getSub('boutique') === 'comptoir'),
-    go: () => {
-      const n = tuNav('boutique', 'comptoir'), R = tuReqTxt();
-      if (n) return { ...n, txt: n.txt || (tab === 'boutique' ? 'Les clients attendent au Comptoir.' : `Ton premier client est arrivé à la boutique ! Touche « Boutique ».`) };
-      return null;
-    } },
   { id: 'commande', num: 3,
-    done: () => tuStepPast('dur') || !!(plan.dest && tab === 'voyage') || !!tuTrip() || !tuOrder(),
+    done: () => tuStepPast('commande') || !!(plan.dest && tab === 'voyage') || !!tuTrip() || !tuOrder(),
     go: () => {
       const R = tuReqTxt();
-      const n = tuNav('boutique', 'comptoir'); if (n) return { ...n, txt: n.txt || `${R.who} t’attend au Comptoir de la boutique.` };
+      if (tuModal()) return tuNav('boutique', 'comptoir');
+      if (tab !== 'boutique') return { el: tuSel('#nav [data-nav="boutique"]'), txt: 'Votre premier client est arrivé ! Touchez « Boutique ».' };
+      const n = tuNav('boutique', 'comptoir'); if (n) return { ...n, txt: 'Les clients attendent au Comptoir.' };
       const o = tuOrder(); if (!o) return null;
       const card = tuVis($q(`.bq-order[data-oid="${o.id}"]`));
-      return { el: card, hand: card && card.querySelector('[data-bgo]'), txt: `${R.who} voudrait : <b>${esc(R.what)}</b>. La commande dit où le trouver : ${esc(R.where)}. Touche « Partir chercher » !`, scroll: card };
+      return { el: card, hand: card && card.querySelector('[data-bgo]'), txt: `${R.who} voudrait : <b>${esc(R.what)}</b>. On en trouve tout près, ${esc(R.where)}. Touchez « Partir chercher » !`, scroll: card };
     } },
-  { id: 'dur', num: 4,
-    done: () => !!S.tuto.f.dur || !!tuTrip(),
-    go: () => {
-      if (tab !== 'voyage' || !plan.dest) return tuBackToOrder();
-      const b = tuSel('#panelBody [data-dur="eclair"]');
-      return { el: b, txt: `Direction <b>${esc(plan.dest.name)}</b>, tout près d’ici ! Pour ce premier voyage, un petit tour : choisis « ${esc(tuDur())} ».`, scroll: b };
-    } },
-  { id: 'go', num: 4,
+  { id: 'go', num: 3,
     done: () => !!tuTrip() || !!S.tuto.f.collected,
     go: () => {
       if (tab !== 'voyage' || !plan.dest) return tuBackToOrder();
       const b = tuSel('#goBtn');
-      return { el: b, txt: `Parfait ! Touche « ${esc((b && b.textContent.trim()) || 'Partir !')} » et c’est parti !` };
+      return { el: b, txt: `Direction <b>${esc(plan.dest.name)}</b>, à deux pas ! Un petit tour pour commencer : touchez « ${esc((b && b.textContent.trim()) || 'Partir !')} ».` };
     } },
-  { id: 'route', num: 5, dim: false,
+  { id: 'route', num: 4, dim: false,
     done: () => { const t = tuTrip(); return !!S.tuto.f.collected || !t || !!tuChoice(t) || t.done; },
-    go: () => {
-      const n = tuNav('carte'); if (n) return { ...n, txt: n.txt || 'Reviens sur la carte pour me suivre.' };
-      return { el: tuSel('#tripCard'), txt: `Je suis en route ! En chemin, je ramasse des objets… et parfois, je te demande ton avis. Regarde bien !` };
-    } },
-  { id: 'choix', num: 5,
+    go: () => tuOnMap('Revenez sur la carte pour me suivre.') || { el: tuSel('#tripCard'), txt: 'Je suis en route ! En chemin, je ramasse des objets… et parfois, je vous demande votre avis.' } },
+  { id: 'choix', num: 4,
     done: () => { const t = tuTrip(), j = tuChoice(t); return !!S.tuto.f.collected || !t || !j || j.resolved; },
     go: () => {
       const t = tuTrip(), j = tuChoice(t);
       if (tab === 'voyage' && S.sel === tuK()) {
         const i = t.journal.indexOf(j), opts = tuVis($q(`#panelBody [data-choice="${i}"]`));
-        if (opts) { const je = opts.closest('.je'); return { el: je || opts.closest('.opts') || opts, hand: opts, txt: 'Lis la question, puis choisis. Audace : gros trésor ou petite chute. Prudence : sûr mais modeste.', scroll: je }; }
+        if (opts) { const je = opts.closest('.je'); return { el: je || opts.closest('.opts') || opts, hand: opts, txt: 'À vous de choisir ! Audace : gros trésor ou petite chute. Prudence : sûr mais modeste.', scroll: je }; }
       }
-      const n = tuNav('carte'); if (n) return { ...n, txt: n.txt || 'Reviens sur la carte : j’ai besoin de toi !' };
-      return { el: tuSel('#tripCard [data-act="choose"]', '#tripCard'), txt: `${esc(j.text)} J’hésite… Aide-moi à choisir !` };
+      return tuOnMap('Revenez sur la carte : j’ai besoin de vous !') || { el: tuSel('#tripCard [data-act="choose"]', '#tripCard'), txt: `${esc(j.text)} J’hésite… Aidez-moi à choisir !` };
     } },
-  { id: 'retour', num: 6,
+  { id: 'retour', num: 5,
     done: () => !!S.tuto.f.collected,
     go: () => {
-      const t = S.trips[tuK()];
-      if (!t) return null;
-      if (!t.done) { const n = tuNav('carte'); if (n) return { ...n, txt: n.txt || 'Reviens sur la carte : je rentre bientôt !' }; const left = Math.max(0, (t.total - t.elapsed) / (typeof fast !== 'undefined' && fast ? 30 : 1)); return { el: tuSel('#tripCard'), dim: false, txt: `Merci ! Je finis mon tour et je rentre avec mon sac plein. Retour dans ${left < 60e3 ? 'moins d’une minute' : 'environ ' + Math.max(1, Math.round(left / 60e3)) + ' min'}…` }; }
-      const n = tuNav('carte'); if (n) return { ...n, txt: n.txt || 'Je suis rentré' + tuE() + ' ! Reviens sur la carte.' };
-      return { el: tuSel('#tripCard [data-act="collect"]', '[data-live="collect"]', '#tripCard'), txt: `Je suis rentré${tuE()} ! Ouvre mon sac pour voir ce que j’ai rapporté.` };
+      const t = S.trips[tuK()]; if (!t) return null;
+      if (!t.done) { const left = Math.max(0, (t.total - t.elapsed) / (typeof fast !== 'undefined' && fast ? 30 : 1)); return tuOnMap('Revenez sur la carte : je rentre bientôt !') || { el: tuSel('#tripCard'), dim: false, txt: `Merci ! Je finis mon tour et je rentre avec mon sac plein. Retour dans ${left < 60e3 ? 'moins d’une minute' : 'environ ' + Math.max(1, Math.round(left / 60e3)) + ' min'}…` }; }
+      return tuOnMap('Je suis rentré' + tuE() + ' ! Revenez sur la carte.') || { el: tuSel('#tripCard [data-act="collect"]', '[data-live="collect"]', '#tripCard'), txt: `Je suis rentré${tuE()} ! Ouvrez mon sac pour voir ce que j’ai rapporté.` };
     } },
-  { id: 'sert', num: 6, ok: 'Compris !',
-    done: () => !!S.tuto.f.sert || !!S.tuto.f.delivered,
-    go: () => {
-      const R = tuReqTxt(), M = tuModal();
-      let line = null;
-      if (M && M.querySelector('.haul')) {
-        const cards = [...M.querySelectorAll('.haul .hcard')];
-        const c = cards.find(x => { const b = x.querySelector('b'); return b && b.textContent.trim() === (tuOrder() ? tuOrder().req[0].name : ''); }) || cards.find(x => x.querySelector('.obu.now'));
-        line = c && (c.querySelector('.obu') || c);
-        if (line) return { el: c, hand: line, txt: `Chaque objet dit à quoi il sert : regarde la ligne « → … ». Celui-ci, ${esc(R.who)} l’attend !`, scroll: c };
-      }
-      const n = tuNav('sac', 'sac'); if (n) return { ...n, txt: n.txt || 'Ouvre le sac : chaque objet y dit à quoi il sert.' };
-      const o = tuOrder(), it = o && S.inv.find(x => bqMatch(o.req[0], x));
-      const card = it ? tuVis($q(`#panelBody .obc[data-fiche="${it.id}"]`)) : tuVis($q('#panelBody .obc.now'));
-      line = card && (card.querySelector('.obu') || card);
-      return { el: card, hand: line, txt: `Chaque objet dit à quoi il sert : la petite ligne « → … ». Celui-ci, ${esc(R.who)} l’attend !`, scroll: card };
-    } },
-  { id: 'livrer', num: 7,
+  { id: 'livrer', num: 5,
     done: () => !!S.tuto.f.delivered || !tuOrder(),
     go: () => {
-      const R = tuReqTxt(), o = tuOrder(), txt = `Livre la commande à ${esc(R.who)} : tu gagnes des pièces et de la réputation !`;
+      const R = tuReqTxt(), o = tuOrder(), txt = `J’ai ${esc(R.what)} ! Livrez la commande de ${esc(R.who)} : votre commerce gagne des pièces et de la réputation.`;
       // filet de sécurité : la commande du tutoriel doit être livrable (objet vendu, porté ou utilisé entre-temps)
       if (o && !bqReady(o) && !tuModal()) { tuTopUp(o); if (tab === 'boutique') renderPanel(); }
       const M = tuModal();
@@ -14378,50 +14374,59 @@ const TU_STEPS = [
       if (tab === 'carte' && !M) { const b = tuSel(`#tripCard [data-act="deliver"][data-id="${o.id}"]`); if (b) return { el: b, txt }; }
       const n = tuNav('boutique', 'comptoir'); return n ? { ...n, txt: n.txt || txt } : null;
     } },
-  { id: 'oeuf', num: 8,
-    done: () => { const e = S.tuto.egg; return !e || (!(S.eggs || []).some(x => x.id === e) && !tuModal()); },
+  { id: 'portee', num: 6, ok: 'Compris !', round: 1,
+    done: () => !!S.tuto.f.portee,
     go: () => {
-      const M = tuModal(), pre = S.tuto.f.paid ? `Bravo, ${esc(S.tuto.f.paid)} ! ` : '';
-      if (M && M.querySelector('[data-egg-tap]')) return { el: tuSel('#modal [data-egg-tap]'), txt: 'Touche l’œuf pour l’aider à sortir !', below: 1 };
-      if (M && M.querySelector('[data-name-ok]')) return { el: tuSel('#modal [data-name-ok]'), txt: 'Un nouveau compagnon ! Donne-lui un nom, puis valide.', below: 1 };
-      const e = (S.eggs || []).find(x => x.id === S.tuto.egg); if (!e) return null;
-      const where = e.inc ? 'Il est au chaud dans la couveuse du village.' : 'Il attend à la nurserie du village.';
-      const n = tuNav('village', 'nurserie'); if (n) return { ...n, txt: n.txt || `${pre}Pendant le voyage, j’ai aussi trouvé un œuf ! ${where}` };
-      const b = tuVis($q(`#panelBody [data-ns-hatch="${e.id}"]`));
-      if (b) return { el: b, txt: 'Il est prêt ! Fais-le éclore.', scroll: b };
-      const card = $q(`#panelBody [data-ns-left="${e.id}"]`); const c = tuVis(card && card.closest('.nsegg'));
-      return { el: c, dim: false, txt: `${where} Les œufs trouvés en voyage éclosent ici. Celui-ci est presque prêt…`, scroll: c };
+      const pre = S.tuto.f.paid ? `Bravo, ${esc(S.tuto.f.paid)} ! ` : '';
+      const n = tuOnMap(`${pre}Revenez sur la carte : je veux vous montrer quelque chose.`); if (n) return n;
+      const km = tuRangeKm();
+      return { el: tuRangeEl(km, 'portee'), txt: `Ce cercle vert, c’est ma portée (${km} km). Votre familier peut aller jusqu’ici. Pour aller plus loin : matériel, provisions, niveau.` };
     } },
-  { id: 'habiller', num: 9,
-    done: () => { const id = S.tuto.cloth; if (id && typeof styleWornBy === 'function' && styleWornBy(id)) return true; return !id || !S.inv.some(x => x.id === id); },
+  { id: 'boussole', num: 7, ok: 'Merci !',
+    done: () => !!tuCompOwned() || tuCompOn(),
+    go: () => tuOnMap('Revenez sur la carte : j’ai un cadeau pour vous.') || { el: null, txt: `<span class="tu-gift">${xpGIco('boussole', 1)}</span>Pour voir plus loin, il faut du matériel. Voici une <b>boussole de base</b>, en cadeau ! Les suivantes s’achètent au Magasin ou se fabriquent à l’atelier.` } },
+  { id: 'equiper', num: 7,
+    done: () => tuCompOn(),
     go: () => {
-      const k = tuK(), it = S.inv.find(x => x.id === S.tuto.cloth); if (!it) return null;
-      const txt0 = `J’ai aussi rapporté un vêtement : « ${esc(it.name)} ». Habille-moi !`;
-      const n = tuNav('compagnons', 'garde'); if (n) return { ...n, txt: n.txt || txt0 };
-      if (S.sel !== k) return { el: tuSel(`#panelBody [data-stc="${k}"]`), txt: `Choisis-moi d’abord : c’est moi, ${esc(tuName())} !` };
-      try { if (stSlot !== it.sub) return { el: tuSel(`#panelBody [data-wslot="${it.sub}"]`), txt: `Il se porte ici : « ${esc(SLOT_LABEL[it.sub] || '')} ».` }; } catch (e) {}
-      const b = tuSel(`#panelBody [data-wput="${it.id}"]`);
-      return { el: b, txt: `Touche « ${esc(it.name)} » pour me le mettre !`, scroll: b };
+      const k = tuK(), it = tuCompOwned(); if (!it) return null;
+      if (tuModal()) return tuNav('compagnons', 'talents');
+      if (tab !== 'compagnons') return { el: tuSel('#nav [data-nav="compagnons"]'), txt: 'Équipons-la ! Touchez « Compagnons ».' };
+      const n = tuNav('compagnons', 'talents'); if (n) return { ...n, txt: 'Le matériel se range dans « Talents ».' };
+      if (S.sel !== k) return { el: tuSel(`#hudComps .hc-btn[data-sel="${k}"]`, `#panelBody [data-stc="${k}"]`), txt: `Choisissez-moi d’abord : c’est moi, ${esc(tuName())} !` };
+      if (xpSlot == null) { const a = xpEq(k), i = a[0] && !a[1] ? 1 : 0, b = tuSel(`#panelBody [data-xps="${i}"]`); return { el: b, txt: 'Voici mes 2 cases de matériel. Touchez une case vide.', scroll: b && b.closest('.xpf') }; }
+      const b = tuSel(`#panelBody [data-xpeq="${it.id}"]`);
+      return { el: b, txt: 'Touchez la boussole pour me l’équiper.', scroll: b };
     } },
-  { id: 'compedium', num: 10,
-    done: () => tab === 'compagnons' && compView === 'compedium',
+  { id: 'accessible', num: 8, ok: 'Super !', round: 1,
+    done: () => !!S.tuto.f.acc,
     go: () => {
-      if (tuModal()) { const b = tuSel('#modal [data-closemodal]', '#modal [data-fclose]'); if (b) return { el: b, txt: 'Ferme d’abord cette fenêtre.' }; }
-      if (tab !== 'compagnons') return { el: tuSel('#nav [data-nav="compagnons"]'), txt: 'Il me va bien, non ? Une dernière chose à te montrer…' };
-      return { el: tuSel('#panelBody .subtabs [data-sub="compedium"]'), txt: 'Il me va bien, non ? Dernière chose : touche « Compédium ».' };
+      const n = tuOnMap('Revenez sur la carte : regardez ma portée !'); if (n) return n;
+      const km0 = S.tuto.f.km0 || 50, km = tuRangeKm(), pl = tuNewPlace(km0, km);
+      return { el: tuRangeEl(km, 'acc'), txt: `Ma portée passe de ${km0} à <b>${km} km</b> !${pl ? ` Désormais accessible : <b>${esc(pl)}</b> ✨` : ''} Plus tard : provisions, matériel pro et niveau la feront encore grandir.` };
     } },
-  { id: 'fin', num: 10, ok: 'À moi de jouer !',
+  { id: 'carnet', num: 9, ok: 'Lire le carnet',
+    done: () => tuStoryRead(),
+    go: () => {
+      if ($('styBD')) return { hide: 1 };
+      return tuOnMap('Revenez sur la carte : une dernière chose…') || { el: null, txt: 'Une dernière chose… En rangeant le grenier, j’ai trouvé un vieux carnet couvert de poussière. Lisons-le !' };
+    } },
+  { id: 'fin', num: 10, ok: 'À vous de jouer !',
     done: () => !!S.tuto.f.fin,
-    go: () => ({ el: tuSel('#panelBody .cpstats'), dim: false, txt: `Le Compédium montre les 10 espèces du monde, leurs couleurs et leurs hybrides. <b>Tu sais tout !</b> Ton but : trouver, élever et échanger des compagnons uniques.` }) },
+    go: () => {
+      if ($('styBD')) return { hide: 1 };
+      const n = tuOnMap('Revenez sur la carte.'); if (n) return n;
+      if (!tuSel('#tripCard.act-story')) try { renderTripCard(); } catch (e) {}
+      return { el: tuSel('#tripCard.act-story', '#tripCard'), txt: 'Voici la suite de l’histoire d’Augustine : une petite liste à cocher, avec « Y aller ». Elle est aussi dans Quêtes › Histoire. Bon voyage !' };
+    } },
 ];
 const TU_IDX = Object.fromEntries(TU_STEPS.map((s, i) => [s.id, i]));
 const tuStepPast = id => (S.tuto.i || 0) > TU_IDX[id];
 // hors du bon écran pendant le départ : on revient à la commande
 function tuBackToOrder() {
   if (S.trips[tuK()]) return null;
-  const n = tuNav('boutique', 'comptoir'); if (n) return { ...n, txt: n.txt || 'Retourne voir la commande au Comptoir.' };
+  const n = tuNav('boutique', 'comptoir'); if (n) return { ...n, txt: n.txt || 'Retournez voir la commande au Comptoir.' };
   const o = tuOrder(); const b = o && tuSel(`[data-bgo="${o.id}"]`);
-  return { el: b, txt: 'Touche « Partir chercher » pour préparer le voyage.', scroll: b && b.closest('.bq-order') };
+  return { el: b, txt: 'Touchez « Partir chercher » pour préparer le voyage.', scroll: b && b.closest('.bq-order') };
 }
 
 function tuTopUp(o) {
@@ -14437,6 +14442,17 @@ function tuTopUp(o) {
     save();
   } catch (e) { console.error('tuto', e); }
 }
+// la boussole offerte (une seule, même si on rejoue le tutoriel)
+function tuGiveCompass() {
+  try {
+    if (tuCompOwned() || tuCompOn()) return;
+    const it = makeItem(xpGearDef('boussole', 1), 0, S.home, [], { fixed: 1 });
+    S.inv.push(it); S.dex[it.name] = true; S.tuto.f.comp = it.id; save();
+  } catch (e) { console.error('tuto', e); }
+}
+// d'autres modules montrent ce qu'ils cachent d'habitude pendant le tutoriel : le cercle de portée (50, 53) et l'histoire (51)
+function tuRangeOn() { try { return tuOn() && S.tuto.i >= TU_IDX.portee && S.tuto.i <= TU_IDX.accessible; } catch (e) { return false; } }
+function tuStoryOn() { try { return tuOn() && S.tuto.i >= TU_IDX.carnet; } catch (e) { return false; } }
 // ---------------- moteur ----------------
 let tuCur = null, tuLastEl = null, tuSkipAsk = false, tuWaitDest = 0;
 function tuTick() {
@@ -14450,15 +14466,16 @@ function tuTick() {
     if (T.i >= TU_STEPS.length) return tuFinish();
     const st = TU_STEPS[T.i];
     // la destination : un lieu du quartier (moins de 2 km), sinon la boutique du quartier la plus proche, créée pour l'occasion
-    if ((st.id === 'commande' || st.id === 'dur') && tab === 'voyage') tuCheckDest();
+    if ((st.id === 'commande' || st.id === 'go') && tab === 'voyage') tuCheckDest();
     let g = null;
     try { g = st.go(); } catch (e) { console.error('tuto', st.id, e); }
+    if (g && g.hide) { tuHide(); return; }
     tuShow(st, g || { el: null, txt: null });
   } catch (e) { console.error('tuto', e); }
 }
 function tuCheckDest() {
   const d = plan.dest; if (!d || S.trips[tuK()]) return;
-  if (d.poi && kmExact(homeObj(), d) <= 1.5) { if (plan.dur !== 'eclair' && !S.tuto.f.dur) { plan.dur = 'eclair'; renderPanel(); } return; }
+  if (d.poi && kmExact(homeObj(), d) <= 1.5) { if (plan.dur !== 'eclair') { plan.dur = 'eclair'; renderPanel(); } return; }
   tuFallbackDest();
 }
 // « Partir chercher » sur la commande du tutoriel : la destination est choisie ICI, sans dépendre des icônes dessinées
@@ -14493,7 +14510,7 @@ function tuFallbackDest() {
 function tuFinish() {
   S.tuto = { done: 1, at: Date.now() };
   save(); tuHide(); renderAll();
-  toast('Bon voyage ! Le tutoriel se revoit depuis le menu (le carnet, en haut à droite).');
+  toast('Bon voyage ! Le tutoriel se revoit depuis le menu.');
 }
 function tuSkip() {
   S.tuto = { done: 1, skipped: 1 };
@@ -14501,7 +14518,7 @@ function tuSkip() {
   toast('Tutoriel passé. Vous pourrez le revoir depuis le menu.');
 }
 function tuReplay() {
-  S.tuto = { on: 1, i: 0, f: {}, replay: 1 };
+  S.tuto = { on: 1, i: 0, f: {}, replay: 1, v: 2 };
   save();
   closeSheet();
   tuTick();
@@ -14524,12 +14541,12 @@ function tuShow(st, g) {
   const k = tuK(), bub = el.querySelector('.tu-bub');
   const dim = g.dim !== undefined ? g.dim : st.dim !== undefined ? st.dim : true;
   // le texte
-  let say = g.txt || '…', ok = st.ok || '', foot = '';
-  if (tuSkipAsk) { say = 'Passer le tutoriel ? Tu pourras le revoir quand tu veux depuis le menu (le carnet, en haut à droite).'; ok = ''; }
+  let say = g.txt || '…', ok = (!g.nav && st.ok) || '', foot = '';
+  if (tuSkipAsk) { say = 'Passer le tutoriel ? Vous pourrez le revoir quand vous voulez depuis le menu.'; ok = ''; }
   const sig = [st.id, say, ok, tuSkipAsk, k].join('|');
   if (sig !== tuSig) {
     tuSig = sig;
-    el.querySelector('.tu-face').src = portraitURI(k, st.id === 'fin' ? 'amour' : st.id === 'choix' ? 'curieux' : 'rire');
+    el.querySelector('.tu-face').src = portraitURI(k, st.id === 'fin' ? 'amour' : st.id === 'choix' || st.id === 'carnet' ? 'curieux' : 'rire');
     el.querySelector('.tu-who').textContent = CHARS[k] ? CHARS[k].name : '';
     el.querySelector('.tu-say').innerHTML = say;
     const ft = el.querySelector('.tu-ft');
@@ -14541,6 +14558,7 @@ function tuShow(st, g) {
   }
   el.classList.toggle('nodim', !dim || !g.el);
   el.classList.toggle('center', !g.el);
+  el.classList.toggle('round', !!(g.el && st.round));
   tuCur = { st, g };
   // amener l'élément sous les yeux (une fois par élément)
   const sc = g.scroll || g.el;
@@ -14646,14 +14664,6 @@ collect = (orig => function () {
           if (def) t.bag.push(makeItem(def, 0, place, tags, { fixed: 0 }));
         }
       });
-      let v = t.bag.find(x => x.cat === 'v');
-      if (!v) {
-        // un vêtement du lieu, sinon de la ville (jamais un bonnet de montagne rapporté de la boulangerie)
-        let def = null;
-        for (const tg of [...tags, 'ville', 'rue', 'mode', 'friperie', 'campagne']) { const pool = (LOOT[tg] || []).filter(d => d[1] === 'v' && d[3] === 0 && d[4]); if (pool.length) { def = pick(pool); break; } }
-        if (def) { v = makeItem(def, 0, place, tags, { fixed: 0 }); t.bag.push(v); }
-      }
-      if (v) S.tuto.cloth = v.id;
     } catch (e) { console.error('tuto', e); }
     tuFastEgg = true;
   }
@@ -14683,6 +14693,8 @@ nextAction = (orig => function () {
       const o = tuOrder(), k = tuK();
       if (o && !S.trips[k]) return { kind: 'order', k, o, r: o.req[0] };
     }
+    // à la fin du tutoriel, la carte d'action montre la checklist de l'histoire (51_histoire.js prend le relais d'une carte « libre »)
+    if (tuStoryOn() && a && a.kind !== 'away' && !$('styBD')) return { kind: 'idle' };
   } catch (e) {}
   return a;
 })(nextAction);
@@ -14716,7 +14728,6 @@ GAME.on('order:done', ({ order }) => {
 // la durée : le joueur l'a choisie lui-même
 document.addEventListener('click', ev => {
   const b = ev.target.closest('button'); if (!b || b.disabled) return;
-  if (tuOn() && b.dataset.dur === 'eclair' && S.tuto.i === TU_IDX.dur) { S.tuto.f.dur = 1; save(); }
   const d = b.dataset.tu; if (!d) return;
   if (d === 'skip') { tuSkipAsk = true; tuSig = ''; tuTick(); return; }
   if (d === 'stay') { tuSkipAsk = false; tuSig = ''; tuTick(); return; }
@@ -14724,8 +14735,12 @@ document.addEventListener('click', ev => {
   if (d === 'replay') return tuReplay();
   if (d === 'ok' && tuCur) {
     const id = tuCur.st.id;
-    if (id === 'sert') S.tuto.f.sert = 1;
-    if (id === 'fin') S.tuto.f.fin = 1;
+    const F = S.tuto.f;
+    if (id === 'portee') { F.portee = 1; F.km0 = tuRangeKm(); }
+    if (id === 'boussole') tuGiveCompass();
+    if (id === 'accessible') F.acc = 1;
+    if (id === 'carnet') { F.carnet = 1; save(); tuHide(); try { styRead(); } catch (e) { console.error('tuto', e); } }
+    if (id === 'fin') F.fin = 1;
     save(); tuTick();
   }
 }, true);
@@ -14776,6 +14791,9 @@ body.tu-on #vyLay,body.tu-on #vyCard,body.tu-on #zFilt,body.tu-on #poiFilt{displ
 .tu-pg i.cur{background:var(--gold,#f6c445);border-color:var(--ink,#4a3528);transform:scale(1.25)}
 .tu-skip{background:none;border:0;padding:2px 0;font:700 12px var(--display);color:var(--muted,#9a8574);text-decoration:underline;cursor:pointer}
 .tu-ft .btn{padding:6px 12px 4px;font-size:14px}
+.tu-rmark{position:absolute;pointer-events:none;opacity:0}
+#tuto.round .tu-hole{border-radius:50%}#tuto.round .tu-hole::after{border-radius:50%}
+.tu-gift{float:left;width:46px;height:46px;margin:0 8px 2px 0}.tu-gift svg{width:100%;height:100%}
 .dur.tu-off{opacity:.42;filter:grayscale(.6)}
 .tu-mri{overflow:hidden;background:#fff3c4}.tu-mri img{width:36px;height:40px;object-fit:cover;object-position:top}
 @media (max-width:420px){.tu-say{font-size:14px}.tu-face{width:44px;height:48px}}
@@ -31379,7 +31397,7 @@ document.addEventListener('click', ev => {
 let dfSig = '';
 function dfMapUpdate(force) {
   if (typeof map === 'undefined' || !map || !mapReady || !map.getStyle) return;
-  const k = S.sel, h = homeObj(), on = !!(CHARS[k] && !S.trips[k] && !dfTuto() && !document.body.classList.contains('firstrun'));
+  const k = S.sel, h = homeObj(), on = !!(CHARS[k] && !S.trips[k] && (!dfTuto() || dfCall(() => tuRangeOn(), false)) && !document.body.classList.contains('firstrun'));
   const R = on ? dfRange(k, plan.dest || null) : null, show = !!(R && !R.world);
   const sig = [show ? R.km : 0, h.lon, h.lat].join('|');
   if (!map.getSource('dfRange')) {
@@ -31512,7 +31530,7 @@ window.__df = {
 // Enveloppes : nextAction, renderActionCard, QM_HTML.hist. Tests : window.__sty.
 
 const styCall = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch (e) { return d; } };
-const styTuto = () => styCall(() => tuOn(), false) || styCall(() => document.body.classList.contains('firstrun'), false);
+const styTuto = () => styCall(() => tuOn() && !tuStoryOn(), false) || styCall(() => document.body.classList.contains('firstrun'), false);
 const STY_SEASON = 1;
 
 // ---------------- les lieux réels par type (s'ajoutent à PLACES et XP_PLACES) ----------------
@@ -33097,7 +33115,7 @@ function ppCircle(h, km) { const g = d3.geoCircle().center([h.lon, h.lat]).radiu
 if (typeof dfMapUpdate === 'function') dfMapUpdate = (orig => function () {
   const r = orig.apply(this, arguments);
   try {
-    const k = S.sel; if (!k || !CHARS[k] || S.trips[k] || ppTuto() || !map.getSource('dfRange')) return r;
+    const k = S.sel; if (!k || !CHARS[k] || S.trips[k] || (ppTuto() && !pp$(() => tuRangeOn(), false)) || !map.getSource('dfRange')) return r;
     const R = dfRange(k, plan.dest || null), old = ppRK[k]; ppRK[k] = R.km;
     if (!old || R.world || R.km <= old || dfPalier(R.km) === dfPalier(old) || reduceMotion()) return r;
     const h = homeObj(), id = ++ppAnim;
@@ -34060,6 +34078,273 @@ if (typeof startTrip === 'function') startTrip = (orig => function () {
 })();
 
 window.__guide = { S: () => S.guide, cur: () => gdCur && { id: gdCur.id, txt: gdEl && gdEl.querySelector('.gd-say').textContent, range: gdEl && gdEl.querySelector('.gd-r').textContent, target: gdCur.el || null }, blocks: (k, d) => gdBlocks(k || S.sel, d || plan.dest), start: gdStart, quit: gdQuit, tick: gdTick, places: () => gdPl.map(p => p.name) };
+
+// =====================================================================
+// v41 : NE JAMAIS SE PERDRE, ET VOIR QU'ON PROGRESSE
+// 1. UN SEUL CONSEIL : nextAdvice() → { src, ico, txt, kick, sub, btn, go, dot }, une seule règle de priorité :
+//    a. urgent : retour de voyage, choix en voyage, commande prête (nextAction de 20/21), client qui attend une
+//       préparation finie (37), épreuve qui expire dans moins d'une heure (52), familier blessé sélectionné (41),
+//       œuf prêt ;
+//    b. l'étape de l'histoire (51) — si elle est bloquée, « Me guider » (57) ;
+//    c. le guide en cours (57, S.guide) ;
+//    d. la découverte conseillée de l'Exploration (52) ;
+//    e. l'objectif du jour (38), puis l'épreuve du jour (52).
+//    Affiché : carte d'action de l'écran principal (enveloppes nextAction / renderActionCard), en-tête de la page Quêtes
+//    (enveloppe qtPageHTML) ; la « découverte » de l'Exploration passe au second plan si le conseil est ailleurs.
+// 2. UN SEUL POINT ROUGE (.cs-dot), sur l'élément visible qui mène au conseil. Les autres pastilles (onglets, barre du
+//    bas, sous-onglets, Quêtes, menu, marché, familiers…) deviennent bleu-gris (CSS sous body.cs-on, hors tutoriel).
+// 3. progressToast(ico, titre, détail) : bandeau « ⭐ Progrès ! » en haut, avec file d'attente. Remplace pgCele (48 : rang,
+//    stade, paliers), et les toasts « Page n du carnet », « … équipé sur … », « Désormais accessible » ; ajoute niveau de
+//    terrain (enveloppe xpGain), nouveau matériel obtenu et palier de portée (S.cs = { pal, gear }, optionnel).
+// Rien n'est supprimé. Tests : window.__cs.
+// =====================================================================
+const cs$ = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch (e) { return d; } };
+const csTuto = () => cs$(() => tuOn(), false) || cs$(() => document.body.classList.contains('firstrun'), false);
+const csNm = k => cs$(() => compName(k), (CHARS[k] || {}).name || '');
+const csE = k => cs$(() => compE(k), '');
+const CS_TOP = '#modal:not([hidden]) .cs-adv .btn';
+const CS_CARD = '#tripCard:not([hidden]) .btn';
+const csCloseModal = () => { const m = $('modal'); if (m && !m.hidden) { m.hidden = true; cs$(() => { qtPageOn = false; }, 0); } };
+const csQuests = t => { cs$(() => { qmTab = t; }, 0); const m = $('modal'); if (m && !m.hidden && m.querySelector('.md-page')) cs$(mdRerender, 0); else cs$(qtOpenPage, 0); };
+
+// ---------- a. l'urgent ----------
+function csFromAction(a) {
+  if (!a) return null;
+  const k = a.k, n = k ? csNm(k) : '';
+  const run = ds => () => { csCloseModal(); cs$(() => runAction({ dataset: ds }), 0); };
+  if (a.kind === 'collect') return { src: 'action', ico: '🎒', kick: 'Retour de voyage', txt: `${n} est rentré${csE(k)} !`, sub: a.t && a.t.dest ? a.t.dest.name : '', btn: 'Ouvrir le sac', go: run({ act: 'collect', k }), dot: [CS_TOP, CS_CARD, `#hudComps .hc-btn[data-sel="${k}"]`, '#nav [data-nav="carte"]'] };
+  if (a.kind === 'choose') return { src: 'action', ico: '❓', kick: 'En voyage', txt: cs$(() => liveAskText(compName(k), a.j).replace(/ ! Choisis$/, ' !'), `${n} hésite !`), sub: a.j.text || '', btn: 'Choisir', go: run({ act: 'choose', k }), dot: [CS_TOP, CS_CARD, `#hudComps .hc-btn[data-sel="${k}"]`] };
+  if (a.kind === 'deliver') { const c = cs$(() => BQC(a.o.client), { name: '' }); return { src: 'action', ico: '📦', kick: 'Boutique', txt: `Commande prête : ${c.name}`, sub: 'Tout est dans le sac : il ne reste qu’à livrer !', btn: 'Livrer', go: run({ act: 'deliver', id: a.o.id }), dot: [CS_TOP, CS_CARD, '#nav [data-nav="boutique"]'] }; }
+  if (a.kind === 'hatch') return { src: 'action', ico: '🥚', kick: 'Nurserie', txt: 'Un œuf va éclore !', sub: 'Il remue… aidez-le à sortir', btn: 'Faire éclore', go: run({ act: 'hatch', id: a.egg.id }), dot: [CS_TOP, CS_CARD, '#nav [data-nav="village"]'] };
+  return null;
+}
+function csPrep() {
+  const T = cs$(() => cmT(), null); if (!T) return null;
+  const c = cs$(() => cmState(), null); if (!c || !Array.isArray(c.buy)) return null;
+  const stock = new Set(cs$(() => cmProducts(T.id), []).map(it => it.mk.rid));
+  const b = c.buy.find(x => x.shop === T.id && stock.has(x.rid)); if (!b) return null;
+  const R = CM_R[b.rid], cl = cs$(() => BQC(b.cid), { name: 'Un client' });
+  return { src: 'prep', ico: '🧁', kick: 'Préparation prête', txt: `${cl.name} attend : ${R ? R.def[0] : 'votre produit'}`, sub: 'Votre préparation est finie : vendez-la au comptoir avant qu’il reparte !', btn: 'Vendre',
+    go: () => { csCloseModal(); cs$(() => { bView = 'comptoir'; }, 0); cs$(() => openSheet('boutique'), 0); }, dot: [CS_TOP, CS_CARD, '#nav [data-nav="boutique"]'] };
+}
+function csDefiSoon() {
+  const A = cs$(() => mdState().tr.act, null); if (!A) return null;
+  const left = A.dl - cs$(mdNow, Date.now()); if (!(left > 0 && left < 3600e3) || A.n >= A.goal) return null;
+  return { src: 'defi', ico: '⏱️', kick: 'Épreuve qui expire', txt: `${A.t} : plus que ${cs$(() => mdDur(left), Math.ceil(left / 60e3) + ' min')}`, sub: `${A.n}/${A.goal} · Gaspard la tente aussi`, btn: 'Voir', go: () => csQuests('defi'), dot: [CS_TOP, CS_CARD, '#qtBtns .qt-mb'] };
+}
+function csHurt() {
+  const k = S.sel; if (!k || S.trips[k] || !(cs$(() => xpHurtLeft(k), 0) > 0)) return null;
+  const o = cs$(() => teamIds(), []).find(c => c !== k && CHARS[c] && S.comps[c] && !S.trips[c] && !(cs$(() => xpHurtLeft(c), 0) > 0)); if (!o) return null;
+  return { src: 'hurt', ico: '🩹', kick: 'Familier blessé', txt: `${csNm(k)} se repose : partez avec ${csNm(o)}`, sub: `Repos au foyer encore ${cs$(() => xpMin(xpHurtLeft(k)), '')}`, btn: 'Changer', go: () => { csCloseModal(); cs$(() => selectComp(o), 0); }, dot: [CS_TOP, CS_CARD, `#hudComps .hc-btn[data-sel="${o}"]`] };
+}
+// ---------- b. l'histoire ----------
+function csStory() {
+  if (typeof styState !== 'function') return null;
+  const T = cs$(styState, null); if (!T || T.end) return null;
+  const n = T.n, C = styC(n), s = styCh(n), st = styStep(n), L = cs$(() => styLines(n).find(x => x.on), null);
+  let txt, btn = 'Y aller', go = () => { csCloseModal(); styGo(); };
+  if (st === 0) { txt = n === 1 ? 'Un vieux carnet au grenier…' : `Chapitre ${n} : ${C.nm}`; btn = 'Lire'; go = () => { csCloseModal(); styState().pend = 0; styRead(); }; }
+  else if (st === 4) { txt = `Page ${n} retrouvée !`; btn = 'Lire'; go = () => { csCloseModal(); styState().pend = 0; styRead(); }; }
+  else {
+    txt = L ? `${L.tx}${L.ct ? ` (${L.ct})` : ''}` : C.nm;
+    if (s.miss && typeof gdFromStory === 'function') { btn = '🧭 Me guider'; go = () => { csCloseModal(); gdFromStory(); }; }
+  }
+  return { src: 'story', ico: '📔', kick: `Le carnet d’Augustine · Chapitre ${n}`, txt, sub: s.miss && st >= 1 && st <= 3 ? `⚠ ${s.miss}` : '', btn, go, dot: [CS_TOP, CS_CARD, '#qtBtns .qt-mb'] };
+}
+// ---------- c. le guide ----------
+function csGuide() {
+  if (!(S.guide && S.guide.on) || typeof gdTick !== 'function') return null;
+  const d = S.guide.d || {};
+  return { src: 'guide', ico: '🧭', kick: 'Le guide', txt: `Préparer le départ vers ${d.name || 'votre destination'}`, sub: 'Suivez la bulle, étape par étape.', btn: 'Continuer', go: () => { csCloseModal(); cs$(gdTick, 0); }, dot: [CS_TOP, CS_CARD] };
+}
+// ---------- d. la découverte ----------
+function csExplo() {
+  if (typeof exAdvice !== 'function') return null;
+  const A = cs$(exAdvice, null); if (!A || A.story) return null;
+  return { src: 'explo', ico: '🧭', kick: 'Prochaine découverte', txt: A.name, sub: A.txt, btn: 'Y aller', go: () => { csCloseModal(); cs$(exGoAdvice, 0); }, dot: [CS_TOP, CS_CARD, '#qtBtns .qt-mb'] };
+}
+// ---------- e. objectif du jour, épreuve du jour ----------
+function csDaily() {
+  const o = cs$(() => qtDay().list.find(x => !x.done), null);
+  if (o) return { src: 'daily', ico: '🎯', kick: 'Objectif du jour', txt: `Trouver : ${o.name}`, sub: o.where || '', btn: 'Voir', go: () => csQuests('defi'), dot: [CS_TOP, CS_CARD, '#qtBtns .qt-mb'] };
+  const M = cs$(mdState, null), X = M && !M.tr.act ? cs$(() => mdTrials().find(x => !M.tr.res[x.id]), null) : null;
+  if (X) return { src: 'defi', ico: '🏆', kick: 'Épreuve du jour', txt: `${X.ico} ${X.t}`, sub: 'Gaspard la tente aussi.', btn: 'Voir', go: () => csQuests('defi'), dot: [CS_TOP, CS_CARD, '#qtBtns .qt-mb'] };
+  return null;
+}
+
+let csOrigNA = nextAction;
+function csCompute(a) {
+  if (csTuto()) return csFromAction(a);
+  const act = csFromAction(a);
+  if (act && a.kind !== 'hatch') return act;              // retour de voyage, choix, commande prête
+  return csPrep() || csDefiSoon() || csHurt() || act        // a. urgent (l'œuf après)
+    || csStory() || csGuide() || csExplo() || csDaily() || null;
+}
+function nextAdvice() { return cs$(() => csCompute(csOrigNA()), null); }
+
+// ---------- 1. carte d'action ----------
+nextAction = (orig => function () {
+  const a = orig.apply(this, arguments);
+  try {
+    if (csTuto()) return a;
+    const A = csCompute(a);
+    if (!A || A.src === 'action' || A.src === 'story') return a;
+    return { kind: 'cs', k: `cs:${A.src}:${A.txt}`, adv: A };
+  } catch (e) { return a; }
+})(nextAction);
+renderActionCard = (orig => function (box) {
+  let a = null; try { a = !document.body.classList.contains('firstrun') ? nextAction() : null; } catch (e) { a = null; }
+  if (!a || a.kind !== 'cs') { const r = orig.apply(this, arguments); csDotsSoon(); return r; }
+  const A = a.adv;
+  box.hidden = false; box.className = `tripcard act act-cs act-${A.src}`; box.dataset.k = ''; box.dataset.kind = 'cs';
+  box.dataset.sig = actionSig(a);
+  box.innerHTML = `<span class="acic"><span class="cs-ic">${A.ico}</span></span><div class="tcx"><span class="ack">${esc(A.kick)}</span><b class="act-t">${esc(A.txt)}</b><span class="acs">${esc(A.sub || '')}</span></div><button class="btn green" data-csgo="1">${esc(A.btn)}</button>`;
+  csDotsSoon();
+})(renderActionCard);
+
+// ---------- 1. en-tête de la page Quêtes ----------
+if (typeof qtPageHTML === 'function') qtPageHTML = (orig => function () {
+  let h = orig.apply(this, arguments);
+  try {
+    if (csTuto()) return h;
+    const A = nextAdvice(); if (!A) return h;
+    const box = `<div class="cs-adv cs-${A.src}"><span class="cs-ic">${A.ico}</span><span class="cs-tx"><small>Le conseil du moment · ${esc(A.kick)}</small><b>${esc(A.txt)}</b></span><button class="btn green" data-csgo="1">${esc(A.btn)}</button></div>`;
+    const i = h.indexOf('<nav class="qm-tabs"');
+    if (i >= 0) h = h.slice(0, i) + box + h.slice(i);
+    // la découverte de l'Exploration suit le conseil ; si le conseil est ailleurs, elle passe au second plan
+    if (A.src !== 'story' && A.src !== 'explo') h = h.replace('class="md-big md-x" id="exAdvice"', 'class="md-big md-x cs-later" id="exAdvice"');
+  } catch (e) { console.error('conseil quêtes', e); }
+  setTimeout(csDots, 0);
+  return h;
+})(qtPageHTML);
+
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-csgo]'); if (!b) return;
+  ev.preventDefault(); ev.stopPropagation();
+  cs$(() => sfx('pop'), 0);
+  const A = nextAdvice(); if (A && A.go) cs$(A.go, 0);
+}, true);
+
+// ---------- 2. un seul point rouge ----------
+const csVis = el => { if (!el || !el.isConnected) return false; const r = el.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return false; const cs = getComputedStyle(el); return cs.visibility !== 'hidden' && !el.closest('[hidden]'); };
+let csDotT = 0;
+function csDotsSoon() { clearTimeout(csDotT); csDotT = setTimeout(csDots, 30); }
+function csDots() {
+  const on = !csTuto();
+  document.body.classList.toggle('cs-on', on);
+  let tgt = null;
+  if (on) {
+    const A = nextAdvice();
+    if (A && A.dot) for (const s of A.dot) { const el = [...document.querySelectorAll(s)].find(csVis); if (el) { tgt = el; break; } }
+  }
+  document.querySelectorAll('.cs-dot').forEach(d => { if (!tgt || d.parentElement !== tgt) d.remove(); });
+  document.querySelectorAll('.cs-host').forEach(e => { if (e !== tgt) e.classList.remove('cs-host'); });
+  if (tgt && !tgt.querySelector(':scope > .cs-dot')) { tgt.classList.add('cs-host'); tgt.insertAdjacentHTML('beforeend', '<i class="cs-dot" aria-label="À faire maintenant"></i>'); }
+}
+setInterval(() => cs$(csDots, 0), 600);
+
+// ---------- 3. la fête des progrès ----------
+let csQ = [], csBusy = false;
+function progressToast(ico, titre, detail) {
+  csQ.push({ ico: ico || '⭐', t: String(titre || ''), d: String(detail || '') });
+  if (!csBusy) csNextProg();
+}
+function csNextProg() {
+  const p = csQ.shift(); if (!p) { csBusy = false; return; }
+  csBusy = true;
+  let el = $('csProg');
+  if (!el) { el = document.createElement('div'); el.id = 'csProg'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite'); document.body.appendChild(el); }
+  el.innerHTML = `<span class="csp-i">${esc(p.ico)}</span><span class="csp-x"><b>Progrès ! <em>${esc(p.t)}</em></b>${p.d ? `<small>${esc(p.d)}</small>` : ''}</span>`;
+  el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+  cs$(() => sfx('pop'), 0);
+  clearTimeout(csNextProg.h);
+  csNextProg.h = setTimeout(() => { el.classList.remove('on'); setTimeout(csNextProg, 380); }, 2600);
+}
+// 48 : rang, stade, pouvoir, paliers du passeport, bâtiment
+if (typeof pgCele === 'function') pgCele = function (msg) {
+  const m = String(msg || ''); let r;
+  if ((r = m.match(/^Nouveau rang : (.+?) ! (.*)$/))) return progressToast('🏅', `Rang ${r[1]}`, r[2]);
+  if ((r = m.match(/^(.+?) devient (.+?) ! (.*)$/))) return progressToast('🌟', `${r[1]} : ${r[2]}`, r[3]);
+  if ((r = m.match(/^(.+?) : nouveau pouvoir ! (.*)$/))) return progressToast('🌟', `${r[1]} : nouveau pouvoir`, r[2]);
+  if ((r = m.match(/^Passeport : (.*?) ! (.*)$/))) return progressToast('🛂', `Passeport : ${r[1]}`, r[2]);
+  if ((r = m.match(/^(.+? construite?) ! (.*)$/))) return progressToast('🏠', r[1], r[2]);
+  return progressToast('⭐', m, '');
+};
+// toasts disparates → bandeau commun (par motif, prudemment)
+toast = (orig => function (msg) {
+  try {
+    if (!csTuto()) {
+      const m = String(msg || ''); let r;
+      if ((r = m.match(/^Page (\d+) du carnet retrouvée ! Vous recevez : (.+?)\.?$/))) return progressToast('📔', `Page ${r[1]} du carnet`, `Vous recevez : ${r[2]}`);
+      if ((r = m.match(/^Désormais accessible : (.+?) ✨$/))) return progressToast('🔓', 'Désormais accessible', r[1]);
+      if ((r = m.match(/^(\d+) lieux désormais accessibles ✨$/))) return progressToast('🔓', 'Désormais accessible', `${r[1]} nouveaux lieux`);
+      if ((r = m.match(/^(.+?) ?: équipée? sur (.+?)\. Vous pouvez repartir !$/)) || (r = m.match(/^(.+?) équipée? sur (.+?)\.$/))) return progressToast('🎒', 'Matériel équipé', `${r[1]} sur ${r[2]}`);
+    }
+  } catch (e) {}
+  return orig.apply(this, arguments);
+})(toast);
+// 41 : niveau de terrain
+if (typeof xpGain === 'function') xpGain = (orig => function (k, terr) {
+  const r = orig.apply(this, arguments);
+  try { if (r && r.l1 > r.l0 && !csTuto()) progressToast('⛰️', `${(XP_T[terr] || [])[1] || 'Terrain'} niv. ${r.l1}`, csNm(k)); } catch (e) {}
+  return r;
+})(xpGain);
+// nouveau matériel obtenu, palier de portée (mémoire S.cs : rien n'est annoncé deux fois, rien à l'ancienne sauvegarde)
+function csWatch() {
+  if (!S || csTuto()) return;
+  const first = !S.cs || typeof S.cs !== 'object';
+  if (first) S.cs = { pal: {}, gear: [] };
+  if (!S.cs.pal || typeof S.cs.pal !== 'object') S.cs.pal = {};
+  if (!Array.isArray(S.cs.gear)) S.cs.gear = [];
+  let ch = first;
+  const gear = (S.inv || []).filter(it => it && cs$(() => xpGearOf(it), null));
+  const known = new Set(S.cs.gear);
+  gear.forEach(it => { if (known.has(it.id)) return; S.cs.gear.push(it.id); ch = true; if (!first) progressToast('🎒', 'Nouveau matériel', it.name); });
+  if (S.cs.gear.length > 300) S.cs.gear = S.cs.gear.slice(-300);
+  if (typeof dfRange === 'function' && typeof DF_PAL !== 'undefined') cs$(() => compIds(), []).forEach(k => {
+    if (!CHARS[k] || !S.comps[k]) return;
+    const km = cs$(() => dfRange(k, null).km, 0); if (!km) return;
+    const i = DF_PAL.findIndex(p => km < p[0]), was = S.cs.pal[k];
+    if (was == null) { S.cs.pal[k] = i; ch = true; return; }
+    if (i > was) { S.cs.pal[k] = i; ch = true; progressToast('🧭', `Portée : ${DF_PAL[i][1]}`, `${csNm(k)} · ${Math.round(km).toLocaleString('fr-FR')} km`); }
+  });
+  if (ch) cs$(save, 0);
+}
+setInterval(() => cs$(csWatch, 0), 2000);
+
+// ---------- styles ----------
+try {
+  const st = document.createElement('style'); st.id = 'csCSS';
+  st.textContent = `
+.cs-adv{display:flex;align-items:center;gap:10px;margin:2px 0 10px;padding:10px 10px 10px 12px;border-radius:16px;background:#fff7e8;border:2px solid #e8cf9f}
+.cs-adv .cs-ic{font-size:24px;line-height:1;flex:none}.cs-adv .cs-tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.cs-adv small{font-size:.7rem;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:#8a6a4a}.cs-adv b{font-size:.98rem;line-height:1.25}
+.cs-adv .btn{flex:none;padding:8px 12px}
+.act-cs .cs-ic{display:grid;place-items:center;width:100%;height:100%;font-size:30px}
+.md-big.cs-later{padding:8px 10px;gap:3px;background:rgba(0,0,0,.03);border-width:1px}.md-big.cs-later .md-t{font-size:.98rem}.md-big.cs-later .btn{min-width:0;padding:6px 12px}
+.cs-host{position:relative}
+.cs-dot{position:absolute;top:-5px;right:-5px;width:13px;height:13px;border-radius:50%;background:#e5484d;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.25);z-index:5;pointer-events:none;animation:csPing 1.6s ease-in-out infinite}
+@keyframes csPing{50%{transform:scale(1.18)}}
+body.cs-on .tb,body.cs-on .tb.soft,body.cs-on .bq-sdot,body.cs-on i.cpdot{background:#8fa3b8!important;color:#fff}
+body.cs-on .sdot,body.cs-on .bq-rdot,body.cs-on .bq-pdot,body.cs-on .mdot,body.cs-on .mk-dot,body.cs-on .mk-ndot,body.cs-on .qt-dot,body.cs-on .qm-dot{background:#8fa3b8!important;width:9px!important;height:9px!important;box-shadow:none!important;border-width:1.5px!important}
+body.cs-on .obdot{background:#8fa3b8!important;box-shadow:0 0 0 3px #e3eaf1!important;animation:none!important}
+body.cs-on .st.done{background:#8fa3b8!important;animation:none!important}
+#csProg{position:fixed;z-index:9500;left:50%;top:calc(10px + env(safe-area-inset-top,0px));transform:translate(-50%,-170%);display:flex;align-items:center;gap:10px;width:max-content;max-width:min(420px,calc(100vw - 32px));padding:8px 16px 8px 10px;border-radius:999px;border:2.5px solid #a8781a;background:linear-gradient(#fff6d0,#f6d77a);color:#4a3528;box-shadow:0 5px 0 rgba(120,80,20,.25),0 8px 18px rgba(0,0,0,.18);transition:transform .38s cubic-bezier(.3,1.4,.5,1);pointer-events:none}
+#csProg.on{transform:translate(-50%,0)}
+#csProg .csp-i{font-size:24px;line-height:1;flex:none}
+#csProg .csp-x{display:flex;flex-direction:column;min-width:0}
+#csProg b{font:800 14px/1.2 var(--display,inherit)}#csProg b em{font-style:normal;color:#8a4a10}
+#csProg small{font-size:12px;line-height:1.2;color:#6a5040;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (prefers-reduced-motion:reduce){.cs-dot{animation:none}#csProg{transition:none}}`;
+  document.head.appendChild(st);
+} catch (e) {}
+
+// ---------- tests ----------
+window.__cs = {
+  advice: () => { const A = nextAdvice(); return A && { src: A.src, txt: A.txt, kick: A.kick, btn: A.btn }; },
+  progress: (i, t, d) => progressToast(i, t, d), dots: () => csDots(), watch: () => csWatch(), q: () => csQ.length,
+  T: () => ({ S, BQ_SHOP_CLIENTS: typeof BQ_SHOP_CLIENTS !== 'undefined' ? BQ_SHOP_CLIENTS : {}, cmT, cmState, CM_R, cmUnlocked: typeof cmUnlocked === 'function' ? cmUnlocked : null, mdState, renderTripCard, qtOpenPage, toast, pgCele, xpGain }),
+};
 
 })();
 </script>

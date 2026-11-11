@@ -337,7 +337,7 @@ function ppCircle(h, km) { const g = d3.geoCircle().center([h.lon, h.lat]).radiu
 if (typeof dfMapUpdate === 'function') dfMapUpdate = (orig => function () {
   const r = orig.apply(this, arguments);
   try {
-    const k = S.sel; if (!k || !CHARS[k] || S.trips[k] || ppTuto() || !map.getSource('dfRange')) return r;
+    const k = S.sel; if (!k || !CHARS[k] || S.trips[k] || (ppTuto() && !pp$(() => tuRangeOn(), false)) || !map.getSource('dfRange')) return r;
     const R = dfRange(k, plan.dest || null), old = ppRK[k]; ppRK[k] = R.km;
     if (!old || R.world || R.km <= old || dfPalier(R.km) === dfPalier(old) || reduceMotion()) return r;
     const h = homeObj(), id = ++ppAnim;
