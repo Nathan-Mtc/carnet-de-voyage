@@ -52,7 +52,10 @@ function jrOrganize() {
     box[k].forEach(n => { n.classList.add('jr-in'); body.appendChild(n); });
     d.appendChild(body); wrap.appendChild(d);
   });
-  if (btn) m.insertBefore(wrap, btn); else m.appendChild(wrap);
+  // v43 : le joueur veut voir Progrès et À savoir EN HAUT, sans faire défiler : juste sous le titre du retour
+  const top = [...m.children].filter(e => e.matches('.hhead, .hbig')).pop();
+  if (top) top.after(wrap); else if (btn) m.insertBefore(wrap, btn); else m.appendChild(wrap);
+  wrap.classList.add('jr-top');
 }
 // v41 : « ce qui sert maintenant » : les objets utilisables tout de suite passent devant, avec un ✔,
 // et « Ce que vous rapportez » se réduit à UN bouton, l'action la plus utile.
@@ -136,6 +139,7 @@ if (typeof showHaul === 'function') showHaul = (orig => function () {
 .jr-body{display:flex;flex-direction:column;gap:6px;padding:0 10px 10px}
 .jr-body .jr-in{margin:0!important;font-size:13px;list-style:none}
 .jr-body li.jr-in{background:#fff7dc;border:1.5px solid #ecd59a;border-radius:10px;padding:6px 9px}`;
+  st.textContent += `\n.jr-wrap.jr-top{margin:6px 0 10px}.jr-top .jr-cat{margin:4px 0}.jr-top .jr-cat summary{padding:6px 10px}.jr-top .jr-in{padding:6px 10px;font-size:14px}`;
   document.head.appendChild(st);
 }
 
