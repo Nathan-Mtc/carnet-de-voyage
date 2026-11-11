@@ -112,7 +112,7 @@ function dpcCompact(box) {
 }
 if (typeof renderVoyage === 'function') renderVoyage = (orig => function () {
   const r = orig.apply(this, arguments);
-  try { dpcCompact(document.getElementById('panelBody')); } catch (e) { console.error('départ compact', e); }
+  // v43 : le joueur préfère l'ancien panneau ; on ne compacte plus (voir 60_depart_onglets.js)
   return r;
 })(renderVoyage);
 const dpcRender = () => { const b = $('panelBody'), y = b ? b.scrollTop : 0; dpc$(() => renderPanel(), 0); if (b) b.scrollTop = y; };
