@@ -7,7 +7,22 @@
 // Les éléments sont DÉPLACÉS (jamais recopiés) : leurs gestionnaires continuent de marcher.
 // L'alerte de risque au toucher de « Partir » (59) est gardée.
 let dptTab = 'prep', dptDest = null;
+// v43 : lieux du quotidien = juste récolter. Pas de provisions, pas de compagnon de route, pas de fiche de stats :
+// on ne garde que « Qui part ? », le lieu, « À trouver ici » et le bouton Récolter.
+function dptPoi(box) {
+  const d = plan.dest; if (!box || !d || !d.poi) return;
+  try { if (plan.eqProv && plan.eqProv.length) plan.eqProv = []; } catch (e) {}
+  const dfc = box.querySelector('.dfc');
+  if (dfc) {
+    // « À trouver ici » et tout ce qui suit (ex. « Lieu épuisé ») sont gardés
+    const h = [...dfc.querySelectorAll('h4.dfh')].find(x => /trouver/i.test(x.textContent || ''));
+    if (h) { const w = document.createElement('div'); w.className = 'dpt-poils'; let n = h; while (n) { const nx = n.nextElementSibling; if (!n.matches('.dftips')) w.appendChild(n); n = nx; } dfc.before(w); }
+    dfc.remove();
+  }
+  box.querySelectorAll('.eqp, .eqd, .f3-go, .xpgo, .dfc-far, .gd-offer').forEach(e => e.remove());
+}
 function dptSplit(box) {
+  dptPoi(box);
   const d = plan.dest;
   if (!box || !d || box.querySelector('.dpt-tabs')) return;
   const head = box.querySelector(':scope > .dhead'), gb = box.querySelector(':scope > .gobar');
@@ -63,6 +78,7 @@ document.addEventListener('click', ev => {
 #panelBody[data-dpt="lieu"] .dpt-prep,#panelBody[data-dpt="prep"] .dpt-lieu{display:none}
 .dpt-lieu{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
 .dpt-lieu .nsbait{display:block!important}
+.dpt-poils{margin:4px 2px 10px;display:flex;flex-direction:column;gap:6px}
 .dpt-none{margin:6px 2px;color:#9a8470;font-size:14px}`;
   document.head.appendChild(st);
 }
