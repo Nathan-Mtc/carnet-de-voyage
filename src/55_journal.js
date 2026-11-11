@@ -44,10 +44,9 @@ function jrOrganize() {
   }
   ['prog', 'bonus', 'warn'].forEach(k => {
     if (!box[k].length) return;
-    const d = document.createElement('details'); d.className = 'jr-cat jr-' + k;
-    // « À savoir » s'ouvre seul quand il explique un échec ; le reste reste replié
-    if (k === 'warn' && hero && hero.k[0] === 'echec') d.open = true;
-    d.innerHTML = `<summary><span>${JR_BOX[k][0]}</span>${JR_BOX[k][1]}<b>${box[k].length}</b></summary>`;
+    // v43 : toujours affiché, jamais replié (demande du joueur)
+    const d = document.createElement('div'); d.className = 'jr-cat jr-open jr-' + k;
+    d.innerHTML = `<div class="jr-h"><span>${JR_BOX[k][0]}</span>${JR_BOX[k][1]}</div>`;
     const body = document.createElement('div'); body.className = 'jr-body';
     box[k].forEach(n => { n.classList.add('jr-in'); body.appendChild(n); });
     d.appendChild(body); wrap.appendChild(d);
@@ -139,7 +138,7 @@ if (typeof showHaul === 'function') showHaul = (orig => function () {
 .jr-body{display:flex;flex-direction:column;gap:6px;padding:0 10px 10px}
 .jr-body .jr-in{margin:0!important;font-size:13px;list-style:none}
 .jr-body li.jr-in{background:#fff7dc;border:1.5px solid #ecd59a;border-radius:10px;padding:6px 9px}`;
-  st.textContent += `\n.jr-wrap.jr-top{margin:6px 0 10px}.jr-top .jr-cat{margin:4px 0}.jr-top .jr-cat summary{padding:6px 10px}.jr-top .jr-in{padding:6px 10px;font-size:14px}`;
+  st.textContent += `\n.jr-wrap.jr-top{margin:6px 0 10px}.jr-top .jr-cat{margin:4px 0}.jr-top .jr-cat summary{padding:6px 10px}.jr-top .jr-in{padding:6px 10px;font-size:14px}.jr-open .jr-h{display:flex;align-items:center;gap:6px;padding:6px 10px 2px;font:800 14px var(--display,inherit);color:var(--ink,#4a3528)}`;
   document.head.appendChild(st);
 }
 
