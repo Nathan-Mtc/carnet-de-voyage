@@ -321,7 +321,7 @@ function dfCardHTML(k, d) {
   h += `<div class="dfs">${dfGly('robu', '#5f8fb8')}<span class="dfs-n">Robustesse</span>${rbBar}<span class="dfs-v">${risk ? `${dfPct(1 - r)}` : 'pas de risque ici'}</span></div>`;
   h += `</div>`;
   if (C.ex) h += `<p class="dfc-note">Hors de sa portée (${R.km.toLocaleString('fr-FR')} km), mais autorisé : c’est une étape de quête ou une livraison.</p>`;
-  else h += `<p class="dfc-note">Portée : <b>${esc(kmTxt)}</b> · ${esc(dfPalier(R.km))}${R.parts.length > 1 ? ` <span class="dfc-pts">${R.parts.filter(p => p.id !== 'base').map(p => `${esc(p.lbl)} +${p.km.toLocaleString('fr-FR')}`).join(' · ')}</span>` : ''}</p>`;
+  else h += `<p class="dfc-note">Portée : <b>${esc(kmTxt)}</b>${R.parts.length > 1 ? ` <span class="dfc-pts">${R.parts.filter(p => p.id !== 'base').map(p => `${esc(p.lbl)} +${p.km.toLocaleString('fr-FR')}`).join(' · ')}</span>` : ''}</p>`;
   if (risk) h += `<div class="dfc-cmp"><span>Sans préparation <b class="bad">${dfPct(risk.no)}</b></span><span class="arr">→</span><span>avec votre équipement <b class="${dfRC(r)}">${dfPct(r)}</b></span></div>`;
   h += `<h4 class="dfh">Ce qu’${eqCall2(k) ? 'elle' : 'il'} porte</h4>` + dfWearHTML(k, d, c, risk);
   const loot = dfLootHTML(d);

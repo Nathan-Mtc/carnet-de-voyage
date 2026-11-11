@@ -225,7 +225,7 @@ function csWatch() {
     const km = cs$(() => dfRange(k, null).km, 0); if (!km) return;
     const i = DF_PAL.findIndex(p => km < p[0]), was = S.cs.pal[k];
     if (was == null) { S.cs.pal[k] = i; ch = true; return; }
-    if (i > was) { S.cs.pal[k] = i; ch = true; progressToast('🧭', `Portée : ${DF_PAL[i][1]}`, `${csNm(k)} · ${Math.round(km).toLocaleString('fr-FR')} km`); }
+    if (i > was) { S.cs.pal[k] = i; ch = true; progressToast('🧭', `Portée : ${Math.round(km).toLocaleString('fr-FR')} km`, `${csNm(k)} va plus loin`); }
   });
   if (ch) cs$(save, 0);
 }
