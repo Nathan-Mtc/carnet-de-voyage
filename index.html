@@ -33242,7 +33242,7 @@ function jrOrganize() {
   const m = document.querySelector('#modal .mbox'); if (!m || !m.querySelector('.hhead') || m.dataset.jr === '1') return;
   m.dataset.jr = '1';
   const btn = [...m.children].reverse().find(e => e.matches('button[data-closemodal]'));
-  const keep = e => e.matches('.hhead, .hbig, .haul, .jr-wrap, .obsum') || e === btn || /Ce que vous rapportez/.test(e.textContent || '');
+  const keep = e => e.matches('.hhead, .hbig, .haul, .jr-wrap, .obsum, .jr-bar') || e === btn || /Ce que vous rapportez/.test(e.textContent || '');
   const notes = [];
   [...m.children].forEach(e => {
     if (keep(e)) return;
@@ -33291,23 +33291,33 @@ function jrItems() {
     if (u) { c.classList.add('jr-now'); useful.push(c); if (!jrAct) jrAct = u; }
   });
   useful.reverse().forEach(c => haul.prepend(c)); }
-  const sum = m.querySelector('.obsum');
-  if (sum && !sum.dataset.jr) { sum.dataset.jr = '1';
-    // Sans action « utile maintenant », on garde le VRAI bouton du module 23 (déplacé, pas copié, pour qu'il marche)
-    // en choisissant le plus parlant, avec un libellé clair qui nomme l'objet.
-    const PRI = ['craft', 'wear', 'order', 'bait', 'reve'];
-    const bs = jrAct ? [] : [...sum.querySelectorAll('.obsa button')];
-    const b = bs.sort((x, y) => (PRI.indexOf(x.dataset.obgo) + 1 || 9) - (PRI.indexOf(y.dataset.obgo) + 1 || 9))[0] || null;
-    if (jrAct) sum.innerHTML = `<button class="btn green jr-one" data-jrone="1">${esc(jrAct.t)}</button>`;
-    else if (b) {
-      const it = (S.inv || []).find(i => i.id === b.dataset.obid), nm = it ? it.name : '';
-      const L = { bait: `Emporter l’appât : ${nm}`, wear: b.textContent + (nm ? ` (${nm})` : ''), craft: (() => { const r = typeof RECIPES !== 'undefined' && RECIPES.find(x => x.id === b.dataset.obarg); return r ? `Fabriquer : ${r.out[0]}` : b.textContent; })() };
-      if (['bait', 'wear', 'craft'].includes(b.dataset.obgo)) b.textContent = L[b.dataset.obgo];
-      else if (!PRI.includes(b.dataset.obgo)) b.textContent = nm ? `Œuf : réchauffer avec ${nm} (éclosion plus rapide)` : b.textContent;
-      b.className = 'btn green jr-one'; sum.innerHTML = ''; sum.appendChild(b);
-    } else sum.remove();
-  }
+  // v44 : plus de bouton séparé : on SÉLECTIONNE un objet, et une barre propose Utiliser + Détails
+  const sum = m.querySelector('.obsum'); if (sum) sum.remove();
+  if (!haul.querySelector('.hcard.jr-sel')) { const f = haul.querySelector('.hcard.jr-now:not(.jr-used)') || haul.querySelector('.hcard'); if (f) jrSelect(f.dataset.fiche); }
 }
+function jrMainOf(it) {
+  if (!it || typeof usActsFor !== 'function') return null;
+  const acts = usActsFor(it), a = usMainOf(acts, it); if (!a) return null;
+  const t = a.out && a.kind !== 'planter' ? (a.kind === 'cuisiner' ? 'Cuisiner : ' : 'Fabriquer : ') + a.label
+    : (typeof US_VERB !== 'undefined' && US_VERB[a.kind] && !/^(Porter|Équiper|Nourrir|Ouvrir)/.test(a.label) ? US_VERB[a.kind] + ' : ' : '') + a.label;
+  return { t, run: a.run };
+}
+function jrSelect(id) {
+  const m = document.querySelector('#modal .mbox'), haul = m && m.querySelector('.haul'); if (!haul) return;
+  haul.querySelectorAll('.hcard.jr-sel').forEach(c => c.classList.remove('jr-sel'));
+  const c = haul.querySelector(`.hcard[data-fiche="${id}"]`); if (!c) return;
+  c.classList.add('jr-sel');
+  const it = (S.inv || []).find(i => i.id === id), main = c.classList.contains('jr-used') ? null : jrMainOf(it);
+  let u = null; try { u = typeof utilOf === 'function' ? utilOf(it) : null; } catch (e) {}
+  let bar = m.querySelector(':scope > .jr-bar');
+  if (!bar) { bar = document.createElement('div'); bar.className = 'jr-bar'; haul.insertAdjacentElement('afterend', bar); }
+  const nm = it ? it.name : (c.querySelector('.hn, b, strong') || c).textContent.trim();
+  bar.dataset.id = id;
+  bar.innerHTML = `<div class="jr-bh"><b>${esc(nm)}</b>${u && u.txt ? `<span>${u.ico || ''} ${esc(u.txt)}</span>` : ''}</div>
+    <div class="jr-bb">${c.classList.contains('jr-used') ? '<span class="jr-done">✔ Déjà utilisé</span>' : main ? `<button class="btn green sm" data-jruse="${id}">${esc(main.t)}</button>` : '<span class="jr-none">Rien à faire tout de suite</span>'}
+    <button class="btn cream sm" data-jrdet="${id}">🔍 Détails</button></div>`;
+}
+let jrPass = false;
 document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-jrone]'); if (!b || !jrAct) return; ev.stopPropagation(); try { jrAct.run(); } catch (e) {} b.disabled = true; b.textContent = '✔ ' + b.textContent; }, true);
 if (typeof showHaul === 'function') showHaul = (orig => function () {
   const r = orig.apply(this, arguments);
@@ -33325,6 +33335,11 @@ if (typeof showHaul === 'function') showHaul = (orig => function () {
 .haul .hcard.jr-now::after{content:'✔';position:absolute;bottom:6px;right:6px;width:20px;height:20px;border-radius:50%;background:#5fb36b;color:#fff;font:800 12px/20px system-ui;text-align:center}
 .obsum{padding:6px!important;background:none!important;border:0!important;box-shadow:none!important}
 .jr-one{width:100%}
+.haul .hcard.jr-sel{outline:3.5px solid var(--ink,#4a3528);outline-offset:2px;transform:translateY(-2px)}
+.jr-bar{width:100%;margin:2px 0 8px;padding:10px 12px;border:2.5px solid var(--ink,#4a3528);border-radius:16px;background:#fff;box-shadow:0 3px 0 rgba(74,53,40,.3);text-align:left}
+.jr-bh{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}.jr-bh b{font:800 15px var(--display,system-ui);color:var(--ink,#4a3528)}.jr-bh span{font-size:13px;color:#7a6656}
+.jr-bb{display:flex;gap:8px;align-items:center}.jr-bb .btn.green{flex:1 1 auto}.jr-bb .btn.cream{flex:0 0 auto}
+.jr-none,.jr-done{flex:1 1 auto;font:700 13px var(--body,system-ui);color:#9a8470}.jr-done{color:#3f8a4b}
 .jr-wrap{width:100%;display:flex;flex-direction:column;gap:8px;margin:4px 0 8px;text-align:left}
 .jr-hero{position:relative;padding:12px 14px 12px;border-radius:16px;background:linear-gradient(135deg,#fff4d6,#ffe6b8);border:2.5px solid #c9902a;box-shadow:0 3px 0 rgba(120,80,20,.25)}
 .jr-hero.bad{background:linear-gradient(135deg,#f3eef8,#e4dcef);border-color:#7f6aa8}
@@ -33348,7 +33363,26 @@ let jrSnap = null, jrUsedId = null;
 window.addEventListener('click', ev => {
   const t = ev.target; if (!t.closest) return;
   const card = t.closest('#modal .haul .hcard[data-fiche]');
+  if (card && !jrPass) { ev.stopPropagation(); ev.preventDefault(); jrSelect(card.dataset.fiche); return; }
   if (card) { const m = document.querySelector('#modal .mbox'); jrSnap = m ? m.innerHTML : null; jrUsedId = card.dataset.fiche; return; }
+  const det = t.closest('[data-jrdet]');
+  if (det) { ev.stopPropagation(); ev.preventDefault(); const c = document.querySelector(`#modal .haul .hcard[data-fiche="${det.dataset.jrdet}"]`); if (c) { jrPass = true; c.click(); jrPass = false; } return; }
+  const use = t.closest('[data-jruse]');
+  if (use) {
+    ev.stopPropagation(); ev.preventDefault();
+    const id = use.dataset.jruse, it = (S.inv || []).find(i => i.id === id), main = jrMainOf(it); if (!main) return;
+    const box0 = document.querySelector('#modal .mbox'); const snap = box0 ? box0.innerHTML : null;
+    try { main.run(); } catch (e) { console.error('utiliser', e); }
+    setTimeout(() => {
+      const mod = document.getElementById('modal'), box = mod && mod.querySelector('.mbox'); if (!box) return;
+      if (!mod.hidden && !box.querySelector('.hhead') && !box.querySelector('.fiche')) return; // un autre écran utile s'est ouvert
+      if (!box.querySelector('.hhead') && snap) { box.innerHTML = snap; mod.hidden = false; }
+      const c = box.querySelector(`.hcard[data-fiche="${id}"]`); if (c) { c.classList.add('jr-used'); c.classList.remove('jr-now'); }
+      const nx = box.querySelector('.hcard.jr-now:not(.jr-used)'); jrSelect(nx ? nx.dataset.fiche : id);
+      if (typeof toast === 'function') toast('✔ ' + main.t);
+    }, 80);
+    return;
+  }
   if (t.closest('[data-closemodal]') && !t.closest('.fiche')) { jrSnap = null; return; }
   const act = t.closest('#modal .fiche [data-usact], #modal .fiche [data-usres]');
   if (!act || !jrSnap) return;
@@ -33359,8 +33393,8 @@ window.addEventListener('click', ev => {
     // si une autre fenêtre utile s'est ouverte (atelier, magasin…), on la laisse ; sinon on revient au butin
     if (!mod.hidden && box && !box.querySelector('.fiche') && !box.querySelector('.hhead')) return;
     box.innerHTML = snap; mod.hidden = false;
-    const c = box.querySelector(`.hcard[data-fiche="${used}"]`); if (c) c.classList.add('jr-used');
-    jrSnap = box.innerHTML;
+    const c = box.querySelector(`.hcard[data-fiche="${used}"]`); if (c) { c.classList.add('jr-used'); c.classList.remove('jr-now'); }
+    jrSelect(used); jrSnap = box.innerHTML;
     if (label && typeof toast === 'function') toast('✔ ' + label);
   }, 80);
 }, true);
