@@ -96,7 +96,7 @@ function jrSelect(id) {
   const nm = it ? it.name : (c.querySelector('.hn, b, strong') || c).textContent.trim();
   bar.dataset.id = id;
   bar.innerHTML = `<div class="jr-bh"><b>${esc(nm)}</b>${u && u.txt ? `<span>${u.ico || ''} ${esc(u.txt)}</span>` : ''}</div>
-    <div class="jr-bb">${c.classList.contains('jr-used') ? '<span class="jr-done">✔ Déjà utilisé</span>' : main ? `<button class="btn green sm" data-jruse="${id}">${esc(main.t)}</button>` : '<span class="jr-none">Rien à faire tout de suite</span>'}
+    <div class="jr-bb">${c.classList.contains('jr-used') ? '<span class="jr-done">Déjà utilisé</span>' : main ? `<button class="btn green sm" data-jruse="${id}">${esc(main.t)}</button>` : '<span class="jr-none">Rien à faire tout de suite</span>'}
     <button class="btn cream sm" data-jrdet="${id}">🔍 Détails</button></div>`;
 }
 let jrPass = false;
@@ -121,7 +121,7 @@ if (typeof showHaul === 'function') showHaul = (orig => function () {
 .jr-bar{width:100%;margin:2px 0 8px;padding:10px 12px;border:2.5px solid var(--ink,#4a3528);border-radius:16px;background:#fff;box-shadow:0 3px 0 rgba(74,53,40,.3);text-align:left}
 .jr-bh{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}.jr-bh b{font:800 15px var(--display,system-ui);color:var(--ink,#4a3528)}.jr-bh span{font-size:13px;color:#7a6656}
 .jr-bb{display:flex;gap:8px;align-items:center}.jr-bb .btn.green{flex:1 1 auto}.jr-bb .btn.cream{flex:0 0 auto}
-.jr-none,.jr-done{flex:1 1 auto;font:700 13px var(--body,system-ui);color:#9a8470}.jr-done{color:#3f8a4b}
+.jr-none,.jr-done{flex:1 1 auto;font:700 13px var(--body,system-ui);color:#9a8470}.jr-done{color:#8a8178}
 .jr-wrap{width:100%;display:flex;flex-direction:column;gap:8px;margin:4px 0 8px;text-align:left}
 .jr-hero{position:relative;padding:12px 14px 12px;border-radius:16px;background:linear-gradient(135deg,#fff4d6,#ffe6b8);border:2.5px solid #c9902a;box-shadow:0 3px 0 rgba(120,80,20,.25)}
 .jr-hero.bad{background:linear-gradient(135deg,#f3eef8,#e4dcef);border-color:#7f6aa8}
@@ -183,6 +183,7 @@ window.addEventListener('click', ev => {
 }, true);
 {
   const st = document.createElement('style');
-  st.textContent = `.haul .hcard.jr-used::before{content:'✔ utilisé';position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-8deg);z-index:3;background:#5fb36b;color:#fff;font:800 11px/1 system-ui;padding:4px 8px;border-radius:999px;box-shadow:0 2px 0 rgba(0,0,0,.2)}`;
+  st.textContent = `.haul .hcard.jr-used{filter:grayscale(.75);opacity:.7}.haul .hcard.jr-used::after{display:none!important}
+.haul .hcard.jr-used::before{content:'Utilisé';position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-8deg);z-index:3;background:#8a8178;color:#fff;font:800 11px/1 system-ui;padding:4px 8px;border-radius:999px;box-shadow:0 2px 0 rgba(0,0,0,.2)}`;
   document.head.appendChild(st);
 }
