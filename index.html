@@ -34779,6 +34779,70 @@ document.addEventListener('click', ev => {
   const x = t.closest('.xpgo.expe'); if (x && !t.closest('button')) { ev.stopPropagation(); return dptExpInfo(x); }
 });
 document.addEventListener('keydown', ev => { const it = ev.target.closest && ev.target.closest('[data-dptit]'); if (it && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); dptItemInfo(it); } });
+
+// ---------------- « Sans préparation » : vraie simulation (sans matériel ni provisions), jamais plus bas que le risque réel ----------------
+let dptNoSim = false;
+if (typeof dfRiskOf === 'function') dfRiskOf = (orig => function (k, d) {
+  const R = orig.apply(this, arguments);
+  if (!R || dptNoSim) return R;
+  dptNoSim = true;
+  try {
+    const a = xpEq(k), oldEq = a.slice(), oldP = plan.eqProv, oldD = plan.eqDuo;
+    a[0] = null; a[1] = null; plan.eqProv = []; plan.eqDuo = null;
+    try { const R0 = orig.call(this, k, d); if (R0) R.no = Math.max(R0.r, R.no); }
+    finally { a[0] = oldEq[0]; a[1] = oldEq[1]; plan.eqProv = oldP; plan.eqDuo = oldD; }
+  } catch (e) {} finally { dptNoSim = false; }
+  if (R.no < R.r) R.no = R.r;
+  return R;
+})(dfRiskOf);
+
+// ---------------- « Ce qu'il porte » rangé : Matériel / Provisions / Vêtements, utile d'abord, touchable ----------------
+if (typeof dfWearHTML === 'function') dfWearHTML = (orig => function (k, d, c, risk) {
+  try {
+    const terr = c.terr, R = dfRange(k, d), rk = () => { const x = dfRiskOf(k, d); return x ? x.r : 0; };
+    const chip = (ico, nm, fx, on, attr) => `<button class="dfw${on ? '' : ' off'}" ${attr || 'disabled'}><span class="dfw-i">${ico}</span><span class="dfw-t"><b>${esc(nm)}</b><small>${fx}</small></span></button>`;
+    const sortOn = l => l.sort((a, b) => b.on - a.on);
+    // matériel : 2 cases, touchez pour changer
+    const gear = xpEqItems(k).map((it, slot) => {
+      if (!it) return { on: 1, h: `<button class="dfw dpt-add${xpSlot === slot ? ' sel' : ''}" data-xps="${slot}"><span class="dfw-i"><b>+</b></span><span class="dfw-t"><b>Case ${slot + 1} vide</b><small>Ajouter du matériel</small></span></button>` };
+      const G = xpGearOf(it), fx = [];
+      if (G && G.g === 'boussole') { const p = R.parts.find(x => x.id === 'comp'); if (p) fx.push(`+${p.km.toLocaleString('fr-FR')} km`); }
+      else if (dfUseful(it, c)) {
+        const p = R.parts.find(x => x.id === 'g:' + it.id); if (p) fx.push(`+${p.km} km`);
+        if (risk) { const w = dfWithEq(k, slot, null, rk); if (w > risk.r + 0.004) fx.push(`−${Math.round((1 - risk.r / w) * 100)} % de risques`); }
+      }
+      return { on: fx.length ? 1 : 0, h: chip(itemIcon(it), it.name, fx.length ? fx.join(' · ') : 'inutile ici · toucher pour changer', fx.length, `data-xps="${slot}"${xpSlot === slot ? ' data-sel="1"' : ''}`) };
+    });
+    let pick = '';
+    if (xpSlot === 0 || xpSlot === 1) {
+      const items = xpEqItems(k), mine = (S.inv || []).filter(it => xpGearOf(it)).sort((a, b) => (dfUseful(b, c) - dfUseful(a, c)) || (xpGearOf(b).tier - xpGearOf(a).tier));
+      pick = `<div class="dpt-pick"><small>Case ${xpSlot + 1} : choisissez le matériel (vert = utile ici)</small><div class="dpt-pl">${mine.length ? mine.map(it => { const by = xpWornBy(it.id), cur = items[xpSlot] && items[xpSlot].id === it.id, use = dfUseful(it, c); return `<button class="dpt-pi${cur ? ' on' : ''}${use ? ' use' : ''}" data-xpeq="${it.id}" ${by && by !== k ? 'disabled' : ''}>${itemIcon(it)}<span>${esc(it.name)}${by && by !== k ? ` (${esc(xpName(by))})` : ''}</span></button>`; }).join('') : '<span class="dpt-pn">Pas de matériel : atelier › Équipement, ou magasin.</span>'}</div>${items[xpSlot] ? `<button class="btn cream sm" data-xpun="${xpSlot}">Retirer</button>` : ''}</div>`;
+    }
+    // provisions choisies
+    const prov = dfCall(() => eqPlanProv(), []).map((rid, i) => {
+      const kd = eqKindOf(rid), fx = kd === 'end' ? '+90 km' : kd === 'moral' ? '+1 objet · +30 km' : (kd === 'chaud' && (terr === 'froid' || terr === 'montagne')) || (kd === 'frais' && terr === 'desert') ? 'moins de risques · +30 km' : '+30 km';
+      return { on: 1, h: chip(eqRIco(rid, 'dfp' + i), eqRName(rid), fx, true) };
+    });
+    // vêtements portés + ensembles
+    const wear = dfCall(() => usWornItems(k), []).map(it => {
+      const b = dfCall(() => usWearOf(it), null), f = dfCall(() => usFormOf(it), ''), fx = [];
+      if (DF_EXPLO.includes(f)) fx.push('+40 km');
+      if (b && b.t !== 'cm' && (b.t === terr || b.t === '*')) { fx.push(b.k === 'risk' ? `−${Math.round(b.v * 100)} % de risques` : `+${Math.round(b.v * 100)} % de butin`); if (!DF_EXPLO.includes(f)) fx.push('+20 km'); }
+      return { on: fx.length ? 1 : 0, h: chip(itemIcon(it), it.name, fx.length ? fx.join(' · ') : 'rien ici', fx.length, `data-dptfi="${esc(it.id)}"`) };
+    });
+    dfCall(() => usSetsOf(k), []).filter(x => x.on).forEach(x => {
+      const fx = x.St.fx.filter(([t]) => t === terr || t === '*').map(([, kk, v]) => (kk === 'risk' ? `−${Math.round(v * 100)} % de risques` : kk === 'loot' ? `+${Math.round(v * 100)} % de butin` : '')).filter(Boolean);
+      if (x.St.id === 'explo') fx.push('+150 km');
+      wear.push({ on: fx.length ? 1 : 0, h: chip(`<b class="dfw-set">${x.n}/4</b>`, 'Ensemble ' + x.St.nom, fx.length ? fx.join(' · ') : 'rien ici', fx.length) });
+    });
+    const grp = (t, l, more) => l.length || more ? `<div class="dpt-wg"><small class="dpt-wt">${t}</small><div class="dfws">${sortOn(l).map(x => x.h).join('')}</div>${more || ''}</div>` : '';
+    return grp('🧭 Matériel', gear, pick) + grp('🍱 Provisions', prov) + grp('👕 Vêtements', wear) || `<p class="df-none">Rien d’équipé.</p>`;
+  } catch (e) { console.error('porte', e); return orig.apply(this, arguments); }
+})(dfWearHTML);
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-dptfi]'); if (!b || !b.closest('#panelBody')) return;
+  ev.stopPropagation(); try { openFiche(b.dataset.dptfi); } catch (e) {}
+});
 {
   const st = document.createElement('style');
   st.textContent = `.dpt-tabs{display:flex;gap:6px;margin:4px 0 12px;padding:4px;background:#f3eadc;border-radius:14px}
@@ -34817,6 +34881,17 @@ document.addEventListener('keydown', ev => { const it = ev.target.closest && ev.
 .dfc-cmp{flex-wrap:wrap;text-align:center}
 .dfc-cmp b{display:inline-block;white-space:nowrap}
 .dfc-cmp>span{white-space:nowrap}
+.dpt-wg{display:flex;flex-direction:column;gap:4px;margin-bottom:6px}
+.dpt-wt{font:800 11.5px var(--body,system-ui);color:#9a8470;letter-spacing:.03em}
+button.dfw{font:inherit;text-align:left;cursor:pointer;color:inherit}button.dfw[disabled]{cursor:default;opacity:1}button.dfw.off[disabled]{opacity:.5}
+.dfw[data-sel],.dfw.dpt-add.sel{outline:3px solid var(--ink,#4a3528);outline-offset:1px}
+.dfw.dpt-add{border-style:dashed;background:#fffaf0}.dfw.dpt-add .dfw-i b{font:800 20px var(--display,inherit);color:#b49a7c}.dfw.dpt-add small{color:#9a8470}
+.dpt-pick{display:flex;flex-direction:column;gap:6px;align-items:flex-start;padding:8px;border:2px solid var(--ink,#4a3528);border-radius:12px;background:#fff}
+.dpt-pick small{font:700 12px var(--body,system-ui);color:var(--ink2,#7a6250)}
+.dpt-pl{display:flex;flex-wrap:wrap;gap:6px}
+.dpt-pi{display:flex;align-items:center;gap:5px;padding:3px 8px 3px 3px;border:2px solid var(--line,#e2d3bd);border-radius:12px;background:#f7f2ea;font:800 12px var(--display,inherit);color:#8a7a6a;cursor:pointer}
+.dpt-pi svg,.dpt-pi img{width:28px;height:28px}.dpt-pi.use{background:#ecf7ec;border-color:#5fb36b;color:var(--ink,#4a3528)}.dpt-pi.on{outline:3px solid var(--ink,#4a3528)}.dpt-pi[disabled]{opacity:.45}
+.dpt-pn{font-size:12.5px;color:#9a8470}
 .dpt-none{margin:6px 2px;color:#9a8470;font-size:14px}`;
   document.head.appendChild(st);
 }
