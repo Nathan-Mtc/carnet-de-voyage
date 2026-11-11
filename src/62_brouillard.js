@@ -8,7 +8,8 @@
 // S.ex.leg = anciennes cellules de 0,5° dévoilées avant cette version (toujours dégagées). Le dessin rasterise
 // tout sur une grille fine de 0,1° et réutilise le principe de 52 (bandes par ligne + bords flous).
 // Les cellules S.ex.c de 52 restent tenues à jour (conseil, zones, histoire) : rien d'autre ne change.
-const BF_R = 100, BF_F = 0.1;
+// v43b : le joueur trouve 100 km trop grand et le brouillard trop épais → 30 km par voyage, 40 km autour de la maison, voile plus léger
+const BF_R = 30, BF_HOME = 40, BF_F = 0.1;
 let bfAnim = null, bfSkip = false;
 function bfX() {
   const X = exState();
@@ -16,8 +17,9 @@ function bfX() {
   if (!Array.isArray(X.pend)) X.pend = [];
   if (!X.v2) {
     X.v2 = 1; X.leg = Object.keys(X.c);
-    const h = md$(() => homeObj(), null); if (h) X.o.push([+h.lon, +h.lat, BF_R]);
+    const h = md$(() => homeObj(), null); if (h) X.o.push([+h.lon, +h.lat, BF_HOME]);
   }
+  if (!X.v3) { X.v3 = 1; X.o.forEach((c, i) => { if (c[2] >= 100) c[2] = i === 0 ? BF_HOME : BF_R; }); X.pend.forEach(p => { if (p.km >= 100) p.km = BF_R; }); exDirty = true; }
   if (!Array.isArray(X.leg)) X.leg = [];
   return X;
 }
@@ -39,27 +41,54 @@ function bfCells(extra) {
   return set;
 }
 exFogData = function (extra) {
-  const set = bfCells(extra), rows = {}, edges = [], holes = [];
-  set.forEach(k => { const i = k.indexOf('_'), x = +k.slice(0, i), y = +k.slice(i + 1); (rows[y] = rows[y] || []).push(x); });
-  Object.entries(rows).forEach(([y, xs]) => {
-    y = +y; xs.sort((a, b) => a - b);
-    let s = xs[0], prev = xs[0];
-    const push = (a, b) => { const x0 = a * BF_F, x1 = (b + 1) * BF_F, y0 = y * BF_F, y1 = (y + 1) * BF_F; holes.push([[x0, y0], [x0, y1], [x1, y1], [x1, y0], [x0, y0]]); };
-    for (let i = 1; i < xs.length; i++) { if (xs[i] !== prev + 1) { push(s, prev); s = xs[i]; } prev = xs[i]; }
-    push(s, prev);
-    xs.forEach(x => {
-      const x0 = x * BF_F, x1 = x0 + BF_F, y0 = y * BF_F, y1 = y0 + BF_F;
-      if (!set.has(bfKey(x - 1, y))) edges.push([[x0, y0], [x0, y1]]);
-      if (!set.has(bfKey(x + 1, y))) edges.push([[x1, y0], [x1, y1]]);
-      if (!set.has(bfKey(x, y - 1))) edges.push([[x0, y0], [x1, y0]]);
-      if (!set.has(bfKey(x, y + 1))) edges.push([[x0, y1], [x1, y1]]);
-    });
-  });
+  // Un polygone avec des centaines de trous qui se touchent est mal dessiné par la carte (tout restait dans le brouillard).
+  // On dessine donc l'inverse : le monde avec UN seul trou (le rectangle autour de ce qui est découvert), puis, dans ce
+  // rectangle, des bandes de brouillard sur les cases NON découvertes (des rectangles séparés, toujours valides).
+  const set = bfCells(extra), edges = [], polys = [];
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  set.forEach(k => { const i = k.indexOf('_'), x = +k.slice(0, i), y = +k.slice(i + 1); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; });
+  const W = [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]];
+  if (!set.size) polys.push([W]);
+  else {
+    x0 -= 1; x1 += 1; y0 -= 1; y1 += 1;
+    const bx0 = x0 * BF_F, bx1 = (x1 + 1) * BF_F, by0 = y0 * BF_F, by1 = (y1 + 1) * BF_F;
+    // sens des anneaux : la carte range les anneaux par sens de rotation ; contour du monde et bandes = même sens, trou = sens inverse
+    polys.push([W, [[bx0, by0], [bx0, by1], [bx1, by1], [bx1, by0], [bx0, by0]]]);
+    const rect = (a, b, y) => { const ax = a * BF_F, bx = (b + 1) * BF_F, ay = y * BF_F, by = (y + 1) * BF_F; polys.push([[[ax, ay], [bx, ay], [bx, by], [ax, by], [ax, ay]]]); };
+    for (let y = y0; y <= y1; y++) {
+      let s0 = null;
+      for (let x = x0; x <= x1 + 1; x++) {
+        const fog = x <= x1 && !set.has(bfKey(x, y));
+        if (fog && s0 === null) s0 = x;
+        if (!fog && s0 !== null) { rect(s0, x - 1, y); s0 = null; }
+        if (x <= x1 && !fog) {
+          const cx0 = x * BF_F, cx1 = cx0 + BF_F, cy0 = y * BF_F, cy1 = cy0 + BF_F;
+          if (!set.has(bfKey(x - 1, y))) edges.push([[cx0, cy0], [cx0, cy1]]);
+          if (!set.has(bfKey(x + 1, y))) edges.push([[cx1, cy0], [cx1, cy1]]);
+          if (!set.has(bfKey(x, y - 1))) edges.push([[cx0, cy0], [cx1, cy0]]);
+          if (!set.has(bfKey(x, y + 1))) edges.push([[cx0, cy1], [cx1, cy1]]);
+        }
+      }
+    }
+  }
   return {
-    fog: { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]], ...holes] } },
+    fog: { type: 'Feature', properties: {}, geometry: { type: 'MultiPolygon', coordinates: polys } },
     edge: { type: 'Feature', properties: {}, geometry: { type: 'MultiLineString', coordinates: edges } },
   };
 };
+// voile plus léger, sans coutures entre les bandes
+let bfPaintOk = false;
+function bfPaint() {
+  if (bfPaintOk || typeof map === 'undefined' || !map || !md$(() => map.getLayer('exFog'), null)) return;
+  md$(() => {
+    map.setPaintProperty('exFog', 'fill-antialias', false);
+    map.setPaintProperty('exFog', 'fill-opacity', ['interpolate', ['linear'], ['zoom'], 2, 0.28, 8, 0.32]);
+    map.setPaintProperty('exEdge', 'line-opacity', 0.35);
+    map.setPaintProperty('exEdge', 'line-width', ['interpolate', ['linear'], ['zoom'], 3, 3, 9, 14]);
+    map.setPaintProperty('exEdge', 'line-blur', ['interpolate', ['linear'], ['zoom'], 3, 3, 9, 12]);
+    bfPaintOk = true;
+  }, 0);
+}
 // un cercle validé : il entre dans S.ex.o et ses cellules de 0,5° sont marquées (conseil, zones)
 function bfCommit(lon, lat, km) {
   const X = bfX(); X.o.push([+(+lon).toFixed(3), +(+lat).toFixed(3), km]);
@@ -89,7 +118,7 @@ if (typeof exReveal === 'function') exReveal = (orig => function (ids) {
 // déménagement : un cercle autour de la nouvelle maison
 if (typeof exRevealHome === 'function') exRevealHome = (orig => function (X) {
   const r = orig.apply(this, arguments);
-  md$(() => { const h = homeObj(); if (Array.isArray(X.o) && h && !X.o.some(([a, b]) => Math.abs(a - h.lon) < 0.05 && Math.abs(b - h.lat) < 0.05)) X.o.push([+h.lon, +h.lat, BF_R]); }, 0);
+  md$(() => { const h = homeObj(); if (Array.isArray(X.o) && h && !X.o.some(([a, b]) => Math.abs(a - h.lon) < 0.05 && Math.abs(b - h.lat) < 0.05)) X.o.push([+h.lon, +h.lat, BF_HOME]); }, 0);
   return r;
 })(exRevealHome);
 
@@ -139,5 +168,11 @@ setInterval(() => md$(() => {
   if (Date.now() - Math.min(...X.pend.map(p => p.at || 0)) > 180000) bfPlay();
 }, 0), 5000);
 // pendant l'animation, la mise à jour automatique de 52 ne doit pas redessiner le brouillard final
-if (typeof exMapTick === 'function') exMapTick = (orig => function () { if (bfAnim) return; return orig.apply(this, arguments); })(exMapTick);
-window.__fog = { x: bfX, play: bfPlay, commit: bfCommit, cells: bfCells, visit: (d, t) => exVisit(d, t) };
+if (typeof exMapTick === 'function') exMapTick = (orig => function () { if (bfAnim) return; const r = orig.apply(this, arguments); bfPaint(); return r; })(exMapTick);
+window.__fog = { x: bfX, play: bfPlay, commit: bfCommit, cells: bfCells, visit: (d, t) => exVisit(d, t), jump: (lon, lat, z) => map.jumpTo({ center: [lon, lat], zoom: z }) };
+// v43b : le soir, le voile de nuit de la carte (06_map.js) s'ajoutait au brouillard → bien trop sombre. Voile de nuit allégé.
+{
+  const st = document.createElement('style');
+  st.textContent = `#cvAmb[data-ph="night"] .veil{background:radial-gradient(120% 90% at 50% 40%,rgba(118,124,196,.22),rgba(62,70,140,.32))}`;
+  document.head.appendChild(st);
+}
