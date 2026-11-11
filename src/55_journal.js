@@ -86,12 +86,23 @@ function jrMainOf(it) {
     : (typeof US_VERB !== 'undefined' && US_VERB[a.kind] && !/^(Porter|Équiper|Nourrir|Ouvrir)/.test(a.label) ? US_VERB[a.kind] + ' : ' : '') + a.label;
   return { t, run: a.run };
 }
+// v43 : l'objet d'une carte du butin peut ne plus porter le même identifiant dans le sac (rangé avec ses semblables) :
+// on le retrouve alors par son nom, pour que « Détails » et l'action marchent toujours
+function jrFind(id, card) {
+  const inv = S.inv || []; let it = inv.find(i => i.id === id);
+  if (!it && card) { const b = card.querySelector('b'), nm = b ? b.textContent.trim() : ''; if (nm) it = inv.find(i => i.name === nm); }
+  return it || null;
+}
+if (typeof openFiche === 'function') openFiche = (orig => function (id) {
+  if (!(S.inv || []).some(i => i.id === id)) { const c = document.querySelector(`.hcard[data-fiche="${CSS.escape(String(id))}"]`), it = jrFind(id, c); if (it) id = it.id; }
+  return orig.call(this, id);
+})(openFiche);
 function jrSelect(id) {
   const m = document.querySelector('#modal .mbox'), haul = m && m.querySelector('.haul'); if (!haul) return;
   haul.querySelectorAll('.hcard.jr-sel').forEach(c => c.classList.remove('jr-sel'));
   const c = haul.querySelector(`.hcard[data-fiche="${id}"]`); if (!c) return;
   c.classList.add('jr-sel');
-  const it = (S.inv || []).find(i => i.id === id), main = c.classList.contains('jr-used') ? null : jrMainOf(it);
+  const it = jrFind(id, c), main = c.classList.contains('jr-used') ? null : jrMainOf(it);
   let u = null; try { u = typeof utilOf === 'function' ? utilOf(it) : null; } catch (e) {}
   let bar = m.querySelector(':scope > .jr-bar');
   if (!bar) { bar = document.createElement('div'); bar.className = 'jr-bar'; haul.insertAdjacentElement('afterend', bar); }
@@ -155,7 +166,7 @@ window.addEventListener('click', ev => {
   const use = t.closest('[data-jruse]');
   if (use) {
     ev.stopPropagation(); ev.preventDefault();
-    const id = use.dataset.jruse, it = (S.inv || []).find(i => i.id === id), main = jrMainOf(it); if (!main) return;
+    const id = use.dataset.jruse, it = jrFind(id, document.querySelector(`#modal .hcard[data-fiche="${CSS.escape(id)}"]`)), main = jrMainOf(it); if (!main) return;
     const box0 = document.querySelector('#modal .mbox'); const snap = box0 ? box0.innerHTML : null;
     try { main.run(); } catch (e) { console.error('utiliser', e); }
     setTimeout(() => {
