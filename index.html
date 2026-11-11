@@ -35106,7 +35106,7 @@ setInterval(() => md$(() => {
 }, 0), 5000);
 // pendant l'animation, la mise à jour automatique de 52 ne doit pas redessiner le brouillard final
 if (typeof exMapTick === 'function') exMapTick = (orig => function () { if (bfAnim) return; const r = orig.apply(this, arguments); bfPaint(); return r; })(exMapTick);
-window.__fog = { x: bfX, play: bfPlay, commit: bfCommit, cells: bfCells, visit: (d, t) => exVisit(d, t), jump: (lon, lat, z) => map.jumpTo({ center: [lon, lat], zoom: z }) };
+window.__fog = { x: bfX, play: bfPlay, commit: bfCommit, cells: bfCells, visit: (d, t) => exVisit(d, t), jump: (lon, lat, z) => map.jumpTo({ center: [lon, lat], zoom: z }), vis: v => ['exFog', 'exEdge'].forEach(id => map.setLayoutProperty(id, 'visibility', v)), feat: () => map.queryRenderedFeatures(map.project(map.getCenter()), { layers: ['exFog'] }).length };
 // v43b : le soir, le voile de nuit de la carte (06_map.js) s'ajoutait au brouillard → bien trop sombre. Voile de nuit allégé.
 {
   const st = document.createElement('style');
