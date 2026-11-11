@@ -42,7 +42,7 @@ function dptSplit(box) {
 }
 if (typeof renderVoyage === 'function') renderVoyage = (orig => function () {
   const r = orig.apply(this, arguments);
-  try { dptSplit(document.getElementById('panelBody')); } catch (e) { console.error('départ onglets', e); }
+  try { const bx = document.getElementById('panelBody'); if (bx) bx.querySelectorAll('.evban').forEach(e => e.remove()); /* bandeau d'événement : décale tout, le joueur n'en veut pas ici */ dptSplit(bx); } catch (e) { console.error('départ onglets', e); }
   return r;
 })(renderVoyage);
 document.addEventListener('click', ev => {
