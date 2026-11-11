@@ -34695,6 +34695,13 @@ function dptSplit(box) {
   [...box.children].forEach(e => { if (e !== head && e !== gb) prep.appendChild(e); });
   // « Qui part ? » reste en haut de la préparation
   const who = prep.querySelector(':scope > .trjwho'); if (who) prep.prepend(who);
+  // v43 : « Compagnon de route » à droite de « Qui part ? » : le % de risque, juste en dessous, se met à jour sous les yeux
+  const duo = prep.querySelector(':scope > .eqd');
+  if (who && duo) {
+    const row = document.createElement('div'); row.className = 'dpt-who2';
+    who.before(row); row.appendChild(who); row.appendChild(duo); duo.classList.add('dpt-duo');
+    const t = duo.querySelector('.eqp-t span'); if (t) t.textContent = 'Avec qui ?';
+  }
   const warn = prep.querySelector('.dfc-far, .dfc.far') ? ' <i class="dpt-dot" aria-label="à préparer"></i>' : '';
   head.insertAdjacentHTML('afterend', `<div class="dpt-tabs" role="tablist"><button role="tab" data-dpttab="lieu" aria-selected="${dptTab === 'lieu'}">🔍 Le lieu</button><button role="tab" data-dpttab="prep" aria-selected="${dptTab === 'prep'}">🎒 Préparation${warn}</button></div>`);
   const tabs = box.querySelector('.dpt-tabs');
@@ -34789,6 +34796,16 @@ document.addEventListener('keydown', ev => { const it = ev.target.closest && ev.
 .dpt-xinfo{display:flex;flex-direction:column;gap:8px;align-items:flex-start;margin-top:-4px;padding:8px 10px;border:2px dashed #b9cfe0;border-radius:12px;background:#f7fbfe;font-size:13.5px;color:var(--ink2,#7a6250)}
 .dpt-nobs{display:flex;flex-direction:column;gap:6px;margin-top:6px;align-items:flex-start}
 .dpt-nob{padding:7px 10px;border:2px solid #f0c9c0;border-radius:12px;background:#fff4f0;font-size:13px;color:var(--ink2,#7a6250)}.dpt-nob b{display:block;color:#b8403a;font-size:13.5px}
+.dpt-who2{display:flex;gap:10px;align-items:flex-start;margin-bottom:6px}
+.dpt-who2 .trjwho{flex:1 1 auto;min-width:0;margin:0!important}
+.dpt-duo{flex:0 1 auto;max-width:46%;margin:0!important;padding:0 0 0 10px!important;border:0!important;border-left:2px dashed #cfe0bd!important;border-radius:0!important;background:none!important;box-shadow:none!important}
+.dpt-duo>:not(.eqp-t):not(.eqd-l){display:none!important}
+.dpt-duo .eqp-t{display:block;margin:0 0 6px 2px;font:800 12px var(--body,system-ui);letter-spacing:.04em;text-transform:uppercase;color:#9a8470}
+.dpt-duo .eqp-t>:not(span){display:none}
+.dpt-duo .eqd-l{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:6px;padding-bottom:2px}
+.dpt-duo .eqd-c{flex:0 0 auto;width:52px;padding:2px;border-radius:12px}
+.dpt-duo .eqd-c img{width:38px;height:40px}
+.dpt-duo .eqd-c span{max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px}
 .dpt-none{margin:6px 2px;color:#9a8470;font-size:14px}`;
   document.head.appendChild(st);
 }
