@@ -34679,6 +34679,7 @@ function dptSplit(box) {
   if (guiding) dptTab = 'prep';
   // contenu de « Le lieu »
   const lieu = document.createElement('div'); lieu.className = 'dpt-lieu';
+  box.querySelectorAll(':scope > .xpgo, :scope > .wdgo').forEach(e => lieu.appendChild(e)); // expédition et météo en haut
   const ls = box.querySelector('.dfc .dfls');
   if (ls) {
     const h = ls.previousElementSibling;
@@ -34686,7 +34687,7 @@ function dptSplit(box) {
     lieu.appendChild(ls);
   }
   const nb = box.querySelector(':scope > .nsbait'); if (nb) { nb.classList.remove('dp-hide'); lieu.appendChild(nb); }
-  box.querySelectorAll(':scope > .xpgo, :scope > .wdgo').forEach(e => lieu.appendChild(e));
+  if (nb) dptBaits(nb, d);
   if (!lieu.children.length) lieu.innerHTML = '<p class="dpt-none">Rien de particulier à trouver ici.</p>';
   const egg = head.querySelector('.dp-egg'); if (egg) egg.remove(); // l'onglet remplace la petite icône
   // le reste (sauf en-tête et Partir) = Préparation
@@ -34695,7 +34696,7 @@ function dptSplit(box) {
   // « Qui part ? » reste en haut de la préparation
   const who = prep.querySelector(':scope > .trjwho'); if (who) prep.prepend(who);
   const warn = prep.querySelector('.dfc-far, .dfc.far') ? ' <i class="dpt-dot" aria-label="à préparer"></i>' : '';
-  head.insertAdjacentHTML('afterend', `<div class="dpt-tabs" role="tablist"><button role="tab" data-dpt="lieu" aria-selected="${dptTab === 'lieu'}">🔍 Le lieu</button><button role="tab" data-dpt="prep" aria-selected="${dptTab === 'prep'}">🎒 Préparation${warn}</button></div>`);
+  head.insertAdjacentHTML('afterend', `<div class="dpt-tabs" role="tablist"><button role="tab" data-dpttab="lieu" aria-selected="${dptTab === 'lieu'}">🔍 Le lieu</button><button role="tab" data-dpttab="prep" aria-selected="${dptTab === 'prep'}">🎒 Préparation${warn}</button></div>`);
   const tabs = box.querySelector('.dpt-tabs');
   tabs.after(lieu); lieu.after(prep);
   box.dataset.dpt = dptTab;
@@ -34706,14 +34707,71 @@ if (typeof renderVoyage === 'function') renderVoyage = (orig => function () {
   return r;
 })(renderVoyage);
 document.addEventListener('click', ev => {
-  const b = ev.target.closest && ev.target.closest('[data-dpt]'); if (!b) return;
+  const b = ev.target.closest && ev.target.closest('button[data-dpttab]'); if (!b) return;
   ev.stopPropagation();
-  dptTab = b.dataset.dpt;
+  dptTab = b.dataset.dpttab;
   const box = document.getElementById('panelBody'); if (!box) return;
   box.dataset.dpt = dptTab;
-  box.querySelectorAll('[data-dpt]').forEach(x => x.setAttribute('aria-selected', x.dataset.dpt === dptTab));
+  box.querySelectorAll('.dpt-tabs [data-dpttab]').forEach(x => x.setAttribute('aria-selected', x.dataset.dpttab === dptTab));
   box.scrollTop = 0;
 }, true);
+// ---------------- appâts : nombre possédé, et où en trouver quand on n'en a pas ----------------
+function dptBaits(nb, d) {
+  nb.querySelectorAll('.nsbb b').forEach(b => { if (!/×\s*\d+\s*$/.test(b.textContent)) b.insertAdjacentText('beforeend', ' ×1'); });
+  let bag = [], sc = [];
+  try { bag = nsBaitsInBag(); sc = nsScores(d, null).sort((a, b) => b.w - a.w); } catch (e) { return; }
+  const tot = sc.reduce((a, b) => a + b.w, 0) || 1;
+  const sps = sc.slice(0, 3).filter(x => x.w > 0 && x.w / tot >= 0.06).map(x => x.sp).filter(Boolean);
+  const lack = sps.filter(sp => !bag.some(b => b.sps.includes(sp)));
+  if (!lack.length) return;
+  const rows = lack.map(sp => `<div class="dpt-nob"><span><b>Pas d’appât pour ${esc((typeof NS_PLURAL !== 'undefined' && NS_PLURAL[sp]) || sp)}</b>${typeof NS_BAIT_HINT !== 'undefined' && NS_BAIT_HINT[sp] ? `Ils aiment : ${esc(NS_BAIT_HINT[sp])}.` : ''} À trouver en voyage, au comptoir ou au marché.</span></div>`).join('');
+  nb.insertAdjacentHTML('beforeend', `<div class="dpt-nobs">${rows}<button class="btn cream sm" data-dptmk="1">🛒 Voir le marché</button></div>`);
+}
+// ---------------- « À trouver ici » : toucher un objet montre ce que c'est et à quoi il sert ----------------
+let DPT_IT = [];
+if (typeof dfLootHTML === 'function') dfLootHTML = (orig => function (d) {
+  const h = orig.apply(this, arguments);
+  try {
+    DPT_IT = [];
+    if (!h || d.poi) return h;
+    const tbl = lootTable(d.tags || ['campagne']) || [];
+    const common = tbl.slice().sort((a, b) => b.p - a.p).filter(x => x.d[3] < 2).slice(0, 4), rare = tbl.filter(x => x.d[3] >= 2).sort((a, b) => b.d[3] - a.d[3]).slice(0, 2);
+    [...common, ...rare].forEach(x => DPT_IT.push({ name: x.d[0], cat: x.d[1], sub: x.d[2], rarity: x.d[3], look: x.d[4], color: x.d[5] }));
+    if (d.special) DPT_IT.push({ name: d.special[0], cat: d.special[1], sub: d.special[2], rarity: 3, look: d.special[4], color: d.special[5], special: 1 });
+    let i = 0;
+    return h.replace(/<span class="dfl/g, () => `<span data-dptit="${i++}" role="button" tabindex="0" class="dfl`);
+  } catch (e) { return h; }
+})(dfLootHTML);
+function dptItemInfo(el) {
+  const it = DPT_IT[+el.dataset.dptit]; if (!it) return;
+  const ls = el.closest('.dfls'); if (!ls) return;
+  const old = ls.parentElement.querySelector('.dpt-info'), same = old && old.dataset.i === el.dataset.dptit;
+  ls.querySelectorAll('.dpt-on').forEach(x => x.classList.remove('dpt-on'));
+  if (old) old.remove();
+  if (same) return;
+  el.classList.add('dpt-on');
+  const known = (S.dex && S.dex[it.name]) || (S.found && it.special && S.found[plan.dest && plan.dest.name]) || it.rarity < 3;
+  let rar = ''; try { rar = RARITY[it.rarity] || ''; } catch (e) {}
+  let uses = []; try { uses = (GAME.usesOf(it) || []).map(u => u.txt).filter(Boolean); } catch (e) {}
+  uses = [...new Set(uses)].slice(0, 3);
+  const nm = known ? it.name : (it.special ? 'Souvenir unique de ce lieu' : 'Objet rare encore inconnu');
+  const txt = !known ? 'Trouvez-le une première fois pour le découvrir.' : uses.length ? `Sert à : ${uses.join(' · ')}` : (it.special ? 'Un souvenir unique, à poser au foyer.' : 'Se vend ou se recycle.');
+  ls.insertAdjacentHTML('afterend', `<div class="dpt-info" data-i="${el.dataset.dptit}"><b>${esc(nm)}</b>${rar ? `<small>${esc(rar)}</small>` : ''}<span>${esc(txt)}</span></div>`);
+}
+// ---------------- « Expédition » : toucher explique ce qui attend le compagnon ----------------
+function dptExpInfo(x) {
+  const nx = x.nextElementSibling;
+  if (nx && nx.classList.contains('dpt-xinfo')) { nx.remove(); return; }
+  let nm = ''; try { nm = CHARS[S.sel].name; } catch (e) {}
+  x.insertAdjacentHTML('afterend', `<div class="dpt-xinfo"><span>En expédition, ${esc(nm || 'votre compagnon')} rencontre des <b>choix risqués en route</b>. Le bon matériel, des provisions et un meilleur niveau sur ce terrain font monter ses chances ; la météo peut les faire baisser.</span><button class="btn green sm" data-dpttab="prep">🎒 Voir la préparation</button></div>`);
+}
+document.addEventListener('click', ev => {
+  const t = ev.target; if (!t.closest || !t.closest('#panelBody .dpt-lieu')) return;
+  const it = t.closest('[data-dptit]'); if (it) { ev.stopPropagation(); return dptItemInfo(it); }
+  if (t.closest('[data-dptmk]')) { ev.stopPropagation(); try { openBoutique('marche'); } catch (e) {} return; }
+  const x = t.closest('.xpgo.expe'); if (x && !t.closest('button')) { ev.stopPropagation(); return dptExpInfo(x); }
+});
+document.addEventListener('keydown', ev => { const it = ev.target.closest && ev.target.closest('[data-dptit]'); if (it && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); dptItemInfo(it); } });
 {
   const st = document.createElement('style');
   st.textContent = `.dpt-tabs{display:flex;gap:6px;margin:4px 0 12px;padding:4px;background:#f3eadc;border-radius:14px}
@@ -34724,6 +34782,13 @@ document.addEventListener('click', ev => {
 .dpt-lieu{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
 .dpt-lieu .nsbait{display:block!important}
 .dpt-poils{margin:4px 2px 10px;display:flex;flex-direction:column;gap:6px}
+.dfl[data-dptit]{cursor:pointer}.dfl.dpt-on{outline:3px solid var(--ink,#4a3528);outline-offset:1px}
+.dpt-info{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:2px solid var(--line,#e7dccb);border-radius:12px;background:#fff;font-size:13.5px;color:var(--ink2,#7a6250)}
+.dpt-info b{font:800 14.5px var(--display,inherit);color:var(--ink,#4a3528)}.dpt-info small{font-weight:800;color:#a0805e}
+.xpgo.expe{cursor:pointer}
+.dpt-xinfo{display:flex;flex-direction:column;gap:8px;align-items:flex-start;margin-top:-4px;padding:8px 10px;border:2px dashed #b9cfe0;border-radius:12px;background:#f7fbfe;font-size:13.5px;color:var(--ink2,#7a6250)}
+.dpt-nobs{display:flex;flex-direction:column;gap:6px;margin-top:6px;align-items:flex-start}
+.dpt-nob{padding:7px 10px;border:2px solid #f0c9c0;border-radius:12px;background:#fff4f0;font-size:13px;color:var(--ink2,#7a6250)}.dpt-nob b{display:block;color:#b8403a;font-size:13.5px}
 .dpt-none{margin:6px 2px;color:#9a8470;font-size:14px}`;
   document.head.appendChild(st);
 }
