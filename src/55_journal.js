@@ -168,6 +168,7 @@ window.addEventListener('click', ev => {
   if (t.closest('[data-closemodal]') && !t.closest('.fiche')) { jrSnap = null; return; }
   const act = t.closest('#modal .fiche [data-usact], #modal .fiche [data-usres]');
   if (!act || !jrSnap) return;
+  if (act.classList.contains('usres') && !act.classList.contains('ok')) return; // v45 : résultat pas encore faisable
   const snap = jrSnap, used = jrUsedId, label = (act.innerText || '').replace(/\s+/g, ' ').trim();
   setTimeout(() => {
     const mod = document.getElementById('modal'); if (!mod) return;

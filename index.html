@@ -29232,8 +29232,13 @@ function usAtRecipes(it) {
   if (!it || typeof RECIPES === 'undefined') return [];
   const seen = new Set(), out = [];
   for (const r of RECIPES) {
-    if (seen.has(r.out[0]) || usRecLocked(r) || !r.ing.some(([k]) => usIngMatch(k, it))) continue;
-    seen.add(r.out[0]); out.push({ r, ok: usCall(() => canCraft(r), false) });
+    if (usRecLocked(r) || !r.ing.some(([k]) => usIngMatch(k, it))) continue;
+    const ok = usCall(() => canCraft(r), false);
+    if (seen.has(r.out[0])) { // v45 : même résultat, autre recette : on garde celle qu'on peut faire
+      const j = out.findIndex(x => x.r.out[0] === r.out[0]); if (j >= 0 && !out[j].ok && ok) out[j] = { r, ok };
+      continue;
+    }
+    seen.add(r.out[0]); out.push({ r, ok });
   }
   return out.sort((a, b) => b.ok - a.ok);
 }
@@ -29471,6 +29476,14 @@ function usCook(rid) {
   if (cmState().sl.filter(Boolean).length > n0) toast(`En préparation : « ${R.def[0]} » (${Math.round(cmDur(R))} s). Il ira sur le comptoir.`);
   usAfter();
 }
+// v45 : ce qui manque pour une recette d'atelier, en clair
+function usMissTxt(r) {
+  try {
+    const m = r.ing.map(([k, n]) => { const h = ingCount(k); return h >= n ? '' : `${n - h} × ${(ING[k] && ING[k][1]) || k}`; }).filter(Boolean);
+    if (r.coins && S.coins < r.coins) m.push(`${r.coins - S.coins} pièces`);
+    return m.join(', ');
+  } catch (e) { return ''; }
+}
 function usCraft(rid) {
   const r = RECIPES.find(x => x.id === rid); if (!r) return;
   if (usCall(() => canCraft(r), false)) { const n0 = S.stats.crafted; craft(rid); if (S.stats.crafted > n0) toast(`Fabriqué : « ${r.out[0]} » !`); usAfter(); return; }
@@ -29514,7 +29527,7 @@ GAME.addAction(it => {
   const cms = usCmRecipes(it).slice(0, 4), cmN = new Set(cms.map(x => x.R.def[0]));
   cms.forEach(({ R, ok, here }) => out.push({ label: R.def[0], kind: R.def[1] === 'n' ? 'cuisiner' : 'construire', out: R.def, ready: ok, hint: here ? `${R.ing.map(([k, n]) => `${n} ${usCall(() => cmIngName(k), k).toLowerCase()}`).join(' + ')}` : 'Dans un autre commerce', run: () => usCook(R.id) }));
   // atelier (vêtements, matériel d'expédition, objets)
-  usAtRecipes(it).filter(x => !cmN.has(x.r.out[0])).slice(0, 4).forEach(({ r, ok }) => out.push({ label: r.out[0], kind: usOutKind(r.out), out: r.out, ready: ok, run: () => usCraft(r.id) }));
+  usAtRecipes(it).filter(x => !cmN.has(x.r.out[0])).slice(0, 4).forEach(({ r, ok }) => out.push({ label: r.out[0], kind: usOutKind(r.out), out: r.out, ready: ok, miss: ok ? '' : usMissTxt(r), run: () => usCraft(r.id) }));
   // bâtiments du village
   usCall(() => VILLAGE_BUILDINGS.filter(b => !villageBuilt(b.id) && b.cost.some(([k]) => usIngMatch(k, it))).slice(0, 2), []).forEach(b => out.push({ label: b.name, kind: 'construire', ico: usCall(() => obIco('batiment'), ''), run: () => obGo('village') }));
   // vêtement, matériel, graine, coffre, clé
@@ -29560,7 +29573,7 @@ function usFicheHTML(it) {
   let h = '<div class="usfiche">';
   if (res.length) {
     h += `<div class="usflow"><span class="usfrom">${usCall(() => itemIcon(it), '')}${usBadgesHTML(it)}</span><svg class="usarr" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12 H18 M13 6 L19 12 L13 18" fill="none" stroke="${US_INK}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="usouts">`;
-    h += res.map(a => `<button class="usres${a.ready ? ' ok' : ''}" data-usact="${idx(a)}" title="${esc(a.label)}${a.hint ? ' · ' + esc(a.hint) : ''}" aria-label="${esc(a.label)}${a.ready ? ', prêt' : ''}"><span class="usri">${a.out ? usIco(a.out) : a.ico}${usPill(US_K[a.kind] ? a.kind : 'construire', 's usrk')}${a.ready ? '<b class="usok" aria-hidden="true">✓</b>' : ''}</span><small>${esc(a.label)}</small></button>`).join('');
+    h += res.map(a => `<button class="usres${a.ready ? ' ok' : ''}" data-usact="${idx(a)}" title="${esc(a.label)}${a.hint ? ' · ' + esc(a.hint) : ''}" aria-label="${esc(a.label)}${a.ready ? ', prêt' : ''}"><span class="usri">${a.out ? usIco(a.out) : a.ico}${usPill(US_K[a.kind] ? a.kind : 'construire', 's usrk')}${a.ready ? '<b class="usok" aria-hidden="true">✓</b>' : ''}</span><small>${esc(a.label)}</small>${!a.ready && a.miss ? `<em class="usmiss">Manque : ${esc(a.miss)}</em>` : ''}</button>`).join('');
     h += '</div></div>';
   }
   const btns = [];
@@ -29590,6 +29603,7 @@ if (typeof openFiche === 'function') openFiche = (orig => function (id) {
 document.addEventListener('click', ev => {
   const b = ev.target.closest && ev.target.closest('[data-usact]'); if (!b || b.disabled) return;
   const a = US_ACTS[+b.dataset.usact]; if (!a) return;
+  if (b.classList.contains('usres') && !a.ready && a.miss) { ev.stopPropagation(); toast(`${a.label} : il manque ${a.miss}.`); return; } // v45 : pas de fabrication « grisée »
   const m = $('modal'); if (m && b.closest('#modal')) m.hidden = true;
   try { a.run(); } catch (e) { console.error('usages action', e); }
 });
@@ -29640,6 +29654,7 @@ if (typeof renderWardrobe === 'function') renderWardrobe = (orig => function (k)
 .usri{position:relative;width:40px;height:40px;display:block}.usri>svg{width:40px;height:40px}
 .usri .usrk{position:absolute;left:-3px;bottom:-3px}
 .usok{position:absolute;right:-4px;top:-4px;width:15px;height:15px;border-radius:50%;background:#4f9f63;color:#fff;font-size:10px;line-height:15px;text-align:center;border:1.5px solid ${US_INK}}
+.usres .usmiss{display:block;font:700 9.5px/1.15 system-ui;color:#c0503a;max-width:76px;white-space:normal;margin-top:2px;font-style:normal}
 .usres small{font-size:10.5px;line-height:1.1;max-width:54px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
 .usbtns{display:flex;gap:6px;flex-wrap:wrap}
 .usbtns .btn{display:inline-flex;align-items:center;gap:5px;flex:1 1 auto;justify-content:center;min-width:0}
@@ -33386,6 +33401,7 @@ window.addEventListener('click', ev => {
   if (t.closest('[data-closemodal]') && !t.closest('.fiche')) { jrSnap = null; return; }
   const act = t.closest('#modal .fiche [data-usact], #modal .fiche [data-usres]');
   if (!act || !jrSnap) return;
+  if (act.classList.contains('usres') && !act.classList.contains('ok')) return; // v45 : résultat pas encore faisable
   const snap = jrSnap, used = jrUsedId, label = (act.innerText || '').replace(/\s+/g, ' ').trim();
   setTimeout(() => {
     const mod = document.getElementById('modal'); if (!mod) return;
