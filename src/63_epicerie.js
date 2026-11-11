@@ -66,8 +66,13 @@ function epBuy(k, n, el) {
 if (typeof renderMagasin === 'function') renderMagasin = (orig => function (box) {
   const r = orig.apply(this, arguments);
   try {
+    // v43b : le joueur ne veut plus la vitrine (« objets fabriqués et outils », « Au niveau … ») : le magasin = l'épicerie de base
+    // (+ le marchand de passage quand il est là). Les recettes et le matériel de base s'obtiennent autrement (voir plus bas).
+    box.querySelectorAll('.bq-h3, .bq-grid, .bq-tmw').forEach(e => e.remove());
+    [...box.querySelectorAll(':scope > p.small')].forEach(e => { if (/réputation|Rien dans ce rayon/.test(e.textContent)) e.remove(); });
+    const sub = box.querySelector('.phead p'); if (sub) sub.innerHTML = `Les ingrédients de vos recettes. Vous avez ${coins(S.coins)}.`;
     const h = epHTML();
-    if (h) { const at = box.querySelector('.bq-pass') || box.querySelector('.bq-tmw'); if (at) at.insertAdjacentHTML('afterend', h); else box.insertAdjacentHTML('beforeend', h); }
+    if (h) { const at = box.querySelector('.phead'); if (at) at.insertAdjacentHTML('afterend', h); else box.insertAdjacentHTML('beforeend', h); }
   } catch (e) { console.error('épicerie', e); }
   return r;
 })(renderMagasin);
@@ -89,3 +94,21 @@ document.addEventListener('click', ev => {
 .ep-b{display:flex;flex-direction:column;gap:4px;flex:none}.ep-b .btn{white-space:nowrap;padding:4px 8px;font-size:12.5px}`;
   document.head.appendChild(st);
 }
+
+// ---- ce que vendait la vitrine reste accessible ----
+// 1) les recettes du magasin sont toutes connues à l'atelier
+function epRecipesAll() { try { const st = bqState(); BQ_RIDS.forEach(id => { if (!st.recipes.includes(id)) st.recipes.push(id); }); } catch (e) {} }
+setTimeout(epRecipesAll, 0);
+if (typeof renderAtelier === 'function') renderAtelier = (orig => function () { epRecipesAll(); return orig.apply(this, arguments); })(renderAtelier);
+// 2) « Acheter » le matériel depuis la préparation du voyage : achat direct, sans passer par une vitrine qui n'existe plus
+if (typeof ppOpenShop === 'function') ppOpenShop = function (key) {
+  let art = null; try { art = bqArticle(bqStockArticle({ key })); } catch (e) {}
+  if (!art || !art.it) { toast('Cet objet n’est pas en vente : fabriquez-le à l’atelier (onglet Équipement).'); return; }
+  if (S.coins < art.price) { toast(`Il faut ${art.price} pièces. Vendez vos produits au Comptoir !`); return; }
+  S.coins -= art.price;
+  const it = makeItem([art.it.name, art.it.cat, art.it.sub, art.it.rarity, art.it.look, art.it.color], 0, 'La boutique', [], { fixed: art.it.rarity });
+  it.paid = art.price; S.inv.push(it); S.dex[it.name] = true;
+  S.stats.shopBought = (S.stats.shopBought || 0) + 1;
+  save(); renderTop(); renderPanel();
+  toast(`Acheté : « ${it.name} » (${art.price} pièces). Équipez-le dans la préparation du voyage.`);
+};
