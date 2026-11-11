@@ -571,6 +571,7 @@ document.addEventListener('click', ev => {
   if (hc) { const k = hc.dataset.hc; if (CHARS[k]) reactionPopup(k, 'amour', pick(CHARS[k].lines.pet)); return; }
   const el = ev.target.closest('button'); if (!el || el.disabled) return;
   const d = el.dataset;
+  if (d.fclose && el.closest('#modal') && !el.closest('.fiche')) { $('modal').hidden = true; return; } // v43 : « Super ! » du coffre, « Fermer » du jardin… (hors fiche) ne faisaient rien
   if (el.closest('.fiche') && !el.closest('#cfMiss') && !(el.classList.contains('usres') && !el.classList.contains('ok'))) { $('modal').hidden = true; if (d.fclose) return; } // une action dans la fiche ferme la fiche (sauf l'encadré « Il manque » et les résultats pas encore faisables)
   if (d.fiche) return openFiche(d.fiche);
   if (d.sel) { if (d.sel !== S.sel) selectComp(d.sel); hudFlyTo(d.sel); return; } // v19 : toucher un portrait le choisit et centre la carte sur lui
