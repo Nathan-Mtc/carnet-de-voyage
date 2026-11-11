@@ -14325,6 +14325,13 @@ const tuCompOn = () => { try { return xpTierOf(tuK(), 'boussole') >= 1; } catch 
 const tuStoryRead = () => { try { return styStep(1) !== 0 || styState().n > 1; } catch (e) { return true; } };
 const tuOnMap = txt => { const n = tuNav('carte'); return n ? { ...n, txt: n.txt || txt } : null; };
 const TU_STEPS = [
+  // v43 : « Revoir le tutoriel » ne peut pas refaire l'œuf et le choix du commerce (pages 1 et 2) : un rappel en bulle
+  { id: 'rappel1', num: 1, ok: 'Suivant', dim: false,
+    done: () => !S.tuto.replay || !!S.tuto.f.r1,
+    go: () => ({ el: null, txt: `Tout a commencé par un <b>œuf mystère</b>… et c’était moi, ${esc(CHARS[tuK()] ? CHARS[tuK()].name : 'votre compagnon')} ! Vos compagnons voyagent sur la vraie carte du monde et rapportent des objets des lieux qu’ils visitent.` }) },
+  { id: 'rappel2', num: 2, ok: 'C’est parti !', dim: false,
+    done: () => !S.tuto.replay || !!S.tuto.f.r2,
+    go: () => { let nm = ''; try { const T = bqType(); nm = T ? (T.name || T.n || '') : ''; } catch (e) {} return { el: null, txt: `Ensuite, vous avez ouvert votre commerce${nm ? ` : <b>${esc(nm)}</b>` : ''}. Des clients y passent commande, et nos voyages servent à trouver ce qu’ils veulent. Voyons ça ensemble !` }; } },
   { id: 'commande', num: 3,
     done: () => tuStepPast('commande') || !!(plan.dest && tab === 'voyage') || !!tuTrip() || !tuOrder(),
     go: () => {
@@ -14737,6 +14744,8 @@ document.addEventListener('click', ev => {
   if (d === 'ok' && tuCur) {
     const id = tuCur.st.id;
     const F = S.tuto.f;
+    if (id === 'rappel1') F.r1 = 1;
+    if (id === 'rappel2') F.r2 = 1;
     if (id === 'portee') { F.portee = 1; F.km0 = tuRangeKm(); }
     if (id === 'boussole') tuGiveCompass();
     if (id === 'accessible') F.acc = 1;
