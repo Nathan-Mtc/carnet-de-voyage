@@ -34700,7 +34700,7 @@ function dptSplit(box) {
   if (who && duo) {
     const row = document.createElement('div'); row.className = 'dpt-who2';
     who.before(row); row.appendChild(who); row.appendChild(duo); duo.classList.add('dpt-duo');
-    const t = duo.querySelector('.eqp-t span'); if (t) t.textContent = 'Avec qui ?';
+    const t = duo.querySelector('.eqp-t span'); if (t) t.innerHTML = 'Avec qui ? <i>facultatif</i>';
   }
   const warn = prep.querySelector('.dfc-far, .dfc.far') ? ' <i class="dpt-dot" aria-label="à préparer"></i>' : '';
   head.insertAdjacentHTML('afterend', `<div class="dpt-tabs" role="tablist"><button role="tab" data-dpttab="lieu" aria-selected="${dptTab === 'lieu'}">🔍 Le lieu</button><button role="tab" data-dpttab="prep" aria-selected="${dptTab === 'prep'}">🎒 Préparation${warn}</button></div>`);
@@ -34798,14 +34798,25 @@ document.addEventListener('keydown', ev => { const it = ev.target.closest && ev.
 .dpt-nob{padding:7px 10px;border:2px solid #f0c9c0;border-radius:12px;background:#fff4f0;font-size:13px;color:var(--ink2,#7a6250)}.dpt-nob b{display:block;color:#b8403a;font-size:13.5px}
 .dpt-who2{display:flex;gap:10px;align-items:flex-start;margin-bottom:6px}
 .dpt-who2 .trjwho{flex:1 1 auto;min-width:0;margin:0!important}
-.dpt-duo{flex:0 1 auto;max-width:46%;margin:0!important;padding:0 0 0 10px!important;border:0!important;border-left:2px dashed #cfe0bd!important;border-radius:0!important;background:none!important;box-shadow:none!important}
+.dpt-duo{flex:0 0 auto;max-width:44%;margin:0!important;padding:0 0 0 10px!important;border:0!important;border-left:2px dashed #e2d4bf!important;border-radius:0!important;background:none!important;box-shadow:none!important}
 .dpt-duo>:not(.eqp-t):not(.eqd-l){display:none!important}
-.dpt-duo .eqp-t{display:block;margin:0 0 6px 2px;font:800 12px var(--body,system-ui);letter-spacing:.04em;text-transform:uppercase;color:#9a8470}
+.dpt-duo .eqp-t{display:block;margin:0 0 6px 2px;font:800 12px var(--body,system-ui);letter-spacing:.04em;text-transform:uppercase;color:#9a8470;white-space:nowrap}
+.dpt-duo .eqp-t i{font-style:normal;text-transform:none;letter-spacing:0;font-weight:700;color:#b5a08a}
 .dpt-duo .eqp-t>:not(span){display:none}
-.dpt-duo .eqd-l{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:6px;padding-bottom:2px}
-.dpt-duo .eqd-c{flex:0 0 auto;width:52px;padding:2px;border-radius:12px}
-.dpt-duo .eqd-c img{width:38px;height:40px}
-.dpt-duo .eqd-c span{max-width:48px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px}
+.dpt-duo .eqd-l{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;gap:6px;padding-bottom:2px}
+.dpt-duo .eqd-l::-webkit-scrollbar{display:none}
+.dpt-duo .eqd-c{flex:0 0 auto;width:44px!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;display:flex;flex-direction:column;align-items:center;gap:3px;opacity:.6}
+.dpt-duo .eqd-c img{width:40px!important;height:40px!important;border-radius:50%;border:2.5px dashed #d8c6aa;background:#fff;object-fit:cover;box-sizing:border-box}
+.dpt-duo .eqd-c span{max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 10.5px var(--body,system-ui);color:var(--ink2,#7a6250)!important}
+.dpt-duo .eqd-c.on{opacity:1}.dpt-duo .eqd-c.on img{border:3px solid #5fb36b;box-shadow:0 0 0 3px #d8f0d8}
+.dpt-duo .eqd-c.on span{color:var(--ink,#4a3528)!important}
+.dpt-who2 .trjwl{gap:8px!important}
+.dpt-who2 .trjwb{width:52px}
+.dpt-who2 .trjwb img,.dpt-who2 .trjwb .livep{width:44px!important;height:44px!important;max-width:44px}
+/* « Sans préparation → avec votre équipement » : les pourcentages ne se coupent plus */
+.dfc-cmp{flex-wrap:wrap;text-align:center}
+.dfc-cmp b{display:inline-block;white-space:nowrap}
+.dfc-cmp>span{white-space:nowrap}
 .dpt-none{margin:6px 2px;color:#9a8470;font-size:14px}`;
   document.head.appendChild(st);
 }
