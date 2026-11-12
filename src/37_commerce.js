@@ -201,14 +201,15 @@ function cmStart(rid) {
   const i = c.sl.findIndex(x => !x); if (i < 0) { toast('Les 3 places sont occupées : attendez qu’un produit soit prêt.'); return; }
   if (R.egg && c.eggDay === dayKey()) { toast('Un seul œuf du nid douillet par jour : revenez demain !'); return; }
   if (!cmCanIng(R)) { const m = R.ing.find(([k, n]) => cmHave(k) < n); toast(`Il manque : ${cmIngName(m[0]).toLowerCase()} (${cmHave(m[0])}/${m[1]}).`); return; }
-  let rare = false;
+  let rare = false, sg = 0; // sg : meilleure « spécialité maison » utilisée (65_adresses.js) — elles partent en premier, la plus étoilée d'abord
   for (const [k, n] of R.ing) {
-    const take = cmPool(k).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || (a.rarity || 0) - (b.rarity || 0)).slice(0, n);
-    take.forEach(it => { if ((it.rarity || 0) >= 2) rare = true; S.inv.splice(S.inv.indexOf(it), 1); });
+    const take = cmPool(k).sort((a, b) => ((b.sg ? b.sg.s : 0) - (a.sg ? a.sg.s : 0)) || (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || (a.rarity || 0) - (b.rarity || 0)).slice(0, n);
+    take.forEach(it => { if (it.sg) sg = Math.max(sg, it.sg.s || 1); else if ((it.rarity || 0) >= 2) rare = true; S.inv.splice(S.inv.indexOf(it), 1); });
   }
   if (R.egg) c.eggDay = dayKey();
   const now = Date.now(), dur = cmDur(R) * 1000;
   c.sl[i] = { rid, shop: T.id, t0: now, end: now + dur, dur, st: rare ? 2 : 1, ch: cmForceDefi || Math.random() < cmDefiP() ? 1 : 0, chd: 0 };
+  if (sg) { c.sl[i].sg = sg; try { toast(`Spécialité ${'★'.repeat(sg)} utilisée : ce plat se vendra ${[0, 10, 25, 50][sg]} % plus cher.`); } catch (e) {} }
   cmForceDefi = false;
   save(); cmPaint();
 }
@@ -224,6 +225,7 @@ function cmFinish(i) {
   const st = Math.max(1, Math.min(3, x.st));
   const it = makeItem(R.def, 0, `Fabriqué : ${T ? T.short : 'commerce'}`, [], { fixed: R.def[3] });
   it.mk = { shop: x.shop, rid: R.id, st, p: cmPrice(R, st) };
+  if (x.sg) { it.mk.sg = x.sg; it.mk.p = Math.round(it.mk.p * (1 + [0, 0.1, 0.25, 0.5][x.sg])); } // cuisiné avec une spécialité maison étoilée
   if (x.shop === 'mode' && it.cat === 'v') it.mkb = 1; // avantage de la mode : cousu main
   S.inv.push(it); S.dex[it.name] = true;
   S.stats.crafted = (S.stats.crafted || 0) + 1;

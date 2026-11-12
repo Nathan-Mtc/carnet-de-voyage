@@ -11,6 +11,8 @@ const JR_CATS = [
   ['carte', /bout de carte|morceau de carte|rumeur|carte déchirée/i, '📜 Un mystère commence…', 'prog'],
   ['secret', /secret|énigme résolue|trésor/i, '❓ Un secret dévoilé', 'prog'],
   ['acces', /désormais accessible|nouveau lieu|lieu secret/i, '🗺️ De nouveaux horizons', 'prog'],
+  ['pepite', /pépite/i, '⭐ Une pépite !', 'prog'],
+  ['adresse', /nouvelle adresse/i, null, 'prog'],
   ['oeuf', /œuf|rencontre|nouvelle espèce|apprivois/i, '🥚 Une rencontre inattendue', 'prog'],
   ['record', /record|vainqueur|conquis|titre/i, '🏔️ Un exploit !', 'prog'],
   ['echec', /demi-tour|blessé|échou|il fallait|manque du matériel|perdu/i, '⛈️ L’expédition a mal tourné…', 'warn'],
