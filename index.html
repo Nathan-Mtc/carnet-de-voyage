@@ -35285,16 +35285,17 @@ if (typeof ppOpenShop === 'function') ppOpenShop = function (key) {
 const SG_VAR = ['maison', 'à l’ancienne', 'du chef', 'grand cru', 'de tradition', 'des habitués', 'du patron', 'façon grand-mère', 'des voyageurs', 'au feu de bois',
   'de saison', 'des grands jours', 'du terroir', 'cuvée spéciale', 'première récolte', 'de la maison', 'des connaisseurs', 'à la mode d’ici', 'du marché', 'de collection'];
 // talent : [nom, effet affiché selon les étoiles]
+// (v44b : textes en mots simples — le joueur ne comprenait pas « 15 % de chances de monter en rareté »)
 const SG_TAL = {
-  genereux: ['Généreux', s => `+${s} objet${s > 1 ? 's' : ''} à chaque visite`],
-  rare: ['Filon', s => `1 objet ${['peu commun', 'rare', 'très rare'][s - 1]} garanti`],
-  fortune: ['Bonne affaire', s => `+${20 * s} pièces à chaque visite`],
-  formateur: ['Formateur', s => `+${25 * s} % d’expérience`],
-  bricoleur: ['Bricoleur', s => `+${s} matéri${s > 1 ? 'aux' : 'au'} de construction`],
-  jardinier: ['Jardinier', s => `+${s} graine${s > 1 ? 's' : ''} à semer`],
-  gourmand: ['Gourmand', s => `${1 + Math.ceil(s / 2)} spécialités au lieu d’une`],
-  chanceux: ['Porte-bonheur', s => `chaque objet a ${15 * s} % de chances de monter en rareté`],
-  eclaireur: ['Point de vue', s => `le brouillard se lève ${50 * s} % plus loin`],
+  genereux: ['Généreux', () => 'on en revient avec plus d’objets'],
+  rare: ['Filon', () => 'on trouve toujours un objet rare'],
+  fortune: ['Bonne affaire', () => 'on gagne des pièces en plus'],
+  formateur: ['Formateur', () => 'votre compagnon apprend plus vite'],
+  bricoleur: ['Bricoleur', () => 'on trouve des matériaux pour construire'],
+  jardinier: ['Jardinier', () => 'on trouve des graines à planter'],
+  gourmand: ['Gourmand', () => 'on rapporte sa spécialité en plusieurs exemplaires'],
+  chanceux: ['Porte-bonheur', () => 'les trouvailles sont souvent plus rares'],
+  eclaireur: ['Point de vue', () => 'on voit loin : le brouillard se lève plus largement'],
 };
 const SG_PCT = [0, 10, 25, 50];
 const sg$ = (fn, d) => { try { const v = fn(); return v == null ? d : v; } catch (e) { return d; } };
@@ -35314,9 +35315,16 @@ function sgOf(d) {
   let c = pool.filter(x => x[1] === 'n' && x[3] <= 1); if (!c.length) c = pool.filter(x => x[1] === 'm' && x[3] <= 1); if (!c.length) c = pool.filter(x => x[1] === 'n' || x[1] === 'm'); if (!c.length) return null;
   const def = c[Math.floor(sgRnd(key, 'd') * c.length)];
   const tals = Object.keys(SG_TAL).filter(t => !(d.poi && t === 'eclaireur')), tal = tals[Math.floor(sgRnd(key, 't') * tals.length)];
-  return { key, s, tal, def, name: `${def[0]} ${SG_VAR[Math.floor(sgRnd(key, 'v') * SG_VAR.length)]} · ${sgShort(d.name)}` };
+  // v44b : la spécialité doit avoir du sens pour CE lieu. On reprend la spécialité déjà prévue par le jeu pour ce type de lieu
+  // (« Plat signature de McDonald's », « Brioche de … ») ; sinon celle d'un de ses paysages ; sinon un produit du coin.
+  const fix = x => x.replace(/\bde (Le|Les|Au|Aux) /, (m, a) => ({ Le: 'du ', Les: 'des ', Au: 'd’Au ', Aux: 'd’Aux ' })[a]);
+  let sp = d.special && (d.special[1] === 'n' || d.special[1] === 'm') ? d.special : null;
+  if (!sp && typeof SPECIALTY !== 'undefined') { const tg = tags.find(t => SPECIALTY[t] && (SPECIALTY[t][1] === 'n' || SPECIALTY[t][1] === 'm')); if (tg) { sp = SPECIALTY[tg].slice(); sp[0] = fix(sp[0].replace('{P}', d.name)); } }
+  if (sp) return { key, s, tal, def: sp, name: sp[0] };
+  const nm = sgShort(d.name);
+  return { key, s, tal, def, name: fix(`${def[0]} ${/^[aeiouyhéèêàâîôû]/i.test(nm) ? 'd’' : 'de '}${nm}`) };
 }
-const sgTalTxt = G => `${SG_TAL[G.tal][0]} : ${SG_TAL[G.tal][1](G.s)}`;
+const sgTalTxt = G => `Ici, ${SG_TAL[G.tal][1](G.s)}`;
 const sgKnown = d => { const G = sgOf(d); return !!(G && sgState().v[G.key]); };
 function sgItem(G, d) {
   const it = makeItem([G.name, G.def[1], G.def[2], G.s, G.def[4] || null, G.def[5] || null], 0, d.name, d.tags || [], { fixed: G.s });
@@ -35337,7 +35345,11 @@ if (typeof collect === 'function') collect = (orig => function () {
       const d = t.dest, G = t.xpFail ? null : sgOf(d), tags = d.tags || ['campagne'], luck = t.luck || 0;
       if (G) {
         const V = sgState().v, fresh = !V[G.key], dry = t.dfEx != null && t.dfEx < 1; // lieu épuisé : pas de spécialité cette fois
-        if (!dry) { const n = G.tal === 'gourmand' ? 1 + Math.ceil(G.s / 2) : 1; for (let i = 0; i < n; i++) t.bag.push(sgItem(G, d)); }
+        if (!dry) {
+          // le jeu offre déjà cette spécialité une fois (souvenir unique du lieu) : on ne la double pas, on la marque
+          const own = t.bag.filter(it => it.name === G.name); own.forEach(it => { it.sg = { k: G.key, s: G.s }; });
+          const n = (G.tal === 'gourmand' ? 1 + Math.ceil(G.s / 2) : 1) - own.length; for (let i = 0; i < n; i++) t.bag.push(sgItem(G, d));
+        }
         if (G.tal === 'genereux') t.bag.push(...lootFor(tags, luck, d.name, G.s, k));
         if (G.tal === 'rare') { const b = lootFor(tags, luck + 1, d.name, 1, k)[0]; if (b) { b.rarity = Math.max(b.rarity || 0, G.s); t.bag.push(b); } }
         if (G.tal === 'fortune') t.coins = (t.coins || 0) + 20 * G.s;
@@ -35346,7 +35358,7 @@ if (typeof collect === 'function') collect = (orig => function () {
         if (G.tal === 'jardinier') for (let i = 0; i < G.s; i++) t.bag.push(makeItem(Math.random() < 0.5 ? ['Graines de tournesol', 'm', 'graine', 0] : ['Pomme de pin', 'm', 'graine', 0], 0, d.name, tags, { fixed: 0 }));
         if (G.tal === 'chanceux') t.bag.forEach(it => { if (!it.sg && !it.special && !it.mk && (it.rarity || 0) < 3 && Math.random() < 0.15 * G.s) it.rarity = (it.rarity || 0) + 1; });
         if (G.tal === 'eclaireur') sg$(() => { const p = (S.ex.pend || []).find(x => x.name === d.name); if (p && !p.sg) { p.km = Math.round(p.km * (1 + 0.5 * G.s)); p.sg = 1; } }, 0);
-        if (fresh) { V[G.key] = { at: Date.now(), n: 1, d: sgCopy(d) }; sgHaul = { k, txt: `${G.s === 3 ? 'Une pépite ! ' : ''}Nouvelle adresse : ${sgStars(G.s)} ${G.name} — ${sgTalTxt(G)}.` }; }
+        if (fresh) { V[G.key] = { at: Date.now(), n: 1, d: sgCopy(d) }; sgHaul = { k, txt: `${G.s === 3 ? 'Une pépite ! ' : ''}Nouvelle adresse ${sgStars(G.s)} : ${d.name}. ${sgTalTxt(G)}. Sa spécialité (${G.name}) rend vos plats plus chers à la vente.` }; }
         else { V[G.key].n = (V[G.key].n || 1) + 1; V[G.key].at = Date.now(); }
       }
       // un plat cuisiné avec une spécialité étoilée, emporté en provision : des objets en plus
@@ -35380,7 +35392,7 @@ GAME.addUses(it => {
 function sgLineHTML(d) {
   const G = sgOf(d); if (!G) return '';
   if (!sgState().v[G.key]) return `<div class="sg-line new"><span class="sg-s">?</span><span class="sg-t"><b>Adresse à découvrir</b><small>Sa spécialité et son talent se révèlent à la première visite.</small></span></div>`;
-  return `<div class="sg-line s${G.s}"><span class="sg-s">${sgStars(G.s)}</span><span class="sg-t"><b>${esc(G.name)}</b><small>${esc(sgTalTxt(G))}</small></span></div>`;
+  return `<div class="sg-line s${G.s}"><span class="sg-s">${sgStars(G.s)}</span><span class="sg-t"><b>✓ Déjà visité · ${esc(sgTalTxt(G))}</b><small>Spécialité : ${esc(G.name)} (pour cuisiner des plats vendus plus cher)</small></span></div>`;
 }
 if (typeof renderVoyage === 'function') renderVoyage = (orig => function () {
   const r = orig.apply(this, arguments);
@@ -35405,7 +35417,7 @@ function sgBookHTML() {
   if (!rows.length) return `<details class="sg-book"><summary><b>📒 Carnet d’adresses</b><small>aucune adresse pour l’instant</small></summary><p class="sg-none">Chaque lieu a sa spécialité maison et son talent. Visitez-en un pour le noter ici.</p></details>`;
   const top = rows.filter(x => x.G.s === 3).length;
   return `<details class="sg-book"><summary><b>📒 Carnet d’adresses</b><small>${rows.length} adresse${rows.length > 1 ? 's' : ''}${top ? ` · ${top} pépite${top > 1 ? 's' : ''} ★★★` : ''}</small></summary>
-    ${rows.slice(0, 60).map(x => `<div class="sg-r s${x.G.s}"><span class="sg-s">${sgStars(x.G.s)}</span><span class="sg-t"><b>${esc(x.G.name)}</b><small>${esc(sgTalTxt(x.G))}</small></span><button class="btn cream sm" data-sggo="${esc(x.key)}">Y aller</button></div>`).join('')}
+    ${rows.slice(0, 60).map(x => `<div class="sg-r s${x.G.s}"><span class="sg-s">${sgStars(x.G.s)}</span><span class="sg-t"><b>${esc(x.e.d.name || '')}</b><small>${esc(sgTalTxt(x.G))} · ${esc(x.G.name)}</small></span><button class="btn cream sm" data-sggo="${esc(x.key)}">Y aller</button></div>`).join('')}
     ${rows.length > 60 ? `<p class="sg-none">… et ${rows.length - 60} autres adresses.</p>` : ''}</details>`;
 }
 if (typeof renderAlbum === 'function') renderAlbum = (orig => function (box) {
@@ -35430,12 +35442,23 @@ document.addEventListener('click', ev => {
 .sg-line.s2,.sg-r.s2{border-color:#e3c36a;background:#fff8e1}.sg-line.s3,.sg-r.s3{border-color:#d9a21b;background:#fff3c9}
 .sg-line.new{border-style:dashed;background:#faf6ee}
 .sg-s{flex:none;min-width:30px;text-align:center;font:800 14px var(--display,inherit);color:#c98a12;letter-spacing:-1px}.sg-line.new .sg-s{color:#b5a08a;font-size:18px}
-.sg-t{flex:1;min-width:0;display:flex;flex-direction:column}.sg-t b{font:800 13.5px var(--display,inherit);color:var(--ink,#4a3528);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sg-t{flex:1;min-width:0;display:flex;flex-direction:column}.sg-t b{font:800 13.5px var(--display,inherit);color:var(--ink,#4a3528)}
 .sg-t small{font-size:12px;color:var(--ink2,#7a6250)}
 .sg-book{margin:10px 0;padding:8px 10px;border:2.5px solid var(--ink,#4a3528);border-radius:16px;background:#fff}
 .sg-book summary{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none}.sg-book summary::-webkit-details-marker{display:none}
 .sg-book summary b{font:800 15px var(--display,inherit);color:var(--ink,#4a3528)}.sg-book summary small{font-size:12px;color:var(--ink2,#7a6250)}
 .sg-book[open] summary{margin-bottom:8px}.sg-book .sg-r{margin-bottom:6px}.sg-none{margin:4px 2px;font-size:13px;color:#9a8470}`;
+  document.head.appendChild(st);
+}
+// ---------------- sur la carte : une petite étoile sur les lieux du quotidien déjà visités ----------------
+if (typeof poiMarkerHTML === 'function') poiMarkerHTML = (orig => function (p) {
+  let h = orig.apply(this, arguments);
+  try { if (p && p.name && sgState().v['n:' + String(p.name).slice(0, 40) + '@' + (+p.lon).toFixed(3) + ',' + (+p.lat).toFixed(3)]) h = h.replace('class="poib"', 'class="poib sgv"'); } catch (e) {}
+  return h;
+})(poiMarkerHTML);
+{
+  const st = document.createElement('style');
+  st.textContent = `.poib.sgv{position:relative}.poib.sgv::after{content:"✓";position:absolute;right:-5px;top:-5px;width:14px;height:14px;border-radius:50%;background:#5fb36b;border:1.5px solid #fff;color:#fff;font:800 9px/14px system-ui;text-align:center}`;
   document.head.appendChild(st);
 }
 window.__sg = { of: sgOf, state: sgState, line: sgLineHTML, book: sgBookHTML };
