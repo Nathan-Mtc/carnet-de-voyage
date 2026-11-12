@@ -78,16 +78,23 @@ if (typeof collect === 'function') collect = (orig => function () {
           const own = t.bag.filter(it => it.name === G.name); own.forEach(it => { it.sg = { k: G.key, s: G.s }; });
           const n = (G.tal === 'gourmand' ? 1 + Math.ceil(G.s / 2) : 1) - own.length; for (let i = 0; i < n; i++) t.bag.push(sgItem(G, d));
         }
-        if (G.tal === 'genereux') t.bag.push(...lootFor(tags, luck, d.name, G.s, k));
-        if (G.tal === 'rare') { const b = lootFor(tags, luck + 1, d.name, 1, k)[0]; if (b) { b.rarity = Math.max(b.rarity || 0, G.s); t.bag.push(b); } }
-        if (G.tal === 'fortune') t.coins = (t.coins || 0) + 20 * G.s;
-        if (G.tal === 'formateur') t.xp = Math.round((t.xp || 0) * (1 + 0.25 * G.s)) + 5 * G.s;
+        let got = '', n0 = t.bag.length; // ce que le talent a vraiment donné, en quelques mots
+        if (G.tal === 'genereux') { t.bag.push(...lootFor(tags, luck, d.name, G.s, k)); got = `+${G.s} objet${G.s > 1 ? 's' : ''}`; }
+        if (G.tal === 'rare') { const b = lootFor(tags, luck + 1, d.name, 1, k)[0]; if (b) { b.rarity = Math.max(b.rarity || 0, G.s); t.bag.push(b); got = `+1 objet ${sg$(() => RARITY[b.rarity].toLowerCase(), 'rare')} : ${b.name}`; } }
+        if (G.tal === 'fortune') { t.coins = (t.coins || 0) + 20 * G.s; got = `+${20 * G.s} pièces`; }
+        if (G.tal === 'formateur') { const x0 = t.xp || 0; t.xp = Math.round(x0 * (1 + 0.25 * G.s)) + 5 * G.s; got = `+${t.xp - x0} exp.`; }
         if (G.tal === 'bricoleur') { const ks = ['bois', 'pierre', 'tissu', 'metal'].filter(x => ING[x]); for (let i = 0; i < G.s && ks.length; i++) { const m = sg$(() => bqSampleIng(ks[Math.floor(Math.random() * ks.length)]), null); if (m && m.name) t.bag.push(makeItem([m.name, m.cat, m.sub, 0, m.look || null, m.color], 0, d.name, tags, { fixed: 0 })); } }
         if (G.tal === 'jardinier') for (let i = 0; i < G.s; i++) t.bag.push(makeItem(Math.random() < 0.5 ? ['Graines de tournesol', 'm', 'graine', 0] : ['Pomme de pin', 'm', 'graine', 0], 0, d.name, tags, { fixed: 0 }));
-        if (G.tal === 'chanceux') t.bag.forEach(it => { if (!it.sg && !it.special && !it.mk && (it.rarity || 0) < 3 && Math.random() < 0.15 * G.s) it.rarity = (it.rarity || 0) + 1; });
+        if (G.tal === 'bricoleur') got = `+${t.bag.length - n0} matériau${t.bag.length - n0 > 1 ? 'x' : ''}`;
+        if (G.tal === 'jardinier') got = `+${G.s} graine${G.s > 1 ? 's' : ''}`;
+        if (G.tal === 'chanceux') { let up = 0; t.bag.forEach(it => { if (!it.sg && !it.special && !it.mk && (it.rarity || 0) < 3 && Math.random() < 0.15 * G.s) { it.rarity = (it.rarity || 0) + 1; up++; } }); got = up ? `${up} objet${up > 1 ? 's' : ''} plus rare${up > 1 ? 's' : ''}` : 'pas de chance cette fois'; }
         if (G.tal === 'eclaireur') sg$(() => { const p = (S.ex.pend || []).find(x => x.name === d.name); if (p && !p.sg) { p.km = Math.round(p.km * (1 + 0.5 * G.s)); p.sg = 1; } }, 0);
-        if (fresh) { V[G.key] = { at: Date.now(), n: 1, d: sgCopy(d) }; sgHaul = { k, txt: `${G.s === 3 ? 'Une pépite ! ' : ''}Nouvelle adresse ${sgStars(G.s)} · ${SG_TAL[G.tal][0]}` }; }
-        else { V[G.key].n = (V[G.key].n || 1) + 1; V[G.key].at = Date.now(); }
+        if (G.tal === 'eclaireur') got = 'brouillard levé plus loin';
+        if (G.tal === 'gourmand' && !dry) got = `+${1 + Math.ceil(G.s / 2)} spécialités`;
+        const lbl = `${SG_TAL[G.tal][0]}${got ? ' : ' + got : ''}`;
+        if (fresh) { V[G.key] = { at: Date.now(), n: 1, d: sgCopy(d) }; sgHaul = { k, txt: G.s === 3 ? `Pépite ★★★ · ${lbl}` : `Nouvelle adresse ${sgStars(G.s)} · ${lbl}` }; }
+        else if (got) sgHaul = { k, txt: `📍 ${lbl}` };
+        if (!fresh) { V[G.key].n = (V[G.key].n || 1) + 1; V[G.key].at = Date.now(); }
       }
       // un plat cuisiné avec une spécialité étoilée, emporté en provision : des objets en plus
       if (t.sgProv && !t.xpFail) t.bag.push(...lootFor(tags, luck, d.name, t.sgProv, k));
@@ -178,6 +185,13 @@ document.addEventListener('click', ev => {
 .sg-book{margin:10px 0;padding:8px 10px;border:2.5px solid var(--ink,#4a3528);border-radius:16px;background:#fff}
 .sg-book summary{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;list-style:none}.sg-book summary::-webkit-details-marker{display:none}
 .sg-book summary b{font:800 15px var(--display,inherit);color:var(--ink,#4a3528)}.sg-book summary small{font-size:12px;color:var(--ink2,#7a6250)}
+/* v44c : écran de retour plus compact sur téléphone (on doit voir le butin sans faire défiler) */
+@media (max-width:600px){#modal .hhead{gap:10px}#modal .hhead img{width:48px;height:52px;border-radius:12px}#modal .hhead h2{font-size:18px;line-height:1.15}
+#modal .hstats{gap:4px;margin-top:3px}#modal .hstats span{padding:1px 7px;font-size:11.5px;border-width:1.5px}
+#modal .hbig{font-size:11.5px;padding:2px 9px;letter-spacing:.04em}
+#modal .jr-hero{padding:7px 10px}#modal .jr-ht{font-size:14px;margin-bottom:1px}#modal .jr-hero .jr-in{font-size:13px;line-height:1.3}
+#modal .jr-top .jr-in{font-size:13px;padding:4px 8px;line-height:1.3}#modal .jr-open .jr-h{font-size:13px;padding:3px 8px 1px}
+#modal .jr-wrap.jr-top{margin:4px 0 6px}#modal .jr-top .jr-cat{margin:3px 0}}
 .sg-book[open] summary{margin-bottom:8px}.sg-book .sg-r{margin-bottom:6px}.sg-none{margin:4px 2px;font-size:13px;color:#9a8470}`;
   document.head.appendChild(st);
 }
