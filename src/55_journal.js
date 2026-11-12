@@ -12,7 +12,7 @@ const JR_CATS = [
   ['secret', /secret|énigme résolue|trésor/i, '❓ Un secret dévoilé', 'prog'],
   ['acces', /désormais accessible|nouveau lieu|lieu secret/i, '🗺️ De nouveaux horizons', 'prog'],
   ['pepite', /pépite/i, '⭐ Une pépite !', 'prog'],
-  ['adresse', /nouvelle adresse|📍/i, null, 'prog'],
+  ['adresse', /nouvelle adresse|📍|recette signature|pièce signature/i, null, 'prog'],
   ['oeuf', /œuf|rencontre|nouvelle espèce|apprivois/i, '🥚 Une rencontre inattendue', 'prog'],
   ['record', /record|vainqueur|conquis|titre/i, '🏔️ Un exploit !', 'prog'],
   ['echec', /demi-tour|blessé|échou|il fallait|manque du matériel|perdu/i, '⛈️ L’expédition a mal tourné…', 'warn'],
