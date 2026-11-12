@@ -72,10 +72,16 @@ if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
     const r = orig.apply(this, arguments);
     try {
       const hot = box.querySelector('.msec.hot');
-      box.innerHTML = '';
       const wrap = document.createElement('div'); wrap.className = 'cn cn-rw';
       wrap.innerHTML = `<div class="cn-hero gift"><span class="cn-hi">🎁</span><div><b>${hot ? 'Des cadeaux vous attendent !' : 'Rien à récupérer pour l’instant'}</b><small>Paliers de collection, succès et cadeau du jour arrivent ici.</small></div></div>`;
       if (hot) wrap.appendChild(hot);
+      // ce qui DONNE quelque chose : la série de connexion et le bonus du jour, la machine à souvenirs (tickets)
+      const secs = [...box.querySelectorAll('.msec')], title = x => ((x.querySelector('header h3') || {}).textContent || '').trim();
+      const ev = secs.find(x => /^Événement/.test(title(x)) || /^Aujourd/.test(title(x)));
+      if (ev) { const h3 = ev.querySelector('header h3'); if (h3) h3.textContent = 'Chaque jour'; wrap.appendChild(ev); }
+      const rv = secs.find(x => /^Rendez-vous/.test(title(x))), mach = rv && [...rv.querySelectorAll('.mrow')].find(x => x.querySelector('.eco-mach'));
+      if (mach) { const sm = document.createElement('section'); sm.className = 'msec'; sm.innerHTML = '<header><h3>Machine à souvenirs</h3></header>'; sm.appendChild(mach); wrap.appendChild(sm); }
+      box.innerHTML = '';
       box.appendChild(wrap);
     } catch (e) { console.error('carnet cadeaux', e); }
     return r;
