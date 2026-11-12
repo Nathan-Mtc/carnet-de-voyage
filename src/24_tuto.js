@@ -320,12 +320,12 @@ function tuFallbackDest() {
 function tuFinish() {
   S.tuto = { done: 1, at: Date.now() };
   save(); tuHide(); renderAll();
-  toast('Bon voyage ! Le tutoriel se revoit depuis le menu.');
+  toast('Bon voyage ! Le tutoriel se revoit dans le carnet › Guide.');
 }
 function tuSkip() {
   S.tuto = { done: 1, skipped: 1 };
   save(); tuHide(); renderAll();
-  toast('Tutoriel passé. Vous pourrez le revoir depuis le menu.');
+  toast('Tutoriel passé. Vous pourrez le revoir dans le carnet › Guide.');
 }
 function tuReplay() {
   S.tuto = { on: 1, i: 0, f: {}, replay: 1, v: 2 };
@@ -352,7 +352,7 @@ function tuShow(st, g) {
   const dim = g.dim !== undefined ? g.dim : st.dim !== undefined ? st.dim : true;
   // le texte
   let say = g.txt || '…', ok = (!g.nav && st.ok) || '', foot = '';
-  if (tuSkipAsk) { say = 'Passer le tutoriel ? Vous pourrez le revoir quand vous voulez depuis le menu.'; ok = ''; }
+  if (tuSkipAsk) { say = 'Passer le tutoriel ? Vous pourrez le revoir quand vous voulez dans le carnet › Guide.'; ok = ''; }
   const sig = [st.id, say, ok, tuSkipAsk, k].join('|');
   if (sig !== tuSig) {
     tuSig = sig;

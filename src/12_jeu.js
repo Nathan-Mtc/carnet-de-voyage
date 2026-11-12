@@ -342,7 +342,7 @@ function grantTier(c, i) {
   }
   return { c, i, coins: coinsR, item: it };
 }
-const tierText = t => t.pending ? `Palier ${TIERS[t.i].label} · ${t.c.label} atteint ! Récompense à récupérer dans le menu.` : t.full ? `Collection « ${t.c.label} » complète ! +${t.coins} pièces et un trophée pour la maison.` : `Palier ${TIERS[t.i].label} · ${t.c.label} : +${t.coins} pièces${t.item ? ` et « ${t.item.name} »` : ''}`;
+const tierText = t => t.pending ? `Palier ${TIERS[t.i].label} · ${t.c.label} atteint ! Récompense à récupérer dans le carnet › Cadeaux.` : t.full ? `Collection « ${t.c.label} » complète ! +${t.coins} pièces et un trophée pour la maison.` : `Palier ${TIERS[t.i].label} · ${t.c.label} : +${t.coins} pièces${t.item ? ` et « ${t.item.name} »` : ''}`;
 
 // ================= SUCCÈS =================
 const st_ = k => S.stats[k] || 0;
@@ -421,7 +421,7 @@ function achHTML() {
 function colsHTML() {
   const cols = collections().map(c => ({ c, got: colGot(c), n: c.names.length, tier: colTierReached(c) }));
   cols.sort((a, b) => ((b.tier === 3 && !S.colClaimed[b.c.key]) - (a.tier === 3 && !S.colClaimed[a.c.key])) || (!!S.colClaimed[a.c.key] - !!S.colClaimed[b.c.key]) || (b.got / b.n - a.got / a.n));
-  let h = `<p class="small" style="margin:0 0 8px">Chaque type de lieu a sa collection. À 25 % et 50 % des objets découverts, une récompense vous attend dans le menu. À 100 %, un trophée pour la maison.</p><div class="tcols">`;
+  let h = `<p class="small" style="margin:0 0 8px">Chaque type de lieu a sa collection. À 25 % et 50 % des objets découverts, une récompense vous attend dans le carnet › Cadeaux. À 100 %, un trophée pour la maison.</p><div class="tcols">`;
   h += cols.map(({ c, got, n, tier }) => {
     const claimed = S.colClaimed[c.key], f = got / n;
     const pills = TIERS.map((t, i) => `<span class="${tier > i ? 'on' : ''}">${tier > i ? '✓ ' : ''}${t.label} · ${coins(tierReward(c, i))}${i === 1 ? ' + objet' : i === 2 ? ' + trophée' : ''}</span>`).join('');
@@ -438,7 +438,7 @@ function showHaul(h) {
   const items = h.items.slice().sort((a, b) => b.rarity - a.rarity);
   const top = items.length ? items[0].rarity : 0, name = CHARS[h.comp] ? CHARS[h.comp].name : '';
   const tiers = checkTiers(), achs = checkAch();
-  const extra = (h.extra || []).map(x => `<li>${esc(x)}</li>`).concat(tiers.map(t => `<li>${esc(tierText(t))}</li>`), achs.length ? [`<li class="ach">${achs.length > 1 ? 'Succès débloqués' : 'Succès débloqué'} : <b>${achs.map(a => esc(a.name)).join(', ')}</b>. Récompense${achs.length > 1 ? 's' : ''} à récupérer dans le menu.</li>`] : []);
+  const extra = (h.extra || []).map(x => `<li>${esc(x)}</li>`).concat(tiers.map(t => `<li>${esc(tierText(t))}</li>`), achs.length ? [`<li class="ach">${achs.length > 1 ? 'Succès débloqués' : 'Succès débloqué'} : <b>${achs.map(a => esc(a.name)).join(', ')}</b>. Récompense${achs.length > 1 ? 's' : ''} à récupérer dans le carnet › Cadeaux.</li>`] : []);
   const newN = items.filter(i => h.newNames.has(i.name)).length;
   showModal(`<div class="hhead"><img src="${portraitURI(h.comp, 'rire')}" alt=""><div><h2>${name} est de retour !</h2><div class="hstats"><span>${items.length} objet${items.length > 1 ? 's' : ''}</span>${newN ? `<span>${newN} nouveau${newN > 1 ? 'x' : ''}</span>` : ''}${h.coins > 0 ? `<span>${COIN}+${h.coins}</span>` : ''}<span>+${h.xp} exp.</span>${h.photos ? `<span>${h.photos} carte${h.photos > 1 ? 's' : ''} postale${h.photos > 1 ? 's' : ''}</span>` : ''}</div></div></div>${top >= 3 ? `<span class="hbig r${top}">${top >= 4 ? 'Trouvaille légendaire !' : 'Trouvaille épique !'}</span>` : ''}<div class="haul">${items.map((it, i) => haulCard(it, i, h.newNames.has(it.name))).join('')}</div>${extra.length ? `<ul class="hextra">${extra.join('')}</ul>` : ''}<button class="btn green big wide" data-closemodal="1">Tout ranger dans le sac</button>`);
   if (top >= 3) setTimeout(() => confetti(top >= 4), 300 + Math.min(items.length, 8) * 60);
