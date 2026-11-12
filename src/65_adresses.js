@@ -86,7 +86,7 @@ if (typeof collect === 'function') collect = (orig => function () {
         if (G.tal === 'jardinier') for (let i = 0; i < G.s; i++) t.bag.push(makeItem(Math.random() < 0.5 ? ['Graines de tournesol', 'm', 'graine', 0] : ['Pomme de pin', 'm', 'graine', 0], 0, d.name, tags, { fixed: 0 }));
         if (G.tal === 'chanceux') t.bag.forEach(it => { if (!it.sg && !it.special && !it.mk && (it.rarity || 0) < 3 && Math.random() < 0.15 * G.s) it.rarity = (it.rarity || 0) + 1; });
         if (G.tal === 'eclaireur') sg$(() => { const p = (S.ex.pend || []).find(x => x.name === d.name); if (p && !p.sg) { p.km = Math.round(p.km * (1 + 0.5 * G.s)); p.sg = 1; } }, 0);
-        if (fresh) { V[G.key] = { at: Date.now(), n: 1, d: sgCopy(d) }; sgHaul = { k, txt: `${G.s === 3 ? 'Une pépite ! ' : ''}Nouvelle adresse ${sgStars(G.s)} : ${d.name}. ${sgTalTxt(G)}. Sa spécialité (${G.name}) rend vos plats plus chers à la vente.` }; }
+        if (fresh) { V[G.key] = { at: Date.now(), n: 1, d: sgCopy(d) }; sgHaul = { k, txt: `${G.s === 3 ? 'Une pépite ! ' : ''}Nouvelle adresse ${sgStars(G.s)} · ${SG_TAL[G.tal][0]}` }; }
         else { V[G.key].n = (V[G.key].n || 1) + 1; V[G.key].at = Date.now(); }
       }
       // un plat cuisiné avec une spécialité étoilée, emporté en provision : des objets en plus
@@ -111,16 +111,19 @@ if (typeof eqOnStart === 'function') eqOnStart = (orig => function (k, t, dest, 
 // ---------------- à quoi sert la spécialité (fiche et pastilles d'usage) ----------------
 GAME.addUses(it => {
   if (!it) return [];
-  if (it.sg) return [{ txt: `Spécialité ${sgStars(it.sg.s)} : un plat cuisiné avec se vend ${SG_PCT[it.sg.s]} % plus cher, et rapporte ${it.sg.s} objet${it.sg.s > 1 ? 's' : ''} de plus s’il est emporté en provision`, kind: 'cuisiner' }];
-  if (it.mk && it.mk.sg) return [{ txt: `Cuisiné avec une spécialité ${sgStars(it.mk.sg)} : vendu ${SG_PCT[it.mk.sg]} % plus cher · en provision : +${it.mk.sg} objet${it.mk.sg > 1 ? 's' : ''} au retour`, kind: 'expedition' }];
+  if (it.sg && it.cat === 'n') return [{ txt: `Spécialité ${sgStars(it.sg.s)} : vos plats cuisinés avec se vendent ${SG_PCT[it.sg.s]} % plus cher`, kind: 'cuisiner' }];
+  if (it.sg) return [{ txt: `Spécialité ${sgStars(it.sg.s)} : objet de collection, se revend ${SG_PCT[it.sg.s]} % plus cher`, kind: 'vendre' }];
+  if (it.mk && it.mk.sg) return [{ txt: `Plat de spécialité : vendu ${SG_PCT[it.mk.sg]} % plus cher · en provision, +${it.mk.sg} objet${it.mk.sg > 1 ? 's' : ''} au retour`, kind: 'expedition' }];
   return [];
 });
+// une spécialité non comestible vaut plus cher à la revente
+if (typeof value === 'function') value = (orig => function (it) { const v = orig.apply(this, arguments); return it && it.sg && it.cat !== 'n' && typeof v === 'number' ? Math.round(v * (1 + SG_PCT[it.sg.s || 1])) : v; })(value);
 
 // ---------------- affichage : une ligne dans « Le lieu » ----------------
 function sgLineHTML(d) {
   const G = sgOf(d); if (!G) return '';
-  if (!sgState().v[G.key]) return `<div class="sg-line new"><span class="sg-s">?</span><span class="sg-t"><b>Adresse à découvrir</b><small>Sa spécialité et son talent se révèlent à la première visite.</small></span></div>`;
-  return `<div class="sg-line s${G.s}"><span class="sg-s">${sgStars(G.s)}</span><span class="sg-t"><b>✓ Déjà visité · ${esc(sgTalTxt(G))}</b><small>Spécialité : ${esc(G.name)} (pour cuisiner des plats vendus plus cher)</small></span></div>`;
+  if (!sgState().v[G.key]) return `<div class="sg-line new"><span class="sg-s">?</span><span class="sg-t"><b>Adresse à découvrir</b><small>Son talent se révèle à la première visite.</small></span></div>`;
+  return `<div class="sg-line s${G.s}"><span class="sg-s">${sgStars(G.s)}</span><span class="sg-t"><b>✓ Déjà visité · ${esc(SG_TAL[G.tal][0])}</b><small>${esc(sgTalTxt(G))}</small></span></div>`;
 }
 if (typeof renderVoyage === 'function') renderVoyage = (orig => function () {
   const r = orig.apply(this, arguments);
@@ -178,15 +181,27 @@ document.addEventListener('click', ev => {
 .sg-book[open] summary{margin-bottom:8px}.sg-book .sg-r{margin-bottom:6px}.sg-none{margin:4px 2px;font-size:13px;color:#9a8470}`;
   document.head.appendChild(st);
 }
-// ---------------- sur la carte : une petite étoile sur les lieux du quotidien déjà visités ----------------
-if (typeof poiMarkerHTML === 'function') poiMarkerHTML = (orig => function (p) {
-  let h = orig.apply(this, arguments);
-  try { if (p && p.name && sgState().v['n:' + String(p.name).slice(0, 40) + '@' + (+p.lon).toFixed(3) + ',' + (+p.lat).toFixed(3)]) h = h.replace('class="poib"', 'class="poib sgv"'); } catch (e) {}
-  return h;
-})(poiMarkerHTML);
-{
-  const st = document.createElement('style');
-  st.textContent = `.poib.sgv{position:relative}.poib.sgv::after{content:"✓";position:absolute;right:-5px;top:-5px;width:14px;height:14px;border-radius:50%;background:#5fb36b;border:1.5px solid #fff;color:#fff;font:800 9px/14px system-ui;text-align:center}`;
-  document.head.appendChild(st);
-}
+// ---------------- sur la carte : une coche verte sur les lieux du quotidien déjà visités ----------------
+// (les épingles sont dessinées sur une image par 07_poi.js : on ajoute le drapeau « k » et on dessine la coche)
+const sgPoiSeen = p => !!(p && p.name && sgState().v['n:' + String(p.name).slice(0, 40) + '@' + (+p.lon).toFixed(3) + ',' + (+p.lat).toFixed(3)]);
+if (typeof poiPick === 'function') poiPick = (orig => function () {
+  const out = orig.apply(this, arguments);
+  try { out.forEach(s => { if (sgPoiSeen(s.p) && !String(s.v).includes('k')) s.v = (s.v === 'n' ? '' : s.v) + 'k'; }); } catch (e) {}
+  return out;
+})(poiPick);
+if (typeof poiDrawIcon === 'function') poiDrawIcon = (orig => function (g, cx, cy, cat, v) {
+  const r = orig.apply(this, arguments);
+  try {
+    if (String(v).includes('k')) {
+      const rr = String(v).includes('s') ? 7 : 10.5, bx = cx + rr * 0.75, by = cy + rr * 0.75;
+      g.fillStyle = '#fffaf0'; g.beginPath(); g.arc(bx, by, 4.6, 0, 7); g.fill();
+      g.fillStyle = '#4fa765'; g.beginPath(); g.arc(bx, by, 3.6, 0, 7); g.fill();
+      g.strokeStyle = '#fff'; g.lineWidth = 1.3; g.lineCap = 'round'; g.lineJoin = 'round';
+      g.beginPath(); g.moveTo(bx - 1.8, by); g.lineTo(bx - 0.4, by + 1.4); g.lineTo(bx + 1.9, by - 1.4); g.stroke();
+    }
+  } catch (e) {}
+  return r;
+})(poiDrawIcon);
+// après un retour, les épingles se redessinent tout de suite
+if (typeof collect === 'function') collect = (orig => function () { const r = orig.apply(this, arguments); setTimeout(() => sg$(() => refreshPOIs(true), 0), 50); return r; })(collect);
 window.__sg = { of: sgOf, state: sgState, line: sgLineHTML, book: sgBookHTML };

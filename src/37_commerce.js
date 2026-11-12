@@ -203,8 +203,9 @@ function cmStart(rid) {
   if (!cmCanIng(R)) { const m = R.ing.find(([k, n]) => cmHave(k) < n); toast(`Il manque : ${cmIngName(m[0]).toLowerCase()} (${cmHave(m[0])}/${m[1]}).`); return; }
   let rare = false, sg = 0; // sg : meilleure « spécialité maison » utilisée (65_adresses.js) — elles partent en premier, la plus étoilée d'abord
   for (const [k, n] of R.ing) {
-    const take = cmPool(k).sort((a, b) => ((b.sg ? b.sg.s : 0) - (a.sg ? a.sg.s : 0)) || (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || (a.rarity || 0) - (b.rarity || 0)).slice(0, n);
-    take.forEach(it => { if (it.sg) sg = Math.max(sg, it.sg.s || 1); else if ((it.rarity || 0) >= 2) rare = true; S.inv.splice(S.inv.indexOf(it), 1); });
+    const sgw = it => (it.sg && it.cat === 'n' ? it.sg.s : it.sg ? -9 : 0); // spécialité culinaire d'abord ; une spécialité non comestible (médaille…) en dernier
+    const take = cmPool(k).sort((a, b) => (sgw(b) - sgw(a)) || (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || (a.rarity || 0) - (b.rarity || 0)).slice(0, n);
+    take.forEach(it => { if (it.sg && it.cat === 'n') sg = Math.max(sg, it.sg.s || 1); else if ((it.rarity || 0) >= 2) rare = true; S.inv.splice(S.inv.indexOf(it), 1); });
   }
   if (R.egg) c.eggDay = dayKey();
   const now = Date.now(), dur = cmDur(R) * 1000;
