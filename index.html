@@ -35707,29 +35707,37 @@ function cnAdrHTML() {
 // ---------------- le rendu du carnet ----------------
 if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
   if (cnView === 'reglages' || !SUBTABS.menu.some(x => x[0] === cnView)) {
+    // « Cadeaux » : SEULEMENT ce qui est à récupérer (le reste du vieux menu n'a rien à faire ici ; les réglages sont dans Guide)
     const r = orig.apply(this, arguments);
     try {
-      // « Récompenses » : on enlève l'aide (dans Guide) et « Ma progression » (doublon de Collections) ; les réglages se replient en bas
-      box.querySelectorAll('.msec').forEach(s => {
-        const h3 = s.querySelector('header h3'), t = h3 ? h3.textContent.trim() : '';
-        if (s.querySelector('[data-tu="replay"]') || /^Ma progression/.test(t)) { s.remove(); return; }
-        if (/^Réglages/.test(t)) { const d = document.createElement('details'); d.className = 'msec cn-set'; d.innerHTML = `<summary>⚙️ Réglages</summary>`; [...s.children].forEach((c, i) => { if (i > 0) d.appendChild(c); }); s.replaceWith(d); }
-      });
-      if (!box.querySelector('.msec.hot')) box.insertAdjacentHTML('afterbegin', `<div class="cn-hero gift"><span class="cn-hi">🎁</span><div><b>Rien à récupérer pour l’instant</b><small>Paliers de collection, succès et cadeaux du jour arrivent ici.</small></div></div>`);
-      const wrap = document.createElement('div'); wrap.className = 'cn cn-rw'; while (box.firstChild) wrap.appendChild(box.firstChild); box.appendChild(wrap);
-    } catch (e) { console.error('carnet récompenses', e); }
+      const hot = box.querySelector('.msec.hot');
+      box.innerHTML = '';
+      const wrap = document.createElement('div'); wrap.className = 'cn cn-rw';
+      wrap.innerHTML = `<div class="cn-hero gift"><span class="cn-hi">🎁</span><div><b>${hot ? 'Des cadeaux vous attendent !' : 'Rien à récupérer pour l’instant'}</b><small>Paliers de collection, succès et cadeau du jour arrivent ici.</small></div></div>`;
+      if (hot) wrap.appendChild(hot);
+      box.appendChild(wrap);
+    } catch (e) { console.error('carnet cadeaux', e); }
     return r;
   }
   let h = '';
   try {
     const HERO = { guide: ['🧭', 'Le guide du voyageur', 'Tout ce qu’il faut savoir, en quelques lignes.'], adresses: ['📒', 'Mes bonnes adresses', 'Les lieux qui valent le détour, et leurs spécialités.'], col: ['🏅', 'Mes collections', 'Tampons, objets découverts et paliers.'], hist: ['📖', 'Le carnet d’Augustine', 'Son voyage, page après page.'] }[cnView];
     if (HERO) h += `<div class="cn-hero"><span class="cn-hi">${HERO[0]}</span><div><b>${HERO[1]}</b><small>${HERO[2]}</small></div></div>`;
-    if (cnView === 'guide') h += cnGuideHTML();
+    if (cnView === 'guide') h += cnGuideHTML() + '<div class="cn-setslot"></div>';
     else if (cnView === 'adresses') h += cnAdrHTML();
     else if (cnView === 'col') h += cn$(() => pgPassHTML(), '') + cn$(() => colsHTML(), '');
     else if (cnView === 'hist') h += cn$(() => styHistHTML(), '<p class="empty">L’histoire commence après le tutoriel.</p>');
   } catch (e) { console.error('carnet', e); h = '<p class="empty">Oups, cette page n’a pas pu s’afficher.</p>'; }
   box.innerHTML = `<div class="cn">${h}</div>`;
+  // les réglages (ville de départ, son…) : repliés en bas du Guide
+  try {
+    const slot = box.querySelector('.cn-setslot');
+    if (slot) {
+      const tmp = document.createElement('div'); orig.call(this, tmp);
+      const set = [...tmp.querySelectorAll('.msec')].find(x => /^Réglages/.test((x.querySelector('header h3') || {}).textContent || ''));
+      if (set) { const d = document.createElement('details'); d.className = 'msec cn-set'; d.innerHTML = '<summary>⚙️ Réglages</summary>'; [...set.children].forEach((c, i) => { if (i > 0) d.appendChild(c); }); slot.replaceWith(d); } else slot.remove();
+    }
+  } catch (e) { console.error('carnet réglages', e); }
 })(renderMenu);
 document.addEventListener('click', ev => {
   const b = ev.target.closest && ev.target.closest('[data-cnf]'); if (!b) return;
