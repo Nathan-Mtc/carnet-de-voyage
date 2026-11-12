@@ -104,12 +104,13 @@ const xpCall = (f, d) => { try { return f(); } catch (e) { return d; } };
 const xpName = k => (CHARS[k] ? CHARS[k].name : '');
 const xpE = k => xpCall(() => compE(k), '');
 // matériel équipé (les objets vendus ou disparus sont oubliés)
+const XP_N = 4; // v45 : 4 cases de matériel (demande du joueur), au lieu de 2
 function xpEq(k) {
   const X = xpState(); let a = X.eq[k];
-  if (!Array.isArray(a)) a = X.eq[k] = [null, null];
-  while (a.length < 2) a.push(null);
-  a.length = 2;
-  for (let i = 0; i < 2; i++) if (a[i] && !S.inv.some(it => it.id === a[i] && xpGearOf(it))) a[i] = null;
+  if (!Array.isArray(a)) a = X.eq[k] = [];
+  while (a.length < XP_N) a.push(null);
+  a.length = XP_N;
+  for (let i = 0; i < XP_N; i++) if (a[i] && !S.inv.some(it => it.id === a[i] && xpGearOf(it))) a[i] = null;
   return a;
 }
 const xpEqItems = k => xpEq(k).map(id => (id ? S.inv.find(it => it.id === id) : null));
@@ -411,7 +412,7 @@ function xpFicheHTML(k) {
   const tl = Array.isArray(X.titles[k]) ? X.titles[k] : [];
   if (tl.length) h += `<div class="xpf-ti">${tl.slice(-3).reverse().map(x => `<span>${xpGly('etoile', '#e0a52a', 's')}${esc(x)}</span>`).join('')}</div>`;
   if (left > 0) h += `<p class="xpf-hurt">${esc(xpName(k))} est blessé${xpE(k)} : repos au foyer encore ${xpMin(left)}.</p>`;
-  return h + `<p class="xpf-help">2 cases de matériel : il ouvre les lieux à cadenas de la carte et réduit les risques. Chaque voyage fait progresser son terrain.</p></div>`;
+  return h + `<p class="xpf-help">4 cases de matériel : il ouvre les lieux à cadenas de la carte et réduit les risques. Chaque voyage fait progresser son terrain.</p></div>`;
 }
 if (typeof renderTalents === 'function') renderTalents = (orig => function (k) {
   const h = orig.apply(this, arguments);
@@ -422,7 +423,7 @@ if (typeof renderTalents === 'function') renderTalents = (orig => function (k) {
   } catch (e) { console.error('expédition fiche', e); return h; }
 })(renderTalents);
 function xpEquip(k, slot, id) {
-  const a = xpEq(k), it = S.inv.find(x => x.id === id), G = xpGearOf(it); if (!G || slot < 0 || slot > 1) return false;
+  const a = xpEq(k), it = S.inv.find(x => x.id === id), G = xpGearOf(it); if (!G || slot < 0 || slot >= XP_N) return false;
   const by = xpWornBy(id); if (by && by !== k) return false;
   const other = a[1 - slot] && xpGearOf(S.inv.find(x => x.id === a[1 - slot]));
   if (a[1 - slot] === id) a[1 - slot] = null;

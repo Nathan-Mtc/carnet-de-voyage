@@ -157,7 +157,7 @@ if (typeof dfWearHTML === 'function') dfWearHTML = (orig => function (k, d, c, r
     const terr = c.terr, R = dfRange(k, d), rk = () => { const x = dfRiskOf(k, d); return x ? x.r : 0; };
     const chip = (ico, nm, fx, on, attr) => `<button class="dfw${on ? '' : ' off'}" ${attr || 'disabled'}><span class="dfw-i">${ico}</span><span class="dfw-t"><b>${esc(nm)}</b><small>${fx}</small></span></button>`;
     const sortOn = l => l.sort((a, b) => b.on - a.on);
-    // matériel : 2 cases, touchez pour changer
+    // matériel : 4 cases, touchez pour changer
     const gear = xpEqItems(k).map((it, slot) => {
       if (!it) return { on: 1, h: `<button class="dfw dpt-add${xpSlot === slot ? ' sel' : ''}" data-xps="${slot}"><span class="dfw-i"><b>+</b></span><span class="dfw-t"><b>Case ${slot + 1} vide</b><small>Ajouter du matériel</small></span></button>` };
       const G = xpGearOf(it), fx = [];
@@ -169,7 +169,7 @@ if (typeof dfWearHTML === 'function') dfWearHTML = (orig => function (k, d, c, r
       return { on: fx.length ? 1 : 0, h: chip(itemIcon(it), it.name, fx.length ? fx.join(' · ') : 'inutile ici · toucher pour changer', fx.length, `data-xps="${slot}"${xpSlot === slot ? ' data-sel="1"' : ''}`) };
     });
     let pick = '';
-    if (xpSlot === 0 || xpSlot === 1) {
+    if (xpSlot != null && xpSlot >= 0 && xpSlot < XP_N) {
       const items = xpEqItems(k), mine = (S.inv || []).filter(it => xpGearOf(it)).sort((a, b) => (dfUseful(b, c) - dfUseful(a, c)) || (xpGearOf(b).tier - xpGearOf(a).tier));
       pick = `<div class="dpt-pick"><small>Case ${xpSlot + 1} : choisissez le matériel (vert = utile ici)</small><div class="dpt-pl">${mine.length ? mine.map(it => { const by = xpWornBy(it.id), cur = items[xpSlot] && items[xpSlot].id === it.id, use = dfUseful(it, c); return `<button class="dpt-pi${cur ? ' on' : ''}${use ? ' use' : ''}" data-xpeq="${it.id}" ${by && by !== k ? 'disabled' : ''}>${itemIcon(it)}<span>${esc(it.name)}${by && by !== k ? ` (${esc(xpName(by))})` : ''}</span></button>`; }).join('') : '<span class="dpt-pn">Pas de matériel : atelier › Équipement, ou magasin.</span>'}</div>${items[xpSlot] ? `<button class="btn cream sm" data-xpun="${xpSlot}">Retirer</button>` : ''}</div>`;
     }

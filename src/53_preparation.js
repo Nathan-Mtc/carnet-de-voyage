@@ -61,7 +61,7 @@ function prepNeedHTML(gearList, ctx) {
 
 // ---------------- les actions ----------------
 let ppWant = null; // { g, t, k, at } : ce qu'on est allé fabriquer ou acheter depuis l'encadré
-function ppSlot(k, g) { const a = xpEq(k); for (let i = 0; i < 2; i++) { const G = a[i] && xpGearOf(S.inv.find(x => x.id === a[i])); if (G && G.g === g) return i; } return a[0] ? (a[1] ? 1 : 1) : 0; }
+function ppSlot(k, g) { const a = xpEq(k); for (let i = 0; i < XP_N; i++) { const G = a[i] && xpGearOf(S.inv.find(x => x.id === a[i])); if (G && G.g === g) return i; } return a[0] ? (a[1] ? 1 : 1) : 0; }
 function ppEquip(k, id, quiet) {
   const it = S.inv.find(x => x.id === id), G = it && xpGearOf(it); if (!G || !CHARS[k]) return false;
   if (!xpEquip(k, ppSlot(k, G.g), id)) return false;

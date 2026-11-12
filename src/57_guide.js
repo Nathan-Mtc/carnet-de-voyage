@@ -89,9 +89,9 @@ function gdNav(t, sub, nm) {
 // la case de matériel à remplir : une vide, sinon celle dont on n'a pas besoin ici
 function gdSlot(k, g) {
   const a = xpEq(k), keep = gdGearNeeds(k, gdDest() || {}).map(x => x[0]).concat(['boussole', g]);
-  for (let i = 0; i < 2; i++) { const G = a[i] && xpGearOf(S.inv.find(x => x.id === a[i])); if (G && G.g === g) return i; }
-  for (let i = 0; i < 2; i++) if (!a[i]) return i;
-  for (let i = 0; i < 2; i++) { const G = xpGearOf(S.inv.find(x => x.id === a[i])); if (!G || !keep.includes(G.g)) return i; }
+  for (let i = 0; i < XP_N; i++) { const G = a[i] && xpGearOf(S.inv.find(x => x.id === a[i])); if (G && G.g === g) return i; }
+  for (let i = 0; i < XP_N; i++) if (!a[i]) return i;
+  for (let i = 0; i < XP_N; i++) { const G = xpGearOf(S.inv.find(x => x.id === a[i])); if (!G || !keep.includes(G.g)) return i; }
   return 1;
 }
 function gdGearStep(k, g, t, pre) {

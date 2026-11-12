@@ -36,6 +36,8 @@ document.addEventListener('click', ev => {
   st.textContent = `.tl-row{display:flex;gap:6px;margin:8px 0 6px}
 .tl-b{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 4px;border:2px solid var(--line,#e2d3bd);border-radius:14px;background:#fff;font:800 12.5px var(--body,system-ui);color:var(--ink,#4a3528);cursor:pointer;box-shadow:0 2px 0 rgba(74,53,40,.12)}
 .tl-b span{font-size:18px;line-height:1}.tl-b.on{border-color:var(--ink,#4a3528);background:#fff3c9}
-.tl-pane>*{margin-top:0!important}`;
+.tl-pane>*{margin-top:0!important}
+.eqf-am{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.eqf-am span{display:inline-flex;align-items:center;gap:5px;padding:2px 8px 2px 2px;border-radius:999px;background:#fff3f6;border:1.5px solid #f0c4d2;font-size:12px;color:var(--ink2,#7a6250)}
+.eqf-am img,.eqf-am .livep{width:26px!important;height:26px!important;max-width:26px;border-radius:50%;flex:none;overflow:hidden;position:static!important;transform:none!important}.eqf-am .livep svg,.eqf-am .livep img{width:100%!important;height:100%!important}`;
   document.head.appendChild(st);
 }

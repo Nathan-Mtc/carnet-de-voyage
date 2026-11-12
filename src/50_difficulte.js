@@ -241,7 +241,7 @@ function dfFlair(k, d, c) {
 function dfWithEq(k, slot, id, fn) { const a = xpEq(k), old = a.slice(); a[slot] = id; try { return fn(); } finally { a[0] = old[0]; a[1] = old[1]; } }
 function dfWithProv(rid, fn) { const p = dfCall(() => eqPlanProv(), []), old = p.slice(); p.push(rid); try { return fn(); } finally { plan.eqProv = old; } }
 function dfUseful(it, c) { const G = xpGearOf(it); if (!G) return false; if (G.g === 'boussole') return true; const D = XP_G[G.g]; return !!(c && (D[4].includes(c.terr) || (D[5] === 'cave' && (c.cave || c.night)) || (D[5] === 'wild' && c.wild))); }
-function dfSlotFor(k, c) { const a = xpEq(k), items = xpEqItems(k); for (let i = 0; i < 2; i++) if (!a[i]) return i; for (let i = 0; i < 2; i++) if (!dfUseful(items[i], c)) return i; return 1; }
+function dfSlotFor(k, c) { const a = xpEq(k), items = xpEqItems(k); for (let i = 0; i < XP_N; i++) if (!a[i]) return i; for (let i = 0; i < XP_N; i++) if (!dfUseful(items[i], c)) return i; return 1; }
 function dfWearHTML(k, d, c, risk) {
   const chips = [], terr = c.terr, R = dfRange(k, d), rk = () => { const x = dfRiskOf(k, d); return x ? x.r : 0; };
   const chip = (ico, nm, fx, on) => `<span class="dfw${on ? '' : ' off'}"><span class="dfw-i">${ico}</span><span class="dfw-t"><b>${esc(nm)}</b><small>${fx}</small></span></span>`;

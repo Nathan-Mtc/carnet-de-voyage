@@ -517,7 +517,7 @@ function eqFicheHTML(k) {
   } else h += `<p class="eqf-help">Au niveau ${EQ_SP_LVL} (encore ${EQ_SP_LVL - lv}), ${esc(eqNm(k))} choisira une spécialité : alpiniste, plongeur, archéologue, botaniste, photographe animalier ou marchand.</p>`;
   h += `<div class="eqf-ti"><small>Titre affiché :</small>${[eqStageWord(k, st)].concat(tl).slice(0, 8).map(x => `<button class="eqf-t${x === cur ? ' on' : ''}" data-eqti="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
   const pals = compIds().filter(x => x !== k && CHARS[x] && eqAmiN(k, x) > 0);
-  if (pals.length) h += `<div class="eqf-am">${pals.map(x => `<span><img src="${portraitURI(x)}" alt="">${esc(eqNm(x))} · ${esc(eqAmiNm(eqAmiLv(k, x)))} (${eqAmiN(k, x)})</span>`).join('')}</div>`;
+  if (pals.length) h += `<small class="eqf-aml">Ses amis de voyage :</small><div class="eqf-am">${pals.map(x => `<span><img src="${portraitURI(x)}" alt="">${esc(eqNm(x))} · ${esc(eqAmiNm(eqAmiLv(k, x)))} (${eqAmiN(k, x)})</span>`).join('')}</div>`;
   return h + '</div>';
 }
 if (typeof renderTalents === 'function') renderTalents = (orig => function (k) {

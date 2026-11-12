@@ -25879,12 +25879,13 @@ const xpCall = (f, d) => { try { return f(); } catch (e) { return d; } };
 const xpName = k => (CHARS[k] ? CHARS[k].name : '');
 const xpE = k => xpCall(() => compE(k), '');
 // matériel équipé (les objets vendus ou disparus sont oubliés)
+const XP_N = 4; // v45 : 4 cases de matériel (demande du joueur), au lieu de 2
 function xpEq(k) {
   const X = xpState(); let a = X.eq[k];
-  if (!Array.isArray(a)) a = X.eq[k] = [null, null];
-  while (a.length < 2) a.push(null);
-  a.length = 2;
-  for (let i = 0; i < 2; i++) if (a[i] && !S.inv.some(it => it.id === a[i] && xpGearOf(it))) a[i] = null;
+  if (!Array.isArray(a)) a = X.eq[k] = [];
+  while (a.length < XP_N) a.push(null);
+  a.length = XP_N;
+  for (let i = 0; i < XP_N; i++) if (a[i] && !S.inv.some(it => it.id === a[i] && xpGearOf(it))) a[i] = null;
   return a;
 }
 const xpEqItems = k => xpEq(k).map(id => (id ? S.inv.find(it => it.id === id) : null));
@@ -26186,7 +26187,7 @@ function xpFicheHTML(k) {
   const tl = Array.isArray(X.titles[k]) ? X.titles[k] : [];
   if (tl.length) h += `<div class="xpf-ti">${tl.slice(-3).reverse().map(x => `<span>${xpGly('etoile', '#e0a52a', 's')}${esc(x)}</span>`).join('')}</div>`;
   if (left > 0) h += `<p class="xpf-hurt">${esc(xpName(k))} est blessé${xpE(k)} : repos au foyer encore ${xpMin(left)}.</p>`;
-  return h + `<p class="xpf-help">2 cases de matériel : il ouvre les lieux à cadenas de la carte et réduit les risques. Chaque voyage fait progresser son terrain.</p></div>`;
+  return h + `<p class="xpf-help">4 cases de matériel : il ouvre les lieux à cadenas de la carte et réduit les risques. Chaque voyage fait progresser son terrain.</p></div>`;
 }
 if (typeof renderTalents === 'function') renderTalents = (orig => function (k) {
   const h = orig.apply(this, arguments);
@@ -26197,7 +26198,7 @@ if (typeof renderTalents === 'function') renderTalents = (orig => function (k) {
   } catch (e) { console.error('expédition fiche', e); return h; }
 })(renderTalents);
 function xpEquip(k, slot, id) {
-  const a = xpEq(k), it = S.inv.find(x => x.id === id), G = xpGearOf(it); if (!G || slot < 0 || slot > 1) return false;
+  const a = xpEq(k), it = S.inv.find(x => x.id === id), G = xpGearOf(it); if (!G || slot < 0 || slot >= XP_N) return false;
   const by = xpWornBy(id); if (by && by !== k) return false;
   const other = a[1 - slot] && xpGearOf(S.inv.find(x => x.id === a[1 - slot]));
   if (a[1 - slot] === id) a[1 - slot] = null;
@@ -28536,7 +28537,7 @@ function eqFicheHTML(k) {
   } else h += `<p class="eqf-help">Au niveau ${EQ_SP_LVL} (encore ${EQ_SP_LVL - lv}), ${esc(eqNm(k))} choisira une spécialité : alpiniste, plongeur, archéologue, botaniste, photographe animalier ou marchand.</p>`;
   h += `<div class="eqf-ti"><small>Titre affiché :</small>${[eqStageWord(k, st)].concat(tl).slice(0, 8).map(x => `<button class="eqf-t${x === cur ? ' on' : ''}" data-eqti="${esc(x)}">${esc(x)}</button>`).join('')}</div>`;
   const pals = compIds().filter(x => x !== k && CHARS[x] && eqAmiN(k, x) > 0);
-  if (pals.length) h += `<div class="eqf-am">${pals.map(x => `<span><img src="${portraitURI(x)}" alt="">${esc(eqNm(x))} · ${esc(eqAmiNm(eqAmiLv(k, x)))} (${eqAmiN(k, x)})</span>`).join('')}</div>`;
+  if (pals.length) h += `<small class="eqf-aml">Ses amis de voyage :</small><div class="eqf-am">${pals.map(x => `<span><img src="${portraitURI(x)}" alt="">${esc(eqNm(x))} · ${esc(eqAmiNm(eqAmiLv(k, x)))} (${eqAmiN(k, x)})</span>`).join('')}</div>`;
   return h + '</div>';
 }
 if (typeof renderTalents === 'function') renderTalents = (orig => function (k) {
@@ -31332,7 +31333,7 @@ function dfFlair(k, d, c) {
 function dfWithEq(k, slot, id, fn) { const a = xpEq(k), old = a.slice(); a[slot] = id; try { return fn(); } finally { a[0] = old[0]; a[1] = old[1]; } }
 function dfWithProv(rid, fn) { const p = dfCall(() => eqPlanProv(), []), old = p.slice(); p.push(rid); try { return fn(); } finally { plan.eqProv = old; } }
 function dfUseful(it, c) { const G = xpGearOf(it); if (!G) return false; if (G.g === 'boussole') return true; const D = XP_G[G.g]; return !!(c && (D[4].includes(c.terr) || (D[5] === 'cave' && (c.cave || c.night)) || (D[5] === 'wild' && c.wild))); }
-function dfSlotFor(k, c) { const a = xpEq(k), items = xpEqItems(k); for (let i = 0; i < 2; i++) if (!a[i]) return i; for (let i = 0; i < 2; i++) if (!dfUseful(items[i], c)) return i; return 1; }
+function dfSlotFor(k, c) { const a = xpEq(k), items = xpEqItems(k); for (let i = 0; i < XP_N; i++) if (!a[i]) return i; for (let i = 0; i < XP_N; i++) if (!dfUseful(items[i], c)) return i; return 1; }
 function dfWearHTML(k, d, c, risk) {
   const chips = [], terr = c.terr, R = dfRange(k, d), rk = () => { const x = dfRiskOf(k, d); return x ? x.r : 0; };
   const chip = (ico, nm, fx, on) => `<span class="dfw${on ? '' : ' off'}"><span class="dfw-i">${ico}</span><span class="dfw-t"><b>${esc(nm)}</b><small>${fx}</small></span></span>`;
@@ -32893,7 +32894,7 @@ function prepNeedHTML(gearList, ctx) {
 
 // ---------------- les actions ----------------
 let ppWant = null; // { g, t, k, at } : ce qu'on est allé fabriquer ou acheter depuis l'encadré
-function ppSlot(k, g) { const a = xpEq(k); for (let i = 0; i < 2; i++) { const G = a[i] && xpGearOf(S.inv.find(x => x.id === a[i])); if (G && G.g === g) return i; } return a[0] ? (a[1] ? 1 : 1) : 0; }
+function ppSlot(k, g) { const a = xpEq(k); for (let i = 0; i < XP_N; i++) { const G = a[i] && xpGearOf(S.inv.find(x => x.id === a[i])); if (G && G.g === g) return i; } return a[0] ? (a[1] ? 1 : 1) : 0; }
 function ppEquip(k, id, quiet) {
   const it = S.inv.find(x => x.id === id), G = it && xpGearOf(it); if (!G || !CHARS[k]) return false;
   if (!xpEquip(k, ppSlot(k, G.g), id)) return false;
@@ -33908,9 +33909,9 @@ function gdNav(t, sub, nm) {
 // la case de matériel à remplir : une vide, sinon celle dont on n'a pas besoin ici
 function gdSlot(k, g) {
   const a = xpEq(k), keep = gdGearNeeds(k, gdDest() || {}).map(x => x[0]).concat(['boussole', g]);
-  for (let i = 0; i < 2; i++) { const G = a[i] && xpGearOf(S.inv.find(x => x.id === a[i])); if (G && G.g === g) return i; }
-  for (let i = 0; i < 2; i++) if (!a[i]) return i;
-  for (let i = 0; i < 2; i++) { const G = xpGearOf(S.inv.find(x => x.id === a[i])); if (!G || !keep.includes(G.g)) return i; }
+  for (let i = 0; i < XP_N; i++) { const G = a[i] && xpGearOf(S.inv.find(x => x.id === a[i])); if (G && G.g === g) return i; }
+  for (let i = 0; i < XP_N; i++) if (!a[i]) return i;
+  for (let i = 0; i < XP_N; i++) { const G = xpGearOf(S.inv.find(x => x.id === a[i])); if (!G || !keep.includes(G.g)) return i; }
   return 1;
 }
 function gdGearStep(k, g, t, pre) {
@@ -34828,7 +34829,7 @@ if (typeof dfWearHTML === 'function') dfWearHTML = (orig => function (k, d, c, r
     const terr = c.terr, R = dfRange(k, d), rk = () => { const x = dfRiskOf(k, d); return x ? x.r : 0; };
     const chip = (ico, nm, fx, on, attr) => `<button class="dfw${on ? '' : ' off'}" ${attr || 'disabled'}><span class="dfw-i">${ico}</span><span class="dfw-t"><b>${esc(nm)}</b><small>${fx}</small></span></button>`;
     const sortOn = l => l.sort((a, b) => b.on - a.on);
-    // matériel : 2 cases, touchez pour changer
+    // matériel : 4 cases, touchez pour changer
     const gear = xpEqItems(k).map((it, slot) => {
       if (!it) return { on: 1, h: `<button class="dfw dpt-add${xpSlot === slot ? ' sel' : ''}" data-xps="${slot}"><span class="dfw-i"><b>+</b></span><span class="dfw-t"><b>Case ${slot + 1} vide</b><small>Ajouter du matériel</small></span></button>` };
       const G = xpGearOf(it), fx = [];
@@ -34840,7 +34841,7 @@ if (typeof dfWearHTML === 'function') dfWearHTML = (orig => function (k, d, c, r
       return { on: fx.length ? 1 : 0, h: chip(itemIcon(it), it.name, fx.length ? fx.join(' · ') : 'inutile ici · toucher pour changer', fx.length, `data-xps="${slot}"${xpSlot === slot ? ' data-sel="1"' : ''}`) };
     });
     let pick = '';
-    if (xpSlot === 0 || xpSlot === 1) {
+    if (xpSlot != null && xpSlot >= 0 && xpSlot < XP_N) {
       const items = xpEqItems(k), mine = (S.inv || []).filter(it => xpGearOf(it)).sort((a, b) => (dfUseful(b, c) - dfUseful(a, c)) || (xpGearOf(b).tier - xpGearOf(a).tier));
       pick = `<div class="dpt-pick"><small>Case ${xpSlot + 1} : choisissez le matériel (vert = utile ici)</small><div class="dpt-pl">${mine.length ? mine.map(it => { const by = xpWornBy(it.id), cur = items[xpSlot] && items[xpSlot].id === it.id, use = dfUseful(it, c); return `<button class="dpt-pi${cur ? ' on' : ''}${use ? ' use' : ''}" data-xpeq="${it.id}" ${by && by !== k ? 'disabled' : ''}>${itemIcon(it)}<span>${esc(it.name)}${by && by !== k ? ` (${esc(xpName(by))})` : ''}</span></button>`; }).join('') : '<span class="dpt-pn">Pas de matériel : atelier › Équipement, ou magasin.</span>'}</div>${items[xpSlot] ? `<button class="btn cream sm" data-xpun="${xpSlot}">Retirer</button>` : ''}</div>`;
     }
@@ -35904,7 +35905,9 @@ document.addEventListener('click', ev => {
   st.textContent = `.tl-row{display:flex;gap:6px;margin:8px 0 6px}
 .tl-b{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 4px;border:2px solid var(--line,#e2d3bd);border-radius:14px;background:#fff;font:800 12.5px var(--body,system-ui);color:var(--ink,#4a3528);cursor:pointer;box-shadow:0 2px 0 rgba(74,53,40,.12)}
 .tl-b span{font-size:18px;line-height:1}.tl-b.on{border-color:var(--ink,#4a3528);background:#fff3c9}
-.tl-pane>*{margin-top:0!important}`;
+.tl-pane>*{margin-top:0!important}
+.eqf-am{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.eqf-am span{display:inline-flex;align-items:center;gap:5px;padding:2px 8px 2px 2px;border-radius:999px;background:#fff3f6;border:1.5px solid #f0c4d2;font-size:12px;color:var(--ink2,#7a6250)}
+.eqf-am img,.eqf-am .livep{width:26px!important;height:26px!important;max-width:26px;border-radius:50%;flex:none;overflow:hidden;position:static!important;transform:none!important}.eqf-am .livep svg,.eqf-am .livep img{width:100%!important;height:100%!important}`;
   document.head.appendChild(st);
 }
 
