@@ -166,7 +166,7 @@ Object.entries({
 }).forEach(([k, v]) => { if (LOOT[k]) LOOT[k].push(...v.filter(d => !LOOT[k].some(x => x[0] === d[0]))); });
 // Spécialité unique à chaque lieu ({P} = nom du lieu)
 const SPECIALTY = {
-  boulangerie: ['Brioche de {P}', 'n', 'sucre', 2, null, '#e9b86b'], cafe: ['Mélange maison de {P}', 'n', 'boisson', 2, null, '#8a5a3a'], restaurant: ['Plat signature de {P}', 'n', 'plat', 2, null, '#d9733f'],
+  boulangerie: ['Brioche de {P}', 'n', 'sucre', 2, null, '#e9b86b'], cafe: ['Mélange maison de {P}', 'n', 'boisson', 2, null, '#8a5a3a'], restaurant: ['Mijoté du chef de {P}', 'n', 'plat', 2, null, '#d9733f'],
   marche: ['Panier garni de {P}', 'n', 'legume', 2, null, '#7fae4f'], epicerie: ['Pot secret de {P}', 'n', 'sucre', 2, null, '#f2b13e'], poissonnerie: ['Pêche du jour de {P}', 'n', 'mer', 2, null, '#5f87a8'],
   fleuriste: ['Bouquet de {P}', 'm', 'fleur', 2, null, '#e07a9a'], librairie: ['Ex-libris de {P}', 'm', 'papier', 2, null, '#7a6fb8'], parc: ['Feuille d’or de {P}', 'm', 'feuille', 2, null, '#f2c14e'],
   rue: ['Plaque émaillée « {P} »', 'm', 'metal', 2, null, '#3b5aa8'], route: ['Borne de la {P}', 'm', 'pierre', 2, null, '#e9e2d6'], plage: ['Sable doré de {P}', 'm', 'sable', 2, null, '#f2c14e'],

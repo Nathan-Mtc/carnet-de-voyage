@@ -60,7 +60,7 @@ function usShopLines() {
   return ids;
 }
 function usCmRecipes(it) {
-  if (!it || typeof CM_LINES === 'undefined') return [];
+  if (!it || it.special || typeof CM_LINES === 'undefined') return []; // v44 : un souvenir unique (plat signature…) n'est pas un ingrédient
   const out = [], T = usCall(() => cmT(), null);
   for (const sh of usShopLines()) for (const R of CM_LINES[sh] || []) {
     if (R.egg || !usCall(() => cmUnlocked(R), false)) continue;
@@ -70,7 +70,7 @@ function usCmRecipes(it) {
 }
 const usRecLocked = r => usCall(() => BQ_RIDS.has(r.id) && !bqRecOwned(r.id), false);
 function usAtRecipes(it) {
-  if (!it || typeof RECIPES === 'undefined') return [];
+  if (!it || it.special || typeof RECIPES === 'undefined') return [];
   const seen = new Set(), out = [];
   for (const r of RECIPES) {
     if (usRecLocked(r) || !r.ing.some(([k]) => usIngMatch(k, it))) continue;

@@ -2420,7 +2420,7 @@ Object.entries({
 }).forEach(([k, v]) => { if (LOOT[k]) LOOT[k].push(...v.filter(d => !LOOT[k].some(x => x[0] === d[0]))); });
 // Spécialité unique à chaque lieu ({P} = nom du lieu)
 const SPECIALTY = {
-  boulangerie: ['Brioche de {P}', 'n', 'sucre', 2, null, '#e9b86b'], cafe: ['Mélange maison de {P}', 'n', 'boisson', 2, null, '#8a5a3a'], restaurant: ['Plat signature de {P}', 'n', 'plat', 2, null, '#d9733f'],
+  boulangerie: ['Brioche de {P}', 'n', 'sucre', 2, null, '#e9b86b'], cafe: ['Mélange maison de {P}', 'n', 'boisson', 2, null, '#8a5a3a'], restaurant: ['Mijoté du chef de {P}', 'n', 'plat', 2, null, '#d9733f'],
   marche: ['Panier garni de {P}', 'n', 'legume', 2, null, '#7fae4f'], epicerie: ['Pot secret de {P}', 'n', 'sucre', 2, null, '#f2b13e'], poissonnerie: ['Pêche du jour de {P}', 'n', 'mer', 2, null, '#5f87a8'],
   fleuriste: ['Bouquet de {P}', 'm', 'fleur', 2, null, '#e07a9a'], librairie: ['Ex-libris de {P}', 'm', 'papier', 2, null, '#7a6fb8'], parc: ['Feuille d’or de {P}', 'm', 'feuille', 2, null, '#f2c14e'],
   rue: ['Plaque émaillée « {P} »', 'm', 'metal', 2, null, '#3b5aa8'], route: ['Borne de la {P}', 'm', 'pierre', 2, null, '#e9e2d6'], plage: ['Sable doré de {P}', 'm', 'sable', 2, null, '#f2c14e'],
@@ -23119,7 +23119,7 @@ const cmIsFar = it => !!(it && it.rid && typeof RG_RES !== 'undefined' && RG_RES
 const cmWorn = () => { try { return bqWorn(); } catch (e) { return new Set(); } };
 function cmPool(key) {
   const worn = cmWorn();
-  return S.inv.filter(it => it && !it.mk && !it.tresor && !worn.has(it.id) && (key === 'far' ? cmIsFar(it) && it.cat !== 'v' : ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n')));
+  return S.inv.filter(it => it && !it.mk && !it.tresor && !it.special && !worn.has(it.id) && (key === 'far' ? cmIsFar(it) && it.cat !== 'v' : ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n')));
 }
 const cmHave = key => cmPool(key).length;
 const cmCanIng = R => R.ing.every(([k, n]) => cmHave(k) >= n);
@@ -29232,7 +29232,7 @@ function usShopLines() {
   return ids;
 }
 function usCmRecipes(it) {
-  if (!it || typeof CM_LINES === 'undefined') return [];
+  if (!it || it.special || typeof CM_LINES === 'undefined') return []; // v44 : un souvenir unique (plat signature…) n'est pas un ingrédient
   const out = [], T = usCall(() => cmT(), null);
   for (const sh of usShopLines()) for (const R of CM_LINES[sh] || []) {
     if (R.egg || !usCall(() => cmUnlocked(R), false)) continue;
@@ -29242,7 +29242,7 @@ function usCmRecipes(it) {
 }
 const usRecLocked = r => usCall(() => BQ_RIDS.has(r.id) && !bqRecOwned(r.id), false);
 function usAtRecipes(it) {
-  if (!it || typeof RECIPES === 'undefined') return [];
+  if (!it || it.special || typeof RECIPES === 'undefined') return [];
   const seen = new Set(), out = [];
   for (const r of RECIPES) {
     if (usRecLocked(r) || !r.ing.some(([k]) => usIngMatch(k, it))) continue;
@@ -35459,6 +35459,9 @@ if (typeof poiDrawIcon === 'function') poiDrawIcon = (orig => function (g, cx, c
 #modal .jr-wrap.jr-top{margin:4px 0 6px}#modal .jr-top .jr-cat{margin:3px 0}}`;
   document.head.appendChild(st);
 }
+// ---------------- v44e : plus de carte « Nouvel objet fabriqué » au milieu de l'écran (avec « Emporter comme appât ») ----------------
+// on ne fabrique pas pour faire un appât : un simple message suffit
+if (typeof obCraftCard === 'function') obCraftCard = function (it) { if (it && it.name) sg$(() => toast(`Fabriqué : ${it.name} ✓`), 0); };
 window.__sg = { of: sgOf, state: sgState, line: sgLineHTML, book: sgBookHTML };
 
 })();

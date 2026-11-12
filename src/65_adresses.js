@@ -186,4 +186,7 @@ if (typeof poiDrawIcon === 'function') poiDrawIcon = (orig => function (g, cx, c
 #modal .jr-wrap.jr-top{margin:4px 0 6px}#modal .jr-top .jr-cat{margin:3px 0}}`;
   document.head.appendChild(st);
 }
+// ---------------- v44e : plus de carte « Nouvel objet fabriqué » au milieu de l'écran (avec « Emporter comme appât ») ----------------
+// on ne fabrique pas pour faire un appât : un simple message suffit
+if (typeof obCraftCard === 'function') obCraftCard = function (it) { if (it && it.name) sg$(() => toast(`Fabriqué : ${it.name} ✓`), 0); };
 window.__sg = { of: sgOf, state: sgState, line: sgLineHTML, book: sgBookHTML };

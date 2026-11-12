@@ -153,7 +153,7 @@ const cmIsFar = it => !!(it && it.rid && typeof RG_RES !== 'undefined' && RG_RES
 const cmWorn = () => { try { return bqWorn(); } catch (e) { return new Set(); } };
 function cmPool(key) {
   const worn = cmWorn();
-  return S.inv.filter(it => it && !it.mk && !it.tresor && !worn.has(it.id) && (key === 'far' ? cmIsFar(it) && it.cat !== 'v' : ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n')));
+  return S.inv.filter(it => it && !it.mk && !it.tresor && !it.special && !worn.has(it.id) && (key === 'far' ? cmIsFar(it) && it.cat !== 'v' : ING[key] && ING[key][0].includes(it.sub) && (it.cat === 'm' || it.cat === 'n')));
 }
 const cmHave = key => cmPool(key).length;
 const cmCanIng = R => R.ing.every(([k, n]) => cmHave(k) >= n);
