@@ -99,7 +99,8 @@ function cpState(k) {
   return T;
 }
 const cpHas = (k, id) => { const T = cpState(k); return !!T.n[id] || T.leg.includes(id); };
-const cpPtsTotal = k => Math.max(0, ((S.prog[k] && S.prog[k].lvl) || 1) - 1) + cpState(k).bonus;
+// v46 (72_arbre.js) : plus on monte, plus chaque niveau rapporte de points : 1 (niv. 2-4), 2 (5-9), 3 (10-14), 4 ensuite
+const cpPtsTotal = k => { const L = (S.prog[k] && S.prog[k].lvl) || 1; let p = 0; for (let l = 2; l <= L; l++) p += l < 5 ? 1 : l < 10 ? 2 : l < 15 ? 3 : 4; return p + cpState(k).bonus; };
 const cpPtsUsed = k => { const T = cpState(k); return Object.keys(T.n).filter(id => T.n[id] && !T.leg.includes(id)).length; };
 const cpPtsFree = k => Math.max(0, cpPtsTotal(k) - cpPtsUsed(k));
 function cpCan(k, node) {
