@@ -116,23 +116,8 @@ hmPanelExtra = (box, R, at) => {
   if (R.id === 'entree') { const n = hmSvInv().length; if (n) box.insertAdjacentHTML('beforeend', `<button class="hm-sv" data-hmedit="1"><span>📦</span><b>${n} souvenir${n > 1 ? 's' : ''} de voyage à déballer</b><small>Posez-les chez vous : chacun réduit les risques sur son terrain.</small></button>`); }
 };
 // ---------------- clics ----------------
-function hmRe() { const b = $('panelBody'), t = b ? b.scrollTop : 0; renderPanel(); const b2 = $('panelBody'); if (b2) b2.scrollTop = t; }
-document.addEventListener('click', ev => {
-  const t = ev.target; if (!t.closest || !t.closest('#panelBody')) return;
-  const e = t.closest('[data-hmedit],[data-hmedtab],[data-hmpick],[data-hmcell],[data-hmact],[data-hmwall],[data-hmfloor]'); if (!e) return;
-  ev.stopPropagation(); const d = e.dataset, H = hmS();
-  if (d.hmedit) { hmEdit = !hmEdit; hmPick = hmSel = null; hmMove = false; hmEdTab = 'o'; if (hmEdit) { const r = hmR(hmRoom); if (!r || r.id === 'jardin' || (r.lock && hmLvl(r) < 1)) hmRoom = 'salon'; } return hmRe(); }
-  if (d.hmedtab) { hmEdTab = d.hmedtab; return hmRe(); }
-  if (d.hmpick) { hmPick = hmPick === d.hmpick ? null : d.hmpick; hmSel = null; hmMove = false; return hmRe(); }
-  if (d.hmact) {
-    const it = f3State().d[hmSel]; if (!it) { hmSel = null; return hmRe(); }
-    if (d.hmact === 'rot') H.p[hmSel].m = H.p[hmSel].m ? 0 : 1;
-    if (d.hmact === 'move') hmMove = !hmMove;
-    if (d.hmact === 'store') { f3Take(hmSel); delete H.p[hmSel]; hm$(() => toast(`${it.name} retourne dans le sac.`), 0); hmSel = null; hmMove = false; }
-    save(); return hmRe();
-  }
-  if (d.hmcell) {
-    const [x, y] = d.hmcell.split(',').map(Number), room = hmRoom;
+function hmCellTap(x, y) { // une case touchée en mode Aménager (SVG ou 3D)
+    const room = hmRoom, H = hmS();
     if (hmPick) {
       const it = S.inv.find(i => i.id === hmPick); if (!it) { hmPick = null; return hmRe(); }
       if (!hmCanAt(room, it, x, y)) { hm$(() => toast(hmHere(room).length >= HM_MAXI ? `${HM_MAXI} objets au plus par pièce.` : hmWallIt(it) ? 'Un tableau se pose contre un mur.' : 'Cette case est prise.'), 0); return; }
@@ -148,6 +133,23 @@ document.addEventListener('click', ev => {
     const here = hmHere(room), o = here.find(q => !q.w && q.p.x === x && q.p.y === y) || here.find(q => q.w && q.p.x === x && q.p.y === y);
     hmSel = o ? (hmSel === o.k ? null : o.k) : null; hmMove = false; return hmRe();
   }
+
+function hmRe() { const b = $('panelBody'), t = b ? b.scrollTop : 0; renderPanel(); const b2 = $('panelBody'); if (b2) b2.scrollTop = t; }
+document.addEventListener('click', ev => {
+  const t = ev.target; if (!t.closest || !t.closest('#panelBody')) return;
+  const e = t.closest('[data-hmedit],[data-hmedtab],[data-hmpick],[data-hmcell],[data-hmact],[data-hmwall],[data-hmfloor]'); if (!e) return;
+  ev.stopPropagation(); const d = e.dataset, H = hmS();
+  if (d.hmedit) { hmEdit = !hmEdit; hmPick = hmSel = null; hmMove = false; hmEdTab = 'o'; if (hmEdit) { const r = hmR(hmRoom); if (!r || r.id === 'jardin' || (r.lock && hmLvl(r) < 1)) hmRoom = 'salon'; } return hmRe(); }
+  if (d.hmedtab) { hmEdTab = d.hmedtab; return hmRe(); }
+  if (d.hmpick) { hmPick = hmPick === d.hmpick ? null : d.hmpick; hmSel = null; hmMove = false; return hmRe(); }
+  if (d.hmact) {
+    const it = f3State().d[hmSel]; if (!it) { hmSel = null; return hmRe(); }
+    if (d.hmact === 'rot') H.p[hmSel].m = H.p[hmSel].m ? 0 : 1;
+    if (d.hmact === 'move') hmMove = !hmMove;
+    if (d.hmact === 'store') { f3Take(hmSel); delete H.p[hmSel]; hm$(() => toast(`${it.name} retourne dans le sac.`), 0); hmSel = null; hmMove = false; }
+    save(); return hmRe();
+  }
+  if (d.hmcell) { const [x, y] = d.hmcell.split(',').map(Number); return hmCellTap(x, y); }
   if (d.hmwall || d.hmfloor) {
     const tp = d.hmwall ? 'w' : 'f', id = d.hmwall || d.hmfloor, C = tp === 'w' ? HM_WALLS : HM_FLOORS, v = C[id]; if (!v) return;
     if (!hmOwn(tp, id)) {
@@ -201,7 +203,7 @@ if (typeof renderPanel === 'function') renderPanel = (orig => function () {
   return r;
 })(renderPanel);
 document.addEventListener('click', ev => { const e = ev.target.closest && ev.target.closest('[data-hmhome]'); if (!e) return; ev.stopPropagation(); const back = villView; try { villView = 'foyer'; setSub('village', 'foyer'); } catch (x) {} hmRoom = back === 'nurserie' ? 'nurserie' : 'atelier'; renderPanel(); }, true);
-window.__am = { S: () => hmS(), here: r => hmHere(r), edit: v => { hmEdit = v; } };
+window.__am = { tap: (x, y) => hmCellTap(x, y), S: () => hmS(), here: r => hmHere(r), edit: v => { hmEdit = v; } };
 {
   const st = document.createElement('style');
   st.textContent = `.hm-cell{stroke:#fff;stroke-opacity:.75;stroke-width:1;stroke-dasharray:3 2;cursor:pointer}.hm-cell.ok{fill:rgba(95,179,107,.32);stroke:#5fb36b;stroke-dasharray:none}
