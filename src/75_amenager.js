@@ -12,14 +12,14 @@
 //    posé, chacun donne −5 % de risques sur ce terrain (jusqu'à −20 %). Affiché au départ.
 // État : S.hm = { n, p: { clé: { r: pièce, x, y, m: retourné } }, r: { pièce: { w, f } }, own: { w: [], f: [] } }.
 const HM_WALLS = {
-  peche: ['Pêche rayé', '#f7d9bd', 'stripe', 0], rose: ['Rose rayé', '#f5d6e2', 'stripe', 0], menthe: ['Menthe à pois', '#d6ead0', 'dots', 0],
-  creme: ['Crème uni', '#f6e8d4', 'plain', 60], lambris: ['Lambris', '#e5c9a0', 'wood', 120], lavande: ['Lavande à pois', '#e4dbf3', 'dots', 120],
-  fleurs: ['Fleuri', '#f4d9cf', 'flowers', 180], ciel: ['Ciel étoilé', '#3b4778', 'stars', 250],
+  peche: ['Pêche rayé', '#ffbf8f', 'stripe', 0], rose: ['Rose rayé', '#f7aecb', 'stripe', 0], menthe: ['Menthe à pois', '#9fdbbd', 'dots', 0],
+  creme: ['Crème uni', '#ffe3b0', 'plain', 60], lambris: ['Lambris', '#dcae76', 'wood', 120], lavande: ['Lavande à pois', '#c8b6f0', 'dots', 120],
+  fleurs: ['Fleuri', '#ffab9c', 'flowers', 180], ciel: ['Ciel étoilé', '#2f3a78', 'stars', 250],
 };
 const HM_FLOORS = {
-  miel: ['Parquet miel', '#e3b98a', 'planks', 0], carreau: ['Carrelage crème', '#f1e6d4', 'tiles', 0],
-  clair: ['Parquet clair', '#ecd5b2', 'planks', 80], fonce: ['Parquet noyer', '#b78a62', 'planks', 120],
-  damier: ['Damier menthe', '#d5ebd2', 'check', 150], moquette: ['Moquette rose', '#f2c7d2', 'carpet', 150], nuit: ['Moquette nuit', '#6d5a8c', 'carpet', 200],
+  miel: ['Parquet miel', '#d99a5b', 'planks', 0], carreau: ['Carrelage crème', '#fbeedb', 'tiles', 0],
+  clair: ['Parquet clair', '#e8bf86', 'planks', 80], fonce: ['Parquet noyer', '#a46c3c', 'planks', 120],
+  damier: ['Damier menthe', '#b5e2be', 'check', 150], moquette: ['Moquette rose', '#f4a3bb', 'carpet', 150], nuit: ['Moquette nuit', '#55468a', 'carpet', 200],
 };
 const HM_MAXI = 12; // objets par pièce
 let hmPick = null, hmSel = null, hmMove = false, hmEdTab = 'o';

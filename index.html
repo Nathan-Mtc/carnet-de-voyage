@@ -36310,9 +36310,9 @@ function hmWho() {
 }
 // ---------------- projection 3/4 ----------------
 // X va vers la droite-bas, Y vers la gauche-bas, Z vers le haut. Pièce de 9 × 9, murs de 6.
-const HIU = 21.5, HIA = HIU * 0.866, HIB = HIU * 0.5, HIOX = 190, HIOY = 146, HIN = 9, HIH = 6, HILN = '#6b5040';
+const HIU = 21.5, HIA = HIU * 0.866, HIB = HIU * 0.5, HIOX = 190, HIOY = 146, HIN = 9, HIH = 6, HILN = '#4a3528';
 const hIP = (x, y, z = 0) => [+(HIOX + (x - y) * HIA).toFixed(1), +(HIOY + (x + y) * HIB - z * HIU).toFixed(1)];
-const hIPath = (pts, f, o = '') => `<path d="M${pts.map(p => p.join(' ')).join('L')}Z" fill="${f}" stroke="${HILN}" stroke-opacity=".55" stroke-width="1" stroke-linejoin="round" ${o}/>`;
+const hIPath = (pts, f, o = '') => `<path d="M${pts.map(p => p.join(' ')).join('L')}Z" fill="${f}" stroke="${HILN}" stroke-opacity=".9" stroke-width="1.35" stroke-linejoin="round" ${o}/>`;
 function hIMix(h, k) { // k > 0 : vers la lumière ; k < 0 : vers une ombre chaude
   const c = parseInt(h.slice(1), 16), t = k > 0 ? [255, 250, 240] : [74, 48, 38], a = Math.abs(k);
   const r = [(c >> 16) & 255, (c >> 8) & 255, c & 255].map((v, i) => Math.round(v + (t[i] - v) * a));
@@ -36320,7 +36320,7 @@ function hIMix(h, k) { // k > 0 : vers la lumière ; k < 0 : vers une ombre chau
 }
 // un bloc (meuble, mur…) : dessus, face gauche (vers Y+), face droite (vers X+)
 function hIBox(x, y, z, w, d, h, c, o = {}) {
-  const T = o.t || hIMix(c, .2), L = o.l || c, R = o.r || hIMix(c, -.16), fx = !o.flat && w + d + h > .9;
+  const T = o.t || hIMix(c, .2), L = o.l || c, R = o.r || hIMix(c, -.26), fx = !o.flat && w + d + h > .9;
   const qT = [hIP(x, y, z + h), hIP(x + w, y, z + h), hIP(x + w, y + d, z + h), hIP(x, y + d, z + h)], qL = [hIP(x, y + d, z + h), hIP(x + w, y + d, z + h), hIP(x + w, y + d, z), hIP(x, y + d, z)], qR = [hIP(x + w, y, z + h), hIP(x + w, y + d, z + h), hIP(x + w, y + d, z), hIP(x + w, y, z)];
   const sh = z === 0 && !o.flat && h > .2 ? hIPath(hIFq(x + .05, y + .05, w + .4, d + .4), '#3a2418', 'stroke="none" opacity=".2" filter="url(#hBl)"') : '';
   return sh + hIPath(qT, T) + (fx ? hIPath(qT, 'url(#gT)', 'stroke="none"') : '')
@@ -36335,7 +36335,12 @@ function hIWin(s, a, z, w, h) {
   const q = hIWq(s, a, z, w, h), m = (i, j, t) => q[i].map((v, n) => v + (q[j][n] - v) * t);
   const cur = (a0, ww) => { const Q = hIWq(s, a0, z - .55, ww, h + .85); return hIPath([Q[0], Q[1], Q[2], Q[3]], '#fbe3d0') + hIPath([Q[0], Q[1], Q[2], Q[3]], 'url(#gCur)', 'stroke="none"') + [.25, .5, .75].map(t => `<path d="M${Q[3].map((v, n) => v + (Q[2][n] - v) * t).join(' ')}L${Q[0].map((v, n) => v + (Q[1][n] - v) * t).join(' ')}" stroke="#e8c2a6" stroke-width="1.2"/>`).join(''); };
   const g1 = q[3].map((v, n) => v + (q[2][n] - v) * .15), g2 = q[3].map((v, n) => v + (q[2][n] - v) * .4), g3 = q[0].map((v, n) => v + (q[1][n] - v) * .05), g4 = q[0].map((v, n) => v + (q[1][n] - v) * .3);
-  return hIPath(hIWq(s, a - .18, z - .18, w + .36, h + .36), '#fffaf0') + hIPath(q, 'url(#isky)', 'class="iwin"')
+  const id = 'hw' + (++hWinN), xs = q.map(v => v[0]), ys = q.map(v => v[1]), X0 = Math.min(...xs), X1 = Math.max(...xs), Y0 = Math.min(...ys), Y1 = Math.max(...ys), W = X1 - X0, H = Y1 - Y0;
+  const land = `<clipPath id="${id}"><path d="M${q.map(v => v.join(' ')).join('L')}Z"/></clipPath><g clip-path="url(#${id})"><rect x="${X0}" y="${Y0}" width="${W}" height="${H}" fill="url(#isky)" class="iwin"/>
+    <circle cx="${X0 + W * .75}" cy="${Y0 + H * .3}" r="${H * .14}" class="iwsun"/><g class="iwcl"><ellipse cx="${X0 + W * .3}" cy="${Y0 + H * .28}" rx="${W * .22}" ry="${H * .07}" fill="#fff"/><ellipse cx="${X0 + W * .9}" cy="${Y0 + H * .45}" rx="${W * .16}" ry="${H * .05}" fill="#fff" opacity=".85"/></g>
+    <ellipse cx="${X0 + W * .2}" cy="${Y1 + H * .1}" rx="${W * .7}" ry="${H * .38}" class="iwh1"/><ellipse cx="${X0 + W * .85}" cy="${Y1 + H * .15}" rx="${W * .6}" ry="${H * .42}" class="iwh2"/>
+    <circle cx="${X0 + W * .62}" cy="${Y1 - H * .32}" r="${H * .1}" fill="#3f8f55"/><path d="M${X0 + W * .62} ${Y1 - H * .25}v${H * .12}" stroke="#6b4a36" stroke-width="2"/></g>`;
+  return hIPath(hIWq(s, a - .18, z - .18, w + .36, h + .36), '#fffaf0') + land
     + `<path d="M${g1.join(' ')}L${g2.join(' ')}L${g4.join(' ')}L${g3.join(' ')}Z" fill="#fff" opacity=".35"/>`
     + `<path d="M${m(0, 1, .5).join(' ')}L${m(3, 2, .5).join(' ')}M${m(0, 3, .5).join(' ')}L${m(1, 2, .5).join(' ')}" stroke="#fffaf0" stroke-width="2.2"/>`
     + hIBox(s === 'L' ? 0 : a - .3, s === 'L' ? a - .3 : 0, z - .35, s === 'L' ? .35 : w + .6, s === 'L' ? w + .6 : .35, .14, '#fffaf0', { flat: 1 })
@@ -36362,7 +36367,7 @@ function hIMug(x, y, z, c = '#fffdf7', steam) { const [px, py] = hIP(x, y, z); r
 function hIHang(sd, a, ztop = HIH, len = 1.6) { const [tx, ty] = sd === 'L' ? hIP(.6, a, ztop) : hIP(a, .6, ztop), py = ty + len * HIU; return `<path d="M${tx} ${ty}V${py - 8}" stroke="${HILN}" stroke-opacity=".7"/><path d="M${tx - 9} ${py - 8}h18l-3 9h-12z" fill="#e9d8bf" stroke="${HILN}" stroke-opacity=".6"/><g class="isway"><path d="M${tx - 7} ${py}q-4 10 -1 20M${tx - 2} ${py + 1}q-2 14 2 26M${tx + 5} ${py}q5 8 2 17" stroke="#5fb36b" stroke-width="2.4" fill="none" stroke-linecap="round"/>${[[-8, 9], [-7, 18], [-1, 14], [1, 24], [6, 8], [7, 15]].map(([dx, dy]) => `<ellipse cx="${tx + dx}" cy="${py + dy}" rx="3" ry="2" fill="#7fc38a"/>`).join('')}</g>`; }
 const hIGlow = (x, y, z, r = 46, c = '#ffd27a') => { const [px, py] = hIP(x, y, z); return `<circle cx="${px}" cy="${py}" r="${r}" fill="url(#iglow)" style="--gc:${c}" class="iglow"/>`; };
 // ---------------- la coquille de la pièce ----------------
-let hmCur = '', hmCustom = () => ({}); // pièce dessinée ; murs et sol choisis par le joueur (75_amenager.js)
+let hWinN = 0, hmCur = '', hmCustom = () => ({}); // pièce dessinée ; murs et sol choisis par le joueur (75_amenager.js)
 function hIShell(wall, floor, o = {}) {
   if (!o.open) { const C = hm$(() => hmCustom(hmCur), {}); if (C.w) { wall = C.w[1]; o = Object.assign({}, o, { pat: C.w[2], wl: null, wr: null }); } if (C.f) { floor = C.f[1]; o = Object.assign({}, o, { tiles: C.f[2] === 'tiles', check: C.f[2] === 'check', carpet: C.f[2] === 'carpet' }); } }
   let s = `<ellipse cx="${HIOX}" cy="${HIOY + HIN * 2 * HIB + 14}" rx="180" ry="20" fill="#4a3026" opacity=".12"/>`;
@@ -36395,16 +36400,16 @@ const HISTD = `<defs><linearGradient id="isky" x1="0" y1="0" x2="0" y2="1"><stop
   <radialGradient id="iglow"><stop offset="0" stop-color="var(--gc,#ffd27a)" stop-opacity=".55"/><stop offset="1" stop-color="var(--gc,#ffd27a)" stop-opacity="0"/></radialGradient>
   <linearGradient id="gT" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset=".7" stop-color="#fff" stop-opacity="0"/></linearGradient>
   <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#3a2418" stop-opacity=".18"/></linearGradient>
-  <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2418" stop-opacity=".04"/><stop offset="1" stop-color="#3a2418" stop-opacity=".26"/></linearGradient>
+  <linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2418" stop-opacity=".04"/><stop offset="1" stop-color="#3a2418" stop-opacity=".34"/></linearGradient>
   <linearGradient id="gCur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset="1" stop-color="#c98a6a" stop-opacity=".25"/></linearGradient>
   <linearGradient id="gBeam" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff6d8" stop-opacity=".45"/><stop offset="1" stop-color="#fff6d8" stop-opacity="0"/></linearGradient>
-  <filter id="hBl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.6"/></filter>
+  <filter id="hBl" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.6"/></filter><filter id="hBl2" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>
   <radialGradient id="ibg" cx=".5" cy=".42" r=".75"><stop offset="0" stop-color="#fff8ee"/><stop offset="1" stop-color="#f6e2cc"/></radialGradient></defs>`;
 // ---------------- les pièces ----------------
 // chaque fonction renvoie { s: le décor, g: les lumières (dessinées par-dessus la pénombre du soir), spots: où se tiennent les compagnons }
 const HM_ISO = {
   entree() {
-    let s = hIShell('#dfe8d2', '#d9b48a', { pat: 'wood' }), g = '';
+    let s = hIShell('#b9dc9f', '#d99a5b', { pat: 'wood' }), g = '';
     s += hIPath(hIWq('R', 3.15, 0, 2.5, 4.35), '#fffaf0') + hIPath(hIWq('R', 3.4, 0, 2, 4), '#79aed0') + hIPath(hIWq('R', 3.75, 2.4, 1.3, 1.1), 'url(#isky)', 'class="iwin"');
     s += hIPath(hIWq('R', 3.65, .4, 1.5, 1.5), 'none', 'stroke="#fff" stroke-opacity=".5"');
     const [kx, ky] = hIP(5.05, 0, 1.9); s += `<circle cx="${kx}" cy="${ky}" r="2.6" fill="#f2c14e" stroke="${HILN}" stroke-opacity=".6"/>`;
@@ -36424,7 +36429,7 @@ const HM_ISO = {
     return { s, g, blk: [[3.4, 0, 2, 1.4], [0, 3, 1.4, 3], [.4, .8, 1, 1], [7.7, .5, .9, .9], [7.8, 2.6, .8, .8]], spots: [[4.6, 3.2], [5.9, 4.4], [3.4, 4.6]] };
   },
   salon(l) {
-    let s = hIShell('#f7d9bd', '#e3b98a', { pat: 'stripe' }), g = '';
+    let s = hIShell('#ffbf8f', '#d99a5b', { pat: 'stripe' }), g = '';
     s += hIWin('L', 2.2, 2.3, 2.6, 2.4) + hISun('L', 2.2, 2.6);
     s += hIPath(hIWq('R', 1.2, 3, 2, 1.5), '#fffaf0') + hIPath(hIWq('R', 1.4, 3.2, 1.6, 1.1), '#a9d8b5') + `<circle cx="${hIP(2.6, 0, 3.9)[0]}" cy="${hIP(2.6, 0, 3.9)[1]}" r="2.6" fill="#ffd866"/>`;
     if (l >= 1) {
@@ -36449,7 +36454,7 @@ const HM_ISO = {
     return { s, g, blk: [[0,2.6,2,4.4],[3.6,4.4,1.5,1.9],[.4,.8,.8,.8],[7.8,.7,.8,.8],[4.4,0,3.2,1.2]].concat(l>=3?[[6.3,3.3,1.7,1.7]]:[]), spots: [[6, 6.6], [7.6, 5.4]] };
   },
   chambres(l) {
-    let s = hIShell('#f5d6e2', '#e6c39a', { pat: 'stripe' }), g = '';
+    let s = hIShell('#f7aecb', '#e0a46a', { pat: 'stripe' }), g = '';
     s += hIWin('R', 3.3, 2.4, 2.4, 2.4) + hISun('R', 3.3, 2.4);
     const bed = (y, c) => hIBox(.2, y, 0, 3.3, 2.2, .65, '#c99a6a') + hIBox(.05, y, 0, .35, 2.2, 1.7, '#b98a5e') + hIBox(.45, y + .08, .65, 2.95, 2.04, .32, '#fffaf2') + hIBox(1.55, y + .02, .7, 1.95, 2.16, .34, c) + hIBox(.6, y + .35, .97, .8, 1.5, .25, '#ffffff');
     s += bed(.9, '#f29cb0');
@@ -36465,7 +36470,7 @@ const HM_ISO = {
     return { s, g, blk: [[0,.9,3.5,2.2],[0,3.4,1.2,1],[0,4.7,3.5,2.2],[7.9,.6,.8,.8]].concat(l>=2?[[6.4,0,2.2,.8]]:[]), spots: [[5.6, 6.4], [7.4, 4.9], [6.6, 7.8]] };
   },
   cuisine(l) {
-    let s = hIShell('#d6ead0', '#f1e6d4', { pat: 'dots', tiles: 1 }), g = '';
+    let s = hIShell('#9fdbbd', '#fbeedb', { pat: 'dots', tiles: 1 }), g = '';
     s += hIWin('L', 2.6, 2.4, 2.4, 2.2) + hISun('L', 2.6, 2.4);
     s += hIBox(.2, 0, 0, 3.4, 1.15, 1.4, '#fffaf0', { t: '#c99a6a' }) + hIBox(3.6, 0, 0, 1.6, 1.15, 1.4, '#e7ecee', { t: '#cfd6da' }) + hIBox(5.2, 0, 0, 1.6, 1.15, 1.4, '#fffaf0', { t: '#c99a6a' });
     s += hIPath([hIP(3.8, 1.15, .25), hIP(5, 1.15, .25), hIP(5, 1.15, 1), hIP(3.8, 1.15, 1)], '#3b2a22') + hIPath([hIP(3.9, 1.15, .35), hIP(4.9, 1.15, .35), hIP(4.9, 1.15, .7), hIP(3.9, 1.15, .7)], '#ffb347', 'class="iglow2"');
@@ -36490,7 +36495,7 @@ const HM_ISO = {
     return { s, g, blk: [[0,0,6.8,1.2],[4.4,4.4,1.7,1.7],[2.9,4.8,1,1],[6.5,4.5,1,1]], spots: [[6.8, 7], [3.8, 7.2]] };
   },
   nurserie() {
-    let s = hIShell('#fde7c4', '#ebc89c', { pat: 'dots' }), g = '';
+    let s = hIShell('#ffd97a', '#e3a86a', { pat: 'dots' }), g = '';
     s += hIWin('R', 4.2, 2.6, 2.2, 2.2) + hISun('R', 4.2, 2.2);
     s += hIEll(4.6, 4.6, 2.8, '#fff3dc') + hIEll(4.6, 4.6, 2, 'none', 0, 'stroke="#f6c7a0" stroke-width="2" stroke-dasharray="5 4"');
     s += hIEll(4.6, 4.6, 1.3, '#e2b96a', .25) + hIEll(4.6, 4.6, .85, '#c99a4e', .3);
@@ -36531,7 +36536,7 @@ const HM_ISO = {
     return { s, g, blk: [[.7,.7,5,1.4],[.7,2.9,1.4,4],[7.2,1.2,.8,.8],[4.6,4.6,.8,.6]], spots: [[5.4, 6.6], [7.6, 5.2], [4, 7.8]], sky: 1 };
   },
   atelier(l) {
-    let s = hIShell('#ead9c0', '#c9a37a'), g = '';
+    let s = hIShell('#93c8d8', '#c98f58', { pat: 'wood' }), g = '';
     s += hIWin('L', 3.2, 2.5, 2.2, 2.2) + hISun('L', 3.2, 2.2);
     s += hIPath(hIWq('R', .8, 2.2, 3.8, 2.2), '#f3e6cf');
     for (let x = 1.1; x < 4.5; x += .45) for (let z = 2.45; z < 4.3; z += .45) { const [px, py] = hIP(x, 0, z); s += `<circle cx="${px}" cy="${py}" r=".9" fill="${HILN}" opacity=".35"/>`; }
@@ -36550,7 +36555,7 @@ const HM_ISO = {
     return { s, g, blk: [[.5,0,4.3,1.6],[7,.4,1.6,1.4],[7.4,2.2,1.1,1.1]].concat(l>=1?[[3.3,4.5,1.6,1]]:[]), spots: [[5.8, 6.4], [3, 6.8]] };
   },
   observ(l) {
-    let s = hIShell('#3b4778', '#6d5a8c', { pat: 'stars', wl: '#3b4778', wr: '#34406d' }), g = '';
+    let s = hIShell('#2f3a78', '#5a4a8c', { pat: 'stars', wl: '#2f3a78', wr: '#28326a' }), g = '';
     const [cx, cy] = hIP(5, 0, 3.6); s += `<ellipse cx="${cx}" cy="${cy}" rx="34" ry="40" fill="#fffaf0" transform="skewY(-30) translate(0 0)" transform-origin="${cx} ${cy}"/><ellipse cx="${cx}" cy="${cy}" rx="29" ry="35" fill="#1f2a55" transform="skewY(-30)" transform-origin="${cx} ${cy}"/><path d="M${cx + 8} ${cy - 16}a12 12 0 1 0 7 20 13 13 0 0 1-7-20z" fill="#ffe9a8"/>`;
     g += `<circle cx="${cx + 10}" cy="${cy - 6}" r="40" fill="url(#iglow)" style="--gc:#cfe0ff" class="iglow"/>`;
     s += hIEll(4.6, 4.6, 2.2, '#8a74ad');
@@ -36569,17 +36574,46 @@ function hmLocked() {
   const [px, py] = hIP(4.8, 6, 0); s += `<path d="M${px} ${py}V${py - 44}" stroke="${HILN}" stroke-width="3"/><rect x="${px - 30}" y="${py - 70}" width="60" height="30" rx="7" fill="#f2d9a8" stroke="${HILN}" stroke-opacity=".7"/><text x="${px}" y="${py - 50}" text-anchor="middle" font-size="16">🔨</text>`;
   return { s, g, spots: [] };
 }
+// ce que font les familiers dans chaque pièce : où ils se tiennent et leur geste
+const HM_ACT = {
+  entree: { fx: 'go', all: 1, p: [[5.6, 2.6], [6.6, 4.8], [4.2, 4.9]] },
+  salon: { fx: 'read', p: l => [[1.2, 4.3, .9], [6, 6.6], [7.6, 5.4]] },
+  chambres: { fx: 'zzz', all: 1, p: l => l >= 1 ? [[2, 1.8, 1.05], [2, 5.6, 1.05], [5.4, 6.6]] : [[2, 1.8, 1.05], [5.4, 6.6], [7, 5.2]] },
+  cuisine: { fx: 'stir', p: [[4.4, 2.1], [6.6, 6.8], [3.8, 7.2]] },
+  nurserie: { fx: 'love', all: 1, p: [[6.2, 4.6], [4.6, 6.8], [3, 5.8]] },
+  jardin: { fx: 'water', all: 1, p: [[3.6, 2.8], [2.8, 5], [5.6, 6.6]] },
+  atelier: { fx: 'hammer', p: [[2.7, 2.3], [5.8, 6.4], [3, 6.8]] },
+  observ: { fx: 'star', p: [[6, 5.6], [6.4, 7.2]] },
+};
+function hmFx(fx, x, y) {
+  const t = y - 66;
+  switch (fx) {
+    case 'water': return `<g class="fxw-can" style="transform-origin:${x + 18}px ${y - 22}px"><path d="M${x + 12} ${y - 30}h14v12h-14z" fill="#5fa8d8" stroke="${HILN}" stroke-width="1.3" stroke-linejoin="round"/><path d="M${x + 26} ${y - 27}l9 -6" stroke="${HILN}" stroke-width="2.6" stroke-linecap="round"/><path d="M${x + 15} ${y - 30}q4 -7 8 0" fill="none" stroke="${HILN}" stroke-width="1.4"/></g>${[0, 1, 2, 3].map(i => `<ellipse class="fxw-drop" style="--i:${i}" cx="${x + 36 + (i % 2) * 3}" cy="${y - 20}" rx="1.5" ry="2.6" fill="#5fb7ea"/>`).join('')}`;
+    case 'stir': return `<g class="fxs-sp" style="transform-origin:${x - 14}px ${y - 22}px"><path d="M${x - 14} ${y - 22}l-10 -14" stroke="#b98a5e" stroke-width="3" stroke-linecap="round"/></g>${[0, 1, 2].map(i => `<circle class="fx-puff" style="--i:${i}" cx="${x - 22 + i * 4}" cy="${y - 44}" r="${4 + i}" fill="#fff"/>`).join('')}`;
+    case 'love': return [0, 1, 2].map(i => `<path class="fx-up" style="--i:${i}" d="M${x - 14 + i * 14} ${t + 4}c-3 -4 2 -7 4 -3c2 -4 7 -1 4 3l-4 4z" fill="#f0648a" stroke="${HILN}" stroke-width=".8"/>`).join('');
+    case 'zzz': return [0, 1, 2].map(i => `<text class="fx-up" style="--i:${i}" x="${x + 14 + i * 5}" y="${t + 8 - i * 4}" font-size="${10 + i * 3}" font-weight="900" fill="#6f7fc0" stroke="#fff" stroke-width="2" paint-order="stroke">z</text>`).join('');
+    case 'read': return `<g class="fxr-bk"><path d="M${x - 12} ${y - 16}l12 3l12 -3v10l-12 3l-12 -3z" fill="#fffaf0" stroke="${HILN}" stroke-width="1.3" stroke-linejoin="round"/><path d="M${x} ${y - 13}v10" stroke="${HILN}"/><path d="M${x - 12} ${y - 16}v-2l12 3l12 -3v2" fill="#e0685a" stroke="${HILN}" stroke-width="1.1"/></g><text class="fx-up" x="${x + 16}" y="${t + 8}" font-size="13" fill="#e0a01e" stroke="#fff" stroke-width="2" paint-order="stroke">♪</text>`;
+    case 'hammer': return `<g class="fxh-h" style="transform-origin:${x + 10}px ${y - 18}px"><path d="M${x + 10} ${y - 18}l12 -14" stroke="#b98a5e" stroke-width="3" stroke-linecap="round"/><path d="M${x + 16} ${y - 38}l10 8l-3 4l-10 -8z" fill="#8a8f95" stroke="${HILN}" stroke-width="1.2" stroke-linejoin="round"/></g>${[0, 1, 2].map(i => `<path class="fx-spark" style="--i:${i}" d="M${x + 28 + i * 4} ${y - 18 - i * 3}l1.5 -4l1.5 4l4 1.5l-4 1.5l-1.5 4l-1.5 -4l-4 -1.5z" fill="#ffd866" stroke="#e0a01e" stroke-width=".6"/>`).join('')}`;
+    case 'go': return `<path d="M${x + 12} ${y - 34}h10q3 0 3 3v12q0 3 -3 3h-10z" fill="#e0685a" stroke="${HILN}" stroke-width="1.2" stroke-linejoin="round"/><text class="fx-up" x="${x - 20}" y="${t + 10}" font-size="12" font-weight="900" fill="#e0a01e" stroke="#fff" stroke-width="2" paint-order="stroke">!</text>`;
+    case 'star': return [0, 1, 2].map(i => `<path class="fx-spark" style="--i:${i}" d="M${x - 16 + i * 16} ${t + 2 - (i % 2) * 6}l2 -5l2 5l5 2l-5 2l-2 5l-2 -5l-5 -2z" fill="#ffe9a8"/>`).join('');
+    default: return '';
+  }
+}
+const HM_FG = `<g class="hm-fg" filter="url(#hBl2)"><path d="M-10 352 Q6 286 40 262 Q28 300 46 300 Q40 322 64 318 Q50 340 70 352Z" fill="#3f8f55"/><path d="M-6 352 Q2 300 22 280 Q20 316 36 330Z" fill="#5fb36b"/><path d="M390 352 Q372 300 340 290 Q354 322 330 326 Q348 340 324 352Z" fill="#3f8f55" opacity=".9"/></g>`;
 let hmExtra = () => ({ s: '', top: '' }); // objets posés et grille d'aménagement (75_amenager.js)
 function hmSceneSVG(R) {
   const l = hmLvl(R), locked = R.lock && l < 1, night = hmNight(); hmCur = R.id;
   const D = locked ? hmLocked() : hm$(() => HM_ISO[R.id](l), { s: '', g: '', spots: [] });
   const who = locked ? [] : (hmWho()[R.id] || []).slice(0, D.spots.length);
-  const chars = who.map((k, i) => { const u = hm$(() => portraitURI(k), ''), [px, py] = hIP(...D.spots[i]); return u ? `<ellipse cx="${px}" cy="${py}" rx="15" ry="5" fill="#4a3026" opacity=".18"/><image href="${u}" x="${px - 25}" y="${py - 52}" width="50" height="55" class="ich" style="--i:${i}"/>` : ''; }).join('');
+  const A = HM_ACT[R.id] || { fx: '', p: D.spots }, P = typeof A.p === 'function' ? A.p(l) : A.p;
+  const chars = who.slice(0, P.length).map((k, i) => { const [x, y, z = 0] = P[i], fx = i < (A.n || 1) || A.all ? A.fx : '', u = hm$(() => portraitURI(k, fx === 'zzz' ? 'dodo' : fx === 'love' ? 'amour' : fx ? 'rire' : 'content'), ''), [px, py] = hIP(x, y, z);
+    return u ? `<g class="ich-w fx-${fx || 'idle'}" style="--i:${i}"><ellipse cx="${px}" cy="${py}" rx="18" ry="6" fill="#3a2418" opacity=".25"/><image href="${u}" x="${px - 31}" y="${py - 66}" width="62" height="68" class="ich"/>${hmFx(fx, px, py)}</g>` : ''; }).join('')
+    + (R.j && !who.length ? (() => { const [x, y, z = 0] = P[0], [px, py] = hIP(x, y, z); return `<g class="hm-hire" data-hmhire="1"><ellipse cx="${px}" cy="${py}" rx="17" ry="6" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/><circle cx="${px}" cy="${py - 26}" r="13" fill="#fff" opacity=".92"/><path d="M${px - 6} ${py - 26}h12M${px} ${py - 32}v12" stroke="${HILN}" stroke-width="3" stroke-linecap="round"/><rect x="${px - 30}" y="${py - 54}" width="60" height="16" rx="8" fill="#fff" opacity=".92"/><text x="${px}" y="${py - 42.5}" text-anchor="middle" font-size="9.5" font-weight="800" fill="${HILN}">Confier</text></g>`; })() : '');
   const X = locked ? { s: '', top: '' } : hm$(() => hmExtra(R, D), { s: '', top: '' });
   const motes = !night && !locked ? [0, 1, 2, 3, 4].map(i => `<circle cx="${110 + i * 37}" cy="${170 + (i % 3) * 22}" r="${i % 2 ? 1.4 : 2}" fill="#fff8d8" class="imote" style="--i:${i}"/>`).join('') : '';
   return `<svg class="hm-iso${night ? ' night' : ''}" viewBox="0 0 380 352" role="img" aria-label="${R.nm}">${HISTD}
     <rect width="380" height="352" fill="${D.sky ? (night ? '#3a4a7a' : '#cfeaf5') : 'url(#ibg)'}"/>
-    ${D.s}${X.s}${chars}${motes}${night ? '<rect width="380" height="352" fill="#1d2550" opacity=".3"/>' : ''}${D.g}${X.top}</svg>`;
+    ${D.s}${X.s}${chars}${motes}${night ? '<rect width="380" height="352" fill="#1d2550" opacity=".3"/>' : ''}${D.g}${R.id === 'jardin' || R.id === 'observ' ? '' : HM_FG}${X.top}</svg>`;
 }
 // ---------------- l'écran ----------------
 function hmTabsHTML(cur) {
@@ -36648,6 +36682,7 @@ function hmGo(d) { const i = HM_ROOMS.findIndex(x => x.id === hmRoom); hmRoom = 
 document.addEventListener('click', ev => {
   const t = ev.target; if (!t.closest) return;
   const r = t.closest('[data-hmroom]'); if (r) { ev.stopPropagation(); if (hmRoom !== r.dataset.hmroom) { hmRoom = r.dataset.hmroom; renderPanel(); } return; }
+  if (t.closest('[data-hmhire]')) { ev.stopPropagation(); const w = document.querySelector('#panelBody .hm-work'); if (w) w.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
   const n = t.closest('[data-hmnav]'); if (n) { ev.stopPropagation(); hmGo(+n.dataset.hmnav); return; }
   const g = t.closest('[data-hmgo]'); if (g) { ev.stopPropagation(); try { villView = g.dataset.hmgo; } catch (e) {} renderPanel(); const p = $('panelBody'); if (p) p.scrollTop = 0; }
 }, true);
@@ -36687,7 +36722,21 @@ window.__hm = { room: () => hmRoom, svg: id => hmSceneSVG(hmR(id)) };
 .hm-bd{position:absolute;top:-4px;right:-1px;min-width:16px;height:16px;padding:0 3px;border-radius:9px;background:#e0533d;color:#fff;font:800 10px/16px system-ui;font-style:normal;border:1.5px solid #fff;animation:hmPulse 1.4s ease-in-out infinite}
 .hm-stage{position:relative;border-radius:22px;overflow:hidden;box-shadow:0 6px 18px -10px rgba(120,80,40,.45);touch-action:pan-y}
 .hm-iso{display:block;width:100%;height:auto}
-.hm-stage::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:radial-gradient(ellipse at 50% 45%,transparent 55%,rgba(110,60,30,.16)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .22 0 0 0 0 .12 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");mix-blend-mode:multiply;opacity:.3}
+.hm-stage::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:radial-gradient(ellipse at 50% 42%,transparent 58%,rgba(60,30,15,.22))}
+.hm-iso{filter:saturate(1.12) contrast(1.04)}
+.iwsun{fill:#ffe27a}.hm-iso.night .iwsun{fill:#fff3c4}.iwh1{fill:#7fcb6f}.iwh2{fill:#5fb35f}.hm-iso.night .iwh1{fill:#3f6a5a}.hm-iso.night .iwh2{fill:#355a4c}.hm-iso.night .iwcl{opacity:.25}
+.iwcl{animation:hmCloud2 14s ease-in-out infinite alternate}@keyframes hmCloud2{to{transform:translateX(-14px)}}
+.hm-fg{animation:hmSway 5s ease-in-out infinite;transform-origin:50% 100%}
+.ich-w.fx-go .ich{animation:hmHop .9s ease-in-out infinite;animation-delay:calc(var(--i,0) * -.3s)}.ich-w.fx-water .ich,.ich-w.fx-stir .ich,.ich-w.fx-hammer .ich{animation:hmLean 1.2s ease-in-out infinite}.ich-w.fx-zzz .ich{animation:hmBreath 3s ease-in-out infinite}
+.fxw-can{animation:hmPour 2.4s ease-in-out infinite}.fxw-drop{opacity:0;animation:hmDrop 2.4s ease-in infinite;animation-delay:calc(var(--i) * .22s + .5s)}
+.fxs-sp{animation:hmStir 1s linear infinite}.fx-puff{opacity:0;animation:hmSteam 2s ease-out infinite;animation-delay:calc(var(--i) * .6s)}
+.fxh-h{animation:hmHam .8s ease-in-out infinite}.fx-spark{opacity:0;animation:hmSpark .8s ease-out infinite;animation-delay:calc(var(--i) * .12s + .3s)}
+.fx-up{opacity:0;animation:hmUp 2.6s ease-out infinite;animation-delay:calc(var(--i,0) * .8s)}.fxr-bk{animation:hmBob 2s ease-in-out infinite}
+.hm-hire{cursor:pointer;animation:hmPulse 1.8s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}
+@keyframes hmHop{0%,100%{transform:translateY(0)}40%{transform:translateY(-7px)}}@keyframes hmLean{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}@keyframes hmBreath{50%{transform:scale(1.03,.97)}}
+@keyframes hmPour{0%,100%{transform:rotate(0)}30%,70%{transform:rotate(28deg)}}@keyframes hmDrop{0%{opacity:0;transform:translate(0,0)}15%{opacity:1}100%{opacity:0;transform:translate(4px,22px)}}
+@keyframes hmStir{0%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}100%{transform:rotate(-14deg)}}@keyframes hmHam{0%,100%{transform:rotate(-30deg)}50%{transform:rotate(10deg)}}
+@keyframes hmSpark{0%{opacity:1;transform:scale(.4)}100%{opacity:0;transform:scale(1.3) translate(4px,-6px)}}@keyframes hmUp{0%{opacity:0;transform:translateY(4px)}20%{opacity:1}100%{opacity:0;transform:translateY(-22px)}}
 .hm-iso .ibeam{opacity:.8}
 .hm-tag{position:absolute;left:12px;top:10px;padding:5px 12px 6px;border-radius:999px;background:rgba(255,250,240,.92);box-shadow:0 2px 6px rgba(120,80,40,.15)}
 .hm-tag b{font:800 15px var(--display,inherit);color:var(--ink,#4a3528);margin-right:6px}.hm-tag span{font-size:12px;color:#e0a01e;letter-spacing:1px}.hm-tag i{font-style:normal;color:#e3d6c2}
@@ -36709,7 +36758,7 @@ window.__hm = { room: () => hmRoom, svg: id => hmSceneSVG(hmR(id)) };
 .isway{animation:hmSway 3.2s ease-in-out infinite;animation-delay:calc(var(--i,0) * -.8s);transform-box:fill-box;transform-origin:50% 100%}
 .ifly{animation:hmFly 5s ease-in-out infinite;animation-delay:calc(var(--i,0) * -2s)}
 .itw{animation:hmTw 2.6s ease-in-out infinite;animation-delay:calc(var(--i,0) * -.45s)}
-.ich{animation:hmBob 2.4s ease-in-out infinite;animation-delay:calc(var(--i,0) * -1s);transform-box:fill-box;transform-origin:50% 100%}
+.ich{animation:hmBob 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}.fxw-can,.fxs-sp,.fxh-h,.fx-up,.fx-puff{transform-box:view-box}.fx-spark{transform-box:fill-box;transform-origin:center}
 .imote{opacity:0;animation:hmMote 7s ease-in-out infinite;animation-delay:calc(var(--i,0) * -1.4s)}
 @keyframes hmPulse{50%{transform:scale(1.15)}}@keyframes hmFire{to{transform:scale(1.07,.85)}}@keyframes hmGlow{from{opacity:.25}}
 @keyframes hmSteam{0%{opacity:0;transform:translateY(4px)}40%{opacity:.9}100%{opacity:0;transform:translateY(-8px)}}
@@ -36735,14 +36784,14 @@ window.__hm = { room: () => hmRoom, svg: id => hmSceneSVG(hmR(id)) };
 //    posé, chacun donne −5 % de risques sur ce terrain (jusqu'à −20 %). Affiché au départ.
 // État : S.hm = { n, p: { clé: { r: pièce, x, y, m: retourné } }, r: { pièce: { w, f } }, own: { w: [], f: [] } }.
 const HM_WALLS = {
-  peche: ['Pêche rayé', '#f7d9bd', 'stripe', 0], rose: ['Rose rayé', '#f5d6e2', 'stripe', 0], menthe: ['Menthe à pois', '#d6ead0', 'dots', 0],
-  creme: ['Crème uni', '#f6e8d4', 'plain', 60], lambris: ['Lambris', '#e5c9a0', 'wood', 120], lavande: ['Lavande à pois', '#e4dbf3', 'dots', 120],
-  fleurs: ['Fleuri', '#f4d9cf', 'flowers', 180], ciel: ['Ciel étoilé', '#3b4778', 'stars', 250],
+  peche: ['Pêche rayé', '#ffbf8f', 'stripe', 0], rose: ['Rose rayé', '#f7aecb', 'stripe', 0], menthe: ['Menthe à pois', '#9fdbbd', 'dots', 0],
+  creme: ['Crème uni', '#ffe3b0', 'plain', 60], lambris: ['Lambris', '#dcae76', 'wood', 120], lavande: ['Lavande à pois', '#c8b6f0', 'dots', 120],
+  fleurs: ['Fleuri', '#ffab9c', 'flowers', 180], ciel: ['Ciel étoilé', '#2f3a78', 'stars', 250],
 };
 const HM_FLOORS = {
-  miel: ['Parquet miel', '#e3b98a', 'planks', 0], carreau: ['Carrelage crème', '#f1e6d4', 'tiles', 0],
-  clair: ['Parquet clair', '#ecd5b2', 'planks', 80], fonce: ['Parquet noyer', '#b78a62', 'planks', 120],
-  damier: ['Damier menthe', '#d5ebd2', 'check', 150], moquette: ['Moquette rose', '#f2c7d2', 'carpet', 150], nuit: ['Moquette nuit', '#6d5a8c', 'carpet', 200],
+  miel: ['Parquet miel', '#d99a5b', 'planks', 0], carreau: ['Carrelage crème', '#fbeedb', 'tiles', 0],
+  clair: ['Parquet clair', '#e8bf86', 'planks', 80], fonce: ['Parquet noyer', '#a46c3c', 'planks', 120],
+  damier: ['Damier menthe', '#b5e2be', 'check', 150], moquette: ['Moquette rose', '#f4a3bb', 'carpet', 150], nuit: ['Moquette nuit', '#55468a', 'carpet', 200],
 };
 const HM_MAXI = 12; // objets par pièce
 let hmPick = null, hmSel = null, hmMove = false, hmEdTab = 'o';
