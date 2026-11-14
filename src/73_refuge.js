@@ -20,7 +20,7 @@ function rfgHTML() {
 }
 if (typeof renderVillageTab === 'function') renderVillageTab = (orig => function (box) {
   const r = orig.apply(this, arguments);
-  try { if (typeof villView !== 'undefined' && villView === 'foyer' && box && !box.querySelector('.rfg')) { const h = rfgHTML(); if (h) box.insertAdjacentHTML('beforeend', h); } } catch (e) { console.error('refuge foyer', e); }
+  try { if (typeof villView !== 'undefined' && villView === 'foyer' && (typeof hmRoom === 'undefined' || hmRoom === 'chambres') && box && !box.querySelector('.rfg')) { const h = rfgHTML(); if (h) box.insertAdjacentHTML('beforeend', h); } } catch (e) { console.error('refuge foyer', e); }
   return r;
 })(renderVillageTab);
 {
