@@ -119,6 +119,12 @@ const H3I = {
   plus: g => { g.fillStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.arc(64, 64, 58, 0, 7); g.fill(); g.strokeStyle = '#4a3528'; g.lineWidth = 14; g.lineCap = 'round'; g.beginPath(); g.moveTo(36, 64); g.lineTo(92, 64); g.moveTo(64, 36); g.lineTo(64, 92); g.stroke(); },
 };
 function h3Sprite(k, x, y, z, s = .4) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: h3Icon(k, H3I[k]), transparent: true, depthWrite: false })); m.position.set(x, z, y); m.scale.set(s, s, s); H3P.add(m); return m; }
+function h3TagSprite(txt, f, x, y, z, s = 1) {
+  const key = 'tag' + txt + (f >= 0 ? Math.round(f * 10) : f);
+  const tx = h3Canvas(key, 256, 96, (g, w, h) => { g.fillStyle = f === -2 ? '#5fb36b' : 'rgba(255,250,240,.95)'; g.beginPath(); g.roundRect ? g.roundRect(4, 4, w - 8, h - 8, 28) : g.rect(4, 4, w - 8, h - 8); g.fill(); g.font = '800 34px system-ui'; g.textAlign = 'center'; g.fillStyle = f === -2 ? '#fff' : '#4a3528'; g.fillText(txt, w / 2, f >= 0 ? 46 : 60);
+    if (f >= 0) { g.fillStyle = '#eee4d6'; g.fillRect(36, 62, w - 72, 14); g.fillStyle = f >= .7 ? '#5fb36b' : '#e9b44c'; g.fillRect(36, 62, (w - 72) * f, 14); } });
+  const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, transparent: true, depthWrite: false, depthTest: false })); m.position.set(x, z, y); m.scale.set(1.9 * s, .71 * s, 1); m.renderOrder = 10; H3P.add(m); return m;
+}
 // portraits des familiers (SVG → canvas → texture), gardés en cache
 const h3Por = {};
 function h3Portrait(k, mood) {
@@ -183,6 +189,7 @@ const H3R = {
     h3Plant(8.2, 3, 1.15);
   },
   salon(l) {
+    l = 0;
     h3Shell('#ffbf8f', '#d99a5b', { pat: 'stripe' }); h3Win('L', 2.2, 2.3, 2.6, 2.4); h3Frame('R', 1.2, 3, 2, 1.5, '#a9d8b5');
     if (l >= 1) {
       hB(4.6, 0, 0, 2.6, .9, 2.8, '#c9785c', .06); hB(4.4, 0, 2.8, 3, 1.15, .28, '#9a6a4a', .06); hB(5.15, .82, .05, 1.5, .1, 1.6, '#3b2a22', .04, { ns: 1 });
@@ -191,7 +198,7 @@ const H3R = {
       if (l >= 2) { hCy(4.9, .45, 3.08, .16, .55, '#7fb3e0', { rt: .1 }); hCy(6.9, .45, 3.08, .25, .1, '#fffdf7'); }
       if (l >= 3) { hB(6.3, 3.3, 0, 1.7, 1.7, .8, '#e0a07a', .2); hB(7.6, 3.3, .8, .4, 1.7, 1.1, '#d8936d', .18); hB(6.3, 3.3, .8, 1.3, .35, .55, '#d8936d', .15); hB(6.3, 4.65, .8, 1.3, .35, .55, '#d8936d', .15); }
     } else { hB(5, .1, 0, 2.4, .8, 1.1, '#c99a6a', .08); h3Plant(6.2, .5, .7, '#7fb3e0', 1.1); }
-    hCy(4.4, 5, 0, 2.3, .04, '#f2a58c', { ns: 1, seg: 40 }); hTo(4.4, 5, .05, 1.6, .04, '#fff7ee', { ns: 1 });
+    hCy(4.4, 5, .006, 2.3, .04, '#f2a58c', { ns: 1, seg: 40, tex: 'fabric' }); hCy(4.4, 5, .046, 1.7, .006, '#fff7ee', { ns: 1, seg: 40 }); hCy(4.4, 5, .053, 1.55, .006, '#f2a58c', { ns: 1, seg: 40, tex: 'fabric' });
     h3Sofa(.2, 2.6, 4.4, '#79aed0');
     hB(.65, 3.4, 1.1, .45, 1, .75, '#ffd866', .2); hB(.65, 5.3, 1.1, .45, 1, .75, '#f6a3b7', .2); hB(.3, 6.2, .9, 1.6, .55, .6, '#f2c14e', .18);
     hCy(4.35, 5.35, .45, .85, .1, '#c99a6a'); hCy(4.35, 5.35, 0, .14, .45, '#a87b52'); hCy(4.35, 5.35, 0, .45, .05, '#a87b52'); h3Books(3.9, 5, .55, 3, 1); hCy(4.8, 5.8, .55, .1, .2, '#f6a3b7');
@@ -208,8 +215,9 @@ const H3R = {
     if (l >= 2) { hB(6.4, .05, 0, 2.2, .7, 3.3, '#c99a6a', .05); h3Books(6.6, .3, 2.2, 5); h3Books(6.6, .3, .9, 5); }
     if (l >= 3) for (let i = 0; i < 8; i++) { const s = hSp(.6 + i * 1.05, .2, 5.2 - Math.sin(i / 7 * Math.PI) * .6, .09, ['#ffd866', '#f6a3b7', '#a9d8f0'][i % 3], 1, 1, 1, { e: ['#ffd866', '#f6a3b7', '#a9d8f0'][i % 3], ei: .8, ns: 1 }); h3Anim(t => { s.material.emissiveIntensity = .5 + Math.abs(Math.sin(t * 2 + i)) * .8; }); }
     h3Frame('L', 1.1, 3.4, 1, .9, '#f6c7a0'); h3Frame('L', 2.4, 3.6, .7, .7, '#a9d8b5');
+    if (hm$(() => pgLvl('cheminee'), 0) >= 1) { hCy(10, 1.4, 0, .55, .25, '#3b3b3b'); hCy(10, 1.4, .25, .5, 1.2, '#4a4a4a', { metal: .4, rough: .5 }); hCy(10, 1.4, 1.45, .55, .12, '#3b3b3b'); hCy(10, 1.4, 1.57, .12, 4.2, '#4a4a4a', { metal: .4, rough: .5 }); const fw = hB(9.7, 1.86, .45, .6, .04, .5, '#ff9a40', .02, { e: '#ff7a20', ei: 1.4, ns: 1 }), lt = hLt(10, 2.4, .8, '#ff9a40', 1, 7); h3Anim(t => { fw.material.emissiveIntensity = 1.2 + Math.sin(t * 11) * .3; lt.intensity = (hmNight() ? 1.8 : 1) * (1 + Math.sin(t * 13) * .1); }); }
     hSp(2.6, 1.9, 1.25, .2, '#d9a87a'); hSp(2.6, 1.9, 1.55, .16, '#d9a87a'); hSp(2.5, 1.85, 1.68, .06, '#d9a87a'); hSp(2.7, 1.95, 1.68, .06, '#d9a87a');
-    hCy(5.2, 5.4, 0, 2, .04, '#f7b9cc', { ns: 1, seg: 40 }); hB(4.2, 3.6, 0, .35, .22, .12, '#f29cb0', .06); hB(4.7, 3.7, 0, .35, .22, .12, '#f29cb0', .06);
+    hCy(5.2, 5.4, .006, 2, .04, '#f7b9cc', { ns: 1, seg: 40, tex: 'fabric' }); hB(4.2, 3.6, 0, .35, .22, .12, '#f29cb0', .06); hB(4.7, 3.7, 0, .35, .22, .12, '#f29cb0', .06);
     hB(7.3, 2.6, 0, 1, 1, .7, '#e2c49a', .12); h3Plant(8.3, 1, 1.05);
   },
   cuisine(l) {
@@ -230,7 +238,7 @@ const H3R = {
   },
   nurserie() {
     h3Shell('#ffd97a', '#e3a86a', { pat: 'dots' }); h3Win('R', 4.2, 2.6, 2.2, 2.2);
-    hCy(4.6, 4.6, 0, 2.8, .03, '#fff3dc', { ns: 1, seg: 48 }); hTo(4.6, 4.6, .04, 2, .04, '#f6c7a0', { ns: 1 });
+    hCy(4.6, 4.6, .006, 2.8, .03, '#fff3dc', { ns: 1, seg: 48, tex: 'fabric' }); hCy(4.6, 4.6, .037, 2.05, .006, '#f6c7a0', { ns: 1, seg: 48 }); hCy(4.6, 4.6, .044, 1.95, .006, '#fff3dc', { ns: 1, seg: 48, tex: 'fabric' });
     hTo(4.6, 4.6, .28, 1, .3, '#e2b96a'); hCy(4.6, 4.6, 0, 1.05, .25, '#c99a4e');
     const eggs = (S.eggs || []).filter(Boolean), now = Date.now();
     eggs.slice(0, 3).forEach((e, i) => { const m = hSp(4.6 + [-.3, .3, .05][i], 4.6 + [.15, -.25, .4][i], .58, .26, ['#fff4dc', '#e4f3ff', '#ffe6ee'][i], 1, 1.3, 1); if (e.ready <= now) h3Anim(t => { m.rotation.z = Math.sin(t * 9 + i) * .25; }); });
@@ -245,12 +253,35 @@ const H3R = {
     h3Shell('#cfeaf5', '#8fd07a', { open: 1, grass: 1 });
     if (l >= 1) { const gm = h3Mat('#e8f8ff', { op: .28, rough: .1 }); const g1 = new THREE.Mesh(new THREE.BoxGeometry(.06, 5.5, HMN), gm); g1.position.set(0, 2.75, HMN / 2); H3P.add(g1); const g2 = g1.clone(); g2.rotation.y = Math.PI / 2; g2.position.set(HMN / 2, 2.75, 0); H3P.add(g2); for (let i = 0; i <= HMN; i += 1.5) { hB(-.05, i - .05, 0, .1, .1, 5.5, '#fffaf0', .02); hB(i - .05, -.05, 0, .1, .1, 5.5, '#fffaf0', .02); } hB(-.05, 0, 5.4, .12, HMN, .12, '#fffaf0', .02); hB(0, -.05, 5.4, HMN, .12, .12, '#fffaf0', .02); }
     else { for (let i = 0; i <= HMN; i += 1) { hB(i - .12, -.12, 0, .24, .24, 1.4, '#e2b97c', .06); hB(-.12, i - .12, 0, .24, .24, 1.4, '#e2b97c', .06); } hB(0, -.06, 1, HMN, .1, .14, '#d9a86a', .03); hB(-.06, 0, 1, .1, HMN, .14, '#d9a86a', .03); hB(0, -.06, .45, HMN, .1, .14, '#d9a86a', .03); hB(-.06, 0, .45, .1, HMN, .14, '#d9a86a', .03); }
-    const bed = (x, y, w, d) => { hB(x, y, 0, w, d, .45, '#9a6a4a', .06); hB(x + .1, y + .1, .45, w - .2, d - .2, .03, '#6b4228', 0, { ns: 1 }); };
-    bed(.7, .7, 5, 1.4); bed(.7, 2.9, 1.4, 4);
-    [[1.3, 1.4, '#e0533d'], [2.3, 1.4, 0], [3.3, 1.4, '#f2c14e'], [4.3, 1.4, 0], [5.2, 1.4, '#e0533d'], [1.4, 3.6, 0], [1.4, 4.6, '#f08a3b'], [1.4, 5.6, 0], [1.4, 6.5, '#c9a0dc']].forEach(([x, y, c], i) => { const g = new THREE.Group(); g.position.set(x, .48, y); H3P.add(g); const P = H3P; H3P = g; hCy(0, 0, 0, .03, .35, '#5fa85a'); hSp(-.12, 0, .38, .14, '#6fbf73', 1.4, .6, 1); hSp(.12, 0, .4, .14, '#7fcb7f', 1.4, .6, 1); if (c) hSp(0, 0, .55, .12, c); H3P = P; h3Anim(t => { g.rotation.z = Math.sin(t * 1.6 + i) * .08; }); });
-    const sf = new THREE.Group(); sf.position.set(7.6, 0, 1.6); H3P.add(sf); { const P = H3P; H3P = sf; hCy(0, 0, 0, .06, 3.2, '#5fa85a'); hSp(0, 0, 3.3, .3, '#8a5a3c', 1, 1, .5); hTo(0, 0, 3.3, .45, .16, '#f2c14e'); H3P = P; sf.children.slice(1).forEach(m => { m.rotation.x = 0; }); } h3Anim(t => { sf.rotation.z = Math.sin(t) * .04; });
-    hB(4.6, 4.6, 0, .8, .6, .6, '#7fb3e0', .12); hCy(5.5, 4.9, .35, .05, .5, '#7fb3e0');
-    if (l >= 3) [0, 1].forEach(i => { const b = new THREE.Group(); H3P.add(b); const P = H3P; H3P = b; const w1 = hB(-.2, -.02, 0, .2, .04, .25, i ? '#ffd866' : '#f7a8bd', .02, { ns: 1 }), w2 = hB(0, -.02, 0, .2, .04, .25, i ? '#ffd866' : '#f7a8bd', .02, { ns: 1 }); H3P = P; h3Anim(t => { b.position.set(3 + i * 3 + Math.sin(t * .7 + i) * 1.5, 2.2 + Math.sin(t * 1.3 + i) * .4, 3 + Math.cos(t * .5 + i) * 1.5); w1.rotation.y = Math.sin(t * 14) * .8; w2.rotation.y = -Math.sin(t * 14) * .8; }); });
+    // le potager : une planche par parcelle, à toucher pour semer ou récolter
+    const J = hm$(() => famState().j, null), N = hm$(() => famPlotN(), J ? J.plots.length : 2), now = Date.now();
+    const PL = [[1.2, 1.2], [4.2, 1.2], [7.2, 1.2], [1.2, 4.4], [4.2, 4.4], [7.2, 4.4]];
+    for (let i = 0; i < Math.min(N, PL.length); i++) {
+      const [x, y] = PL[i], p = J && J.plots[i], f = p ? Math.min(1, (now - p.t0) / p.ms) : 0, ready = p && f >= 1;
+      hB(x, y, 0, 2.6, 2.2, .5, '#a87b52', .05); hB(x + .12, y + .12, .5, 2.36, 1.96, .04, '#5b3a22', .01, { ns: 1 });
+      for (let a = 0; a < 6; a++) hSp(x + .4 + (a % 3) * .9, y + .55 + Math.floor(a / 3) * 1.1, .54, .12, '#6b4228', 1.2, .35, 1, { ns: 1 });
+      const hit = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.6, 2.2), h3Mat('#000', { basic: 1, op: 0 })); hit.position.set(x + 1.3, .8, y + 1.1); hit.visible = false; hit.userData.plot = i; hit.userData.ready = !!ready; H3P.add(hit); H3.hit.push(hit);
+      if (!p) { const m = h3Sprite('plus', x + 1.3, y + 1.1, 1.2, .55); m.userData.plot = i; h3Anim(t => { m.scale.setScalar(.55 + Math.sin(t * 3 + i) * .04); }); h3TagSprite('🌱 Semer', -1, x + 1.3, y + 1.1, 2); continue; }
+      const out = p.out || [], col = out[5] || ({ pomme: '#e0533d', fruit: '#e5584f', agrume: '#f2c14e', sucre: '#9a6a4a', legume: '#7fbf6a', boisson: '#7fae4f', fleur: '#e5587f', feuille: '#7fae8f' })[out[2]] || '#e0533d';
+      const kind = out[1] === 'n' ? 'fruit' : out[2] === 'fleur' ? 'fleur' : 'feuille', st = .35 + .65 * Math.min(1, f);
+      for (let a = 0; a < 6; a++) {
+        const px = x + .4 + (a % 3) * .9, py = y + .55 + Math.floor(a / 3) * 1.1, g = new THREE.Group(); g.position.set(px, .55, py); g.scale.setScalar(st); H3P.add(g); const Q = H3P; H3P = g;
+        if (f < .25) { hSp(-.08, 0, .12, .09, '#7fcb7f', 1.4, .5, .8); hSp(.08, 0, .14, .09, '#6fbf73', 1.4, .5, .8); }
+        else if (kind === 'fleur') { hCy(0, 0, 0, .025, .7, '#5fa85a'); hSp(-.1, 0, .25, .1, '#6fbf73', 1.5, .4, .8); if (ready || f > .7) { [0, 1, 2, 3, 4].forEach(k => hSp(Math.cos(k * 1.26) * .1, Math.sin(k * 1.26) * .1, .72, .08, col)); hSp(0, 0, .74, .06, '#ffd866'); } }
+        else { hSp(0, 0, .25, .26, kind === 'feuille' ? col : '#5fb36b', 1, .9, 1); hSp(.12, .08, .38, .17, '#6fbf73'); if (kind === 'fruit' && (ready || f > .7)) [[.18, .1, .3], [-.15, .12, .35], [0, -.18, .42]].forEach(([dx, dy, dz]) => hSp(dx, dy, dz, .085, col, 1, 1, 1, { rough: .4 })); }
+        H3P = Q; h3Anim(t => { g.rotation.z = Math.sin(t * 1.4 + a + i) * .06; });
+      }
+      const ico = kind === 'fruit' ? '🍎' : kind === 'fleur' ? '🌸' : '🍃';
+      h3TagSprite(ready ? `${ico} Récolter !` : `${ico} ${String(out[0] || '').slice(0, 16)}`, ready ? -2 : f, x + 1.3, y + 1.1, 2.1);
+      if (ready) for (let k = 0; k < 3; k++) { const sp = h3Sprite('spark', x + .6 + k * .7, y + 1.1, 1.3, .3); h3Anim(t => { const u = (t * .6 + k / 3) % 1; sp.position.y = 1.1 + u * .8; sp.material.opacity = 1 - u; }); }
+    }
+    // décor : allée de pierres, arbre, massifs fleuris, arrosoir, tournesol
+    [[3.6, 7.9], [4.8, 8.2], [6, 7.9], [7.2, 8.3], [8.4, 8]].forEach(([x, y]) => hCy(x, y, 0, .38, .06, '#d9d2c4', { seg: 9 }));
+    hCy(1.3, 10.4, 0, .25, 2.2, '#8a5a3c', { rt: .18 }); [[1.3, 10.4, 2.7, .9], [.8, 10, 2.3, .7], [1.7, 9.9, 2.4, .7], [1.1, 10.9, 2.3, .65]].forEach(([x, y, z, r], k) => { const m = hSp(x, y, z, r, ['#5fb36b', '#4fa35f', '#6fbf73', '#5aa860'][k]); h3Anim(t => { m.position.x = x + Math.sin(t * .8 + k) * .03; }); }); [[.9, 9.8, 2.6], [1.5, 10.7, 2.9]].forEach(([x, y, z]) => hSp(x, y, z, .12, '#e0533d'));
+    for (let i = 0; i < 6; i++) { const x = 1.5 + i * 1.6; hSp(x, .55, .35, .45, '#5fb36b', 1.2, .8, 1); [0, 1, 2].forEach(k => hSp(x - .25 + k * .25, .75, .65, .09, ['#f7a8bd', '#ffd866', '#c9a0dc'][(i + k) % 3])); }
+    hB(6.4, 6.4, 0, .6, .45, .5, '#5fa8d8', .12); const sp2 = hCy(7.1, 6.6, .3, .05, .5, '#5fa8d8'); sp2.rotation.z = -.9;
+    const sf = new THREE.Group(); sf.position.set(10.4, 0, 1.3); H3P.add(sf); { const P = H3P; H3P = sf; hCy(0, 0, 0, .06, 3.2, '#5fa85a'); const hd = hCy(0, 0, 3.2, .3, .12, '#8a5a3c'); hd.rotation.x = Math.PI / 2.4; const ring = hTo(0, -.05, 3.3, .42, .14, '#f2c14e'); ring.rotation.x = Math.PI / 2.4 - Math.PI / 2 + Math.PI / 2; H3P = P; } h3Anim(t => { sf.rotation.z = Math.sin(t) * .04; });
+    [0, 1].forEach(i => { const b = new THREE.Group(); H3P.add(b); const P = H3P; H3P = b; const w1 = hB(-.2, -.02, 0, .2, .04, .25, i ? '#ffd866' : '#f7a8bd', .02, { ns: 1 }), w2 = hB(0, -.02, 0, .2, .04, .25, i ? '#ffd866' : '#f7a8bd', .02, { ns: 1 }); H3P = P; h3Anim(t => { b.position.set(4 + i * 4 + Math.sin(t * .7 + i) * 2, 2 + Math.sin(t * 1.3 + i) * .5, 5 + Math.cos(t * .5 + i) * 2.5); w1.rotation.y = Math.sin(t * 14) * .8; w2.rotation.y = -Math.sin(t * 14) * .8; }); });
   },
   atelier(l) {
     h3Shell('#93c8d8', '#c98f58', { pat: 'wood' }); h3Win('L', 3.2, 2.5, 2.2, 2.2);
@@ -317,7 +348,7 @@ function h3Chars(R, l, who, blk) {
     const G = new THREE.Group(); G.position.set(x0, z, y0); H3P.add(G); const Q = H3P; H3P = G; const x = 0, y = 0, zz = 0;
     const mat = new THREE.SpriteMaterial({ map: h3Portrait(k, fx === 'zzz' ? 'dodo' : fx === 'love' ? 'amour' : fx ? 'rire' : 'content'), transparent: true }), sp = new THREE.Sprite(mat);
     const SW = 2.3, SH = 2.52; sp.scale.set(SW, SH, 1); sp.position.set(0, SH / 2 - .06, 0); G.add(sp);
-    const sh = new THREE.Mesh(new THREE.CircleGeometry(.55, 24), h3Mat('#3a2418', { op: .22, basic: 1 })); sh.rotation.x = -Math.PI / 2; sh.position.y = .02; G.add(sh);
+    const sh = new THREE.Mesh(new THREE.CircleGeometry(.5, 24), new THREE.MeshBasicMaterial({ map: h3Canvas('soft', 64, 64, (g2, w, h) => { const gr = g2.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(58,36,24,.35)'); gr.addColorStop(1, 'rgba(58,36,24,0)'); g2.fillStyle = gr; g2.fillRect(0, 0, w, h); }), transparent: true, depthWrite: false })); sh.rotation.x = -Math.PI / 2; sh.position.y = .02; G.add(sh);
     const fxg = new THREE.Group(); G.add(fxg); H3P = fxg;
     const up = (ic, n, s = .42, dx = .6) => { for (let j = 0; j < n; j++) { const m = h3Sprite(ic, x + dx, y, zz + 2, s); h3Anim(t => { const u = (t * .45 + j / n + i * .3) % 1; m.position.set(x + dx + Math.sin(u * 6 + j) * .15, zz + 1.9 + u * 1.3, y); m.material.opacity = u < .2 ? u * 5 : 1 - (u - .2) / .8; }); } };
     if (fx === 'water') { const can = new THREE.Group(); can.position.set(.75, .95, .15); fxg.add(can); { const W = H3P; H3P = can; hB(-.22, -.17, -.18, .44, .34, .38, '#5fa8d8', .1); const s2 = hCy(.32, 0, .08, .05, .5, '#5fa8d8'); s2.rotation.z = -1; hTo(-.05, 0, .25, .14, .03, '#4a90c0'); H3P = W; } h3Anim(t => { can.rotation.z = -.15 - Math.max(0, Math.sin((t + i) * 2)) * .5; });
@@ -327,8 +358,8 @@ function h3Chars(R, l, who, blk) {
     if (fx === 'read') { const bk = hB(-.32, .3, .7, .64, .12, .45, '#e0685a', .03, { ns: 1 }); up('note', 1, .4, .6); h3Anim(t => { bk.rotation.y = Math.sin(t * 1.5) * .15; }); }
     if (fx === 'hammer') { const hm = new THREE.Group(); hm.position.set(.6, .95, .15); fxg.add(hm); { const W = H3P; H3P = hm; hCy(0, 0, 0, .045, .65, '#b98a5e'); hB(-.16, -.08, .6, .32, .16, .16, '#8a8f95', .04); H3P = W; } h3Anim(t => { hm.rotation.z = -.4 - Math.sin((t + i) * 7) * .5; }); up('spark', 2, .3, .9); }
     if (fx === 'stir') { const sp2 = hCy(-.55, .2, .8, .04, .8, '#b98a5e'); h3Anim(t => { sp2.rotation.z = Math.sin(t * 6 + i) * .4; sp2.rotation.x = Math.cos(t * 6 + i) * .4; }); up('spark', 1, .26, -.4); }
-    if (fx === 'go') up('bang', 1, .42, -.55);
     if (fx === 'star') up('spark', 2, .28, .4);
+    H3P = G; if (R.id === 'entree' || R.id === 'chambres') { const n = hmNrg(k), ok = n >= 70; h3TagSprite(ok ? '⚡ En forme !' : `⚡ ${hmEtaTxt(hmNrgEta(k))}`, ok ? -2 : n / 100, 0, 0, SH + .55 + (fx === 'zzz' ? .1 : 0), .85); }
     H3P = Q;
     // il vit sa vie : travaille à son poste, puis fait un petit tour dans la pièce et revient
     const tgt = walk ? free[(i * 7 + k.length * 3) % free.length] : null, CY = 16 + i * 3;
@@ -337,8 +368,7 @@ function h3Chars(R, l, who, blk) {
       if (tgt) { const seg = (a, b, f) => a + (b - a) * f; if (u < .45) {} else if (u < .58) { const f = (u - .45) / .13; px = seg(x0, tgt[0], f); py = seg(y0, tgt[1], f); moving = true; dir = Math.sign((tgt[0] - x0) - (tgt[1] - y0)); } else if (u < .85) { px = tgt[0]; py = tgt[1]; } else { const f = (u - .85) / .15; px = seg(tgt[0], x0, f); py = seg(tgt[1], y0, f); moving = true; dir = -Math.sign((tgt[0] - x0) - (tgt[1] - y0)); } }
       G.position.set(px, z, py); fxg.visible = !moving && (!tgt || u < .45);
       if (dir) sp.scale.x = SW * (dir < 0 ? -1 : 1);
-      if (moving) sp.position.y = SH / 2 - .06 + Math.abs(Math.sin(q * 9)) * .14;
-      else if (fx === 'go') sp.position.y = SH / 2 - .06 + Math.abs(Math.sin(q * 3.4)) * .3;
+      if (moving) { sp.position.y = SH / 2 - .06 + Math.abs(Math.sin(q * 6)) * .04; mat.rotation = Math.sin(q * 6) * .04; }
       else if (fx === 'zzz') sp.scale.set(SW * (1 + Math.sin(q * 2) * .02), SH * (1 - Math.sin(q * 2) * .02), 1);
       else { sp.position.y = SH / 2 - .06 + Math.sin(q * 2.6) * .03; mat.rotation = (fx === 'water' || fx === 'stir' || fx === 'hammer') ? Math.sin(q * 3) * .05 : 0; }
     });
@@ -372,7 +402,7 @@ function h3Build(R) {
   sc.add(new T.HemisphereLight(new T.Color(night ? '#8090d0' : '#fff4e0'), new T.Color(night ? '#3a2a40' : '#c9a07a'), night ? .3 : .42));
   sc.add(new T.AmbientLight(0xffffff, night ? .06 : .08));
   const sun = new T.DirectionalLight(new T.Color(night ? '#9fb0ff' : '#ffe8c8'), night ? .22 : .85); sun.position.set(18, 20, 12); sun.target.position.set(HMN / 2, 0, HMN / 2); sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 60 }); sun.shadow.bias = -.0008; sun.shadow.radius = 4; sc.add(sun, sun.target);
+  sun.shadow.mapSize.set(2048, 2048); Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 60 }); sun.shadow.bias = -.0015; sun.shadow.normalBias = .03; sun.shadow.radius = 4; sc.add(sun, sun.target);
   try { if (locked) h3Locked(); else H3R[R.id](l); } catch (e) { console.error('maison 3d', e); }
   if (!locked) {
     hm$(() => hmHere(R.id), []).forEach(o => { try { h3Item(o, hmEdit && hmSel === o.k); } catch (e) { console.error('objet 3d', e); } });
@@ -414,6 +444,7 @@ function h3Tap(e) {
   const T = THREE, rc = new T.Raycaster(), r = H3.cv.getBoundingClientRect(), v = new T.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
   rc.setFromCamera(v, H3.cam); const hits = rc.intersectObjects(H3.hit, false); if (!hits.length) return;
   const h = hits[0], o = h.object;
+  if (o.userData.plot != null) { const i = o.userData.plot, b = document.querySelector(`#panelBody [data-jharv="${i}"]`) || document.querySelector(`#panelBody [data-jplot="${i}"]`); if (b) { b.click(); setTimeout(() => { renderPanel(); const sel = document.querySelector('#panelBody .famjs'); if (sel) sel.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 30); } return; }
   if (o.userData.hire) { const w = document.querySelector('#panelBody .hm-work'); if (w) w.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
   if (!hmEdit) return;
   const P = h.point, cl = v => Math.max(0, Math.min(HMN - 1, Math.floor(v)));

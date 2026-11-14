@@ -114,16 +114,16 @@ function hmEditHTML(R) {
   const nOf = it => cnt[it.name + '|' + (it.rarity | 0)];
   const pk = hmPick && S.inv.find(i => i.id === hmPick);
   const hint = hmMove && sel ? `Touchez la nouvelle case de « ${esc(sel.name)} ».` : pk ? `Touchez une case verte pour poser « ${esc(pk.name)} »${hmWallIt(pk) ? ' (au mur)' : ''}.` : sel ? '' : 'Choisissez un objet ci-dessous, puis touchez une case. Touchez un objet posé pour le déplacer.';
-  return `<div class="hm-ed">${tabs}${sel ? `<div class="hm-act"><b>${esc(sel.name)}</b><span>+${hm$(() => f3Pts(sel, hmSel), 1)} confort${sel.sv ? ' · souvenir' : ''}</span><div>${hmWallIt(sel) ? '' : '<button data-hmact="rot">↻ Tourner</button>'}<button data-hmact="move" class="${hmMove ? 'on' : ''}">✋ Déplacer</button><button data-hmact="store">📦 Ranger</button></div></div>` : ''}
+  return `<div class="hm-ed">${tabs}${sel ? `<div class="hm-act"><b>${esc(sel.name)}</b>${sel.sv ? '<span>souvenir de voyage</span>' : ''}<div>${hmWallIt(sel) ? '' : '<button data-hmact="rot">↻ Tourner</button>'}<button data-hmact="move" class="${hmMove ? 'on' : ''}">✋ Déplacer</button><button data-hmact="store">📦 Ranger</button></div></div>` : ''}
     ${hint ? `<p class="hm-hint">${hint}</p>` : ''}
     <div class="hm-tray">${list.length ? list.map(it => `<button data-hmpick="${esc(it.id)}" class="${hmPick === it.id ? 'on' : ''}${it.sv ? ' sv' : ''}">${hm$(() => itemIcon(it), '')}<small>${esc(it.name)}</small>${nOf(it) > 1 ? `<i>×${nOf(it)}</i>` : ''}</button>`).join('') : '<p class="hm-tip">Aucune décoration dans le sac : fabriquez-en à l’atelier, ou rapportez des souvenirs des lieux ★★ et ★★★.</p>'}</div>
-    ${hmComfortHTML()}</div>`;
+    </div>`;
 }
 const hmSvInv = () => (S.inv || []).filter(it => it && it.sv);
 hmPanelExtra = (box, R, at) => {
   if (at === 'top' && hmEdit) { box.insertAdjacentHTML('beforeend', hmEditHTML(R)); return; }
   if (at !== 'end' || hmEdit) return;
-  if (R.id === 'salon') box.insertAdjacentHTML('beforeend', hmComfortHTML() + `<button class="btn green hm-go" data-hmedit="1">✏️ Aménager la maison</button>`);
+  if (R.id === 'salon') box.insertAdjacentHTML('beforeend', `<button class="btn green hm-go" data-hmedit="1">✏️ Aménager la pièce</button>`);
   if (R.id === 'entree') { const n = hmSvInv().length; if (n) box.insertAdjacentHTML('beforeend', `<button class="hm-sv" data-hmedit="1"><span>📦</span><b>${n} souvenir${n > 1 ? 's' : ''} de voyage à déballer</b><small>Posez-les chez vous : chacun réduit les risques sur son terrain.</small></button>`); }
 };
 // ---------------- clics ----------------
@@ -135,7 +135,7 @@ function hmCellTap(x, y) { // une case touchée en mode Aménager (SVG ou 3D)
       const key = 'hm' + (++H.n), before = f3Eff(); hmReg(key, it);
       if (f3Place(key, it.id)) {
         H.p[key] = { r: room, x, y, m: 0 }; save(); const E = f3Eff();
-        hm$(() => toast(`${it.name} : +${f3Pts(it, key)} confort${E.i > before.i ? ` · maison « ${E.nm} » !` : ''}`), 0);
+        hm$(() => toast(`${it.name} posé !`), 0);
         if (!S.inv.some(i => i.name === it.name && (i.rarity | 0) === (it.rarity | 0))) hmPick = null; else hmPick = S.inv.find(i => i.name === it.name && (i.rarity | 0) === (it.rarity | 0)).id;
       }
       return hmRe();

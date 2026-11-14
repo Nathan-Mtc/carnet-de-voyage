@@ -11,22 +11,23 @@
 let hmRoom = null, hmEdit = false;
 const HM_ROOMS = [
   // v51 : une pièce = un rôle, et le familier qui y travaille (j = poste de 40_foyer.js)
-  { id: 'entree', nm: 'Entrée', v: 'Partir', e: '🚪', b: null, blocks: [] },
-  { id: 'salon', nm: 'Salon', v: 'Confort', e: '🛋️', b: 'cheminee', blocks: [] },
-  { id: 'chambres', nm: 'Chambres', v: 'Dormir', e: '🛏️', b: 'chambre', blocks: [], j: 'repos' },
-  { id: 'cuisine', nm: 'Cuisine', v: 'Nourrir', e: '🍲', b: 'repas', blocks: ['.fy2-list'], j: 'comm' },
+  // v56 : les 4 premières pièces suivent le cycle (le jardin nourrit la cuisine, la cuisine et le lit rechargent, l'entrée fait partir)
+  { id: 'jardin', nm: 'Jardin', v: 'Planter', e: '🌱', b: 'serre', blocks: ['.fy2-jar'], j: 'jard', cy: 1 },
+  { id: 'cuisine', nm: 'Cuisine', v: 'Nourrir', e: '🍲', b: 'repas', blocks: ['.fy2-list'], j: 'comm', cy: 1 },
+  { id: 'chambres', nm: 'Chambres', v: 'Dormir', e: '🛏️', b: 'chambre', b2: 'cheminee', blocks: [], j: 'repos', cy: 1 },
+  { id: 'entree', nm: 'Entrée', v: 'Partir', e: '🚪', b: null, blocks: [], cy: 1 },
+  { id: 'salon', nm: 'Salon', v: 'Décorer', e: '🛋️', b: null, blocks: [] },
   { id: 'nurserie', nm: 'Nurserie', v: 'Éclore', e: '🥚', b: null, blocks: ['.fy2-nur'], j: 'nurs' },
-  { id: 'jardin', nm: 'Jardin', v: 'Planter', e: '🌱', b: 'serre', blocks: ['.fy2-jar'], j: 'jard' },
   { id: 'atelier', nm: 'Atelier', v: 'Créer', e: '🔨', b: 'atelier', blocks: [] },
   { id: 'observ', nm: 'Observatoire', v: 'Le ciel', e: '🔭', b: 'observ', blocks: [], lock: 1 },
 ];
 const HM_INFO = {
-  entree: 'Vos 3 compagnons de voyage. Bien reposés, ils rapportent plus.',
-  salon: 'Plus votre maison est décorée, plus vos voyages rapportent. Touchez « Aménager ».',
-  chambres: 'Au lit, vos compagnons rechargent leur énergie avant de repartir.',
-  cuisine: 'Nourrissez vos familiers ; le commis cuisine les provisions de voyage.',
+  entree: 'Ici attendent les compagnons en forme, prêts à partir. Les fatigués sont au lit.',
+  salon: 'Votre pièce à vous : aménagez-la comme vous voulez.',
+  chambres: 'Au lit, l’énergie remonte toute seule. La cheminée fait dormir plus vite.',
+  cuisine: 'Un repas redonne tout de suite de l’énergie. Les fruits viennent du jardin.',
   nurserie: 'Les œufs éclosent ici. Agrandissez-la pour accueillir plus de familiers.',
-  jardin: 'Semez des graines : elles poussent même pendant vos voyages.',
+  jardin: 'Touchez une parcelle pour semer ou récolter : 🍎 fruits pour la cuisine, 🌸 fleurs et feuilles pour fabriquer des meubles.',
   atelier: 'Fabriquez le matériel de voyage et vos décorations.',
   observ: 'Annonce à l’avance les moments rares du ciel.',
 };
@@ -46,8 +47,8 @@ function hmWho() {
   hm$(() => fwHome(), []).forEach(k => {
     const j = hm$(() => fwJob(k), 'repos');
     if (j === 'jard') put('jardin', k); else if (j === 'comm') put('cuisine', k); else if (j === 'nurs') put('nurserie', k);
-    else if (team.includes(k)) put('entree', k); // l'équipe au repos attend à l'entrée, sacs prêts
-    else put(alt++ < 3 ? 'chambres' : 'salon', k);
+    else if (team.includes(k) && hmNrg(k) >= 70) put('entree', k); // en forme : attend à l'entrée, sac prêt
+    else if (alt++ < 3) put('chambres', k); else put('salon', k); // fatigué : au lit
   });
   return W;
 }
@@ -210,7 +211,7 @@ const HM_ISO = {
     const [bx, by] = hIP(2.6, 1.9, 1.05); s += `<circle cx="${bx}" cy="${by - 7}" r="6.5" fill="#d9a87a" stroke="${HILN}" stroke-opacity=".6"/><circle cx="${bx - 5}" cy="${by - 13}" r="2.6" fill="#d9a87a" stroke="${HILN}" stroke-opacity=".6"/><circle cx="${bx + 5}" cy="${by - 13}" r="2.6" fill="#d9a87a" stroke="${HILN}" stroke-opacity=".6"/><circle cx="${bx - 2}" cy="${by - 8}" r=".9" fill="${HILN}"/><circle cx="${bx + 2}" cy="${by - 8}" r=".9" fill="${HILN}"/>`;
     s += hIEll(5.2, 5.4, 2, '#f7b9cc') + hIEll(5.2, 5.4, 1.4, 'none', 0, 'stroke="#fff" stroke-opacity=".7" stroke-width="1.6" stroke-dasharray="4 3"') + hIBox(4.2, 3.6, 0, .35, .22, .12, '#f29cb0', { flat: 1 }) + hIBox(4.7, 3.7, 0, .35, .22, .12, '#f29cb0', { flat: 1 });
     s += hIBox(7.3, 2.6, 0, 1, 1, .7, '#e2c49a', { t: '#c9a37a' }) + hIPlant(8.3, 1, .95);
-    return { s, g, blk: [[0,.9,3.5,2.2],[0,3.4,1.2,1],[0,4.7,3.5,2.2],[7.9,.6,.8,.8]].concat(l>=2?[[6.4,0,2.2,.8]]:[]), spots: [[5.6, 6.4], [7.4, 4.9], [6.6, 7.8]] };
+    return { s, g, blk: [[0,.9,3.5,2.2],[0,3.4,1.2,1],[0,4.7,3.5,2.2],[7.9,.6,.8,.8],[9.4,.8,1.2,1.2]].concat(l>=2?[[6.4,0,2.2,.8]]:[]), spots: [[5.6, 6.4], [7.4, 4.9], [6.6, 7.8]] };
   },
   cuisine(l) {
     let s = hIShell('#9fdbbd', '#fbeedb', { pat: 'dots', tiles: 1 }), g = '';
@@ -276,7 +277,7 @@ const HM_ISO = {
     if (l >= 2) [[2, 0], [5.5, 0]].forEach(([x]) => { const [px, py] = hIP(x, 0, 4.4); s += `<path d="M${px} ${py - 22}V${py - 8}" stroke="${HILN}"/><path d="M${px - 8} ${py - 8}h16l-3 10h-10z" fill="#d98a5f" stroke="${HILN}" stroke-opacity=".6"/><path d="M${px - 6} ${py - 8}q-4 12 -1 18M${px + 5} ${py - 8}q4 10 1 16" stroke="#5fb36b" stroke-width="2" fill="none"/>`; });
     if (l >= 3) [[3.2, 3.5, 2.6, '#f7a8bd'], [6.6, 2.8, 3, '#ffd866']].forEach(([x, y, z, c], i) => { const [px, py] = hIP(x, y, z); s += `<g class="ifly" style="--i:${i}"><path d="M${px} ${py}q-7-7-3-9q4 2 3 9q4-7 8-5q-1 5-8 5z" fill="${c}" stroke="${HILN}" stroke-opacity=".6"/></g>`; });
     g += l >= 1 ? '' : `<circle cx="330" cy="40" r="16" fill="#ffd866" opacity=".9"/>`;
-    return { s, g, blk: [[.7,.7,5,1.4],[.7,2.9,1.4,4],[7.2,1.2,.8,.8],[4.6,4.6,.8,.6]], spots: [[5.4, 6.6], [7.6, 5.2], [4, 7.8]], sky: 1 };
+    return { s, g, blk: [[1.2,1.2,2.6,2.2],[4.2,1.2,2.6,2.2],[7.2,1.2,2.6,2.2],[1.2,4.4,2.6,2.2],[4.2,4.4,2.6,2.2],[7.2,4.4,2.6,2.2],[.5,9.4,1.6,1.8]], spots: [[5.4, 6.6], [7.6, 5.2], [4, 7.8]], sky: 1 };
   },
   atelier(l) {
     let s = hIShell('#93c8d8', '#c98f58', { pat: 'wood' }), g = '';
@@ -324,7 +325,7 @@ const HM_ACT = {
   chambres: { fx: 'zzz', all: 1, p: l => l >= 1 ? [[2, 1.8, 1.05], [2, 5.6, 1.05], [5.4, 6.6]] : [[2, 1.8, 1.05], [5.4, 6.6], [7, 5.2]] },
   cuisine: { fx: 'stir', p: [[4.4, 2.1], [6.6, 6.8], [3.8, 7.2]] },
   nurserie: { fx: 'love', all: 1, p: [[6.2, 4.6], [4.6, 6.8], [3, 5.8]] },
-  jardin: { fx: 'water', all: 1, p: [[3.6, 2.8], [2.8, 5], [5.6, 6.6]] },
+  jardin: { fx: 'water', all: 1, p: [[3.95, 3.95], [6.95, 3.95], [3.95, 7.2]] },
   atelier: { fx: 'hammer', p: [[2.7, 2.3], [5.8, 6.4], [3, 6.8]] },
   observ: { fx: 'star', p: [[6, 5.6], [6.4, 7.2]] },
 };
@@ -360,7 +361,7 @@ function hmSceneSVG(R) {
 }
 // ---------------- l'écran ----------------
 function hmTabsHTML(cur) {
-  return `<div class="hm-tabs" role="tablist">${HM_ROOMS.map(R => { const n = hmDot(R), l = hmLvl(R); return `<button role="tab" data-hmroom="${R.id}" aria-selected="${R.id === cur}"${R.lock && l < 1 ? ' class="lk"' : ''}><span class="hm-te">${R.e}</span><small>${R.v}</small>${n ? `<i class="hm-bd">${R.id === 'nurserie' ? n : '!'}</i>` : ''}</button>`; }).join('')}</div>`;
+  return `<div class="hm-tabs" role="tablist">${HM_ROOMS.map(R => { const n = hmDot(R), l = hmLvl(R); return `<button role="tab" data-hmroom="${R.id}" aria-selected="${R.id === cur}" class="${R.cy ? 'cy' : ''}${R.lock && l < 1 ? ' lk' : ''}"><span class="hm-te">${R.e}</span><small>${R.v}</small>${n ? `<i class="hm-bd">${R.id === 'nurserie' ? n : '!'}</i>` : ''}</button>`; }).join('')}</div>`;
 }
 function hmStageHTML(R) {
   const l = hmLvl(R), locked = R.lock && l < 1;
@@ -387,8 +388,8 @@ function hmWorkHTML(R) {
 }
 function hmTeamHTML() {
   const team = hm$(() => teamIds(), []).filter(k => CHARS[k]);
-  return `<section class="hm-work"><h3 class="hm-h">L’équipe de voyage <small>${team.length}/3</small></h3><div class="hm-who">${team.map(k => { const away = !!(S.trips && S.trips[k]); return `<div class="hm-wk on">${hmPic(k)}<b>${esc(CHARS[k].name)}</b>${away ? '<small>en voyage</small>' : hmBar(k)}</div>`; }).join('')}</div>
-    <p class="hm-tip">À 70 d’énergie ou plus : +1 objet au retour et moins de risques. Fatigué : un objet de moins. Les Chambres rechargent l’énergie.</p></section>`;
+  return `<section class="hm-work"><h3 class="hm-h">L’équipe de voyage <small>${team.length}/3</small></h3><div class="hm-who">${team.map(k => { const away = !!(S.trips && S.trips[k]); const eta = hmNrgEta(k); return `<div class="hm-wk${away || eta ? '' : ' on'}">${hmPic(k)}<b>${esc(CHARS[k].name)}</b>${away ? '<small>en voyage</small>' : hmBar(k) + (eta ? `<small>au lit · ${hmEtaTxt(eta)}</small>` : '')}</div>`; }).join('')}</div>
+    <p class="hm-tip">En forme (barre verte) : un objet de plus au retour et moins de risques.</p></section>`;
 }
 function hmProvHTML() {
   const P = hm$(() => eqCount(Object.entries(eqStock()).flatMap(([r, n]) => Array(n).fill(r))), null); if (!P) return '';
@@ -398,15 +399,45 @@ function hmGearHTML() {
   const n = hm$(() => (S.inv || []).filter(it => xpGearOf(it)).length, 0);
   return `<button class="btn green hm-go" data-hmgo="atelier">🔨 Ouvrir l’établi</button><p class="hm-tip">${n} objet${n > 1 ? 's' : ''} de matériel prêt${n > 1 ? 's' : ''} pour vos expéditions.</p>`;
 }
+// ---------------- une étape à la fois : ce qu'il y a à faire maintenant ----------------
+function hmNrgEta(k) { const n = hmNrg(k); if (n >= 70) return 0; const rate = 10 * (1 + .5 * hm$(() => pgLvl('cheminee'), 0)); return Math.ceil((70 - n) / rate * 60); }
+const hmEtaTxt = m => m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`;
+function hmNext() {
+  const now = Date.now(), home = hm$(() => fwHome(), []), team = hm$(() => teamIds(), []).filter(k => CHARS[k]);
+  if ((S.eggs || []).some(e => e && e.ready <= now)) return { r: 'nurserie', t: 'Un œuf est prêt à éclore !', b: 'Faire éclore' };
+  const J = hm$(() => famState().j, null), ripe = J ? J.plots.findIndex(p => p && now - p.t0 >= p.ms) : -1;
+  if (ripe >= 0) return { r: 'jardin', t: `${J.plots[ripe].out[0]} : c’est mûr !`, b: 'Récolter' };
+  const tired = team.filter(k => home.includes(k) && hmNrg(k) < 70);
+  if (tired.length) {
+    const k = tired[0], nm = CHARS[k].name, bed = hm$(() => fwJob(k), 'repos') === 'repos', food = (S.inv || []).some(i => i && i.cat === 'n');
+    if (!bed) return { r: 'chambres', t: `${nm} est fatigué : mettez-le au lit.`, b: 'Au lit' };
+    if (food) return { r: 'cuisine', t: `${nm} dort (en forme dans ${hmEtaTxt(hmNrgEta(k))}). Un repas le remet sur pied tout de suite.`, b: 'Nourrir' };
+    return { r: 'chambres', t: `${nm} dort : en forme dans ${hmEtaTxt(hmNrgEta(k))}.`, b: 'Voir' };
+  }
+  if (J && J.plots.some(p => !p) && (S.inv || []).some(i => hm$(() => famSeedOf(i), null))) return { r: 'jardin', t: 'Une parcelle est libre : semez une graine.', b: 'Semer' };
+  if (team.length && team.every(k => !home.includes(k) || hmNrg(k) >= 70) && team.some(k => home.includes(k))) return { r: 'entree', t: 'Votre équipe est en forme : partez en voyage !', b: 'Partir', go: 1 };
+  return null;
+}
+function hmNextHTML(R) {
+  const N = hmNext(); if (!N) return '';
+  const here = N.r === R.id && !N.go;
+  return `<button class="hm-next${here ? ' here' : ''}" data-hmnext="${N.go ? 'go' : N.r}"><span>💡</span><b>${esc(N.t)}</b>${here ? '' : `<i>${N.b} ›</i>`}</button>`;
+}
+// un repas redonne tout de suite de l'énergie (+30 en plus de ce que donnait déjà la nourriture)
+if (typeof fyFeed === 'function') fyFeed = (orig => function (k, id) {
+  const had = (S.inv || []).some(i => i.id === id), r = orig.apply(this, arguments);
+  try { if (had && !S.inv.some(i => i.id === id)) { const c = fyC(k); c.nrg = fyClamp(c.nrg + 30); save(); toast(`${CHARS[k].name} : +30 d’énergie${c.nrg >= 70 ? ', en forme !' : ''}`); renderPanel(); } } catch (e) {}
+  return r;
+})(fyFeed);
 let hmPanelExtra = () => {}; // aménagement, souvenirs (75_amenager.js)
 if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   if (!box || hm$(() => pgTuto(), false)) return orig.apply(this, arguments);
-  if (!hmR(hmRoom)) hmRoom = (HM_ROOMS.find(x => x.id === 'nurserie' && hmDot(x)) || HM_ROOMS[0]).id;
+  if (!hmR(hmRoom)) { const N = hm$(() => hmNext(), null); hmRoom = N ? N.r : 'entree'; }
   const R = hmR(hmRoom), l = hmLvl(R), locked = R.lock && l < 1;
   const tmp = document.createElement('div');
   try { orig.call(this, tmp); } catch (e) { console.error('foyer', e); }
   box.classList.remove('f3-on');
-  box.innerHTML = hmTabsHTML(R.id) + hmStageHTML(R);
+  box.innerHTML = hmTabsHTML(R.id) + hm$(() => hmNextHTML(R), '') + hmStageHTML(R);
   hm$(() => hmPanelExtra(box, R, 'top'), 0);
   if (!locked) {
     if (R.id === 'entree') box.insertAdjacentHTML('beforeend', hmTeamHTML());
@@ -419,13 +450,14 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   const L = box.querySelector('.fy2-list');
   if (L) { L.querySelectorAll('.fy2-b, .fw-jobs, .fw-away, [data-fy="pet2"]').forEach(e => e.remove()); L.insertAdjacentHTML('beforebegin', `<h3 class="hm-h">Nourrir un familier</h3>`); }
   hm$(() => hmPanelExtra(box, R, 'end'), 0);
-  if (R.b) box.insertAdjacentHTML('beforeend', `<div class="hm-up"><h3 class="hm-h">${l < 1 ? 'Construire' : l < 3 ? 'Améliorer la pièce' : 'Pièce au maximum'}</h3>${hm$(() => pgCardHTML(PG_BY[R.b]), '')}</div>`);
+  if (R.b) box.insertAdjacentHTML('beforeend', `<div class="hm-up"><h3 class="hm-h">${l < 1 ? 'Construire' : l < 3 ? 'Améliorer la pièce' : 'Pièce au maximum'}</h3>${hm$(() => pgCardHTML(PG_BY[R.b]), '')}${R.b2 ? hm$(() => pgCardHTML(PG_BY[R.b2]), '') : ''}</div>`);
 })(fyRender);
 function hmGo(d) { const i = HM_ROOMS.findIndex(x => x.id === hmRoom); hmRoom = HM_ROOMS[(i + d + HM_ROOMS.length) % HM_ROOMS.length].id; renderPanel(); }
 document.addEventListener('click', ev => {
   const t = ev.target; if (!t.closest) return;
   const r = t.closest('[data-hmroom]'); if (r) { ev.stopPropagation(); if (hmRoom !== r.dataset.hmroom) { hmRoom = r.dataset.hmroom; renderPanel(); } return; }
   if (t.closest('[data-hmhire]')) { ev.stopPropagation(); const w = document.querySelector('#panelBody .hm-work'); if (w) w.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+  const nx = t.closest('[data-hmnext]'); if (nx) { ev.stopPropagation(); if (nx.dataset.hmnext === 'go') { hm$(() => openSheet('voyage'), 0); return; } hmRoom = nx.dataset.hmnext; renderPanel(); return; }
   const n = t.closest('[data-hmnav]'); if (n) { ev.stopPropagation(); hmGo(+n.dataset.hmnav); return; }
   const g = t.closest('[data-hmgo]'); if (g) { ev.stopPropagation(); try { villView = g.dataset.hmgo; } catch (e) {} renderPanel(); const p = $('panelBody'); if (p) p.scrollTop = 0; }
 }, true);
@@ -443,10 +475,16 @@ document.addEventListener('click', ev => {
   const k = b.dataset.fk, j = b.dataset.fwjob, to = { jard: 'au jardin', comm: hm$(() => pgLvl('repas') > 0, false) ? 'à la cuisine' : 'à l’atelier', nurs: 'à la nurserie', repos: 'se reposer' }[j];
   hm$(() => toast(`${CHARS[k].name} ${j === 'repos' ? 'va ' : 'part '}${to}`), 0);
 });
+if (typeof openSheet === 'function') openSheet = (orig => function (name) { if (name === 'village' && (typeof tab === 'undefined' || tab !== 'village')) hmRoom = null; return orig.apply(this, arguments); })(openSheet);
 window.__hm = { room: () => hmRoom, svg: id => hmSceneSVG(hmR(id)) };
 {
   const st = document.createElement('style');
-  st.textContent = `.hm-tabs{display:grid;grid-template-columns:repeat(8,1fr);gap:3px;margin:0 0 8px}
+  st.textContent = `.hm-tabs{display:grid;grid-template-columns:repeat(4,1fr) 6px repeat(4,1fr);gap:3px;margin:0 0 8px}.hm-tabs button:nth-child(5){grid-column:6}
+.hm-tabs button.cy:not(:nth-child(4))::after{content:'›';position:absolute;right:-6px;top:30%;font:900 14px system-ui;color:#e0a01e;z-index:1}
+.hm-tabs button.cy{background:#fff4dc}
+.hm-next{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 8px;padding:9px 12px;border:2px solid #f2c14e;border-radius:16px;background:#fffaeb;text-align:left;font:inherit;cursor:pointer;box-shadow:0 2px 0 #f2d9a8}
+.hm-next span{font-size:18px}.hm-next b{flex:1;font-size:13px;line-height:1.3;color:var(--ink,#4a3528)}.hm-next i{flex:none;font-style:normal;font:800 12.5px var(--body,system-ui);color:#fff;background:#5fb36b;padding:6px 10px;border-radius:999px}
+.hm-next.here{border-color:#cfe3c4;background:#f3faef;box-shadow:none}
 .hm-edit{position:absolute;right:10px;top:10px;padding:6px 12px;border-radius:999px;border:0;background:#fff;color:var(--ink,#4a3528);font:800 13px var(--body,system-ui);box-shadow:0 2px 6px rgba(120,80,40,.2);cursor:pointer}
 .hm-work{margin:10px 0}.hm-h small{text-transform:none;letter-spacing:0;font-weight:700;color:#b9a48e;margin-left:4px}
 .hm-wl{margin:-2px 2px 8px;font-size:12.5px;color:#2f7f4c;font-weight:600}
