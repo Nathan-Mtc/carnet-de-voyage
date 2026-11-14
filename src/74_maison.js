@@ -12,19 +12,19 @@ const HM_W = 136, HM_H = 80, HM_K = '#4a3528';
 const HM_ROOMS = [
   // id, nom, construction (48 PG_B), blocs déplacés depuis l'ancien foyer, position [x, y, échelle], mur, « lock » = pièce fermée tant que niveau 0
   { id: 'observ', nm: 'Observatoire', b: 'observ', blocks: [], p: [129, 74, 0.75], wall: '#39457a', lock: 1 },
-  { id: 'chambres', nm: 'Chambres', b: 'chambre', blocks: ['.fw-head', '.fw-posts', '.fy2-list', '.rfg'], p: [44, 142, 1], wall: '#f6dbe6' },
+  { id: 'chambres', nm: 'Chambres', b: 'chambre', blocks: ['.fy2-list'], p: [44, 142, 1], wall: '#f6dbe6' },
   { id: 'nurserie', nm: 'Nurserie', b: null, blocks: ['.fy2-nur'], p: [184, 142, 1], wall: '#fdeccd' },
   { id: 'salon', nm: 'Salon', b: 'cheminee', blocks: ['.f3'], p: [44, 226, 1], wall: '#f8dfc4' },
-  { id: 'cuisine', nm: 'Cuisine', b: 'repas', blocks: [], p: [184, 226, 1], wall: '#dcedd6', lock: 1 },
+  { id: 'cuisine', nm: 'Cuisine', b: 'repas', blocks: ['.fy2-list'], p: [184, 226, 1], wall: '#dcedd6' },
   { id: 'atelier', nm: 'Atelier', b: 'atelier', blocks: [], p: [44, 310, 1], wall: '#e9dcc8' },
   { id: 'jardin', nm: 'Jardin', b: 'serre', blocks: ['.fy2-jar'], p: [184, 310, 1], wall: '#cfeaf5' },
 ];
 const HM_INFO = {
   observ: 'Annonce à l’avance les moments rares du ciel.',
-  chambres: 'Vos familiers qui ne voyagent pas vivent ici : donnez-leur un poste.',
+  chambres: 'Choisissez ce que fait chaque familier à la maison : il va dans la pièce de son poste.',
   nurserie: 'Les œufs éclosent ici. Agrandissez-la pour accueillir plus de familiers.',
   salon: 'Décorez : le confort rend vos compagnons plus efficaces en voyage.',
-  cuisine: 'Nourrir vos compagnons ici leur donne plus d’expérience.',
+  cuisine: 'Nourrissez vos familiers ici : bien nourris, ils sont plus heureux.',
   atelier: 'Fabriquez objets, matériel et décorations.',
   jardin: 'Semez des graines : elles poussent même pendant vos voyages.',
 };
@@ -207,9 +207,18 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   box.classList.toggle('f3-on', R.id === 'salon');
   if (R.b) box.insertAdjacentHTML('beforeend', `<div class="hm-up"><h3 class="hm-h">${hmLvl(R) < 1 ? 'Construire' : 'Améliorer la pièce'}</h3>${hm$(() => pgCardHTML(PG_BY[R.b]), '')}</div>`);
   if (R.id === 'atelier') box.insertAdjacentHTML('beforeend', `<button class="btn green" data-hmgo="atelier">🔨 Ouvrir l’établi</button>`);
-  if (R.id === 'cuisine' && hmLvl(R) > 0) box.insertAdjacentHTML('beforeend', `<button class="btn green" data-hmgo="talents">🍖 Nourrir un compagnon</button>`);
   if (R.id === 'salon') box.insertAdjacentHTML('beforeend', `<h3 class="hm-h">Décorer le salon</h3>`);
   R.blocks.forEach(sel => tmp.querySelectorAll(sel).forEach(e => box.appendChild(e)));
+  // une pièce = une chose à faire : on poste les familiers dans les chambres, on les nourrit à la cuisine
+  const L = box.querySelector('.fy2-list');
+  if (L) {
+    L.querySelectorAll('.fy2-b').forEach(e => e.remove());
+    if (R.id === 'chambres') { L.querySelectorAll('[data-fy="feed2"]').forEach(e => e.remove()); [...L.children].forEach(e => { if (!e.classList.contains('fy2-c')) e.remove(); }); }
+    if (R.id === 'cuisine') L.querySelectorAll('.fw-jobs, .fw-away, [data-fy="pet2"]').forEach(e => e.remove());
+    L.insertAdjacentHTML('beforebegin', `<h3 class="hm-h">${R.id === 'cuisine' ? 'Nourrir un familier' : 'Qui fait quoi ?'}</h3>`);
+  }
+  // ce qu'on fait dans la pièce d'abord, l'amélioration ensuite
+  const up = box.querySelector('.hm-up'); if (up && L) box.appendChild(up);
 })(fyRender);
 document.addEventListener('click', ev => {
   const t = ev.target; if (!t.closest) return;
@@ -220,6 +229,17 @@ document.addEventListener('click', ev => {
 document.addEventListener('keydown', ev => { const r = ev.target.closest && ev.target.closest('[data-hmroom]'); if (r && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); r.dispatchEvent(new MouseEvent('click', { bubbles: true })); } });
 // revenir sur l'onglet Foyer depuis ailleurs : on retrouve la maison
 if (typeof openSheet === 'function') openSheet = (orig => function (name) { if (name === 'village' || name === 'foyer') hmRoom = null; return orig.apply(this, arguments); })(openSheet);
+if (typeof rfgHTML === 'function') rfgHTML = (orig => function () {
+  const h = orig.apply(this, arguments); if (!h || !hmRoom) return h;
+  const n = hm$(() => teamIds().length, 0);
+  return `<details class="hm-rfg"><summary>🎒 Qui part en voyage ? <small>${n}/3</small></summary>${h}</details>`;
+})(rfgHTML);
+// changer de poste : on dit où il va
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-fwjob]'); if (!b || !hmRoom) return;
+  const k = b.dataset.fk, j = b.dataset.fwjob, to = { jard: 'au jardin', comm: hm$(() => pgLvl('repas') > 0, false) ? 'à la cuisine' : 'à l’atelier', nurs: 'à la nurserie', repos: 'se reposer' }[j];
+  hm$(() => toast(`${CHARS[k].name} ${j === 'repos' ? 'va ' : 'part '}${to}`), 0);
+});
 window.__hm = { house: () => hmHouseHTML(), room: () => hmRoom };
 {
   const st = document.createElement('style');
@@ -256,6 +276,8 @@ window.__hm = { house: () => hmHouseHTML(), room: () => hmRoom };
 .hm-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}.hm-ht b{display:block;font:800 18px var(--display,inherit);color:var(--ink,#4a3528)}.hm-ht small{font-size:12px;color:#c98a12;font-weight:800}
 .hm-scene{margin-bottom:10px}.hm-info{margin:6px 2px 0;font-size:13px;color:var(--ink2,#7a6250)}
 .hm-up{margin:10px 0}.hm-h{margin:10px 2px 6px;font:800 13px var(--body,system-ui);color:#9a8470;text-transform:uppercase;letter-spacing:.04em}
+#panelBody .fy2-list .fw-jobs button{cursor:pointer}
+.hm-rfg{margin:12px 0;padding:4px 12px;border:2px solid var(--line,#e7dccb);border-radius:14px;background:#fff}.hm-rfg summary{cursor:pointer;padding:8px 0;font:800 14px var(--display,inherit);color:var(--ink,#4a3528);list-style:none}.hm-rfg summary::-webkit-details-marker{display:none}.hm-rfg summary small{color:#9a8470;margin-left:4px}.hm-rfg .rfh,.hm-rfg .rfnote{display:none}
 #panelBody>.btn.green{display:block;width:100%;margin-top:8px}`;
   document.head.appendChild(st);
 }
