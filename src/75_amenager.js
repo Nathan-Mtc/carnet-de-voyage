@@ -21,7 +21,11 @@ const HM_FLOORS = {
   clair: ['Parquet clair', '#e8bf86', 'planks', 80], fonce: ['Parquet noyer', '#a46c3c', 'planks', 120],
   damier: ['Damier menthe', '#b5e2be', 'check', 150], moquette: ['Moquette rose', '#f4a3bb', 'carpet', 150], nuit: ['Moquette nuit', '#55468a', 'carpet', 200],
 };
-const HM_MAXI = 12; // objets par pièce
+const HM_MAXI = 24, HMN = 12; // objets par pièce ; la pièce fait HMN × HMN cases (v55 : pièces agrandies)
+let hmFpOf = it => [1, 1], hmFlat = it => !!it && it.sub === 'tapis'; // encombrement et objets « à plat » (tapis) : 77_meubles.js
+const hmFp = (it, m) => { const f = hm$(() => hmFpOf(it), [1, 1]) || [1, 1]; return m ? [f[1], f[0]] : f; };
+const hmCells = (it, x, y, m) => { const [w, d] = hmFp(it, m), c = []; for (let i = 0; i < w; i++) for (let j = 0; j < d; j++) c.push([x + i, y + j]); return c; };
+let hmCatHTML = () => ''; // catalogue de meubles (77_meubles.js)
 let hmPick = null, hmSel = null, hmMove = false, hmEdTab = 'o';
 function hmS() {
   if (!S.hm || typeof S.hm !== 'object') S.hm = {};
@@ -36,21 +40,27 @@ function hmS() {
 hmCustom = id => { const C = hmS().r[id] || {}; return { w: HM_WALLS[C.w], f: HM_FLOORS[C.f] }; };
 const hmOwn = (t, id) => (t === 'w' ? HM_WALLS : HM_FLOORS)[id][3] === 0 || hmS().own[t].includes(id);
 // ---------------- les objets posés deviennent des emplacements de confort ----------------
-const hmWallIt = it => !!it && it.sub !== 'mappemonde' && (['herbier', 'cartemur'].includes(it.sub) || /tableau|carte|horloge|pendule|affiche|planisph/i.test(it.name || ''));
+const hmWallIt = it => !!it && (!!it.wall || it.sub !== 'mappemonde' && !String(it.sub || '').startsWith('mb_') && (['herbier', 'cartemur'].includes(it.sub) || /tableau|carte|horloge|pendule|affiche|planisph/i.test(it.name || '')));
 function hmReg(key, it) { if (typeof F3_SLOT !== 'undefined' && !F3_SLOT[key]) F3_SLOT[key] = [key, 'H', 0, 0, 0, 0, it && it.sub === 'tapis' ? 'r' : 'f', 'Chez vous', [], /^\b$/, '']; }
 function hmRegAll() { try { const d = S.f3d && S.f3d.d; Object.keys(hmS().p).forEach(k => hmReg(k, d && d[k])); } catch (e) {} }
 if (typeof f3State === 'function') f3State = (orig => function () { hmRegAll(); return orig.apply(this, arguments); })(f3State);
 const hmBlkOf = id => hm$(() => HM_ISO[id](hmLvl(hmR(id))).blk || [], []);
 const hmIn = (blk, x, y) => blk.some(([a, b, w, d]) => x + .5 > a && x + .5 < a + w && y + .5 > b && y + .5 < b + d);
 function hmHere(room) { const D = f3State(), H = hmS(); return Object.entries(H.p).filter(([k, p]) => p.r === room && D.d[k]).map(([k, p]) => ({ k, p, it: D.d[k], w: hmWallIt(D.d[k]) })); }
-function hmCanAt(room, it, x, y, skip, blk) {
-  if (x < 0 || y < 0 || x > 8 || y > 8) return false;
-  const here = hmHere(room).filter(o => o.k !== skip), w = hmWallIt(it);
+function hmCanAt(room, it, x, y, skip, blk, m) {
+  if (m == null) { const p = skip && hmS().p[skip]; m = p ? p.m : 0; }
+  const cells = hmCells(it, x, y, m);
+  if (cells.some(([a, b]) => a < 0 || b < 0 || a >= HMN || b >= HMN)) return false;
+  const here = hmHere(room).filter(o => o.k !== skip), w = hmWallIt(it), fl = hmFlat(it);
   if (here.length >= HM_MAXI && !skip) return false;
   if (w) return (x === 0 || y === 0) && !here.some(o => o.w && o.p.x === x && o.p.y === y);
-  return !hmIn(blk || hmBlkOf(room), x, y) && !here.some(o => !o.w && o.p.x === x && o.p.y === y);
+  blk = blk || hmBlkOf(room);
+  if (cells.some(([a, b]) => hmIn(blk, a, b))) return false;
+  const taken = new Set(); here.filter(o => !o.w && hmFlat(o.it) === fl).forEach(o => hmCells(o.it, o.p.x, o.p.y, o.p.m).forEach(c => taken.add(c.join(','))));
+  return !cells.some(c => taken.has(c.join(',')));
 }
-function hmFree(room, it) { const blk = hmBlkOf(room); for (let s = 8; s >= 0; s--) for (let x = 0; x <= 8; x++) { const y = s - x + 4; if (y >= 0 && y <= 8 && hmCanAt(room, it, x, y, null, blk)) return [x, y]; } for (let x = 0; x <= 8; x++) for (let y = 0; y <= 8; y++) if (hmCanAt(room, it, x, y, null, blk)) return [x, y]; return null; }
+const hmAt = (room, x, y) => { const here = hmHere(room), on = o => hmCells(o.it, o.p.x, o.p.y, o.p.m).some(([a, b]) => a === x && b === y); return here.find(o => !o.w && !hmFlat(o.it) && on(o)) || here.find(o => !o.w && on(o)) || here.find(o => o.w && o.p.x === x && o.p.y === y); };
+function hmFree(room, it) { const blk = hmBlkOf(room); for (let s = 2 * HMN - 2; s >= 0; s--) for (let x = HMN - 1; x >= 0; x--) { const y = s - x; if (y >= 0 && y < HMN && Math.abs(x - y) < 4 && hmCanAt(room, it, x, y, null, blk)) return [x, y]; } for (let x = 0; x < HMN; x++) for (let y = 0; y < HMN; y++) if (hmCanAt(room, it, x, y, null, blk)) return [x, y]; return null; }
 // les anciens emplacements 3D (et « Poser chez moi » depuis le sac) arrivent dans le salon
 function hmMig() {
   try {
@@ -96,7 +106,8 @@ function hmSwHTML(t) {
   return `<div class="hm-sw">${Object.entries(C).map(([id, v]) => { const own = hmOwn(t, id); return `<button data-hm${t === 'w' ? 'wall' : 'floor'}="${id}" class="${cur === id ? 'on' : ''}"><i class="hm-swp p-${v[2]}" style="--c:${v[1]}"></i><b>${esc(v[0])}</b><small>${own ? (cur === id ? '✓ posé' : 'à vous') : `${v[3]} 🪙`}</small></button>`; }).join('')}</div>`;
 }
 function hmEditHTML(R) {
-  const tabs = `<div class="hm-et">${[['o', '🪑 Objets'], ['w', '🖼️ Murs'], ['f', '🟫 Sol']].map(([k, l]) => `<button data-hmedtab="${k}" class="${hmEdTab === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  const tabs = `<div class="hm-et">${[['o', '🪑 Objets'], ['c', '🛒 Catalogue'], ['w', '🖼️ Murs'], ['f', '🟫 Sol']].map(([k, l]) => `<button data-hmedtab="${k}" class="${hmEdTab === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  if (hmEdTab === 'c') return `<div class="hm-ed">${tabs}${hm$(() => hmCatHTML(), '')}</div>`;
   if (hmEdTab !== 'o') return `<div class="hm-ed">${tabs}${hmSwHTML(hmEdTab)}<p class="hm-tip">Acheté une fois, utilisable dans toutes les pièces.</p></div>`;
   const D = f3State(), sel = hmSel && D.d[hmSel];
   const cnt = {}, list = (S.inv || []).filter(it => hm$(() => f3IsDeco(it), false)).filter(it => { const k = it.name + '|' + (it.rarity | 0); cnt[k] = (cnt[k] || 0) + 1; return cnt[k] === 1; });
@@ -130,7 +141,7 @@ function hmCellTap(x, y) { // une case touchée en mode Aménager (SVG ou 3D)
       return hmRe();
     }
     if (hmMove && hmSel) { const it = f3State().d[hmSel]; if (it && hmCanAt(room, it, x, y, hmSel)) { H.p[hmSel].x = x; H.p[hmSel].y = y; hmMove = false; save(); } return hmRe(); }
-    const here = hmHere(room), o = here.find(q => !q.w && q.p.x === x && q.p.y === y) || here.find(q => q.w && q.p.x === x && q.p.y === y);
+    const o = hmAt(room, x, y);
     hmSel = o ? (hmSel === o.k ? null : o.k) : null; hmMove = false; return hmRe();
   }
 
@@ -144,7 +155,7 @@ document.addEventListener('click', ev => {
   if (d.hmpick) { hmPick = hmPick === d.hmpick ? null : d.hmpick; hmSel = null; hmMove = false; return hmRe(); }
   if (d.hmact) {
     const it = f3State().d[hmSel]; if (!it) { hmSel = null; return hmRe(); }
-    if (d.hmact === 'rot') H.p[hmSel].m = H.p[hmSel].m ? 0 : 1;
+    if (d.hmact === 'rot') { const p = H.p[hmSel], nm = p.m ? 0 : 1; if (hmCanAt(p.r, it, p.x, p.y, hmSel, null, nm)) p.m = nm; else hm$(() => toast('Pas assez de place pour le tourner ici.'), 0); }
     if (d.hmact === 'move') hmMove = !hmMove;
     if (d.hmact === 'store') { f3Take(hmSel); delete H.p[hmSel]; hm$(() => toast(`${it.name} retourne dans le sac.`), 0); hmSel = null; hmMove = false; }
     save(); return hmRe();
@@ -210,7 +221,7 @@ window.__am = { tap: (x, y) => hmCellTap(x, y), S: () => hmS(), here: r => hmHer
 .hm-cell.blk{fill:rgba(74,48,38,.06)}.hm-cell.occ{fill:rgba(242,193,78,.18)}.hm-cell.sel{fill:rgba(242,193,78,.5);stroke:#e0a01e;stroke-width:2;stroke-dasharray:none}
 .hm-pi.sel{filter:drop-shadow(0 0 3px #ffd866) drop-shadow(0 0 2px #e0a01e)}
 .hm-ed{margin:8px 0;padding:10px;border-radius:18px;background:#fff;border:2px solid #f2d9a8}
-.hm-et{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.hm-et button{padding:7px 0;border-radius:12px;border:2px solid transparent;background:#fbf4e8;font:800 13px var(--body,system-ui);color:var(--ink2,#7a6250);cursor:pointer}.hm-et button.on{background:#fff7d6;border-color:#f2c14e;color:var(--ink,#4a3528)}
+.hm-et{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px}.hm-et button{padding:7px 0;border-radius:12px;border:2px solid transparent;background:#fbf4e8;font:800 13px var(--body,system-ui);color:var(--ink2,#7a6250);cursor:pointer}.hm-et button.on{background:#fff7d6;border-color:#f2c14e;color:var(--ink,#4a3528)}
 .hm-hint{margin:0 2px 8px;font-size:12.5px;color:#2f7f4c;font-weight:700}
 .hm-tray{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none}.hm-tray>p{margin:0}
 .hm-tray button{position:relative;flex:none;width:76px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 3px;border:2px solid var(--line,#eadfce);border-radius:14px;background:#fffdf8;cursor:pointer;font:inherit}
