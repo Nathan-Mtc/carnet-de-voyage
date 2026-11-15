@@ -37997,6 +37997,48 @@ Object.assign(H3R, {
   document.head.appendChild(st);
 }
 window.__at = { addComp: o => addComp(o), q: id => atQ(id) };
+// ================= v67 · LE SAC RANGÉ PAR FAMILLES =================
+// Le joueur : « dans le sac je ne vois pas les appâts de l'herboriste ; on pourrait mieux ranger et trier » ;
+// « impossible de looter des appâts en voyage ». Chaque objet est dans UN seul onglet : sa famille (la même pastille que sur la
+// carte). Onglets vides cachés. Nouvelles familles : Appâts, Décoration ; le matériel d'expédition va dans Équipement.
+try {
+  FAM.appats = { nom: 'Appâts', couleur: '#5f8f3a', fond: '#eef6e4', icone: '🪤', usage: 'attirer une espèce en voyage : plus de chances d’œuf' };
+  FAM.deco = { nom: 'Décoration', couleur: '#b0703c', fond: '#fbeee2', icone: '🛋️', usage: 'décorer le foyer avec ✏️ Aménager' };
+  if (!FAM_IDS.includes('appats')) FAM_IDS.splice(1, 0, 'appats'); if (!FAM_IDS.includes('deco')) FAM_IDS.push('deco');
+  const ORDER = ['nourriture', 'appats', 'materiaux', 'jardin', 'equipement', 'vetements', 'deco', 'nature', 'tresors'];
+  US_TABS.splice(0, US_TABS.length, ['tout', 'Tout'], ...ORDER.map(k => [k, FAM[k].nom]));
+  Object.assign(US_TAB_ICO, { nourriture: 'cuisiner', appats: 'familier', materiaux: 'construire', jardin: 'planter', equipement: 'expedition', vetements: 'porter', deco: 'confort', nature: 'vendre', tresors: 'vendre' });
+  Object.assign(US_TAB_HINT, { nourriture: 'Pour nourrir vos compagnons (onglet Compagnons) et cuisiner.', appats: 'À emporter au départ : l’espèce attirée laisse plus souvent un œuf. Ils se préparent à l’Herboristerie.', materiaux: 'Ingrédients des ateliers du foyer : Forge, Couture, Herboristerie.', jardin: 'Graines à semer au Potager du foyer.', equipement: 'Matériel d’expédition : il ouvre les lieux difficiles et réduit les risques.', vetements: 'À porter : chaque vêtement donne un bonus en voyage.', deco: 'À poser chez vous avec ✏️ Aménager, dans n’importe quelle pièce du foyer.', nature: 'Trouvailles de la nature : à vendre ou à collectionner.', tresors: 'Trésors, reliques et pierres : à vendre ou à garder.' });
+  Object.assign(US_TAB_EMPTY, { appats: 'Pas d’appât : préparez-en à l’Herboristerie du foyer.', deco: 'Pas de décoration : achetez-en au Catalogue (✏️ Aménager).' });
+} catch (e) { console.error('sac familles', e); }
+if (typeof famOf === 'function') famOf = (orig => function (it) {
+  const f = orig.apply(this, arguments);
+  try {
+    if (!it) return f;
+    if (it.sub === 'appat') return 'appats';
+    if (typeof xpGearOf === 'function' && xpGearOf(it)) return 'equipement';
+    if (it.cat === 'd' && f === 'tresors' && !it.tresor && !it.relic && !it.rel) return 'deco';
+  } catch (e) {}
+  return f;
+})(famOf);
+if (typeof famUseLine === 'function') famUseLine = (orig => function (it) {
+  try {
+    const f = famOf(it);
+    if (f === 'appats') { const sp = HB_SP[String(it.name || '').replace(/ \(chef-d’œuvre\)$/, '')]; return `Appât : attire ${sp && typeof famSpN === 'function' ? famSpN(sp) : 'une espèce'}`; }
+    if (f === 'deco') return 'Décorer : à poser avec ✏️ Aménager';
+    if (f === 'equipement' && typeof xpGearOf === 'function' && xpGearOf(it)) { const g = xpGearOf(it); return `Expédition : ${XP_G[g.g][2].toLowerCase()}`; }
+  } catch (e) {}
+  return orig.apply(this, arguments);
+})(famUseLine);
+if (typeof usTabsOf === 'function') usTabsOf = function (it) { return new Set([hm$(() => famOf(it), 'tresors')]); };
+// v67 : les appâts ne se trouvent JAMAIS en voyage (décision du joueur) : on les prépare seulement à l'Herboristerie
+{
+  const st = document.createElement('style');
+  st.textContent = `.obfil.usfil{display:flex!important;flex-wrap:nowrap;overflow-x:auto;gap:6px;padding-bottom:4px;scrollbar-width:none}.obfil.usfil::-webkit-scrollbar{display:none}
+.obfil.usfil button{flex:none;min-height:0!important;padding:6px 10px!important;display:inline-flex!important;align-items:center;gap:6px;border-radius:999px!important}
+.obfil.usfil button.zero{display:none!important}.obfil.usfil button span{font-size:12px!important}`;
+  document.head.appendChild(st);
+}
 
 })();
 </script>
