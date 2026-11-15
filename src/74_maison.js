@@ -18,7 +18,7 @@ const HM_ROOMS = [
   { id: 'herbo', nm: 'Herboristerie', v: 'Appâts', e: '🌿', b: null, blocks: [], j: 'herbo', st: 'Herboristerie' },
   { id: 'forge', nm: 'Forge', v: 'Forger', e: '⚒️', b: 'atelier', blocks: [], j: 'forge', st: 'Équipement' },
   { id: 'couture', nm: 'Couture', v: 'Coudre', e: '🧵', b: null, blocks: [], j: 'couture', st: 'Vêtement' },
-  { id: 'nurserie', nm: 'Couveuse', v: 'Éclore', e: '🥚', b: null, blocks: ['.fy2-nur'], j: 'nurs' },
+  { id: 'nurserie', nm: 'Couveuse', v: 'Éclore', e: '🥚', b: null, blocks: [], j: 'nurs' },
   { id: 'observ', nm: 'Observatoire', v: 'Le ciel', e: '🔭', b: 'observ', blocks: [], lock: 1 },
 ];
 const HM_INFO = {
@@ -27,7 +27,7 @@ const HM_INFO = {
   herbo: 'Préparez des appâts : chaque espèce a le sien, il aide à l’apprivoiser en voyage.',
   forge: 'Forgez le matériel d’expédition : crampons, lampe, palmes… Il ouvre les lieux difficiles et réduit les risques.',
   couture: 'Cousez des vêtements : ils protègent du froid, de la pluie et du soleil en voyage.',
-  nurserie: 'Les œufs éclosent ici. Vos familiers sans poste y attendent qu’on leur confie un atelier. On y change aussi l’équipe de voyage.',
+  nurserie: 'Les œufs éclosent ici, et on y réunit deux compagnons pour obtenir un nouvel œuf. Les compagnons sans poste y attendent.',
   salon: 'Votre pièce à vous : aménagez-la et fabriquez vos décorations.',
   observ: 'Annonce à l’avance les moments rares du ciel.',
 };
@@ -43,7 +43,7 @@ function hmDot(R) {
 function hmWho() { // qui est dans quelle pièce : les artisans à leur poste, les autres se promènent au salon
   const W = {}, put = (r, k) => { (W[r] = W[r] || []).push(k); }, POST = { jard: 'jardin', nurs: 'nurserie', cuis: 'cuisine', herbo: 'herbo', forge: 'forge', couture: 'couture' };
   const team = hm$(() => teamIds(), []);
-  hm$(() => fwHome(), []).forEach(k => { if (team.includes(k)) return; /* v69 : l'équipe de voyage n'est pas au foyer */ const j = hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'nurserie', k); /* sans poste : ils vivent à la Couveuse */ });
+  hm$(() => fwHome(), []).forEach(k => { const j = hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'nurserie', k); /* sans poste : ils vivent à la Couveuse */ });
   return W;
 }
 // ---------------- projection 3/4 ----------------
@@ -372,8 +372,8 @@ function hmBar(k) { const n = hmNrg(k), st = n >= 70 ? ['ok', 'En forme'] : n < 
 const HM_JL = { cuis: 'Cuisine 50 % plus vite.', herbo: 'Prépare les appâts 50 % plus vite.', forge: 'Forge 50 % plus vite.', couture: 'Coud 50 % plus vite.', comm: 'Il cuisine tout seul la recette choisie.', nurs: 'Les œufs éclosent plus vite.', jard: 'Le potager pousse plus vite et se récolte tout seul.' };
 const HM_JT = { comm: 'Le commis', nurs: 'Le gardien', jard: 'Le jardinier', cuis: 'Le cuisinier', herbo: 'L’herboriste', forge: 'Le forgeron', couture: 'Le couturier' };
 function hmWorkHTML(R) {
-  const team = hm$(() => teamIds(), []), j = R.j, home = hm$(() => fwHome(), []).filter(k => !team.includes(k)), on = home.filter(k => hm$(() => fwJob(k), 'repos') === j);
-  if (!home.length) return `<section class="hm-work"><h3 class="hm-h">${HM_JT[j]}</h3><p class="hm-none">Pas de familier libre : l’équipe de voyage ne travaille pas. Faites éclore un œuf à la Couveuse pour avoir un artisan.</p></section>`;
+  const team = hm$(() => teamIds(), []), j = R.j, home = hm$(() => fwHome(), []), on = home.filter(k => hm$(() => fwJob(k), 'repos') === j);
+  if (!home.length) return `<section class="hm-work"><h3 class="hm-h">${HM_JT[j]}</h3><p class="hm-none">Tous vos compagnons sont en voyage.</p></section>`;
   const line = HM_JL[j];
   return `<section class="hm-work"><h3 class="hm-h">${HM_JT[j]} <small>${on.length ? on.map(k => esc(CHARS[k].name)).join(', ') : 'personne'}</small></h3>
     ${line ? `<p class="hm-wl">${on.length ? '✓ ' : 'Avec un artisan : '}${esc(line)}</p>` : ''}
@@ -411,7 +411,7 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
     if (R.j) box.insertAdjacentHTML('beforeend', hmWorkHTML(R));
     if (R.st) box.insertAdjacentHTML('beforeend', hm$(() => hmStationHTML(R), ''));
     R.blocks.forEach(sel => tmp.querySelectorAll(sel).forEach(e => box.appendChild(e)));
-    if (R.id === 'nurserie') box.insertAdjacentHTML('beforeend', `<button class="btn cream hm-go" data-hmgo="nurserie">🥚 Toute la nurserie (croisements, habitats)</button>`);
+    if (R.id === 'nurserie') hm$(() => hmCouvFill(box), 0);
   }
   const L = box.querySelector('.fy2-list');
   if (L) { L.querySelectorAll('.fy2-b, .fw-jobs, .fw-away, [data-fy="pet2"]').forEach(e => e.remove()); L.insertAdjacentHTML('beforebegin', `<h3 class="hm-h">Nourrir un familier</h3>`); }

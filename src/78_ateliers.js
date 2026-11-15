@@ -43,7 +43,7 @@ const AT_UP = { couture: [300, 900, 2000], herbo: [250, 800, 1800] };
 function atS() { const H = hmS(); if (!H.st || typeof H.st !== 'object') H.st = {}; if (!H.lv || typeof H.lv !== 'object') H.lv = {}; return H; }
 function atLvl(id) { if (id === 'forge') return hm$(() => pgLvl('atelier'), 0); if (id === 'cuisine') return hm$(() => pgLvl('repas'), 0); if (id === 'salon') return 1; return atS().lv[id] | 0; }
 const atSlots = id => atLvl(id) >= 2 || (id === 'couture' && agBest(hmR('couture')).g >= 2) ? 2 : 1;
-const atWorkers = R => R.j ? hm$(() => fwWho(R.j).filter(k => !teamIds().includes(k)).length, 0) : 0;
+const atWorkers = R => R.j ? hm$(() => fwWho(R.j).length, 0) : 0;
 const atSpeed = R => (1 + .25 * atLvl(R.id)) / (1 - AG_SPD[agBest(R).g] * (atWorkers(R) ? 1 : 0));
 const AT_MIN = [6, 15, 30, 60, 120];
 const atMs = (r, R) => Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R));
@@ -95,7 +95,7 @@ function atAuto() { return false; // v62 : retiré (« il va vider le stock ») 
 function atLogHTML(R) {
   const H = atS(), L = H.log && H.log[R.id]; if (!L || !L.length) return '';
   const c = {}; L.forEach(n => { c[n] = (c[n] || 0) + 1; }); H.log[R.id] = []; save();
-  const who = hm$(() => fwWho(R.j).filter(k => !teamIds().includes(k)).map(k => CHARS[k].name).join(' et '), 'Votre artisan');
+  const who = hm$(() => fwWho(R.j).map(k => CHARS[k].name).join(' et '), 'Votre artisan');
   return `<div class="atl-log">🧺 <b>${esc(who)}</b> a rangé dans votre sac : ${Object.entries(c).map(([n, k]) => `${k} × ${esc(n)}`).join(', ')}</div>`;
 }
 // ---------------- l'artisan progresse : grades de plus en plus longs à atteindre ----------------
@@ -107,7 +107,7 @@ function agXP(k, room) { const H = hmS(); if (!H.ax || typeof H.ax !== 'object')
 function agGrade(n) { let g = 0; while (g < 4 && n >= AG_AT[g + 1]) g++; return g; }
 function agOf(k, room) { const n = agXP(k, room), g = agGrade(n), a = AG_AT[g], b = AG_AT[g + 1]; return { n, g, f: b ? (n - a) / (b - a) : 1, next: b }; }
 const agTeam = () => hm$(() => teamIds(), []);
-const agWorkers = R => R && R.j ? hm$(() => fwWho(R.j).filter(k => !agTeam().includes(k)), []) : [];
+const agWorkers = R => R && R.j ? hm$(() => fwWho(R.j), []) : [];
 function agBest(R) { let best = { g: -1, k: null }; agWorkers(R).forEach(k => { const g = agOf(k, R.id).g; if (g > best.g) best = { g, k }; }); if (best.g < 0) best.g = 0; return best; }
 const agWho = R => { const b = agBest(R); return b.k ? CHARS[b.k].name : 'Votre artisan'; };
 const agRoll = R => agWorkers(R).length > 0 && Math.random() < AG_CH[agBest(R).g];
@@ -192,7 +192,6 @@ setInterval(() => {
 }, 5000);
 // ---------------- pastilles et étape du moment ----------------
 if (typeof hmDot === 'function') hmDot = (orig => function (R) { if (R && R.st) { const n = atQ(R.id).filter(j => Date.now() - j.t0 >= j.ms).length; if (n) return n; } return orig.apply(this, arguments); })(hmDot);
-try { const T = hm$(() => teamIds(), []), F = fwState(); T.forEach(k => { if (F.job && F.job[k] && F.job[k] !== 'repos') F.job[k] = 'repos'; }); } catch (e) {}
 hmStNext = () => {
   const now = Date.now(), ST = HM_ROOMS.filter(R => R.st);
   for (const R of ST) { const j = atQ(R.id).find(x => now - x.t0 >= x.ms), r = j && RECIPES.find(x => x.id === j.rid); if (r) return { r: R.id, t: `${r.out[0]} est prêt à la ${R.nm} !`, b: 'Récupérer', ready: 1 }; }
@@ -319,5 +318,36 @@ if (typeof usTabsOf === 'function') usTabsOf = function (it) { return new Set([h
   st.textContent = `.obfil.usfil{display:flex!important;flex-wrap:wrap;overflow:visible;gap:5px;padding-bottom:2px}.obfil.usfil::-webkit-scrollbar{display:none}
 .obfil.usfil button{flex:none;min-height:0!important;padding:4px 9px 4px 5px!important;display:inline-flex!important;align-items:center;gap:5px;border-radius:999px!important}.obfil.usfil button i.uspill{--sz:18px!important}
 .obfil.usfil button.zero{display:none!important}.obfil.usfil button span{font-size:11.5px!important;grid-row:auto!important;grid-column:auto!important}.obfil.usfil button>i:not(.uspill){min-width:0!important;height:16px!important;padding:0 5px!important;font-size:10px!important;line-height:16px!important;grid-row:auto!important;grid-column:auto!important;justify-self:auto!important}.obfil.usfil button .obic{width:18px!important;height:18px!important;grid-row:auto!important;grid-column:auto!important}`;
+  document.head.appendChild(st);
+}
+
+// ================= v70 · PLUS D'ÉQUIPE, ET LA COUVEUSE TOUT-EN-UN =================
+// Le joueur : « on supprime la notion d'équipe, mais on marque son métier avant qu'il parte, pour éviter de le retirer
+// de là où il travaille » ; « la nurserie n'est pas claire : tout dans la Couveuse, croisements directs ».
+// • Tous les compagnons font partie de l'équipe (teamIds = tous) : « Qui part ? » les propose tous, avec leur métier
+//   en petit sous le portrait ; partir libère le poste le temps du voyage (il le reprend au retour).
+// • La Couveuse affiche directement œufs, éclosion, croisements (le panier double est offert) et les places par habitat.
+if (typeof teamIds === 'function') teamIds = function () { return Object.keys(S.comps || {}).filter(k => S.comps[k] && (typeof CHARS === 'undefined' || CHARS[k])); };
+try { S.team = teamIds(); } catch (e) {}
+if (typeof rfgHTML === 'function') rfgHTML = () => '';
+const AT_JOBNM = { jard: '🌱 Jardinier', cuis: '🍲 Cuisinier', herbo: '🌿 Herboriste', forge: '⚒️ Forgeron', couture: '🧵 Couturier', nurs: '🥚 Gardien', comm: '🏪 Commis' };
+const atJobOf = k => { const j = hm$(() => fwJob(k), 'repos'); return AT_JOBNM[j] || ''; };
+if (typeof trjWhoHTML === 'function') trjWhoHTML = (orig => function () {
+  let h = orig.apply(this, arguments);
+  try { h = h.replace(/(<button class="trjwb[^"]*" data-trjwho="([^"]+)"[^>]*>)([\s\S]*?)(<\/button>)/g, (m, a, k, inner, end) => { const jb = atJobOf(k); return a + inner + (jb ? `<small class="trj-job">${jb}</small>` : '') + end; }); } catch (e) {}
+  return h;
+})(trjWhoHTML);
+document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-trjwho]'); if (!b) return; const jb = atJobOf(b.dataset.trjwho); if (jb) hm$(() => toast(`${CHARS[b.dataset.trjwho].name} est ${jb.replace(/^\S+ /, '').toLowerCase()} : son atelier l’attendra pendant le voyage.`), 0); });
+function hmCouvFill(box) {
+  try { const N = nsState(); if (!N.enclos) { N.enclos = 1; save(); } } catch (e) {}
+  const d = document.createElement('div'); d.className = 'hm-couv';
+  try { nsRenderNurserie(d); } catch (e) { console.error('couveuse', e); }
+  d.querySelectorAll('.nshead').forEach(e => e.remove());
+  box.appendChild(d);
+  try { const hb = document.createElement('details'); hb.className = 'hm-deco hm-hab'; hb.innerHTML = '<summary>🏡 Places pour vos compagnons (habitats)</summary>'; const inner = document.createElement('div'); nsRenderHabitats(inner); inner.querySelectorAll('.nshead').forEach(e => e.remove()); hb.appendChild(inner); box.appendChild(hb); } catch (e) {}
+}
+{
+  const st = document.createElement('style');
+  st.textContent = `.trj-job{display:block;margin-top:2px;font:700 9.5px var(--body,system-ui);color:#8a6a4a;white-space:nowrap}.hm-couv{margin:8px 0}`;
   document.head.appendChild(st);
 }
