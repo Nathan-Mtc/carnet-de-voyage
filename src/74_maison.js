@@ -455,7 +455,7 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   if (!locked) {
     if (R.id === 'entree') box.insertAdjacentHTML('beforeend', hmTeamHTML());
     if (R.j) box.insertAdjacentHTML('beforeend', hmWorkHTML(R));
-    if (R.id === 'cuisine') box.insertAdjacentHTML('beforeend', hmFeedHTML());
+    if (R.id === 'cuisine') box.insertAdjacentHTML('beforeend', hmFeedHTML() + `<button class="btn cream hm-go" data-hmcook="1">🍳 Cuisiner des en-cas › Boutique</button><p class="hm-tip">Les en-cas se préparent aux fourneaux du comptoir de la Boutique, puis reviennent ici dans votre sac.</p>`);
     R.blocks.forEach(sel => tmp.querySelectorAll(sel).forEach(e => box.appendChild(e)));
     if (R.id === 'nurserie') box.insertAdjacentHTML('beforeend', `<button class="btn cream hm-go" data-hmgo="nurserie">🥚 Toute la nurserie (croisements, habitats)</button>`);
     if (R.id === 'atelier') box.insertAdjacentHTML('beforeend', hmGearHTML());
@@ -470,6 +470,7 @@ document.addEventListener('click', ev => {
   const t = ev.target; if (!t.closest) return;
   const r = t.closest('[data-hmroom]'); if (r) { ev.stopPropagation(); if (hmRoom !== r.dataset.hmroom) { hmRoom = r.dataset.hmroom; renderPanel(); } return; }
   if (t.closest('[data-hmhire]')) { ev.stopPropagation(); const w = document.querySelector('#panelBody .hm-work'); if (w) w.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
+  if (t.closest('[data-hmcook]')) { ev.stopPropagation(); try { czTab = 'prep'; } catch (e) {} openSheet('comptoir'); setTimeout(() => { const k = $('cmKit') || $('czTabs'); if (k) k.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 300); return; }
   const nx = t.closest('[data-hmnext]'); if (nx) { ev.stopPropagation(); if (nx.dataset.hmnext === 'go') { hm$(() => openSheet('voyage'), 0); return; } hmRoom = nx.dataset.hmnext; renderPanel(); return; }
   const n = t.closest('[data-hmnav]'); if (n) { ev.stopPropagation(); hmGo(+n.dataset.hmnav); return; }
   const g = t.closest('[data-hmgo]'); if (g) { ev.stopPropagation(); try { villView = g.dataset.hmgo; } catch (e) {} renderPanel(); const p = $('panelBody'); if (p) p.scrollTop = 0; }
