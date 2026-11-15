@@ -27,7 +27,7 @@ const HM_INFO = {
   herbo: 'Préparez des appâts : chaque espèce a le sien, il aide à l’apprivoiser en voyage.',
   forge: 'Forgez le matériel d’expédition : crampons, lampe, palmes… Il ouvre les lieux difficiles et réduit les risques.',
   couture: 'Cousez des vêtements : ils protègent du froid, de la pluie et du soleil en voyage.',
-  nurserie: 'Les œufs éclosent ici, et vos familiers sans poste y vivent. C’est aussi ici qu’on change l’équipe de voyage.',
+  nurserie: 'Les œufs éclosent ici. Vos familiers sans poste y attendent qu’on leur confie un atelier. On y change aussi l’équipe de voyage.',
   salon: 'Votre pièce à vous : aménagez-la et fabriquez vos décorations.',
   observ: 'Annonce à l’avance les moments rares du ciel.',
 };
@@ -43,7 +43,7 @@ function hmDot(R) {
 function hmWho() { // qui est dans quelle pièce : les artisans à leur poste, les autres se promènent au salon
   const W = {}, put = (r, k) => { (W[r] = W[r] || []).push(k); }, POST = { jard: 'jardin', nurs: 'nurserie', cuis: 'cuisine', herbo: 'herbo', forge: 'forge', couture: 'couture' };
   const team = hm$(() => teamIds(), []);
-  hm$(() => fwHome(), []).forEach(k => { const j = team.includes(k) ? 'repos' : hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'nurserie', k); /* sans poste : ils vivent à la Couveuse */ });
+  hm$(() => fwHome(), []).forEach(k => { if (team.includes(k)) return; /* v69 : l'équipe de voyage n'est pas au foyer */ const j = hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'nurserie', k); /* sans poste : ils vivent à la Couveuse */ });
   return W;
 }
 // ---------------- projection 3/4 ----------------

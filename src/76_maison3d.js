@@ -121,9 +121,9 @@ const H3I = {
 function h3Sprite(k, x, y, z, s = .4) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: h3Icon(k, H3I[k]), transparent: true, depthWrite: false })); m.position.set(x, z, y); m.scale.set(s, s, s); H3P.add(m); return m; }
 function h3TagSprite(txt, f, x, y, z, s = 1) {
   const key = 'tag' + txt + (f >= 0 ? Math.round(f * 10) : f);
-  const tx = h3Canvas(key, 256, 96, (g, w, h) => { g.fillStyle = f === -2 ? '#5fb36b' : 'rgba(255,250,240,.95)'; g.beginPath(); g.roundRect ? g.roundRect(4, 4, w - 8, h - 8, 28) : g.rect(4, 4, w - 8, h - 8); g.fill(); g.font = '800 34px system-ui'; g.textAlign = 'center'; g.fillStyle = f === -2 ? '#fff' : '#4a3528'; g.fillText(txt, w / 2, f >= 0 ? 46 : 60);
+  const tx = h3Canvas(key, 384, 96, (g, w, h) => { g.fillStyle = f === -2 ? '#5fb36b' : 'rgba(255,250,240,.95)'; g.beginPath(); g.roundRect ? g.roundRect(4, 4, w - 8, h - 8, 28) : g.rect(4, 4, w - 8, h - 8); g.fill(); let fs = 34; g.font = `800 ${fs}px system-ui`; while (g.measureText(txt).width > w - 30 && fs > 16) { fs -= 2; g.font = `800 ${fs}px system-ui`; } g.textAlign = 'center'; g.fillStyle = f === -2 ? '#fff' : '#4a3528'; g.fillText(txt, w / 2, f >= 0 ? 46 : 60);
     if (f >= 0) { g.fillStyle = '#eee4d6'; g.fillRect(36, 62, w - 72, 14); g.fillStyle = f >= .7 ? '#5fb36b' : '#e9b44c'; g.fillRect(36, 62, (w - 72) * f, 14); } });
-  const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, transparent: true, depthWrite: false, depthTest: false })); m.position.set(x, z, y); m.scale.set(1.9 * s, .71 * s, 1); m.renderOrder = 10; H3P.add(m); return m;
+  const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, transparent: true, depthWrite: false, depthTest: false })); m.position.set(x, z, y); m.scale.set(2.85 * s, .71 * s, 1); m.renderOrder = 10; H3P.add(m); return m;
 }
 // portraits des familiers (SVG → canvas → texture), gardés en cache
 const h3Por = {};
@@ -361,7 +361,11 @@ function h3Chars(R, l, who, blk) {
     if (fx === 'stir') { const sp2 = hCy(-.55, .2, .8, .04, .8, '#b98a5e'); h3Anim(t => { sp2.rotation.z = Math.sin(t * 6 + i) * .4; sp2.rotation.x = Math.cos(t * 6 + i) * .4; }); up('spark', 1, .26, -.4); }
     if (fx === 'star') up('spark', 2, .28, .4);
     H3P = G;
-    if (R.j && typeof agOf === 'function' && !hm$(() => teamIds(), []).includes(k)) { const A = agOf(k, R.id); h3TagSprite(`${AG_N[A.g]}${A.next ? ` · ${A.n}/${A.next}` : ''}`, A.f, 0, 0, SH + .5, 1.15); }
+    { // v69 : chacun a son étiquette : son nom et son rôle (« Safran · Herboriste apprenti », « Cumin · sans poste »)
+      const nm = CHARS[k] ? CHARS[k].name : '', job = hm$(() => fwJob(k), 'repos'), works = R.j && job === R.j;
+      if (works && typeof agOf === 'function') { const A = agOf(k, R.id), tit = (typeof AG_TIT !== 'undefined' && AG_TIT[R.id]) || ''; h3TagSprite(`${nm} · ${A.g ? AG_N[A.g] + ' ' + tit : tit.charAt(0).toUpperCase() + tit.slice(1) + ' apprenti'}`, A.f, 0, 0, SH + .5, 1.1); }
+      else h3TagSprite(`${nm} · sans poste`, -1, 0, 0, SH + .5, 1.1);
+    }
     H3P = Q;
     // il vit sa vie : travaille à son poste, puis fait un petit tour dans la pièce et revient
     const tgt = walk ? free[(i * 7 + k.length * 3) % free.length] : null, CY = 16 + i * 3;
