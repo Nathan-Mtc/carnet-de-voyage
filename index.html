@@ -36246,7 +36246,7 @@ function rfgHTML() {
 }
 if (typeof renderVillageTab === 'function') renderVillageTab = (orig => function (box) {
   const r = orig.apply(this, arguments);
-  try { if (typeof villView !== 'undefined' && villView === 'foyer' && (typeof hmRoom === 'undefined' || hmRoom === 'salon') && box && !box.querySelector('.rfg')) { const h = rfgHTML(); if (h) box.insertAdjacentHTML('beforeend', h); } } catch (e) { console.error('refuge foyer', e); }
+  try { if (typeof villView !== 'undefined' && villView === 'foyer' && (typeof hmRoom === 'undefined' || hmRoom === 'nurserie') && box && !box.querySelector('.rfg')) { const h = rfgHTML(); if (h) box.insertAdjacentHTML('beforeend', h); } } catch (e) { console.error('refuge foyer', e); }
   return r;
 })(renderVillageTab);
 {
@@ -36276,7 +36276,6 @@ const HM_ROOMS = [
   { id: 'forge', nm: 'Forge', v: 'Forger', e: '⚒️', b: 'atelier', blocks: [], j: 'forge', st: 'Équipement' },
   { id: 'couture', nm: 'Couture', v: 'Coudre', e: '🧵', b: null, blocks: [], j: 'couture', st: 'Vêtement' },
   { id: 'nurserie', nm: 'Couveuse', v: 'Éclore', e: '🥚', b: null, blocks: ['.fy2-nur'], j: 'nurs' },
-  { id: 'salon', nm: 'Salon', v: 'Décorer', e: '🛋️', b: 'chambre', blocks: [], st: 'Décoration' },
   { id: 'observ', nm: 'Observatoire', v: 'Le ciel', e: '🔭', b: 'observ', blocks: [], lock: 1 },
 ];
 const HM_INFO = {
@@ -36285,7 +36284,7 @@ const HM_INFO = {
   herbo: 'Préparez des appâts : chaque espèce a le sien, il aide à l’apprivoiser en voyage.',
   forge: 'Forgez le matériel d’expédition : crampons, lampe, palmes… Il ouvre les lieux difficiles et réduit les risques.',
   couture: 'Cousez des vêtements : ils protègent du froid, de la pluie et du soleil en voyage.',
-  nurserie: 'Les œufs éclosent ici : de nouveaux compagnons et familiers.',
+  nurserie: 'Les œufs éclosent ici, et vos familiers sans poste y vivent. C’est aussi ici qu’on change l’équipe de voyage.',
   salon: 'Votre pièce à vous : aménagez-la et fabriquez vos décorations.',
   observ: 'Annonce à l’avance les moments rares du ciel.',
 };
@@ -36301,7 +36300,7 @@ function hmDot(R) {
 function hmWho() { // qui est dans quelle pièce : les artisans à leur poste, les autres se promènent au salon
   const W = {}, put = (r, k) => { (W[r] = W[r] || []).push(k); }, POST = { jard: 'jardin', nurs: 'nurserie', cuis: 'cuisine', herbo: 'herbo', forge: 'forge', couture: 'couture' };
   const team = hm$(() => teamIds(), []);
-  hm$(() => fwHome(), []).forEach(k => { const j = team.includes(k) ? 'repos' : hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'salon', k); });
+  hm$(() => fwHome(), []).forEach(k => { const j = team.includes(k) ? 'repos' : hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'nurserie', k); /* sans poste : ils vivent à la Couveuse */ });
   return W;
 }
 // ---------------- projection 3/4 ----------------
@@ -36714,7 +36713,7 @@ if (typeof czBodyHTML === 'function') czBodyHTML = (orig => function () { const 
 window.__hm = { room: () => hmRoom, svg: id => hmSceneSVG(hmR(id)) };
 {
   const st = document.createElement('style');
-  st.textContent = `.hm-tabs{display:grid;grid-template-columns:repeat(4,1fr) 6px repeat(4,1fr);gap:3px;margin:0 0 8px}.hm-tabs button:nth-child(5){grid-column:6}
+  st.textContent = `.hm-tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:0 0 8px}
 .hm-tabs button.cy:not(:nth-child(4))::after{content:'›';position:absolute;right:-6px;top:30%;font:900 14px system-ui;color:#e0a01e;z-index:1}
 .hm-tabs button.cy{background:#fff4dc}
 .hm-next{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 8px;padding:9px 12px;border:2px solid #f2c14e;border-radius:16px;background:#fffaeb;text-align:left;font:inherit;cursor:pointer;box-shadow:0 2px 0 #f2d9a8}
@@ -36855,9 +36854,12 @@ const hmAt = (room, x, y) => { const here = hmHere(room), on = o => hmCells(o.it
 function hmFree(room, it) { const blk = hmBlkOf(room); for (let s = 2 * HMN - 2; s >= 0; s--) for (let x = HMN - 1; x >= 0; x--) { const y = s - x; if (y >= 0 && y < HMN && Math.abs(x - y) < 4 && hmCanAt(room, it, x, y, null, blk)) return [x, y]; } for (let x = 0; x < HMN; x++) for (let y = 0; y < HMN; y++) if (hmCanAt(room, it, x, y, null, blk)) return [x, y]; return null; }
 // les anciens emplacements 3D (et « Poser chez moi » depuis le sac) arrivent dans le salon
 function hmMig() {
+  try { // v66 : le Salon n'existe plus : ce qui y était posé part à la Couveuse (ou une autre pièce), sinon revient dans le sac
+    const H0 = hmS(), D0 = f3State(); Object.entries(H0.p).forEach(([k, p]) => { if (hmR(p.r)) return; /* pièce disparue : Salon, Entrée, Chambres, Atelier */ const it = D0.d[k]; if (!it) { delete H0.p[k]; return; } for (const r of ['nurserie', 'cuisine', 'herbo', 'forge', 'couture']) { const at = hmFree(r, it); if (at) { p.r = r; p.x = at[0]; p.y = at[1]; p.m = 0; return; } } f3Take(k); delete H0.p[k]; });
+  } catch (e) { console.error('salon → couveuse', e); }
   try {
     const D = f3State(), H = hmS();
-    F3_SLOTS.forEach(sl => { const it = D.d[sl[0]]; if (!it) return; let r = 'salon', at = hmFree(r, it); if (!at) { r = 'chambres'; at = hmFree(r, it); } if (!at) return; const key = 'hm' + (++H.n); hmReg(key, it); D.d[key] = it; delete D.d[sl[0]]; H.p[key] = { r, x: at[0], y: at[1], m: 0 }; });
+    F3_SLOTS.forEach(sl => { const it = D.d[sl[0]]; if (!it) return; let r = 'nurserie', at = hmFree(r, it); if (!at) { r = 'chambres'; at = hmFree(r, it); } if (!at) return; const key = 'hm' + (++H.n); hmReg(key, it); D.d[key] = it; delete D.d[sl[0]]; H.p[key] = { r, x: at[0], y: at[1], m: 0 }; });
   } catch (e) { console.error('aménager migration', e); }
 }
 // ---------------- dessin des objets posés et de la grille ----------------
@@ -36915,7 +36917,6 @@ const hmSvInv = () => (S.inv || []).filter(it => it && it.sv);
 hmPanelExtra = (box, R, at) => {
   if (at === 'top' && hmEdit) { box.insertAdjacentHTML('beforeend', hmEditHTML(R)); return; }
   if (at !== 'end' || hmEdit) return;
-  if (R.id === 'salon') box.insertAdjacentHTML('beforeend', `<div class="hm-2b"><button class="btn green" data-hmedit="1">✏️ Aménager</button><button class="btn gold" data-hmcat="1">🛒 Catalogue</button></div>`);
   if (R.id === 'entree') { const n = hmSvInv().length; if (n) box.insertAdjacentHTML('beforeend', `<button class="hm-sv" data-hmedit="1"><span>📦</span><b>${n} souvenir${n > 1 ? 's' : ''} de voyage à déballer</b><small>Posez-les chez vous : chacun réduit les risques sur son terrain.</small></button>`); }
 };
 // ---------------- clics ----------------
@@ -36942,7 +36943,7 @@ document.addEventListener('click', ev => {
   const t = ev.target; if (!t.closest || !t.closest('#panelBody')) return;
   const e = t.closest('[data-hmedit],[data-hmedtab],[data-hmpick],[data-hmcell],[data-hmact],[data-hmwall],[data-hmfloor]'); if (!e) return;
   ev.stopPropagation(); const d = e.dataset, H = hmS();
-  if (d.hmedit) { hmEdit = !hmEdit; hmPick = hmSel = null; hmMove = false; hmEdTab = 'o'; if (hmEdit) { const r = hmR(hmRoom); if (!r || r.id === 'jardin' || (r.lock && hmLvl(r) < 1)) hmRoom = 'salon'; } return hmRe(); }
+  if (d.hmedit) { hmEdit = !hmEdit; hmPick = hmSel = null; hmMove = false; hmEdTab = 'o'; if (hmEdit) { const r = hmR(hmRoom); if (!r || r.id === 'jardin' || (r.lock && hmLvl(r) < 1)) hmRoom = 'forge'; } return hmRe(); }
   if (d.hmedtab) { hmEdTab = d.hmedtab; return hmRe(); }
   if (d.hmpick) { hmPick = hmPick === d.hmpick ? null : d.hmpick; hmSel = null; hmMove = false; return hmRe(); }
   if (d.hmact) {
@@ -37617,7 +37618,7 @@ document.addEventListener('click', ev => {
   hm$(() => toast(`${it.name} : touchez une case pour le poser.`), 0); hmRe();
 }, true);
 // ---------------- kit de bienvenue : une maison déjà habitée ----------------
-const MB_KIT = [['salon', 'fauteuil', 6, 2, '#e0a07a'], ['salon', 'biblio', 9, 0, 0], ['salon', 'tapisrond', 6, 6, '#f7c8dd'], ['salon', 'tablebasse', 7, 7, 0], ['salon', 'pouf', 9, 8, '#f2c14e'],
+const MB_KIT = [['nurserie', 'fauteuil', 6, 2, '#e0a07a'], ['nurserie', 'biblio', 9, 0, 0], ['nurserie', 'tapisrond', 6, 6, '#f7c8dd'], ['nurserie', 'tablebasse', 7, 7, 0], ['nurserie', 'pouf', 9, 8, '#f2c14e'],
   ['chambres', 'commode', 9, 0, '#fffaf0'], ['chambres', 'panier', 6, 8, '#7fb3e0'], ['chambres', 'tapisraye', 8, 5, '#7fb3e0'], ['chambres', 'tableau', 0, 8, '#7fb3e0'],
   ['cuisine', 'tableferme', 7, 7, 0], ['cuisine', 'chaise', 7, 8, 0], ['cuisine', 'chaise', 8, 6, 0], ['cuisine', 'horloge', 8, 0, 0],
   ['entree', 'grandeplante', 10, 1, '#fffaf0'], ['entree', 'tapisraye', 6, 7, '#e0685a'], ['entree', 'miroir', 0, 9, 0],

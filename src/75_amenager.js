@@ -63,9 +63,12 @@ const hmAt = (room, x, y) => { const here = hmHere(room), on = o => hmCells(o.it
 function hmFree(room, it) { const blk = hmBlkOf(room); for (let s = 2 * HMN - 2; s >= 0; s--) for (let x = HMN - 1; x >= 0; x--) { const y = s - x; if (y >= 0 && y < HMN && Math.abs(x - y) < 4 && hmCanAt(room, it, x, y, null, blk)) return [x, y]; } for (let x = 0; x < HMN; x++) for (let y = 0; y < HMN; y++) if (hmCanAt(room, it, x, y, null, blk)) return [x, y]; return null; }
 // les anciens emplacements 3D (et « Poser chez moi » depuis le sac) arrivent dans le salon
 function hmMig() {
+  try { // v66 : le Salon n'existe plus : ce qui y était posé part à la Couveuse (ou une autre pièce), sinon revient dans le sac
+    const H0 = hmS(), D0 = f3State(); Object.entries(H0.p).forEach(([k, p]) => { if (hmR(p.r)) return; /* pièce disparue : Salon, Entrée, Chambres, Atelier */ const it = D0.d[k]; if (!it) { delete H0.p[k]; return; } for (const r of ['nurserie', 'cuisine', 'herbo', 'forge', 'couture']) { const at = hmFree(r, it); if (at) { p.r = r; p.x = at[0]; p.y = at[1]; p.m = 0; return; } } f3Take(k); delete H0.p[k]; });
+  } catch (e) { console.error('salon → couveuse', e); }
   try {
     const D = f3State(), H = hmS();
-    F3_SLOTS.forEach(sl => { const it = D.d[sl[0]]; if (!it) return; let r = 'salon', at = hmFree(r, it); if (!at) { r = 'chambres'; at = hmFree(r, it); } if (!at) return; const key = 'hm' + (++H.n); hmReg(key, it); D.d[key] = it; delete D.d[sl[0]]; H.p[key] = { r, x: at[0], y: at[1], m: 0 }; });
+    F3_SLOTS.forEach(sl => { const it = D.d[sl[0]]; if (!it) return; let r = 'nurserie', at = hmFree(r, it); if (!at) { r = 'chambres'; at = hmFree(r, it); } if (!at) return; const key = 'hm' + (++H.n); hmReg(key, it); D.d[key] = it; delete D.d[sl[0]]; H.p[key] = { r, x: at[0], y: at[1], m: 0 }; });
   } catch (e) { console.error('aménager migration', e); }
 }
 // ---------------- dessin des objets posés et de la grille ----------------
@@ -123,7 +126,6 @@ const hmSvInv = () => (S.inv || []).filter(it => it && it.sv);
 hmPanelExtra = (box, R, at) => {
   if (at === 'top' && hmEdit) { box.insertAdjacentHTML('beforeend', hmEditHTML(R)); return; }
   if (at !== 'end' || hmEdit) return;
-  if (R.id === 'salon') box.insertAdjacentHTML('beforeend', `<div class="hm-2b"><button class="btn green" data-hmedit="1">✏️ Aménager</button><button class="btn gold" data-hmcat="1">🛒 Catalogue</button></div>`);
   if (R.id === 'entree') { const n = hmSvInv().length; if (n) box.insertAdjacentHTML('beforeend', `<button class="hm-sv" data-hmedit="1"><span>📦</span><b>${n} souvenir${n > 1 ? 's' : ''} de voyage à déballer</b><small>Posez-les chez vous : chacun réduit les risques sur son terrain.</small></button>`); }
 };
 // ---------------- clics ----------------
@@ -150,7 +152,7 @@ document.addEventListener('click', ev => {
   const t = ev.target; if (!t.closest || !t.closest('#panelBody')) return;
   const e = t.closest('[data-hmedit],[data-hmedtab],[data-hmpick],[data-hmcell],[data-hmact],[data-hmwall],[data-hmfloor]'); if (!e) return;
   ev.stopPropagation(); const d = e.dataset, H = hmS();
-  if (d.hmedit) { hmEdit = !hmEdit; hmPick = hmSel = null; hmMove = false; hmEdTab = 'o'; if (hmEdit) { const r = hmR(hmRoom); if (!r || r.id === 'jardin' || (r.lock && hmLvl(r) < 1)) hmRoom = 'salon'; } return hmRe(); }
+  if (d.hmedit) { hmEdit = !hmEdit; hmPick = hmSel = null; hmMove = false; hmEdTab = 'o'; if (hmEdit) { const r = hmR(hmRoom); if (!r || r.id === 'jardin' || (r.lock && hmLvl(r) < 1)) hmRoom = 'forge'; } return hmRe(); }
   if (d.hmedtab) { hmEdTab = d.hmedtab; return hmRe(); }
   if (d.hmpick) { hmPick = hmPick === d.hmpick ? null : d.hmpick; hmSel = null; hmMove = false; return hmRe(); }
   if (d.hmact) {

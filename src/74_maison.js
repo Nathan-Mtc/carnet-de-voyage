@@ -19,7 +19,6 @@ const HM_ROOMS = [
   { id: 'forge', nm: 'Forge', v: 'Forger', e: '⚒️', b: 'atelier', blocks: [], j: 'forge', st: 'Équipement' },
   { id: 'couture', nm: 'Couture', v: 'Coudre', e: '🧵', b: null, blocks: [], j: 'couture', st: 'Vêtement' },
   { id: 'nurserie', nm: 'Couveuse', v: 'Éclore', e: '🥚', b: null, blocks: ['.fy2-nur'], j: 'nurs' },
-  { id: 'salon', nm: 'Salon', v: 'Décorer', e: '🛋️', b: 'chambre', blocks: [], st: 'Décoration' },
   { id: 'observ', nm: 'Observatoire', v: 'Le ciel', e: '🔭', b: 'observ', blocks: [], lock: 1 },
 ];
 const HM_INFO = {
@@ -28,7 +27,7 @@ const HM_INFO = {
   herbo: 'Préparez des appâts : chaque espèce a le sien, il aide à l’apprivoiser en voyage.',
   forge: 'Forgez le matériel d’expédition : crampons, lampe, palmes… Il ouvre les lieux difficiles et réduit les risques.',
   couture: 'Cousez des vêtements : ils protègent du froid, de la pluie et du soleil en voyage.',
-  nurserie: 'Les œufs éclosent ici : de nouveaux compagnons et familiers.',
+  nurserie: 'Les œufs éclosent ici, et vos familiers sans poste y vivent. C’est aussi ici qu’on change l’équipe de voyage.',
   salon: 'Votre pièce à vous : aménagez-la et fabriquez vos décorations.',
   observ: 'Annonce à l’avance les moments rares du ciel.',
 };
@@ -44,7 +43,7 @@ function hmDot(R) {
 function hmWho() { // qui est dans quelle pièce : les artisans à leur poste, les autres se promènent au salon
   const W = {}, put = (r, k) => { (W[r] = W[r] || []).push(k); }, POST = { jard: 'jardin', nurs: 'nurserie', cuis: 'cuisine', herbo: 'herbo', forge: 'forge', couture: 'couture' };
   const team = hm$(() => teamIds(), []);
-  hm$(() => fwHome(), []).forEach(k => { const j = team.includes(k) ? 'repos' : hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'salon', k); });
+  hm$(() => fwHome(), []).forEach(k => { const j = team.includes(k) ? 'repos' : hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'nurserie', k); /* sans poste : ils vivent à la Couveuse */ });
   return W;
 }
 // ---------------- projection 3/4 ----------------
@@ -457,7 +456,7 @@ if (typeof czBodyHTML === 'function') czBodyHTML = (orig => function () { const 
 window.__hm = { room: () => hmRoom, svg: id => hmSceneSVG(hmR(id)) };
 {
   const st = document.createElement('style');
-  st.textContent = `.hm-tabs{display:grid;grid-template-columns:repeat(4,1fr) 6px repeat(4,1fr);gap:3px;margin:0 0 8px}.hm-tabs button:nth-child(5){grid-column:6}
+  st.textContent = `.hm-tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin:0 0 8px}
 .hm-tabs button.cy:not(:nth-child(4))::after{content:'›';position:absolute;right:-6px;top:30%;font:900 14px system-ui;color:#e0a01e;z-index:1}
 .hm-tabs button.cy{background:#fff4dc}
 .hm-next{display:flex;align-items:center;gap:8px;width:100%;margin:0 0 8px;padding:9px 12px;border:2px solid #f2c14e;border-radius:16px;background:#fffaeb;text-align:left;font:inherit;cursor:pointer;box-shadow:0 2px 0 #f2d9a8}

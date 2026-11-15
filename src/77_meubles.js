@@ -110,7 +110,7 @@ document.addEventListener('click', ev => {
   hm$(() => toast(`${it.name} : touchez une case pour le poser.`), 0); hmRe();
 }, true);
 // ---------------- kit de bienvenue : une maison déjà habitée ----------------
-const MB_KIT = [['salon', 'fauteuil', 6, 2, '#e0a07a'], ['salon', 'biblio', 9, 0, 0], ['salon', 'tapisrond', 6, 6, '#f7c8dd'], ['salon', 'tablebasse', 7, 7, 0], ['salon', 'pouf', 9, 8, '#f2c14e'],
+const MB_KIT = [['nurserie', 'fauteuil', 6, 2, '#e0a07a'], ['nurserie', 'biblio', 9, 0, 0], ['nurserie', 'tapisrond', 6, 6, '#f7c8dd'], ['nurserie', 'tablebasse', 7, 7, 0], ['nurserie', 'pouf', 9, 8, '#f2c14e'],
   ['chambres', 'commode', 9, 0, '#fffaf0'], ['chambres', 'panier', 6, 8, '#7fb3e0'], ['chambres', 'tapisraye', 8, 5, '#7fb3e0'], ['chambres', 'tableau', 0, 8, '#7fb3e0'],
   ['cuisine', 'tableferme', 7, 7, 0], ['cuisine', 'chaise', 7, 8, 0], ['cuisine', 'chaise', 8, 6, 0], ['cuisine', 'horloge', 8, 0, 0],
   ['entree', 'grandeplante', 10, 1, '#fffaf0'], ['entree', 'tapisraye', 6, 7, '#e0685a'], ['entree', 'miroir', 0, 9, 0],
