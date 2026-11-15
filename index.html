@@ -36663,7 +36663,7 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   const tmp = document.createElement('div');
   try { orig.call(this, tmp); } catch (e) { console.error('foyer', e); }
   box.classList.remove('f3-on');
-  box.innerHTML = hmTabsHTML(R.id) + hm$(() => hmNextHTML(R), '') + hmStageHTML(R);
+  box.innerHTML = hmTabsHTML(R.id) + hmStageHTML(R); // v63 : plus de bandeau 💡 (on le voyait dans toutes les pièces)
   hm$(() => hmPanelExtra(box, R, 'top'), 0);
   if (!locked) {
     if (R.j) box.insertAdjacentHTML('beforeend', hmWorkHTML(R));
@@ -37397,6 +37397,7 @@ function h3Chars(R, l, who, blk) {
     if (fx === 'stir') { const sp2 = hCy(-.55, .2, .8, .04, .8, '#b98a5e'); h3Anim(t => { sp2.rotation.z = Math.sin(t * 6 + i) * .4; sp2.rotation.x = Math.cos(t * 6 + i) * .4; }); up('spark', 1, .26, -.4); }
     if (fx === 'star') up('spark', 2, .28, .4);
     H3P = G;
+    if (R.j && typeof agOf === 'function' && !hm$(() => teamIds(), []).includes(k)) { const A = agOf(k, R.id); h3TagSprite(`${AG_N[A.g]}${A.next ? ` · ${A.n}/${A.next}` : ''}`, A.f, 0, 0, SH + .5, 1.15); }
     H3P = Q;
     // il vit sa vie : travaille à son poste, puis fait un petit tour dans la pièce et revient
     const tgt = walk ? free[(i * 7 + k.length * 3) % free.length] : null, CY = 16 + i * 3;
@@ -37821,22 +37822,27 @@ if (typeof hmWorkHTML === 'function') hmWorkHTML = (orig => function (R) {
 const atIcon = r => hm$(() => itemIcon({ name: r.out[0], cat: r.out[1], sub: r.out[2], rarity: r.out[3], look: r.out[4], color: r.out[5] }), '');
 hmStationHTML = R => {
   atAuto(); const log = atLogHTML(R);
-  const q = atQ(R.id), slots = atSlots(R.id), now = Date.now(), full = q.length >= slots;
+  const q = atQ(R.id), slots = atSlots(R.id), now = Date.now(), full = q.length >= slots, noArt = !!R.j && !agWorkers(R).length; // v63 : pas d'artisan, pas de fabrication
   let h = `<section class="atl">${log}<h3 class="hm-h">En fabrication <small>${q.length}/${slots}</small></h3><div class="atl-q">`;
   q.forEach((j, i) => { const r = RECIPES.find(x => x.id === j.rid); if (!r) return; const f = Math.min(1, (now - j.t0) / j.ms), done = f >= 1;
     h += `<div class="atl-j${done ? ' done' : ''}"><span class="atl-i">${atIcon(r)}</span><b>${esc(r.out[0])}</b>${done ? `<button class="btn green sm" data-stget="${i}">Récupérer</button>` : `<span class="atl-bar"><i data-stbar="${j.t0},${j.ms}" style="width:${Math.round(f * 100)}%"></i></span><small data-stleft="${j.t0},${j.ms}">encore ${atTime(j.ms - (now - j.t0))}</small>`}</div>`; });
-  for (let i = q.length; i < slots; i++) h += `<div class="atl-j free"><span class="atl-i">＋</span><b>Place libre</b><small>Choisissez une recette ci-dessous</small></div>`;
+  for (let i = q.length; i < slots; i++) h += `<div class="atl-j free"><span class="atl-i">＋</span><b>Place libre</b><small>${noArt ? 'Il faut d’abord un artisan ↑' : 'Choisissez une recette ci-dessous'}</small></div>`;
   if (slots < 2 && R.id !== 'salon') h += `<p class="hm-tip">Au niveau 2, l’atelier fabrique deux choses à la fois.</p>`;
   h += `</div>`;
   const L = atRecipes(R).map(r => [r, canCraft(r)]).sort((a, b) => b[1] - a[1]);
   h += `<h3 class="hm-h">Recettes <small>${L.filter(x => x[1]).length} possibles</small></h3><div class="atl-g">${L.map(([r, ok]) => `<div class="atl-r${ok ? ' ok' : ''}"><span class="atl-i">${atIcon(r)}</span><b>${esc(r.out[0])}</b><small>⏱ ${atTime(atMs(r, R))}${r.coins ? ` · ${r.coins} 🪙` : ''}</small>
     <span class="atl-n">${r.ing.map(([k, n]) => { const c = hm$(() => ingCount(k), 0); return `<i class="${c >= n ? 'ok' : ''}">${Math.min(c, n)}/${n} ${esc((ING[k] && ING[k][1]) || k)}</i>`; }).join('')}</span>
-    <button class="btn ${ok && !full ? 'green' : 'cream'} sm" data-ststart="${r.id}"${ok && !full ? '' : ' disabled'}>${full && ok ? 'Atelier occupé' : 'Fabriquer'}</button></div>`).join('') || '<p class="hm-none">Pas encore de recette ici.</p>'}</div>`;
+    ${noArt ? `<button class="btn cream sm" data-stneed="1">Fabriquer</button>` : `<button class="btn ${ok && !full ? 'green' : 'cream'} sm" data-ststart="${r.id}"${ok && !full ? '' : ' disabled'}>${full && ok ? 'Atelier occupé' : 'Fabriquer'}</button>`}</div>`).join('') || '<p class="hm-none">Pas encore de recette ici.</p>'}</div>`;
   if (R.id === 'cuisine') h += `<p class="hm-tip">Les en-cas à vendre se préparent au comptoir de la Boutique. Pour nourrir un compagnon : onglet Compagnons.</p>`;
   if (R.id === 'forge' || R.id === 'couture') h += `<p class="hm-tip">On s’équipe au départ (onglet Préparation) ou dans l’onglet Compagnons.</p>`;
   if (AT_UP[R.id]) { const l = atLvl(R.id), c = AT_UP[R.id][l]; h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b>${c != null ? `<small>Niveau ${l + 1} : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}</small><button class="btn ${(S.coins || 0) >= c ? 'green' : 'cream'} sm" data-stup="${R.id}"${(S.coins || 0) >= c ? '' : ' disabled'}>Améliorer · ${c} 🪙</button>` : '<small>Niveau maximum</small>'}</div>`; }
   return h + `</section>`;
 };
+document.addEventListener('click', ev => {
+  const n = ev.target.closest && ev.target.closest('[data-stneed]'); if (!n || !n.closest('#panelBody')) return; ev.stopPropagation();
+  const w = document.querySelector('#panelBody .hm-work'); if (w) { w.scrollIntoView({ block: 'center', behavior: 'smooth' }); w.classList.remove('need'); void w.offsetWidth; w.classList.add('need'); }
+  hm$(() => toast('Choisissez d’abord un artisan : touchez un familier.'), 0);
+}, true);
 document.addEventListener('click', ev => {
   const b = ev.target.closest && ev.target.closest('[data-ststart],[data-stget],[data-stup]'); if (!b || b.disabled || !b.closest('#panelBody')) return;
   ev.stopPropagation(); const R = hmR(hmRoom); if (!R) return;
@@ -37861,7 +37867,6 @@ try { const T = hm$(() => teamIds(), []), F = fwState(); T.forEach(k => { if (F.
 hmStNext = () => {
   const now = Date.now(), ST = HM_ROOMS.filter(R => R.st);
   for (const R of ST) { const j = atQ(R.id).find(x => now - x.t0 >= x.ms), r = j && RECIPES.find(x => x.id === j.rid); if (r) return { r: R.id, t: `${r.out[0]} est prêt à la ${R.nm} !`, b: 'Récupérer', ready: 1 }; }
-  for (const R of ST) if (R.id !== 'salon' && atQ(R.id).length < atSlots(R.id) && atRecipes(R).some(r => canCraft(r))) return { r: R.id, t: `${R.nm} : vous avez de quoi fabriquer quelque chose.`, b: 'Fabriquer' };
   return null;
 };
 // ---------------- les ateliers en 3D (même style que 76) ----------------
@@ -37939,6 +37944,7 @@ Object.assign(H3R, {
 .atl-r .btn{grid-column:span 2;margin-top:6px;width:100%}
 .ag{display:block;width:58px;height:4px;margin:3px 0 1px;border-radius:4px;background:#efe6d8;overflow:hidden}.ag i{display:block;height:100%;background:#c9a35a;border-radius:4px}.ag-t{font-size:10px!important;color:#a8927c!important;letter-spacing:.01em}
 .ag-box{margin:0 0 8px;padding:8px 11px;border-radius:12px;background:#fbf6ec;border:1.5px solid #efe2c8;font-size:12px;line-height:1.45;color:#7a6250}.ag-box b{color:var(--ink,#4a3528)}.ag-box span{color:#a8927c}
+.hm-work.need{animation:agNeed 1.2s ease 2}@keyframes agNeed{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 4px #f2c14e;border-radius:16px}}
 .atl-log{margin:0 0 8px;padding:9px 12px;border-radius:14px;background:#f1faee;border:2px solid #cfe8c4;font-size:13px;color:#2f5f3c}
 .atl-up{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:12px 0 4px;padding:10px 12px;border-radius:14px;background:#fff7ea}.atl-up b{font-size:13.5px;color:var(--ink,#4a3528)}.atl-up small{flex:1 1 100%;font-size:12px;color:#9a8470}.atl-up .btn{margin-left:auto}`;
   document.head.appendChild(st);

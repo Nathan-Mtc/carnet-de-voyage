@@ -406,7 +406,7 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   const tmp = document.createElement('div');
   try { orig.call(this, tmp); } catch (e) { console.error('foyer', e); }
   box.classList.remove('f3-on');
-  box.innerHTML = hmTabsHTML(R.id) + hm$(() => hmNextHTML(R), '') + hmStageHTML(R);
+  box.innerHTML = hmTabsHTML(R.id) + hmStageHTML(R); // v63 : plus de bandeau 💡 (on le voyait dans toutes les pièces)
   hm$(() => hmPanelExtra(box, R, 'top'), 0);
   if (!locked) {
     if (R.j) box.insertAdjacentHTML('beforeend', hmWorkHTML(R));

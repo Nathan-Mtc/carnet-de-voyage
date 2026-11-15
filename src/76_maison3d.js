@@ -361,6 +361,7 @@ function h3Chars(R, l, who, blk) {
     if (fx === 'stir') { const sp2 = hCy(-.55, .2, .8, .04, .8, '#b98a5e'); h3Anim(t => { sp2.rotation.z = Math.sin(t * 6 + i) * .4; sp2.rotation.x = Math.cos(t * 6 + i) * .4; }); up('spark', 1, .26, -.4); }
     if (fx === 'star') up('spark', 2, .28, .4);
     H3P = G;
+    if (R.j && typeof agOf === 'function' && !hm$(() => teamIds(), []).includes(k)) { const A = agOf(k, R.id); h3TagSprite(`${AG_N[A.g]}${A.next ? ` · ${A.n}/${A.next}` : ''}`, A.f, 0, 0, SH + .5, 1.15); }
     H3P = Q;
     // il vit sa vie : travaille à son poste, puis fait un petit tour dans la pièce et revient
     const tgt = walk ? free[(i * 7 + k.length * 3) % free.length] : null, CY = 16 + i * 3;
