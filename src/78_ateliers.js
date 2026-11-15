@@ -42,9 +42,9 @@ try { HB_BAITS.forEach(([sp, nm]) => { if (NS_BAIT_HINT[sp] != null) NS_BAIT_HIN
 const AT_UP = { couture: [300, 900, 2000], herbo: [250, 800, 1800] };
 function atS() { const H = hmS(); if (!H.st || typeof H.st !== 'object') H.st = {}; if (!H.lv || typeof H.lv !== 'object') H.lv = {}; return H; }
 function atLvl(id) { if (id === 'forge') return hm$(() => pgLvl('atelier'), 0); if (id === 'cuisine') return hm$(() => pgLvl('repas'), 0); if (id === 'salon') return 1; return atS().lv[id] | 0; }
-const atSlots = id => atLvl(id) >= 2 ? 2 : 1;
+const atSlots = id => atLvl(id) >= 2 || (id === 'couture' && agBest(hmR('couture')).g >= 2) ? 2 : 1;
 const atWorkers = R => R.j ? hm$(() => fwWho(R.j).filter(k => !teamIds().includes(k)).length, 0) : 0;
-const atSpeed = R => (1 + .25 * atLvl(R.id)) * (1 + .5 * Math.min(2, atWorkers(R)));
+const atSpeed = R => (1 + .25 * atLvl(R.id)) / (1 - AG_SPD[agBest(R).g] * (atWorkers(R) ? 1 : 0));
 const AT_MIN = [6, 15, 30, 60, 120];
 const atMs = (r, R) => Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R));
 const atQ = id => { const H = atS(); if (!Array.isArray(H.st[id])) H.st[id] = []; return H.st[id]; };
@@ -55,9 +55,11 @@ const atTime = ms => { const m = Math.max(1, Math.ceil(ms / 60e3)); return m >= 
 function atStart(R, rid, quiet, t0) {
   const r = RECIPES.find(x => x.id === rid), q = atQ(R.id); if (!r || !canCraft(r) || q.length >= atSlots(R.id)) return false;
   const H = atS(); if (!H.last || typeof H.last !== 'object') H.last = {}; H.last[R.id] = rid;
-  for (const [key, n] of r.ing) { const c = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); c.slice(0, n).forEach(x => S.inv.splice(S.inv.indexOf(x), 1)); }
+  const used = [];
+  for (const [key, n] of r.ing) { const c = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); c.slice(0, n).forEach(x => { used.push(x); S.inv.splice(S.inv.indexOf(x), 1); }); }
   S.coins -= r.coins || 0;
-  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + hm$(() => lvlLuck(S.sel), 0) * 0.2 ? 1 : 0 });
+  if (R.id === 'herbo' && used.length && agRoll(R)) { const x = used[0]; S.inv.push(x); hm$(() => toast(`${agWho(R)} a économisé un ingrédient : « ${x.name} » reste dans le sac.`), 0); }
+  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + hm$(() => lvlLuck(S.sel), 0) * 0.2 || (R.id === 'forge' && agRoll(R)) ? 1 : 0 });
   save(); hm$(() => renderTop(), 0); if (!quiet) hm$(() => toast(`${r.out[0]} : c’est parti ! Prêt dans ${atTime(atMs(r, R))}.`), 0);
   return true;
 }
@@ -66,7 +68,9 @@ function atCollect(R, i, quiet) {
   const r = RECIPES.find(x => x.id === j.rid); q.splice(i, 1); if (!r) { save(); return null; }
   const it = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: Math.min(4, (r.out[3] | 0) + (j.m ? 1 : 0)) });
   if (j.m) it.name += ' (chef-d’œuvre)';
-  S.inv.push(it); S.dex[r.out[0]] = true; S.stats.crafted = (S.stats.crafted || 0) + 1; hm$(() => bump('craft'), 0); save();
+  S.inv.push(it); S.dex[r.out[0]] = true; S.stats.crafted = (S.stats.crafted || 0) + 1; hm$(() => bump('craft'), 0);
+  if (R.id === 'cuisine' && agRoll(R)) { const it2 = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: r.out[3] | 0 }); S.inv.push(it2); hm$(() => setTimeout(() => toast(`${agWho(R)} en a fait une part de plus : 2 × « ${r.out[0]} » !`), 1600), 0); }
+  agGain(R); save();
   if (!quiet) hm$(() => toast(j.m ? `Un chef-d’œuvre ! « ${it.name} » rejoint votre sac.` : `« ${it.name} » rejoint votre sac.`), 0);
   return it;
 }
@@ -94,6 +98,55 @@ function atLogHTML(R) {
   const who = hm$(() => fwWho(R.j).filter(k => !teamIds().includes(k)).map(k => CHARS[k].name).join(' et '), 'Votre artisan');
   return `<div class="atl-log">🧺 <b>${esc(who)}</b> a rangé dans votre sac : ${Object.entries(c).map(([n, k]) => `${k} × ${esc(n)}`).join(', ')}</div>`;
 }
+// ---------------- l'artisan progresse : grades de plus en plus longs à atteindre ----------------
+const AG_N = ['Apprenti', 'Compagnon', 'Artisan', 'Maître', 'Grand maître'], AG_AT = [0, 20, 60, 150, 400];
+const AG_SPD = [.1, .2, .3, .4, .5], AG_CH = [.03, .05, .08, .12, .16];
+const AG_FX = { jardin: 'déniche une graine rare en récoltant', cuisine: 'fait une part de plus (2 plats au lieu d’un)', herbo: 'économise un ingrédient', forge: 'réussit un chef-d’œuvre (version plus rare)', couture: null, nurserie: 'fait naître un bébé plus rare (une étoile de plus)' };
+const AG_TIT = { jardin: 'jardinier', cuisine: 'cuisinier', herbo: 'herboriste', forge: 'forgeron', couture: 'couturier', nurserie: 'gardien' };
+function agXP(k, room) { const H = hmS(); if (!H.ax || typeof H.ax !== 'object') H.ax = {}; return ((H.ax[k] || {})[room]) | 0; }
+function agGrade(n) { let g = 0; while (g < 4 && n >= AG_AT[g + 1]) g++; return g; }
+function agOf(k, room) { const n = agXP(k, room), g = agGrade(n), a = AG_AT[g], b = AG_AT[g + 1]; return { n, g, f: b ? (n - a) / (b - a) : 1, next: b }; }
+const agTeam = () => hm$(() => teamIds(), []);
+const agWorkers = R => R && R.j ? hm$(() => fwWho(R.j).filter(k => !agTeam().includes(k)), []) : [];
+function agBest(R) { let best = { g: -1, k: null }; agWorkers(R).forEach(k => { const g = agOf(k, R.id).g; if (g > best.g) best = { g, k }; }); if (best.g < 0) best.g = 0; return best; }
+const agWho = R => { const b = agBest(R); return b.k ? CHARS[b.k].name : 'Votre artisan'; };
+const agRoll = R => agWorkers(R).length > 0 && Math.random() < AG_CH[agBest(R).g];
+function agGain(R) {
+  const H = hmS(); if (!H.ax || typeof H.ax !== 'object') H.ax = {};
+  agWorkers(R).forEach(k => { const o = H.ax[k] = H.ax[k] || {}, g0 = agGrade(o[R.id] | 0); o[R.id] = (o[R.id] | 0) + 1; const g1 = agGrade(o[R.id]); if (g1 > g0) hm$(() => setTimeout(() => toast(`${CHARS[k].name} devient ${AG_N[g1]} ${AG_TIT[R.id] || ''} !`), 2600), 0); });
+}
+// le potager : chaque récolte fait progresser le jardinier, qui déniche parfois une graine rare
+if (typeof famHarvest === 'function') famHarvest = (orig => function () {
+  const r = orig.apply(this, arguments);
+  try { if (r) { const R = hmR('jardin'); if (agRoll(R)) { const rare = FAM_SEEDS.filter(x => x[2] >= 15), s = rare[Math.floor(Math.random() * rare.length)]; if (s) { famPush(famMk([s[0], 'm', 'graine', 2, null, '#c9a36b'], 'Jardin du foyer', [], 2)); hm$(() => toast(`${agWho(R)} a déniché une graine rare : « ${s[0]} » !`), 0); } } agGain(R); save(); } } catch (e) { console.error('jardinier', e); }
+  return r;
+})(famHarvest);
+// la couveuse : chaque éclosion fait progresser le gardien, qui fait parfois naître un bébé plus rare
+if (typeof addComp === 'function') addComp = (orig => function (o = {}) {
+  try { const R = hmR('nurserie'), how = typeof o.from === 'string' ? o.from : (o.from && o.from.how) || 'oeuf'; if (how === 'oeuf' && agWorkers(R).length) { if (agRoll(R)) { o = Object.assign({}, o, { rarity: Math.min(4, (typeof o.rarity === 'number' ? o.rarity : hm$(() => geneRarityOf(o.genes || defaultGenes(o.sp), o.sp), 1)) + 1) }); hm$(() => setTimeout(() => toast(`${agWho(R)} a veillé sur l’œuf : le bébé est plus rare !`), 2000), 0); } agGain(R); } } catch (e) {}
+  return orig.call(this, o);
+})(addComp);
+// la petite jauge sous chaque artisan, et l'encadré qui explique
+function agBar(k, room) { const A = agOf(k, room); return `<span class="ag"><i style="width:${Math.round(A.f * 100)}%"></i></span><small class="ag-t">${AG_N[A.g]}${A.next ? ` · ${A.n}/${A.next}` : ''}</small>`; }
+function agBoxHTML(R) {
+  const SPD = g => R.st ? `${Math.round(AG_SPD[g] * 100)} % plus vite` : R.id === 'jardin' ? 'le potager pousse plus vite' : 'les œufs éclosent plus vite';
+  const w = agWorkers(R); if (!w.length) return `<div class="ag-box"><b>Pourquoi un artisan ?</b> Avec lui, ${R.st ? `l’atelier va ${Math.round(AG_SPD[0] * 100)} % plus vite` : SPD(0)}${AG_FX[R.id] ? `, et a une petite chance qu’il ${AG_FX[R.id]}` : R.id === 'couture' ? ' et, une fois Artisan, coud deux vêtements à la fois' : ''}. Plus il travaille ici, plus il monte en grade et meilleur il devient.</div>`;
+  const b = agBest(R), k = b.k, A = agOf(k, R.id), g = A.g, nx = g < 4 ? g + 1 : null;
+  const fx = AG_FX[R.id] ? `${Math.round(AG_CH[g] * 100)} % de chance qu’il ${AG_FX[R.id]}` : g >= 2 ? 'coud deux vêtements à la fois' : 'deux vêtements à la fois au grade Artisan';
+  return `<div class="ag-box"><b>${esc(CHARS[k].name)}, ${AG_N[g]} ${AG_TIT[R.id] || ''}</b> · ${A.n} ${R.id === 'jardin' ? 'récolte' : R.id === 'nurserie' ? 'éclosion' : 'fabrication'}${A.n > 1 ? 's' : ''}<br>Maintenant : ${SPD(g)} · ${fx}.${nx ? `<br><span>Grade ${AG_N[nx]} à ${AG_AT[nx]} : ${R.st ? `${Math.round(AG_SPD[nx] * 100)} % plus vite` : ''}${R.st && AG_FX[R.id] ? ' · ' : ''}${AG_FX[R.id] ? `${Math.round(AG_CH[nx] * 100)} % de chance` : ''}.</span>` : ''}</div>`;
+}
+if (typeof hmWorkHTML === 'function') hmWorkHTML = (orig => function (R) {
+  let h = orig.apply(this, arguments);
+  try {
+    if (!R || !R.j || R.j === 'comm') return h;
+    const T = document.createElement('template'); T.innerHTML = h;
+    T.content.querySelectorAll('.hm-wk[data-fk]').forEach(b => { const k = b.dataset.fk, sm = b.querySelector('small'); if (sm) sm.insertAdjacentHTML('beforebegin', agBar(k, R.id)); });
+    const wl = T.content.querySelector('.hm-wl'); if (wl) wl.remove();
+    const who = T.content.querySelector('.hm-who'); if (who) who.insertAdjacentHTML('beforebegin', agBoxHTML(R));
+    const d = document.createElement('div'); d.appendChild(T.content.cloneNode(true)); h = d.innerHTML;
+  } catch (e) { console.error('artisan', e); }
+  return h;
+})(hmWorkHTML);
 // ---------------- l'écran de l'atelier ----------------
 const atIcon = r => hm$(() => itemIcon({ name: r.out[0], cat: r.out[1], sub: r.out[2], rarity: r.out[3], look: r.out[4], color: r.out[5] }), '');
 hmStationHTML = R => {
@@ -214,6 +267,8 @@ Object.assign(H3R, {
 .atl-r .atl-i{grid-row:span 2}.atl-r b{font-size:12.5px;line-height:1.15;color:var(--ink,#4a3528)}.atl-r small{font-size:11px;color:#9a8470}
 .atl-n{grid-column:span 2;display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}.atl-n i{font-style:normal;font-size:10.5px;padding:1px 6px;border-radius:8px;background:#f7efe3;color:#a8927c}.atl-n i.ok{background:#e6f5e2;color:#2f7f4c;font-weight:700}
 .atl-r .btn{grid-column:span 2;margin-top:6px;width:100%}
+.ag{display:block;width:58px;height:4px;margin:3px 0 1px;border-radius:4px;background:#efe6d8;overflow:hidden}.ag i{display:block;height:100%;background:#c9a35a;border-radius:4px}.ag-t{font-size:10px!important;color:#a8927c!important;letter-spacing:.01em}
+.ag-box{margin:0 0 8px;padding:8px 11px;border-radius:12px;background:#fbf6ec;border:1.5px solid #efe2c8;font-size:12px;line-height:1.45;color:#7a6250}.ag-box b{color:var(--ink,#4a3528)}.ag-box span{color:#a8927c}
 .atl-log{margin:0 0 8px;padding:9px 12px;border-radius:14px;background:#f1faee;border:2px solid #cfe8c4;font-size:13px;color:#2f5f3c}
 .atl-up{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:12px 0 4px;padding:10px 12px;border-radius:14px;background:#fff7ea}.atl-up b{font-size:13.5px;color:var(--ink,#4a3528)}.atl-up small{flex:1 1 100%;font-size:12px;color:#9a8470}.atl-up .btn{margin-left:auto}`;
   document.head.appendChild(st);
