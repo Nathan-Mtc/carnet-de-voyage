@@ -24,7 +24,7 @@ const HM_ROOMS = [
 ];
 const HM_INFO = {
   jardin: 'Touchez une parcelle pour semer ou récolter. Les récoltes servent d’ingrédients à la Cuisine et à l’Herboristerie.',
-  cuisine: 'Préparez des plats : ils servent d’appâts et nourrissent vos compagnons (onglet Compagnons).',
+  cuisine: 'Préparez des plats pour nourrir vos compagnons (onglet Compagnons). Les appâts, eux, se font à l’Herboristerie.',
   herbo: 'Préparez des appâts : chaque espèce a le sien, il aide à l’apprivoiser en voyage.',
   forge: 'Forgez le matériel d’expédition : crampons, lampe, palmes… Il ouvre les lieux difficiles et réduit les risques.',
   couture: 'Cousez des vêtements : ils protègent du froid, de la pluie et du soleil en voyage.',

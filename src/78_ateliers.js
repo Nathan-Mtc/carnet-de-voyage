@@ -34,6 +34,10 @@ try {
     if (typeof NS_BAIT_HINT !== 'undefined' && NS_BAIT_HINT[sp] && !NS_BAIT_HINT[sp].includes(nm)) NS_BAIT_HINT[sp] += ` ; ou « ${nm} » de l’Herboristerie du foyer`;
   });
 } catch (e) { console.error('herboristerie', e); }
+// v60 : seuls les appâts de l'Herboristerie attirent les animaux (la nourriture ordinaire ne sert plus d'appât)
+const HB_SP = {}; HB_BAITS.forEach(([sp, nm]) => { HB_SP[nm] = sp; });
+if (typeof nsBaitPower === 'function') nsBaitPower = function (it, sp) { if (!it || it.sub !== 'appat') return 0; return HB_SP[String(it.name || '').replace(/ \(chef-d’œuvre\)$/, '')] === sp ? 1.6 : 0; };
+try { HB_BAITS.forEach(([sp, nm]) => { if (NS_BAIT_HINT[sp] != null) NS_BAIT_HINT[sp] = `« ${nm} », à préparer à l’Herboristerie du foyer`; }); } catch (e) {}
 // ---------------- niveaux, vitesse, places ----------------
 const AT_UP = { couture: [300, 900, 2000], herbo: [250, 800, 1800] };
 function atS() { const H = hmS(); if (!H.st || typeof H.st !== 'object') H.st = {}; if (!H.lv || typeof H.lv !== 'object') H.lv = {}; return H; }
