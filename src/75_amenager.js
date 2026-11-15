@@ -123,7 +123,7 @@ const hmSvInv = () => (S.inv || []).filter(it => it && it.sv);
 hmPanelExtra = (box, R, at) => {
   if (at === 'top' && hmEdit) { box.insertAdjacentHTML('beforeend', hmEditHTML(R)); return; }
   if (at !== 'end' || hmEdit) return;
-  if (R.id === 'salon') box.insertAdjacentHTML('beforeend', `<button class="btn green hm-go" data-hmedit="1">✏️ Aménager la pièce</button>`);
+  if (R.id === 'salon') box.insertAdjacentHTML('beforeend', `<div class="hm-2b"><button class="btn green" data-hmedit="1">✏️ Aménager</button><button class="btn gold" data-hmcat="1">🛒 Catalogue</button></div>`);
   if (R.id === 'entree') { const n = hmSvInv().length; if (n) box.insertAdjacentHTML('beforeend', `<button class="hm-sv" data-hmedit="1"><span>📦</span><b>${n} souvenir${n > 1 ? 's' : ''} de voyage à déballer</b><small>Posez-les chez vous : chacun réduit les risques sur son terrain.</small></button>`); }
 };
 // ---------------- clics ----------------
@@ -238,6 +238,6 @@ window.__am = { tap: (x, y) => hmCellTap(x, y), S: () => hmS(), here: r => hmHer
 .hm-swp.p-check{background:conic-gradient(var(--c) 25%,rgba(74,48,38,.12) 0 50%,var(--c) 0 75%,rgba(74,48,38,.12) 0) 0 0/14px 14px}.hm-swp.p-stars{background:radial-gradient(#ffe9a8 1.2px,transparent 1.6px) 0 0/9px 9px,var(--c)}.hm-swp.p-flowers{background:radial-gradient(#fff 2px,#f2c14e 2.2px 3px,transparent 3.4px) 0 0/12px 12px,var(--c)}
 .hm-sv{display:grid;grid-template-columns:auto 1fr;gap:0 10px;align-items:center;width:100%;margin:10px 0;padding:10px 12px;border-radius:16px;border:2px dashed #f2c14e;background:#fffaf0;text-align:left;cursor:pointer;font:inherit}
 .hm-sv span{grid-row:span 2;font-size:26px}.hm-sv b{font-size:14px;color:var(--ink,#4a3528)}.hm-sv small{font-size:12px;color:#9a8470}
-.hm-home{margin:0 0 8px}`;
+.hm-home{margin:0 0 8px}.hm-2b{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}`;
   document.head.appendChild(st);
 }

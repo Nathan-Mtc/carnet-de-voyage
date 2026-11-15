@@ -46,11 +46,24 @@ const MB = {
   banc: ['Banc en bois flotté', '🪵', [2, 1], { bois: 3 }, 2, ['#c9b8a0']],
   vaseperles: ['Vase de perles', '🏺', [1, 1], { perle: 2 }, 2, ['#e8f4f8']],
 };
+// v64 : la Collection étoile — meubles d'exception, uniquement en pierres d'étoile, 3 par semaine
+Object.assign(MB, {
+  lustre: ['Lustre de cristal', '💎', [1, 1], { stones: 4 }, 4, ['#e8f4ff']],
+  baldaquin: ['Lit à baldaquin', '🛏️', [2, 2], { stones: 6 }, 4, ['#f7c8dd', '#cfe3f5']],
+  bassin: ['Bassin aux carpes', '🎏', [2, 2], { stones: 7 }, 4, ['#c9c2b8']],
+  pianoqueue: ['Piano à queue', '🎹', [2, 2], { stones: 8 }, 4, ['#2b2220', '#fffaf0']],
+  arbresouhaits: ['Arbre à souhaits', '🏮', [1, 1], { stones: 5 }, 4, ['#f2a33a']],
+  carrousel: ['Carrousel miniature', '🎠', [1, 1], { stones: 5 }, 4, ['#f7a8bd']],
+  marbre: ['Cheminée de marbre', '🔥', [2, 1], { stones: 6 }, 4, ['#f4efe8']],
+  globeceleste: ['Globe céleste', '🌌', [1, 1], { stones: 4 }, 4, ['#3b4a7a']],
+});
+const mbIsStar = k => !!(MB[k] && MB[k][3] && MB[k][3].stones);
+const mbIsCraft = k => !!(MB[k] && typeof MB[k][3] === 'object' && !MB[k][3].stones);
 const MB_MAT = { coquillage: 'coquillages', tissu: 'tissu', cristal: 'cristal', metal: 'métal', plume: 'plumes', bois: 'bois', lune: 'éclat de lune', verre: 'verre', pierre: 'pierres', fleur: 'fleurs', feuille: 'feuilles', perle: 'perles' };
 const mbId = it => it && String(it.sub || '').startsWith('mb_') ? it.sub.slice(3) : null;
 const mbDef = it => MB[mbId(it)] || null;
 hmFpOf = it => { const D = mbDef(it); return D ? D[2] : [1, 1]; };
-hmFlat = it => !!it && (it.sub === 'tapis' || /^mb_tapis/.test(it.sub || ''));
+hmFlat = it => !!it && (it.sub === 'tapis' || /^mb_(tapis|lustre)/.test(it.sub || ''));
 function mbItem(id, col) {
   const D = MB[id]; if (!D) return null;
   const it = { id: uidGen(), name: D[0], cat: 'd', sub: 'mb_' + id, rarity: D[4], look: null, color: col || D[5][0], from: 'Catalogue', tags: [], date: Date.now() };
@@ -70,20 +83,34 @@ function mbStock() {
   return out;
 }
 const mbHave = mat => (S.inv || []).filter(it => it && it.cat === 'm' && it.sub === mat).length;
+function mbWeek() { const d = new Date(), m = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)); return Math.floor(m.getTime() / 6048e5); }
+function mbStars() { const ids = Object.keys(MB).filter(mbIsStar); let r = (mbWeek() * 7919) % 233280; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280; const out = []; while (out.length < 3 && ids.length) { const k = ids.splice(Math.floor(rnd() * ids.length), 1)[0]; out.push([k, MB[k][5][Math.floor(rnd() * MB[k][5].length)]]); } return out; }
+function mbLeft(kind) { const d = new Date(), end = kind === 'w' ? new Date(d.getFullYear(), d.getMonth(), d.getDate() + (7 - ((d.getDay() + 6) % 7))) : new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1), ms = end - d, h = Math.floor(ms / 36e5), m = Math.floor(ms % 36e5 / 6e4); return h >= 24 ? `${Math.floor(h / 24)} j ${h % 24} h` : `${h} h ${String(m).padStart(2, '0')}`; }
+const mbSeen = () => { const H = hmS(); if (!Array.isArray(H.seen)) H.seen = []; return H.seen; };
+let mbTab = 'jour';
 const mbCanCraft = id => Object.entries(MB[id][3]).every(([m, n]) => mbHave(m) >= n);
 hmCatHTML = () => {
   const cell = (k, c, act) => { const D = MB[k], it = { cat: 'd', sub: 'mb_' + k, color: c }; return `<div class="mb-c"><span class="mb-i">${itemIcon(it)}</span><b>${esc(D[0])}</b><small>${D[2][0] * D[2][1] > 1 ? `${D[2][0]}×${D[2][1]} cases` : '1 case'}${D[6] ? ' · au mur' : ''}</small>${act}</div>`; };
+  const tabs = `<div class="mb-tabs">${[['jour', '🗓️ Du jour'], ['etoile', '⭐ Étoile'], ['mien', '📖 Mon catalogue'], ['fab', '🔨 À fabriquer']].map(([k, l]) => `<button data-mbtab="${k}" class="${mbTab === k ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  const mkt = `<button class="mb-mkt" data-mbmkt="1">🌍 Marché mondial <small>objets d’autres joueurs</small> ›</button>`;
+  if (mbTab === 'etoile') { const n = hm$(() => stonesN(), 0); return tabs + `<h4 class="mb-h">Collection étoile <small>expire dans ${mbLeft('w')}</small></h4><p class="mb-intro">Des pièces d’exception, seulement en pierres d’étoile. Vous en avez <b>${n}</b>.</p><div class="mb-g">${mbStars().map(([k, c]) => { const pr = MB[k][3].stones, ok = n >= pr; return cell(k, c, `<button class="btn ${ok ? 'gold' : 'cream'} sm" data-mbstar="${k}" data-mbcol="${c}"${ok ? '' : ' disabled'}>${pr} ${hm$(() => STONE_SVG, '💎')}</button>`); }).join('')}</div>` + mkt; }
+  if (mbTab === 'mien') { const L = mbSeen().filter(k => MB[k] && typeof MB[k][3] === 'number'); return tabs + `<h4 class="mb-h">Mon catalogue <small>${L.length} meuble${L.length > 1 ? 's' : ''}</small></h4><p class="mb-intro">Tout meuble acheté une fois reste ici : vous pouvez le recommander quand vous voulez.</p><div class="mb-g">${L.map(k => { const pr = MB[k][3], ok = (S.coins || 0) >= pr; return cell(k, MB[k][5][0], `<button class="btn ${ok ? 'green' : 'cream'} sm" data-mbbuy="${k}" data-mbcol="${MB[k][5][0]}"${ok ? '' : ' disabled'}>${pr} 🪙</button>`); }).join('') || '<p class="hm-none">Encore vide : achetez un meuble du jour.</p>'}</div>` + mkt; }
   const shop = mbStock().map(([k, c]) => { const pr = MB[k][3], ok = (S.coins || 0) >= pr; return cell(k, c, `<button class="btn ${ok ? 'green' : 'cream'} sm" data-mbbuy="${k}" data-mbcol="${c}"${ok ? '' : ' disabled'}>${pr} 🪙</button>`); }).join('');
-  const craft = Object.keys(MB).filter(k => typeof MB[k][3] === 'object').map(k => { const ok = mbCanCraft(k), need = Object.entries(MB[k][3]).map(([m, n]) => `<i class="${mbHave(m) >= n ? 'ok' : ''}">${mbHave(m)}/${n} ${MB_MAT[m] || m}</i>`).join(''); return cell(k, MB[k][5][0], `<span class="mb-need">${need}</span><button class="btn ${ok ? 'green' : 'cream'} sm" data-mbcraft="${k}"${ok ? '' : ' disabled'}>Fabriquer</button>`); }).join('');
-  return `<h4 class="mb-h">Arrivage du jour <small>change chaque jour</small></h4><div class="mb-g">${shop}</div><h4 class="mb-h">À fabriquer <small>avec les matériaux de vos voyages</small></h4><div class="mb-g">${craft}</div>`;
+  const craft = Object.keys(MB).filter(mbIsCraft).map(k => { const ok = mbCanCraft(k), need = Object.entries(MB[k][3]).map(([m, n]) => `<i class="${mbHave(m) >= n ? 'ok' : ''}">${mbHave(m)}/${n} ${MB_MAT[m] || m}</i>`).join(''); return cell(k, MB[k][5][0], `<span class="mb-need">${need}</span><button class="btn ${ok ? 'green' : 'cream'} sm" data-mbcraft="${k}"${ok ? '' : ' disabled'}>Fabriquer</button>`); }).join('');
+  if (mbTab === 'fab') return tabs + `<h4 class="mb-h">À fabriquer <small>avec les matériaux de vos voyages</small></h4><div class="mb-g">${craft}</div>`;
+  return tabs + `<h4 class="mb-h">Arrivage du jour <small>expire dans ${mbLeft('d')}</small></h4><div class="mb-g">${shop}</div>` + mkt;
 };
 document.addEventListener('click', ev => {
-  const b = ev.target.closest && ev.target.closest('[data-mbbuy],[data-mbcraft]'); if (!b || b.disabled) return; ev.stopPropagation();
+  const cb = ev.target.closest && ev.target.closest('[data-hmcat]'); if (cb && cb.closest('#panelBody')) { ev.stopPropagation(); hmEdit = true; hmEdTab = 'c'; hmPick = hmSel = null; hmMove = false; hmRe(); setTimeout(() => { const e = document.querySelector('#panelBody .hm-ed'); if (e) e.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 60); return; }
+  const tb = ev.target.closest && ev.target.closest('[data-mbtab],[data-mbmkt]');
+  if (tb && tb.closest('#panelBody')) { ev.stopPropagation(); if (tb.dataset.mbmkt) { hmEdit = false; hm$(() => openSheet('marche'), 0); return; } mbTab = tb.dataset.mbtab; hmRe(); return; }
+  const b = ev.target.closest && ev.target.closest('[data-mbbuy],[data-mbcraft],[data-mbstar]'); if (!b || b.disabled) return; ev.stopPropagation();
   let it = null;
-  if (b.dataset.mbbuy) { const k = b.dataset.mbbuy, pr = MB[k] && MB[k][3]; if (typeof pr !== 'number' || (S.coins || 0) < pr) return; S.coins -= pr; it = mbItem(k, b.dataset.mbcol); hm$(() => renderTop(), 0); }
+  if (b.dataset.mbstar) { const k = b.dataset.mbstar, pr = mbIsStar(k) && MB[k][3].stones; if (!pr || hm$(() => stonesN(), 0) < pr) return; S.stones -= pr; it = mbItem(k, b.dataset.mbcol); hm$(() => renderTop(), 0); }
+  else if (b.dataset.mbbuy) { const k = b.dataset.mbbuy, pr = MB[k] && MB[k][3]; if (typeof pr !== 'number' || (S.coins || 0) < pr) return; S.coins -= pr; it = mbItem(k, b.dataset.mbcol); hm$(() => renderTop(), 0); }
   else { const k = b.dataset.mbcraft; if (!MB[k] || !mbCanCraft(k)) return; Object.entries(MB[k][3]).forEach(([m, n]) => { for (let i = 0; i < n; i++) { const c = S.inv.filter(x => x && x.cat === 'm' && x.sub === m).sort((a, b2) => (a.rarity | 0) - (b2.rarity | 0))[0]; if (c) S.inv.splice(S.inv.indexOf(c), 1); } }); it = mbItem(k); }
   if (!it) return;
-  S.inv.push(it); save(); hmEdTab = 'o'; hmPick = it.id; hmSel = null; hmMove = false;
+  S.inv.push(it); { const k = mbId(it); if (k && !mbSeen().includes(k)) mbSeen().push(k); } save(); hmEdTab = 'o'; hmPick = it.id; hmSel = null; hmMove = false;
   hm$(() => toast(`${it.name} : touchez une case pour le poser.`), 0); hmRe();
 }, true);
 // ---------------- kit de bienvenue : une maison déjà habitée ----------------
@@ -141,6 +168,24 @@ const MB3 = {
   banc(c, w, d) { h3Legs(-w / 2 + .1, -d / 2 + .15, w - .2, d - .3, .45, h3Shade(c, -.15), .06); hB(-w / 2, -d / 2 + .1, .45, w, d - .2, .1, c, .05); hB(-w / 2, -d / 2 + .05, .55, w, .12, .6, c, .05); hB(-.6, -.1, .55, .5, .4, .15, '#f29cb0', .1); },
   vaseperles(c) { hCy(0, 0, 0, .22, .6, c, { rt: .14, op: .7, rough: .05 }); [0, 1, 2, 3, 4].forEach(i => hSp(Math.cos(i) * .1, Math.sin(i) * .1, .2 + i * .08, .06, '#fff3f8', 1, 1, 1, { rough: .1 })); [[-.1, 1], [.1, .9]].forEach(([x, z]) => { hCy(x, 0, .6, .015, z - .55, '#5fb36b'); hSp(x, 0, z + .05, .1, '#f7a8bd'); }); },
 };
+Object.assign(MB3, {
+  lustre(c) { const g = new THREE.Group(); g.position.set(0, 5.6, 0); H3P.add(g); const Q = H3P; H3P = g; hCy(0, 0, -.9, .02, .9, '#c9a35a', { metal: .8, rough: .3 }); hTo(0, 0, -1, .55, .05, '#c9a35a', { metal: .8, rough: .25 }); hTo(0, 0, -.8, .32, .04, '#c9a35a', { metal: .8, rough: .25 });
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; hCo(Math.cos(a) * .55, Math.sin(a) * .55, -1.35, .07, .3, c, { e: '#fff6d8', ei: .5, op: .85, rough: .05 }); hSp(Math.cos(a) * .55, Math.sin(a) * .55, -.95, .05, '#fff6d8', 1, 1, 1, { e: '#ffe9a8', ei: 1.2 }); }
+    hCo(0, 0, -1.6, .12, .45, c, { e: '#fff6d8', ei: .5, op: .85, rough: .05 }); H3P = Q; if (H3.nl++ < 3) hLt(0, 0, 4.4, '#fff1c8', .7, 7); h3Anim(t => { g.rotation.y = Math.sin(t * .4) * .08; }); },
+  baldaquin(c, w, d) { h3Legs(-w / 2 + .1, -d / 2 + .1, w - .2, d - .2, .3, '#8a5a3c', .07); hB(-w / 2 + .1, -d / 2 + .1, .3, w - .2, d - .2, .4, '#b98a5e', .08); hB(-w / 2 + .2, -d / 2 + .2, .7, w - .4, d - .4, .35, '#fffaf2', .16); hB(-w / 2 + .5, -d / 2 + .15, .76, w - .65, d - .3, .36, c, .2); [-1, 1].forEach(s => hB(s * .45 - .3, -d / 2 + .3, 1.05, .6, .5, .25, '#fff', .12));
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => hCy(a * (w / 2 - .12), b * (d / 2 - .12), 0, .06, 3.2, '#8a5a3c')); hB(-w / 2, -d / 2, 3.15, w, d, .12, '#8a5a3c', .04); hB(-w / 2 + .02, -d / 2 + .02, 3, w - .04, d - .04, .15, c, .06, { op: .9 });
+    [[-w / 2 + .05, 'L'], [w / 2 - .25, 'R']].forEach(([x]) => hB(x, -d / 2 + .05, .9, .2, .5, 2.1, h3Shade(c, .15), .1, { tex: 'fabric', op: .92 })); },
+  bassin(c, w, d) { hCy(0, 0, 0, w * .48, .45, c, { seg: 40, tex: 'wood' }); hCy(0, 0, .3, w * .42, .1, '#5fb7d8', { seg: 40, op: .85, rough: .05 }); [0, 1, 2].forEach(i => { const f = hSp(0, 0, .38, .1, ['#f28f3b', '#fffaf0', '#e0533d'][i], 1.8, .5, .8, { ns: 1 }); h3Anim(t => { const a = t * (.5 + i * .15) + i * 2.1; f.position.set(Math.cos(a) * .55, .38, Math.sin(a) * .5); f.rotation.y = -a; }); });
+    [[-.4, .3], [.5, -.2]].forEach(([x, y]) => { const l = hCy(x, y, .41, .18, .02, '#6fbf73', { ns: 1 }); }); hSp(.2, .45, .45, .07, '#f7a8bd'); },
+  pianoqueue(c, w, d) { const g = new THREE.Group(); H3P.add(g); const Q = H3P; H3P = g; hCy(.15, .1, .75, .95, .45, c, { seg: 32, rough: .2 }); hB(-.95, -.85, .75, 1.4, .9, .45, c, .05, { rough: .2 }); hB(-.95, -.95, .95, 1.3, .25, .08, '#fffaf0', .02); for (let i = 0; i < 9; i++) hB(-.9 + i * .14, -.97, 1.03, .05, .14, .04, '#2b2220', 0, { ns: 1 }); const lid = hB(-.6, -.6, 1.2, 1.5, 1.4, .05, c, .02, { rough: .2 }); lid.rotation.z = .45; lid.position.y = 1.55;
+    [[-.8, -.7], [.8, -.5], [.4, .8]].forEach(([x, y]) => hCy(x, y, 0, .07, .75, c, { rough: .2 })); H3P = Q; hB(-.5, -1.35, 0, 1, .4, .5, '#2b2220', .08); },
+  arbresouhaits(c) { hCy(0, 0, 0, .18, 1.6, '#8a5a3c', { rt: .12 }); [[0, 0, 1.9, .65], [-.35, .1, 1.55, .45], [.35, -.1, 1.6, .45]].forEach(([x, y, z, r]) => hSp(x, y, z, r, '#7fbf6a', 1.2, .9, 1.2)); for (let i = 0; i < 6; i++) { const a = i * 1.05, m = hSp(Math.cos(a) * .55, Math.sin(a) * .55, 1.35 + (i % 2) * .4, .09, c, 1, 1.3, 1, { e: c, ei: 1 }); h3Anim(t => { m.material.emissiveIntensity = .7 + Math.sin(t * 2 + i) * .4; }); } if (H3.nl++ < 3) hLt(0, 0, 1.6, '#ffc880', .5, 4); },
+  carrousel(c) { const g = new THREE.Group(); H3P.add(g); const Q = H3P; H3P = g; hCy(0, 0, 0, .45, .15, '#fffaf0'); hCy(0, 0, .15, .42, .05, c); hCy(0, 0, .15, .04, 1, '#c9a35a', { metal: .7, rough: .3 }); hCo(0, 0, 1.15, .5, .4, c); hSp(0, 0, 1.58, .06, '#ffd866');
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; hCy(Math.cos(a) * .3, Math.sin(a) * .3, .2, .015, .95, '#c9a35a'); hSp(Math.cos(a) * .3, Math.sin(a) * .3, .55, .1, ['#fffaf0', '#f2c14e', '#7fb3e0', '#f7a8bd'][i], 1.6, .8, .7); } H3P = Q; h3Anim(t => { g.rotation.y = t * .8; }); },
+  marbre(c, w, d) { hB(-w / 2, -d / 2, 0, w, .8, 2.6, c, .05, { rough: .25 }); hB(-w / 2 - .1, -d / 2, 2.6, w + .2, 1, .2, c, .04, { rough: .25 }); hB(-.55, -d / 2 + .76, .1, 1.1, .06, 1.4, '#2a1a14', .02, { ns: 1 }); [-.85, .85].forEach(x => hB(x - .12, -d / 2 + .7, 0, .24, .15, 2.6, '#e8dfd2', .04)); hB(-w / 2 - .1, -d / 2 + .9, 2.6, w + .2, .06, .06, '#c9a35a', .01, { metal: .7, rough: .3 });
+    const f1 = hCo(0, -d / 2 + .5, .1, .28, .8, '#f28f3b', { e: '#f28f3b', ei: 1.4, ns: 1 }), lt = hLt(0, -d / 2 + 1.2, .8, '#ff9a40', 1.1, 7); h3Anim(t => { f1.scale.y = 1 + Math.sin(t * 9) * .12; lt.intensity = (hmNight() ? 1.8 : 1.1) * (1 + Math.sin(t * 13) * .08); }); hCy(-.6, -d / 2 + .4, 2.8, .1, .35, '#c9a35a', { metal: .7, rough: .3 }); hCy(.6, -d / 2 + .4, 2.8, .1, .35, '#c9a35a', { metal: .7, rough: .3 }); },
+  globeceleste(c) { hCy(0, 0, 0, .35, .08, '#8a6448'); hCy(0, 0, .08, .04, .6, '#c9a35a', { metal: .7, rough: .3 }); const g = new THREE.Group(); g.position.set(0, 1.15, 0); H3P.add(g); const Q = H3P; H3P = g; hSp(0, 0, 0, .28, c, 1, 1, 1, { e: '#9fb8ff', ei: .5 }); [0, 1, 2].forEach(i => { const r = hTo(0, 0, 0, .45 + i * .06, .02, '#c9a35a', { metal: .8, rough: .25 }); r.rotation.set(i * .9, i * .5, 0); }); for (let i = 0; i < 5; i++) hSp(Math.cos(i * 1.3) * .2, Math.sin(i * 1.3) * .2, Math.sin(i) * .15, .025, '#ffe9a8', 1, 1, 1, { e: '#ffe9a8', ei: 1.5, ns: 1 }); H3P = Q; h3Anim(t => { g.rotation.y = t * .5; g.rotation.x = Math.sin(t * .3) * .2; }); },
+});
 h3Meuble = (o, sel) => {
   const k = mbId(o.it), D = MB[k]; if (!D || !MB3[k]) return false;
   const { it, p } = o, g = new THREE.Group(), P = H3P; H3P = g;
@@ -154,7 +199,11 @@ h3Meuble = (o, sel) => {
 };
 {
   const st = document.createElement('style');
-  st.textContent = `.mb-h{margin:10px 2px 6px;font:800 13px var(--body,system-ui);color:#9a8470}.mb-h small{font-weight:600;color:#b9a48e;margin-left:4px}
+  st.textContent = `.mb-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 0 6px}.mb-tabs button{padding:6px 2px;border:2px solid transparent;border-radius:10px;background:#fbf4e8;font:800 11.5px var(--body,system-ui);color:var(--ink2,#7a6250);cursor:pointer}.mb-tabs button.on{background:#fff7d6;border-color:#f2c14e;color:var(--ink,#4a3528)}
+.mb-intro{margin:0 2px 8px;font-size:12px;color:#9a8470}.mb-intro b{color:#6f5fc0}
+.mb-mkt{display:flex;align-items:center;gap:8px;width:100%;margin:10px 0 2px;padding:10px 12px;border:2px solid #cfe3f5;border-radius:14px;background:#f2f8fd;font:800 13.5px var(--body,system-ui);color:var(--ink,#4a3528);cursor:pointer;text-align:left}.mb-mkt small{flex:1;font-weight:600;font-size:11.5px;color:#7f97ad}
+.mb-c .money,.mb-c svg.stone{vertical-align:-2px}.mb-c .btn svg.stone{width:14px;height:14px;margin-left:3px}
+.mb-h{margin:10px 2px 6px;font:800 13px var(--body,system-ui);color:#9a8470}.mb-h small{font-weight:600;color:#b9a48e;margin-left:4px}
 .mb-g{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
 .mb-c{display:grid;grid-template-columns:44px 1fr;grid-template-rows:auto auto auto;gap:0 8px;align-items:center;padding:8px;border:2px solid var(--line,#eadfce);border-radius:14px;background:#fffdf8}
 .mb-i{grid-row:span 2}.mb-i svg{width:44px;height:44px}.mb-c b{font-size:12.5px;line-height:1.15;color:var(--ink,#4a3528)}.mb-c small{font-size:11px;color:#9a8470}
