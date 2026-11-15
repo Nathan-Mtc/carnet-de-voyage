@@ -36300,7 +36300,8 @@ function hmDot(R) {
 }
 function hmWho() { // qui est dans quelle pièce : les artisans à leur poste, les autres se promènent au salon
   const W = {}, put = (r, k) => { (W[r] = W[r] || []).push(k); }, POST = { jard: 'jardin', nurs: 'nurserie', cuis: 'cuisine', herbo: 'herbo', forge: 'forge', couture: 'couture' };
-  hm$(() => fwHome(), []).forEach(k => { const j = hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'salon', k); });
+  const team = hm$(() => teamIds(), []);
+  hm$(() => fwHome(), []).forEach(k => { const j = team.includes(k) ? 'repos' : hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'salon', k); });
   return W;
 }
 // ---------------- projection 3/4 ----------------
@@ -36573,7 +36574,7 @@ function hmLocked() {
 const HM_ACT = {
   salon: { fx: 'read', p: [[1.2, 4.3, .9], [6, 6.6], [7.6, 5.4], [8.4, 8.2]] },
   cuisine: { fx: 'stir', all: 1, p: [[4.4, 2.1], [2.2, 2.1], [6.2, 2.1]] },
-  herbo: { fx: 'stir', all: 1, p: [[5.2, 4.9], [2.4, 2.4], [7.4, 2.4]] },
+  herbo: { fx: 'stir', all: 1, p: [[6.4, 4.4], [2.4, 2.4], [7.4, 2.4]] },
   forge: { fx: 'hammer', all: 1, p: [[4.7, 5.2], [2.8, 2.2], [7.6, 3.4]] },
   couture: { fx: 'sew', all: 1, p: [[3, 3.4], [6.2, 2.6], [5, 5.6]] },
   nurserie: { fx: 'love', all: 1, p: [[6.2, 4.6], [4.6, 6.8], [3, 5.8]] },
@@ -36626,14 +36627,14 @@ function hmStageHTML(R) {
 const hmNrg = k => Math.round(hm$(() => fyC(k).nrg, 50));
 const hmPic = (k, mood) => `<img src="${hm$(() => portraitURI(k, mood || 'content'), '')}" alt="">`;
 function hmBar(k) { const n = hmNrg(k), st = n >= 70 ? ['ok', 'En forme'] : n < 30 ? ['ko', 'Fatigué'] : ['mid', 'Un peu las']; return `<span class="hm-nb ${st[0]}"><i style="width:${n}%"></i></span><small class="hm-ns ${st[0]}">${st[1]}</small>`; }
-const HM_JL = { cuis: 'Les plats sont prêts 50 % plus vite.', herbo: 'Les appâts sont prêts 50 % plus vite.', forge: 'Le matériel est prêt 50 % plus vite.', couture: 'Les vêtements sont prêts 50 % plus vite.', comm: 'Il cuisine tout seul la recette choisie.', nurs: 'Les œufs éclosent plus vite.', jard: 'Le jardin pousse plus vite et se récolte tout seul.' };
+const HM_JL = { cuis: 'Cuisine 50 % plus vite et relance tout seul la dernière recette, même jeu fermé.', herbo: 'Prépare 50 % plus vite et relance tout seul le dernier appât, même jeu fermé.', forge: 'Forge 50 % plus vite et relance tout seul la dernière recette, même jeu fermé.', couture: 'Coud 50 % plus vite et relance tout seul la dernière recette, même jeu fermé.', comm: 'Il cuisine tout seul la recette choisie.', nurs: 'Les œufs éclosent plus vite.', jard: 'Le potager pousse plus vite et se récolte tout seul.' };
 const HM_JT = { comm: 'Le commis', nurs: 'Le gardien', jard: 'Le jardinier', cuis: 'Le cuisinier', herbo: 'L’herboriste', forge: 'Le forgeron', couture: 'Le couturier' };
 function hmWorkHTML(R) {
   const team = hm$(() => teamIds(), []), j = R.j, home = hm$(() => fwHome(), []).filter(k => !team.includes(k)), on = home.filter(k => hm$(() => fwJob(k), 'repos') === j);
   if (!home.length) return `<section class="hm-work"><h3 class="hm-h">${HM_JT[j]}</h3><p class="hm-none">Pas de familier libre : l’équipe de voyage ne travaille pas. Faites éclore un œuf à la Couveuse pour avoir un artisan.</p></section>`;
   const line = HM_JL[j];
   return `<section class="hm-work"><h3 class="hm-h">${HM_JT[j]} <small>${on.length ? on.map(k => esc(CHARS[k].name)).join(', ') : 'personne'}</small></h3>
-    ${line && on.length ? `<p class="hm-wl">${esc(line)}</p>` : ''}
+    ${line ? `<p class="hm-wl">${on.length ? '✓ ' : 'Avec un artisan : '}${esc(line)}</p>` : ''}
     <div class="hm-who">${home.map(k => { const me = on.includes(k), jb = hm$(() => fwJob(k), 'repos'); return `<button class="hm-wk${me ? ' on' : ''}" data-fwjob="${me && j !== 'repos' ? 'repos' : j}" data-fk="${k}" aria-pressed="${me}">${hmPic(k, me && j === 'repos' ? 'dodo' : 'content')}<b>${esc(CHARS[k].name)}</b>${`<small>${me ? 'ici ✓' : jb === 'repos' ? 'au repos' : esc(HM_JT[jb] ? HM_JT[jb].replace(/^(Le|Au) /, '') : '')}</small>`}</button>`; }).join('')}</div>
     <p class="hm-tip">${j === 'repos' ? 'Touchez un familier pour le mettre au lit.' : 'Touchez un familier pour lui confier ce poste, encore une fois pour le libérer.'}</p></section>`;
 }
@@ -36665,8 +36666,8 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   box.innerHTML = hmTabsHTML(R.id) + hm$(() => hmNextHTML(R), '') + hmStageHTML(R);
   hm$(() => hmPanelExtra(box, R, 'top'), 0);
   if (!locked) {
-    if (R.st) box.insertAdjacentHTML('beforeend', hm$(() => hmStationHTML(R), ''));
     if (R.j) box.insertAdjacentHTML('beforeend', hmWorkHTML(R));
+    if (R.st) box.insertAdjacentHTML('beforeend', hm$(() => hmStationHTML(R), ''));
     R.blocks.forEach(sel => tmp.querySelectorAll(sel).forEach(e => box.appendChild(e)));
     if (R.id === 'nurserie') box.insertAdjacentHTML('beforeend', `<button class="btn cream hm-go" data-hmgo="nurserie">🥚 Toute la nurserie (croisements, habitats)</button>`);
   }
@@ -37721,26 +37722,54 @@ const atOwned = r => { try { return !(BQ_RIDS.has(r.id) && !bqRecOwned(r.id)); }
 const atRecipes = R => RECIPES.filter(r => r.kind === R.st && atOwned(r));
 const atTime = ms => { const m = Math.max(1, Math.ceil(ms / 60e3)); return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`; };
 // ---------------- lancer, récupérer ----------------
-function atStart(R, rid) {
-  const r = RECIPES.find(x => x.id === rid), q = atQ(R.id); if (!r || !canCraft(r) || q.length >= atSlots(R.id)) return;
+function atStart(R, rid, quiet, t0) {
+  const r = RECIPES.find(x => x.id === rid), q = atQ(R.id); if (!r || !canCraft(r) || q.length >= atSlots(R.id)) return false;
+  const H = atS(); if (!H.last || typeof H.last !== 'object') H.last = {}; H.last[R.id] = rid;
   for (const [key, n] of r.ing) { const c = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); c.slice(0, n).forEach(x => S.inv.splice(S.inv.indexOf(x), 1)); }
   S.coins -= r.coins || 0;
-  q.push({ rid, t0: Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + hm$(() => lvlLuck(S.sel), 0) * 0.2 ? 1 : 0 });
-  save(); hm$(() => renderTop(), 0); hm$(() => toast(`${r.out[0]} : c’est parti ! Prêt dans ${atTime(atMs(r, R))}.`), 0);
+  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + hm$(() => lvlLuck(S.sel), 0) * 0.2 ? 1 : 0 });
+  save(); hm$(() => renderTop(), 0); if (!quiet) hm$(() => toast(`${r.out[0]} : c’est parti ! Prêt dans ${atTime(atMs(r, R))}.`), 0);
+  return true;
 }
-function atCollect(R, i) {
-  const q = atQ(R.id), j = q[i]; if (!j || Date.now() - j.t0 < j.ms) return;
-  const r = RECIPES.find(x => x.id === j.rid); q.splice(i, 1); if (!r) { save(); return; }
+function atCollect(R, i, quiet) {
+  const q = atQ(R.id), j = q[i]; if (!j || Date.now() - j.t0 < j.ms) return null;
+  const r = RECIPES.find(x => x.id === j.rid); q.splice(i, 1); if (!r) { save(); return null; }
   const it = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: Math.min(4, (r.out[3] | 0) + (j.m ? 1 : 0)) });
   if (j.m) it.name += ' (chef-d’œuvre)';
   S.inv.push(it); S.dex[r.out[0]] = true; S.stats.crafted = (S.stats.crafted || 0) + 1; hm$(() => bump('craft'), 0); save();
-  hm$(() => toast(j.m ? `Un chef-d’œuvre ! « ${it.name} » rejoint votre sac.` : `« ${it.name} » rejoint votre sac.`), 0);
+  if (!quiet) hm$(() => toast(j.m ? `Un chef-d’œuvre ! « ${it.name} » rejoint votre sac.` : `« ${it.name} » rejoint votre sac.`), 0);
+  return it;
+}
+// ---------------- l'artisan : il range ce qui est prêt et relance tout seul la dernière recette, même jeu fermé ----------------
+function atAuto() {
+  let any = false;
+  try {
+    const H = atS(); if (!H.log || typeof H.log !== 'object') H.log = {};
+    HM_ROOMS.filter(R => R.st && R.j && atWorkers(R) > 0).forEach(R => {
+      const q = atQ(R.id), last = H.last && H.last[R.id], now = Date.now();
+      for (let n = 0; n < 60; n++) {
+        let bi = -1, be = Infinity; q.forEach((j, i) => { const e = j.t0 + j.ms; if (e <= now && e < be) { be = e; bi = i; } }); if (bi < 0) break;
+        const it = atCollect(R, bi, true); if (it) { (H.log[R.id] = H.log[R.id] || []).push(it.name); any = true; }
+        if (last && !atStart(R, last, true, be)) break;
+      }
+      if (last && !q.length && atStart(R, last, true)) any = true;
+    });
+    if (any) save();
+  } catch (e) { console.error('artisan', e); }
+  return any;
+}
+function atLogHTML(R) {
+  const H = atS(), L = H.log && H.log[R.id]; if (!L || !L.length) return '';
+  const c = {}; L.forEach(n => { c[n] = (c[n] || 0) + 1; }); H.log[R.id] = []; save();
+  const who = hm$(() => fwWho(R.j).filter(k => !teamIds().includes(k)).map(k => CHARS[k].name).join(' et '), 'Votre artisan');
+  return `<div class="atl-log">🧺 <b>${esc(who)}</b> a rangé dans votre sac : ${Object.entries(c).map(([n, k]) => `${k} × ${esc(n)}`).join(', ')}</div>`;
 }
 // ---------------- l'écran de l'atelier ----------------
 const atIcon = r => hm$(() => itemIcon({ name: r.out[0], cat: r.out[1], sub: r.out[2], rarity: r.out[3], look: r.out[4], color: r.out[5] }), '');
 hmStationHTML = R => {
+  atAuto(); const log = atLogHTML(R);
   const q = atQ(R.id), slots = atSlots(R.id), now = Date.now(), full = q.length >= slots;
-  let h = `<section class="atl"><h3 class="hm-h">En fabrication <small>${q.length}/${slots}</small></h3><div class="atl-q">`;
+  let h = `<section class="atl">${log}<h3 class="hm-h">En fabrication <small>${q.length}/${slots}</small></h3><div class="atl-q">`;
   q.forEach((j, i) => { const r = RECIPES.find(x => x.id === j.rid); if (!r) return; const f = Math.min(1, (now - j.t0) / j.ms), done = f >= 1;
     h += `<div class="atl-j${done ? ' done' : ''}"><span class="atl-i">${atIcon(r)}</span><b>${esc(r.out[0])}</b>${done ? `<button class="btn green sm" data-stget="${i}">Récupérer</button>` : `<span class="atl-bar"><i data-stbar="${j.t0},${j.ms}" style="width:${Math.round(f * 100)}%"></i></span><small data-stleft="${j.t0},${j.ms}">encore ${atTime(j.ms - (now - j.t0))}</small>`}</div>`; });
   for (let i = q.length; i < slots; i++) h += `<div class="atl-j free"><span class="atl-i">＋</span><b>Place libre</b><small>Choisissez une recette ci-dessous</small></div>`;
@@ -37769,11 +37798,13 @@ setInterval(() => {
     const now = Date.now(); let fin = false;
     document.querySelectorAll('#panelBody [data-stbar]').forEach(e => { const [t0, ms] = e.dataset.stbar.split(',').map(Number), f = Math.min(1, (now - t0) / ms); e.style.width = Math.round(f * 100) + '%'; if (f >= 1) fin = true; });
     document.querySelectorAll('#panelBody [data-stleft]').forEach(e => { const [t0, ms] = e.dataset.stleft.split(',').map(Number); e.textContent = `encore ${atTime(ms - (now - t0))}`; });
+    if (atAuto() && document.querySelector('#panelBody .atl')) fin = true;
     if (fin && !hmEdit) renderPanel();
   } catch (e) {}
 }, 5000);
 // ---------------- pastilles et étape du moment ----------------
 if (typeof hmDot === 'function') hmDot = (orig => function (R) { if (R && R.st) { const n = atQ(R.id).filter(j => Date.now() - j.t0 >= j.ms).length; if (n) return n; } return orig.apply(this, arguments); })(hmDot);
+try { const T = hm$(() => teamIds(), []), F = fwState(); T.forEach(k => { if (F.job && F.job[k] && F.job[k] !== 'repos') F.job[k] = 'repos'; }); } catch (e) {}
 hmStNext = () => {
   const now = Date.now(), ST = HM_ROOMS.filter(R => R.st);
   for (const R of ST) { const j = atQ(R.id).find(x => now - x.t0 >= x.ms), r = j && RECIPES.find(x => x.id === j.rid); if (r) return { r: R.id, t: `${r.out[0]} est prêt à la ${R.nm} !`, b: 'Récupérer', ready: 1 }; }
@@ -37853,9 +37884,11 @@ Object.assign(H3R, {
 .atl-r .atl-i{grid-row:span 2}.atl-r b{font-size:12.5px;line-height:1.15;color:var(--ink,#4a3528)}.atl-r small{font-size:11px;color:#9a8470}
 .atl-n{grid-column:span 2;display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}.atl-n i{font-style:normal;font-size:10.5px;padding:1px 6px;border-radius:8px;background:#f7efe3;color:#a8927c}.atl-n i.ok{background:#e6f5e2;color:#2f7f4c;font-weight:700}
 .atl-r .btn{grid-column:span 2;margin-top:6px;width:100%}
+.atl-log{margin:0 0 8px;padding:9px 12px;border-radius:14px;background:#f1faee;border:2px solid #cfe8c4;font-size:13px;color:#2f5f3c}
 .atl-up{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:12px 0 4px;padding:10px 12px;border-radius:14px;background:#fff7ea}.atl-up b{font-size:13.5px;color:var(--ink,#4a3528)}.atl-up small{flex:1 1 100%;font-size:12px;color:#9a8470}.atl-up .btn{margin-left:auto}`;
   document.head.appendChild(st);
 }
+window.__at = { addComp: o => addComp(o), q: id => atQ(id) };
 
 })();
 </script>

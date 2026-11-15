@@ -43,7 +43,8 @@ function hmDot(R) {
 }
 function hmWho() { // qui est dans quelle pièce : les artisans à leur poste, les autres se promènent au salon
   const W = {}, put = (r, k) => { (W[r] = W[r] || []).push(k); }, POST = { jard: 'jardin', nurs: 'nurserie', cuis: 'cuisine', herbo: 'herbo', forge: 'forge', couture: 'couture' };
-  hm$(() => fwHome(), []).forEach(k => { const j = hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'salon', k); });
+  const team = hm$(() => teamIds(), []);
+  hm$(() => fwHome(), []).forEach(k => { const j = team.includes(k) ? 'repos' : hm$(() => fwJob(k), 'repos'); if (j === 'comm') return; /* au comptoir de la Boutique */ put(POST[j] || 'salon', k); });
   return W;
 }
 // ---------------- projection 3/4 ----------------
@@ -316,7 +317,7 @@ function hmLocked() {
 const HM_ACT = {
   salon: { fx: 'read', p: [[1.2, 4.3, .9], [6, 6.6], [7.6, 5.4], [8.4, 8.2]] },
   cuisine: { fx: 'stir', all: 1, p: [[4.4, 2.1], [2.2, 2.1], [6.2, 2.1]] },
-  herbo: { fx: 'stir', all: 1, p: [[5.2, 4.9], [2.4, 2.4], [7.4, 2.4]] },
+  herbo: { fx: 'stir', all: 1, p: [[6.4, 4.4], [2.4, 2.4], [7.4, 2.4]] },
   forge: { fx: 'hammer', all: 1, p: [[4.7, 5.2], [2.8, 2.2], [7.6, 3.4]] },
   couture: { fx: 'sew', all: 1, p: [[3, 3.4], [6.2, 2.6], [5, 5.6]] },
   nurserie: { fx: 'love', all: 1, p: [[6.2, 4.6], [4.6, 6.8], [3, 5.8]] },
@@ -369,14 +370,14 @@ function hmStageHTML(R) {
 const hmNrg = k => Math.round(hm$(() => fyC(k).nrg, 50));
 const hmPic = (k, mood) => `<img src="${hm$(() => portraitURI(k, mood || 'content'), '')}" alt="">`;
 function hmBar(k) { const n = hmNrg(k), st = n >= 70 ? ['ok', 'En forme'] : n < 30 ? ['ko', 'Fatigué'] : ['mid', 'Un peu las']; return `<span class="hm-nb ${st[0]}"><i style="width:${n}%"></i></span><small class="hm-ns ${st[0]}">${st[1]}</small>`; }
-const HM_JL = { cuis: 'Les plats sont prêts 50 % plus vite.', herbo: 'Les appâts sont prêts 50 % plus vite.', forge: 'Le matériel est prêt 50 % plus vite.', couture: 'Les vêtements sont prêts 50 % plus vite.', comm: 'Il cuisine tout seul la recette choisie.', nurs: 'Les œufs éclosent plus vite.', jard: 'Le jardin pousse plus vite et se récolte tout seul.' };
+const HM_JL = { cuis: 'Cuisine 50 % plus vite et relance tout seul la dernière recette, même jeu fermé.', herbo: 'Prépare 50 % plus vite et relance tout seul le dernier appât, même jeu fermé.', forge: 'Forge 50 % plus vite et relance tout seul la dernière recette, même jeu fermé.', couture: 'Coud 50 % plus vite et relance tout seul la dernière recette, même jeu fermé.', comm: 'Il cuisine tout seul la recette choisie.', nurs: 'Les œufs éclosent plus vite.', jard: 'Le potager pousse plus vite et se récolte tout seul.' };
 const HM_JT = { comm: 'Le commis', nurs: 'Le gardien', jard: 'Le jardinier', cuis: 'Le cuisinier', herbo: 'L’herboriste', forge: 'Le forgeron', couture: 'Le couturier' };
 function hmWorkHTML(R) {
   const team = hm$(() => teamIds(), []), j = R.j, home = hm$(() => fwHome(), []).filter(k => !team.includes(k)), on = home.filter(k => hm$(() => fwJob(k), 'repos') === j);
   if (!home.length) return `<section class="hm-work"><h3 class="hm-h">${HM_JT[j]}</h3><p class="hm-none">Pas de familier libre : l’équipe de voyage ne travaille pas. Faites éclore un œuf à la Couveuse pour avoir un artisan.</p></section>`;
   const line = HM_JL[j];
   return `<section class="hm-work"><h3 class="hm-h">${HM_JT[j]} <small>${on.length ? on.map(k => esc(CHARS[k].name)).join(', ') : 'personne'}</small></h3>
-    ${line && on.length ? `<p class="hm-wl">${esc(line)}</p>` : ''}
+    ${line ? `<p class="hm-wl">${on.length ? '✓ ' : 'Avec un artisan : '}${esc(line)}</p>` : ''}
     <div class="hm-who">${home.map(k => { const me = on.includes(k), jb = hm$(() => fwJob(k), 'repos'); return `<button class="hm-wk${me ? ' on' : ''}" data-fwjob="${me && j !== 'repos' ? 'repos' : j}" data-fk="${k}" aria-pressed="${me}">${hmPic(k, me && j === 'repos' ? 'dodo' : 'content')}<b>${esc(CHARS[k].name)}</b>${`<small>${me ? 'ici ✓' : jb === 'repos' ? 'au repos' : esc(HM_JT[jb] ? HM_JT[jb].replace(/^(Le|Au) /, '') : '')}</small>`}</button>`; }).join('')}</div>
     <p class="hm-tip">${j === 'repos' ? 'Touchez un familier pour le mettre au lit.' : 'Touchez un familier pour lui confier ce poste, encore une fois pour le libérer.'}</p></section>`;
 }
@@ -408,8 +409,8 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   box.innerHTML = hmTabsHTML(R.id) + hm$(() => hmNextHTML(R), '') + hmStageHTML(R);
   hm$(() => hmPanelExtra(box, R, 'top'), 0);
   if (!locked) {
-    if (R.st) box.insertAdjacentHTML('beforeend', hm$(() => hmStationHTML(R), ''));
     if (R.j) box.insertAdjacentHTML('beforeend', hmWorkHTML(R));
+    if (R.st) box.insertAdjacentHTML('beforeend', hm$(() => hmStationHTML(R), ''));
     R.blocks.forEach(sel => tmp.querySelectorAll(sel).forEach(e => box.appendChild(e)));
     if (R.id === 'nurserie') box.insertAdjacentHTML('beforeend', `<button class="btn cream hm-go" data-hmgo="nurserie">🥚 Toute la nurserie (croisements, habitats)</button>`);
   }

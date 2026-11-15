@@ -52,26 +52,54 @@ const atOwned = r => { try { return !(BQ_RIDS.has(r.id) && !bqRecOwned(r.id)); }
 const atRecipes = R => RECIPES.filter(r => r.kind === R.st && atOwned(r));
 const atTime = ms => { const m = Math.max(1, Math.ceil(ms / 60e3)); return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`; };
 // ---------------- lancer, récupérer ----------------
-function atStart(R, rid) {
-  const r = RECIPES.find(x => x.id === rid), q = atQ(R.id); if (!r || !canCraft(r) || q.length >= atSlots(R.id)) return;
+function atStart(R, rid, quiet, t0) {
+  const r = RECIPES.find(x => x.id === rid), q = atQ(R.id); if (!r || !canCraft(r) || q.length >= atSlots(R.id)) return false;
+  const H = atS(); if (!H.last || typeof H.last !== 'object') H.last = {}; H.last[R.id] = rid;
   for (const [key, n] of r.ing) { const c = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); c.slice(0, n).forEach(x => S.inv.splice(S.inv.indexOf(x), 1)); }
   S.coins -= r.coins || 0;
-  q.push({ rid, t0: Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + hm$(() => lvlLuck(S.sel), 0) * 0.2 ? 1 : 0 });
-  save(); hm$(() => renderTop(), 0); hm$(() => toast(`${r.out[0]} : c’est parti ! Prêt dans ${atTime(atMs(r, R))}.`), 0);
+  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + hm$(() => lvlLuck(S.sel), 0) * 0.2 ? 1 : 0 });
+  save(); hm$(() => renderTop(), 0); if (!quiet) hm$(() => toast(`${r.out[0]} : c’est parti ! Prêt dans ${atTime(atMs(r, R))}.`), 0);
+  return true;
 }
-function atCollect(R, i) {
-  const q = atQ(R.id), j = q[i]; if (!j || Date.now() - j.t0 < j.ms) return;
-  const r = RECIPES.find(x => x.id === j.rid); q.splice(i, 1); if (!r) { save(); return; }
+function atCollect(R, i, quiet) {
+  const q = atQ(R.id), j = q[i]; if (!j || Date.now() - j.t0 < j.ms) return null;
+  const r = RECIPES.find(x => x.id === j.rid); q.splice(i, 1); if (!r) { save(); return null; }
   const it = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: Math.min(4, (r.out[3] | 0) + (j.m ? 1 : 0)) });
   if (j.m) it.name += ' (chef-d’œuvre)';
   S.inv.push(it); S.dex[r.out[0]] = true; S.stats.crafted = (S.stats.crafted || 0) + 1; hm$(() => bump('craft'), 0); save();
-  hm$(() => toast(j.m ? `Un chef-d’œuvre ! « ${it.name} » rejoint votre sac.` : `« ${it.name} » rejoint votre sac.`), 0);
+  if (!quiet) hm$(() => toast(j.m ? `Un chef-d’œuvre ! « ${it.name} » rejoint votre sac.` : `« ${it.name} » rejoint votre sac.`), 0);
+  return it;
+}
+// ---------------- l'artisan : il range ce qui est prêt et relance tout seul la dernière recette, même jeu fermé ----------------
+function atAuto() {
+  let any = false;
+  try {
+    const H = atS(); if (!H.log || typeof H.log !== 'object') H.log = {};
+    HM_ROOMS.filter(R => R.st && R.j && atWorkers(R) > 0).forEach(R => {
+      const q = atQ(R.id), last = H.last && H.last[R.id], now = Date.now();
+      for (let n = 0; n < 60; n++) {
+        let bi = -1, be = Infinity; q.forEach((j, i) => { const e = j.t0 + j.ms; if (e <= now && e < be) { be = e; bi = i; } }); if (bi < 0) break;
+        const it = atCollect(R, bi, true); if (it) { (H.log[R.id] = H.log[R.id] || []).push(it.name); any = true; }
+        if (last && !atStart(R, last, true, be)) break;
+      }
+      if (last && !q.length && atStart(R, last, true)) any = true;
+    });
+    if (any) save();
+  } catch (e) { console.error('artisan', e); }
+  return any;
+}
+function atLogHTML(R) {
+  const H = atS(), L = H.log && H.log[R.id]; if (!L || !L.length) return '';
+  const c = {}; L.forEach(n => { c[n] = (c[n] || 0) + 1; }); H.log[R.id] = []; save();
+  const who = hm$(() => fwWho(R.j).filter(k => !teamIds().includes(k)).map(k => CHARS[k].name).join(' et '), 'Votre artisan');
+  return `<div class="atl-log">🧺 <b>${esc(who)}</b> a rangé dans votre sac : ${Object.entries(c).map(([n, k]) => `${k} × ${esc(n)}`).join(', ')}</div>`;
 }
 // ---------------- l'écran de l'atelier ----------------
 const atIcon = r => hm$(() => itemIcon({ name: r.out[0], cat: r.out[1], sub: r.out[2], rarity: r.out[3], look: r.out[4], color: r.out[5] }), '');
 hmStationHTML = R => {
+  atAuto(); const log = atLogHTML(R);
   const q = atQ(R.id), slots = atSlots(R.id), now = Date.now(), full = q.length >= slots;
-  let h = `<section class="atl"><h3 class="hm-h">En fabrication <small>${q.length}/${slots}</small></h3><div class="atl-q">`;
+  let h = `<section class="atl">${log}<h3 class="hm-h">En fabrication <small>${q.length}/${slots}</small></h3><div class="atl-q">`;
   q.forEach((j, i) => { const r = RECIPES.find(x => x.id === j.rid); if (!r) return; const f = Math.min(1, (now - j.t0) / j.ms), done = f >= 1;
     h += `<div class="atl-j${done ? ' done' : ''}"><span class="atl-i">${atIcon(r)}</span><b>${esc(r.out[0])}</b>${done ? `<button class="btn green sm" data-stget="${i}">Récupérer</button>` : `<span class="atl-bar"><i data-stbar="${j.t0},${j.ms}" style="width:${Math.round(f * 100)}%"></i></span><small data-stleft="${j.t0},${j.ms}">encore ${atTime(j.ms - (now - j.t0))}</small>`}</div>`; });
   for (let i = q.length; i < slots; i++) h += `<div class="atl-j free"><span class="atl-i">＋</span><b>Place libre</b><small>Choisissez une recette ci-dessous</small></div>`;
@@ -100,11 +128,13 @@ setInterval(() => {
     const now = Date.now(); let fin = false;
     document.querySelectorAll('#panelBody [data-stbar]').forEach(e => { const [t0, ms] = e.dataset.stbar.split(',').map(Number), f = Math.min(1, (now - t0) / ms); e.style.width = Math.round(f * 100) + '%'; if (f >= 1) fin = true; });
     document.querySelectorAll('#panelBody [data-stleft]').forEach(e => { const [t0, ms] = e.dataset.stleft.split(',').map(Number); e.textContent = `encore ${atTime(ms - (now - t0))}`; });
+    if (atAuto() && document.querySelector('#panelBody .atl')) fin = true;
     if (fin && !hmEdit) renderPanel();
   } catch (e) {}
 }, 5000);
 // ---------------- pastilles et étape du moment ----------------
 if (typeof hmDot === 'function') hmDot = (orig => function (R) { if (R && R.st) { const n = atQ(R.id).filter(j => Date.now() - j.t0 >= j.ms).length; if (n) return n; } return orig.apply(this, arguments); })(hmDot);
+try { const T = hm$(() => teamIds(), []), F = fwState(); T.forEach(k => { if (F.job && F.job[k] && F.job[k] !== 'repos') F.job[k] = 'repos'; }); } catch (e) {}
 hmStNext = () => {
   const now = Date.now(), ST = HM_ROOMS.filter(R => R.st);
   for (const R of ST) { const j = atQ(R.id).find(x => now - x.t0 >= x.ms), r = j && RECIPES.find(x => x.id === j.rid); if (r) return { r: R.id, t: `${r.out[0]} est prêt à la ${R.nm} !`, b: 'Récupérer', ready: 1 }; }
@@ -184,6 +214,8 @@ Object.assign(H3R, {
 .atl-r .atl-i{grid-row:span 2}.atl-r b{font-size:12.5px;line-height:1.15;color:var(--ink,#4a3528)}.atl-r small{font-size:11px;color:#9a8470}
 .atl-n{grid-column:span 2;display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}.atl-n i{font-style:normal;font-size:10.5px;padding:1px 6px;border-radius:8px;background:#f7efe3;color:#a8927c}.atl-n i.ok{background:#e6f5e2;color:#2f7f4c;font-weight:700}
 .atl-r .btn{grid-column:span 2;margin-top:6px;width:100%}
+.atl-log{margin:0 0 8px;padding:9px 12px;border-radius:14px;background:#f1faee;border:2px solid #cfe8c4;font-size:13px;color:#2f5f3c}
 .atl-up{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:12px 0 4px;padding:10px 12px;border-radius:14px;background:#fff7ea}.atl-up b{font-size:13.5px;color:var(--ink,#4a3528)}.atl-up small{flex:1 1 100%;font-size:12px;color:#9a8470}.atl-up .btn{margin-left:auto}`;
   document.head.appendChild(st);
 }
+window.__at = { addComp: o => addComp(o), q: id => atQ(id) };
