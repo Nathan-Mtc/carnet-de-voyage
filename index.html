@@ -38034,9 +38034,9 @@ if (typeof usTabsOf === 'function') usTabsOf = function (it) { return new Set([h
 // v67 : les appâts ne se trouvent JAMAIS en voyage (décision du joueur) : on les prépare seulement à l'Herboristerie
 {
   const st = document.createElement('style');
-  st.textContent = `.obfil.usfil{display:flex!important;flex-wrap:nowrap;overflow-x:auto;gap:6px;padding-bottom:4px;scrollbar-width:none}.obfil.usfil::-webkit-scrollbar{display:none}
-.obfil.usfil button{flex:none;min-height:0!important;padding:6px 10px!important;display:inline-flex!important;align-items:center;gap:6px;border-radius:999px!important}
-.obfil.usfil button.zero{display:none!important}.obfil.usfil button span{font-size:12px!important}`;
+  st.textContent = `.obfil.usfil{display:flex!important;flex-wrap:wrap;overflow:visible;gap:5px;padding-bottom:2px}.obfil.usfil::-webkit-scrollbar{display:none}
+.obfil.usfil button{flex:none;min-height:0!important;padding:4px 9px 4px 5px!important;display:inline-flex!important;align-items:center;gap:5px;border-radius:999px!important}.obfil.usfil button i.uspill{--sz:18px!important}
+.obfil.usfil button.zero{display:none!important}.obfil.usfil button span{font-size:11.5px!important;grid-row:auto!important;grid-column:auto!important}.obfil.usfil button>i:not(.uspill){min-width:0!important;height:16px!important;padding:0 5px!important;font-size:10px!important;line-height:16px!important;grid-row:auto!important;grid-column:auto!important;justify-self:auto!important}.obfil.usfil button .obic{width:18px!important;height:18px!important;grid-row:auto!important;grid-column:auto!important}`;
   document.head.appendChild(st);
 }
 
