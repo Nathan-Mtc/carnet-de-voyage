@@ -370,7 +370,7 @@ function hmStageHTML(R) {
 const hmNrg = k => Math.round(hm$(() => fyC(k).nrg, 50));
 const hmPic = (k, mood) => `<img src="${hm$(() => portraitURI(k, mood || 'content'), '')}" alt="">`;
 function hmBar(k) { const n = hmNrg(k), st = n >= 70 ? ['ok', 'En forme'] : n < 30 ? ['ko', 'Fatigué'] : ['mid', 'Un peu las']; return `<span class="hm-nb ${st[0]}"><i style="width:${n}%"></i></span><small class="hm-ns ${st[0]}">${st[1]}</small>`; }
-const HM_JL = { cuis: 'Cuisine 50 % plus vite et relance tout seul la dernière recette, même jeu fermé.', herbo: 'Prépare 50 % plus vite et relance tout seul le dernier appât, même jeu fermé.', forge: 'Forge 50 % plus vite et relance tout seul la dernière recette, même jeu fermé.', couture: 'Coud 50 % plus vite et relance tout seul la dernière recette, même jeu fermé.', comm: 'Il cuisine tout seul la recette choisie.', nurs: 'Les œufs éclosent plus vite.', jard: 'Le potager pousse plus vite et se récolte tout seul.' };
+const HM_JL = { cuis: 'Cuisine 50 % plus vite.', herbo: 'Prépare les appâts 50 % plus vite.', forge: 'Forge 50 % plus vite.', couture: 'Coud 50 % plus vite.', comm: 'Il cuisine tout seul la recette choisie.', nurs: 'Les œufs éclosent plus vite.', jard: 'Le potager pousse plus vite et se récolte tout seul.' };
 const HM_JT = { comm: 'Le commis', nurs: 'Le gardien', jard: 'Le jardinier', cuis: 'Le cuisinier', herbo: 'L’herboriste', forge: 'Le forgeron', couture: 'Le couturier' };
 function hmWorkHTML(R) {
   const team = hm$(() => teamIds(), []), j = R.j, home = hm$(() => fwHome(), []).filter(k => !team.includes(k)), on = home.filter(k => hm$(() => fwJob(k), 'repos') === j);

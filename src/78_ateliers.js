@@ -71,7 +71,7 @@ function atCollect(R, i, quiet) {
   return it;
 }
 // ---------------- l'artisan : il range ce qui est prêt et relance tout seul la dernière recette, même jeu fermé ----------------
-function atAuto() {
+function atAuto() { return false; // v62 : retiré (« il va vider le stock ») ; les bonus d'artisan sont à choisir par le joueur
   let any = false;
   try {
     const H = atS(); if (!H.log || typeof H.log !== 'object') H.log = {};
