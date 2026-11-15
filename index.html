@@ -36282,7 +36282,7 @@ const HM_INFO = {
   entree: 'Ici attendent les compagnons en forme, prêts à partir. Les fatigués sont au lit.',
   salon: 'Votre pièce à vous : aménagez-la comme vous voulez.',
   chambres: 'Au lit, l’énergie remonte toute seule. La cheminée fait dormir plus vite.',
-  cuisine: 'Touchez un compagnon pour lui donner à manger : un repas = +30 d’énergie tout de suite.',
+  cuisine: 'Cuisinez des plats maison avec vos récoltes, puis touchez un compagnon pour le nourrir : ça lui redonne de l’énergie.',
   nurserie: 'Les œufs éclosent ici. Agrandissez-la pour accueillir plus de familiers.',
   jardin: 'Touchez une parcelle pour semer ou récolter : 🍎 fruits pour la cuisine, 🌸 fleurs et feuilles pour fabriquer des meubles.',
   atelier: 'Fabriquez le matériel de voyage et vos décorations.',
@@ -36684,8 +36684,8 @@ function hmNextHTML(R) {
 }
 // un repas redonne tout de suite de l'énergie (+30 en plus de ce que donnait déjà la nourriture)
 if (typeof fyFeed === 'function') fyFeed = (orig => function (k, id) {
-  const had = (S.inv || []).some(i => i.id === id), r = orig.apply(this, arguments);
-  try { if (had && !S.inv.some(i => i.id === id)) { const c = fyC(k); c.nrg = fyClamp(c.nrg + 30); save(); toast(`${CHARS[k].name} : +30 d’énergie${c.nrg >= 70 ? ', en forme !' : ''}`); renderPanel(); } } catch (e) {}
+  const it = (S.inv || []).find(i => i.id === id), gain = it && it.nrg ? it.nrg : 30, r = orig.apply(this, arguments);
+  try { if (it && !S.inv.includes(it)) { const c = fyC(k); c.nrg = fyClamp(c.nrg + gain - 6); save(); toast(`${CHARS[k].name} : +${gain} d’énergie${c.nrg >= 70 ? ', en forme !' : ''}`); renderPanel(); } } catch (e) {}
   return r;
 })(fyFeed);
 // nourrir : on touche un compagnon dans la scène, ses plats apparaissent ici
@@ -36696,9 +36696,37 @@ function hmFeedHTML() {
   if (!hmFeedK || !at.includes(hmFeedK)) return `<p class="hm-tap">👆 Touchez un compagnon à table pour lui donner à manger.</p>`;
   const k = hmFeedK, nm = esc(CHARS[k].name), food = (S.inv || []).some(i => i && i.cat === 'n');
   try { fySel = k; fyMode = 'food'; } catch (e) {}
-  return `<section class="hm-feed"><h3 class="hm-h">Que donner à ${nm} ? <small>⚡ ${hmNrg(k)}/100</small></h3>${food ? hm$(() => fyFoodHTML(k), '') : '<p class="hm-none">Plus rien à manger : récoltez au Jardin ou cuisinez des en-cas à la Boutique.</p>'}
-    <p class="hm-tip">❤️ = son plat préféré. Chaque repas : +30 d’énergie.</p></section>`;
+  return `<section class="hm-feed"><h3 class="hm-h">Que donner à ${nm} ? <small>⚡ ${hmNrg(k)}/100</small></h3>${food ? hm$(() => fyFoodHTML(k), '') : '<p class="hm-none">Plus rien à manger : récoltez au Jardin, puis cuisinez un plat ci-dessous.</p>'}
+    <p class="hm-tip">❤️ = son plat préféré. Un plat maison redonne plus d’énergie qu’un simple en-cas.</p></section>`;
 }
+// ---------------- cuisiner des plats maison (seulement pour l'énergie ; la Boutique cuisine pour vendre) ----------------
+const HM_GRP = { fruit: ['fruit', 'pomme', 'agrume'] }, HM_ING = { fruit: 'fruits', legume: 'légumes', pain: 'pain', fromage: 'fromage', sucre: 'sucré', mer: 'produit de la mer', boisson: 'boisson', any: 'au choix' };
+const HM_DISH = [
+  ['compote', 'Compote maison', '🍎', { fruit: 2 }, 45, 'fruit', '#e0533d'],
+  ['soupe', 'Soupe du potager', '🥕', { legume: 2 }, 50, 'legume', '#f08a3b'],
+  ['tartine', 'Tartine au fromage', '🧀', { pain: 1, fromage: 1 }, 55, 'pain', '#f2c14e'],
+  ['chocolat', 'Chocolat chaud', '☕', { boisson: 1, sucre: 1 }, 40, 'boisson', '#8a5a3c'],
+  ['papillote', 'Papillote de la mer', '🐟', { mer: 1, legume: 1 }, 65, 'mer', '#6fa8dc'],
+  ['tarte', 'Tarte aux fruits', '🥧', { fruit: 1, sucre: 1, pain: 1 }, 75, 'sucre', '#e5584f'],
+  ['ragout', 'Ragoût du voyageur', '🍲', { any: 3 }, 60, 'plat', '#b0603c'],
+];
+const hmFoodOf = g => (S.inv || []).filter(i => i && i.cat === 'n' && !i.maison && (g === 'any' || (HM_GRP[g] || [g]).includes(i.sub)));
+function hmCanDish(D) { const used = new Set(); return Object.entries(D[3]).every(([g, n]) => { const c = hmFoodOf(g).filter(i => !used.has(i)).sort((a, b) => (a.rarity | 0) - (b.rarity | 0)).slice(0, n); c.forEach(i => used.add(i)); return c.length >= n; }); }
+function hmDishHTML() {
+  const L = HM_DISH.map(D => [D, hmCanDish(D)]).sort((a, b) => b[1] - a[1]);
+  return `<section class="hm-work"><h3 class="hm-h">Cuisiner un plat maison</h3><div class="hm-dish">${L.map(([D, ok]) => `<div class="hm-di${ok ? ' ok' : ''}"><span class="hm-de">${D[2]}</span><b>${esc(D[1])}</b><small>⚡ +${D[4]} énergie</small>
+    <span class="hm-dn">${Object.entries(D[3]).map(([g, n]) => { const h = hmFoodOf(g).length; return `<i class="${h >= n ? 'ok' : ''}">${Math.min(h, n)}/${n} ${HM_ING[g] || g}</i>`; }).join('')}</span>
+    <button class="btn ${ok ? 'green' : 'cream'} sm" data-hmdish="${D[0]}"${ok ? '' : ' disabled'}>Cuisiner</button></div>`).join('')}</div>
+    <p class="hm-tip">Les ingrédients viennent du Jardin et de vos voyages. Les en-cas à vendre se préparent à la Boutique.</p></section>`;
+}
+function hmCook(id) {
+  const D = HM_DISH.find(d => d[0] === id); if (!D || !hmCanDish(D)) return;
+  Object.entries(D[3]).forEach(([g, n]) => { for (let i = 0; i < n; i++) { const c = hmFoodOf(g).sort((a, b) => (a.rarity | 0) - (b.rarity | 0))[0]; if (c) S.inv.splice(S.inv.indexOf(c), 1); } });
+  const it = { id: uidGen(), name: D[1], cat: 'n', sub: D[5], rarity: 1, look: null, color: D[6], from: 'Cuisine', tags: [], date: Date.now(), maison: 1, nrg: D[4] };
+  S.inv.push(it); save(); hm$(() => toast(`${D[2]} ${D[1]} est prêt ! Touchez un compagnon pour le lui servir.`), 0);
+  const b = $('panelBody'), top = b ? b.scrollTop : 0; renderPanel(); const b2 = $('panelBody'); if (b2) b2.scrollTop = 0;
+}
+document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-hmdish]'); if (!b || b.disabled) return; ev.stopPropagation(); hmCook(b.dataset.hmdish); }, true);
 let hmPanelExtra = () => {}; // aménagement, souvenirs (75_amenager.js)
 if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   if (!box || hm$(() => pgTuto(), false)) return orig.apply(this, arguments);
@@ -36712,7 +36740,7 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   if (!locked) {
     if (R.id === 'entree') box.insertAdjacentHTML('beforeend', hmTeamHTML());
     if (R.j) box.insertAdjacentHTML('beforeend', hmWorkHTML(R));
-    if (R.id === 'cuisine') box.insertAdjacentHTML('beforeend', hmFeedHTML() + `<button class="btn cream hm-go" data-hmcook="1">🍳 Cuisiner des en-cas › Boutique</button><p class="hm-tip">Les en-cas se préparent aux fourneaux du comptoir de la Boutique, puis reviennent ici dans votre sac.</p>`);
+    if (R.id === 'cuisine') box.insertAdjacentHTML('beforeend', hmFeedHTML() + hmDishHTML());
     R.blocks.forEach(sel => tmp.querySelectorAll(sel).forEach(e => box.appendChild(e)));
     if (R.id === 'nurserie') box.insertAdjacentHTML('beforeend', `<button class="btn cream hm-go" data-hmgo="nurserie">🥚 Toute la nurserie (croisements, habitats)</button>`);
     if (R.id === 'atelier') box.insertAdjacentHTML('beforeend', hmGearHTML());
@@ -36777,6 +36805,9 @@ window.__hm = { feed: k => { hmFeedK = k; renderPanel(); }, room: () => hmRoom, 
 .hm-tip{margin:2px 2px 0;font-size:12px;color:#a8927c}.hm-none{font-size:13px;color:#9a8470}
 .hm-prov{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.hm-prov span{display:flex;flex-direction:column;align-items:center;padding:7px 2px;border-radius:12px;background:#f7f1e8;font-size:11.5px;color:#a8927c}
 .hm-prov span.on{background:#fff;box-shadow:inset 0 0 0 2px var(--pc);color:var(--ink,#4a3528)}.hm-prov b{font:800 18px var(--display,inherit);color:var(--pc)}
+.hm-dish{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}.hm-di{display:grid;grid-template-columns:34px 1fr;gap:0 8px;align-items:center;padding:8px;border:2px solid var(--line,#eadfce);border-radius:14px;background:#fffdf8;opacity:.75}.hm-di.ok{opacity:1;border-color:#9fd08a;background:#f6fbf3}
+.hm-de{grid-row:span 2;font-size:26px;text-align:center}.hm-di b{font-size:12.5px;line-height:1.15;color:var(--ink,#4a3528)}.hm-di small{font-size:11px;color:#2f7f4c;font-weight:700}
+.hm-dn{grid-column:span 2;display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}.hm-dn i{font-style:normal;font-size:10.5px;padding:1px 6px;border-radius:8px;background:#f7efe3;color:#a8927c}.hm-dn i.ok{background:#e6f5e2;color:#2f7f4c;font-weight:700}.hm-di .btn{grid-column:span 2;margin-top:6px;width:100%}
 .hm-tap{margin:10px 2px;padding:10px 12px;border-radius:14px;background:#fff7ea;font-size:13.5px;font-weight:700;color:var(--ink,#4a3528)}.hm-feed .fy-food{margin:4px 0}
 .hm-work .fw-sel{margin:4px 2px 6px;font-size:12.5px}
 .hm-tabs button{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0 5px;border:2px solid transparent;border-radius:14px;background:#fff7ea;font:inherit;color:var(--ink2,#7a6250);cursor:pointer}
