@@ -338,13 +338,19 @@ if (typeof trjWhoHTML === 'function') trjWhoHTML = (orig => function () {
   return h;
 })(trjWhoHTML);
 document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-trjwho]'); if (!b) return; const jb = atJobOf(b.dataset.trjwho); if (jb) hm$(() => toast(`${CHARS[b.dataset.trjwho].name} est ${jb.replace(/^\S+ /, '').toLowerCase()} : son atelier l’attendra pendant le voyage.`), 0); });
+// v71 : pas de « places au chaud » (tous les œufs couvent en même temps), pas d'habitats (on fait éclore sans limite),
+// la Couveuse montre juste la liste des œufs puis les croisements ; les compagnons sans poste n'y vivent plus.
+try { NS_COUV.forEach(c => { c.slots = 99; }); } catch (e) {}
+if (typeof nsRoomFor === 'function') nsRoomFor = () => true;
 function hmCouvFill(box) {
-  try { const N = nsState(); if (!N.enclos) { N.enclos = 1; save(); } } catch (e) {}
-  const d = document.createElement('div'); d.className = 'hm-couv';
+  try { const N = nsState(); if (!N.enclos) { N.enclos = 1; save(); } nsCouvFill(); } catch (e) {}
+  const now = Date.now(), eggs = (S.eggs || []).filter(Boolean).sort((a, b) => (b.ready <= now) - (a.ready <= now) || a.ready - b.ready);
+  let h = `<section class="hm-eggs"><h3 class="hm-h">Vos œufs <small>${eggs.length}</small></h3>`;
+  h += eggs.length ? `<div class="nseggs">${eggs.map(e => hm$(() => nsEggCard(e), '')).join('')}</div>` : `<p class="hm-none">Aucun œuf pour l’instant : on en trouve en voyage (plus souvent avec un appât), ou en réunissant deux compagnons ci-dessous.</p>`;
+  box.insertAdjacentHTML('beforeend', h + `</section>`);
+  const d = document.createElement('div');
   try { nsRenderNurserie(d); } catch (e) { console.error('couveuse', e); }
-  d.querySelectorAll('.nshead').forEach(e => e.remove());
-  box.appendChild(d);
-  try { const hb = document.createElement('details'); hb.className = 'hm-deco hm-hab'; hb.innerHTML = '<summary>🏡 Places pour vos compagnons (habitats)</summary>'; const inner = document.createElement('div'); nsRenderHabitats(inner); inner.querySelectorAll('.nshead').forEach(e => e.remove()); hb.appendChild(inner); box.appendChild(hb); } catch (e) {}
+  const cross = d.querySelector('.nscard.encl'); if (cross) { const w = document.createElement('div'); w.className = 'hm-couv'; w.appendChild(cross); box.appendChild(w); }
 }
 {
   const st = document.createElement('style');
