@@ -1,0 +1,185 @@
+// ================= 78 · LES ATELIERS DU FOYER (v59) =================
+// Le joueur : « on ne comprend pas qui est prêt, qui fait quoi ; il faut refaire le foyer : il doit servir à préparer
+// les expéditions et à créer des équipements (forge, plantation, éclosion…) ; attention aux doublons avec Compagnons ;
+// on supprime tout simplement la fatigue ; refais d'un coup, même style 3D ».
+// • Chaque pièce est un ATELIER (façon planque de Tarkov) : on lance une fabrication, elle prend du temps et continue
+//   pendant les voyages, puis on vient la récupérer. Recettes = celles du jeu (RECIPES) rangées par atelier :
+//   Forge = matériel d'expédition, Couture = vêtements, Cuisine = plats (appâts, nourrir), Herboristerie = appâts par
+//   espèce (nouvelles recettes), Salon = décorations. On ne fait que FABRIQUER ici : on équipe et on nourrit dans
+//   l'onglet Compagnons (pas de doublon).
+// • Niveaux : Forge = construction « Atelier agrandi », Cuisine = « Coin repas », Couture et Herboristerie ont les leurs.
+//   Niveau : +25 % de vitesse ; dès le niveau 2, deux fabrications à la fois. Un familier ARTISAN (poste) : +50 %.
+//   L'équipe de voyage ne travaille jamais (74 : hmWorkHTML).
+// • Fatigue et énergie supprimées : plus aucun effet (f3Nrg neutre) ni affichage.
+// État : S.hm.st[atelier] = [{ rid, t0, ms, m: chef-d'œuvre }], S.hm.lv[atelier] = niveau (Couture, Herboristerie).
+// ---------------- postes d'artisans (40_foyer.js) ----------------
+try { [['cuis', 'Cuisinier', 'cuisine', '#fff0dc', ''], ['herbo', 'Herboriste', 'prépare', '#e6f3e2', ''], ['forge', 'Forgeron', 'forge', '#f3e0d0', ''], ['couture', 'Couturier', 'coud', '#f6e6f0', '']].forEach(j => { FW_J[j[0]] = j; }); } catch (e) { console.error('postes', e); }
+// ---------------- fatigue supprimée ----------------
+if (typeof f3Nrg === 'function') f3Nrg = () => ({ b: 0, ch: 0, n: 100 });
+if (typeof fyC === 'function') fyC = (orig => function () { const c = orig.apply(this, arguments); if (c) c.nrg = 100; return c; })(fyC);
+if (typeof f3GoHTML === 'function') f3GoHTML = (orig => function () { return String(orig.apply(this, arguments)).replace(/<span[^>]*><b>Énergie[\s\S]*?<\/span>/, ''); })(f3GoHTML);
+// ---------------- herboristerie : un appât par espèce ----------------
+Object.assign(ING, { hb_fruit: [['fruit', 'pomme', 'agrume'], 'Fruit'], hb_veg: [['legume'], 'Légume'], hb_mer: [['mer'], 'Produit de la mer'], hb_from: [['fromage'], 'Fromage'], hb_pain: [['pain'], 'Pain'], hb_sucre: [['sucre'], 'Sucré'], hb_boi: [['boisson'], 'Boisson'] });
+const HB_BAITS = [
+  ['panda', 'Boulettes de bambou', [['hb_veg', 2], ['feuille', 1]], '#7fbf6a'], ['capy', 'Bouquet d’agrumes', [['hb_fruit', 2], ['feuille', 1]], '#f2a33a'],
+  ['axo', 'Pâtée aux crevettes', [['hb_mer', 1], ['feuille', 1]], '#f08a9a'], ['renard', 'Croquettes fromagères', [['hb_from', 1], ['hb_pain', 1]], '#f2c14e'],
+  ['fennec', 'Barre aux dattes', [['hb_sucre', 2]], '#b07a4a'], ['tanuki', 'Thé aux galettes', [['hb_boi', 1], ['hb_pain', 1]], '#7fae4f'],
+  ['paresseux', 'Salade d’hibiscus', [['hb_veg', 1], ['feuille', 2]], '#e5587f'], ['lemur', 'Brochette de fruits', [['hb_fruit', 2], ['hb_sucre', 1]], '#e5584f'],
+  ['phoque', 'Filet de hareng', [['hb_mer', 2]], '#8fb3c9'], ['quokka', 'Feuillage tendre', [['feuille', 2], ['hb_fruit', 1]], '#8fd07a'],
+];
+try {
+  HB_BAITS.forEach(([sp, nm, ing, col]) => {
+    if (!RECIPES.some(r => r.id === 'hb_' + sp)) RECIPES.push({ id: 'hb_' + sp, kind: 'Herboristerie', out: [nm, 'n', 'appat', 1, null, col], ing, coins: 0, sp });
+    if (NS_BAITS[sp]) NS_BAITS[sp].names[nm] = 1.6;
+    if (typeof NS_BAIT_HINT !== 'undefined' && NS_BAIT_HINT[sp] && !NS_BAIT_HINT[sp].includes(nm)) NS_BAIT_HINT[sp] += ` ; ou « ${nm} » de l’Herboristerie du foyer`;
+  });
+} catch (e) { console.error('herboristerie', e); }
+// ---------------- niveaux, vitesse, places ----------------
+const AT_UP = { couture: [300, 900, 2000], herbo: [250, 800, 1800] };
+function atS() { const H = hmS(); if (!H.st || typeof H.st !== 'object') H.st = {}; if (!H.lv || typeof H.lv !== 'object') H.lv = {}; return H; }
+function atLvl(id) { if (id === 'forge') return hm$(() => pgLvl('atelier'), 0); if (id === 'cuisine') return hm$(() => pgLvl('repas'), 0); if (id === 'salon') return 1; return atS().lv[id] | 0; }
+const atSlots = id => atLvl(id) >= 2 ? 2 : 1;
+const atWorkers = R => R.j ? hm$(() => fwWho(R.j).filter(k => !teamIds().includes(k)).length, 0) : 0;
+const atSpeed = R => (1 + .25 * atLvl(R.id)) * (1 + .5 * Math.min(2, atWorkers(R)));
+const AT_MIN = [6, 15, 30, 60, 120];
+const atMs = (r, R) => Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R));
+const atQ = id => { const H = atS(); if (!Array.isArray(H.st[id])) H.st[id] = []; return H.st[id]; };
+const atOwned = r => { try { return !(BQ_RIDS.has(r.id) && !bqRecOwned(r.id)); } catch (e) { return true; } };
+const atRecipes = R => RECIPES.filter(r => r.kind === R.st && atOwned(r));
+const atTime = ms => { const m = Math.max(1, Math.ceil(ms / 60e3)); return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`; };
+// ---------------- lancer, récupérer ----------------
+function atStart(R, rid) {
+  const r = RECIPES.find(x => x.id === rid), q = atQ(R.id); if (!r || !canCraft(r) || q.length >= atSlots(R.id)) return;
+  for (const [key, n] of r.ing) { const c = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); c.slice(0, n).forEach(x => S.inv.splice(S.inv.indexOf(x), 1)); }
+  S.coins -= r.coins || 0;
+  q.push({ rid, t0: Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + hm$(() => lvlLuck(S.sel), 0) * 0.2 ? 1 : 0 });
+  save(); hm$(() => renderTop(), 0); hm$(() => toast(`${r.out[0]} : c’est parti ! Prêt dans ${atTime(atMs(r, R))}.`), 0);
+}
+function atCollect(R, i) {
+  const q = atQ(R.id), j = q[i]; if (!j || Date.now() - j.t0 < j.ms) return;
+  const r = RECIPES.find(x => x.id === j.rid); q.splice(i, 1); if (!r) { save(); return; }
+  const it = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: Math.min(4, (r.out[3] | 0) + (j.m ? 1 : 0)) });
+  if (j.m) it.name += ' (chef-d’œuvre)';
+  S.inv.push(it); S.dex[r.out[0]] = true; S.stats.crafted = (S.stats.crafted || 0) + 1; hm$(() => bump('craft'), 0); save();
+  hm$(() => toast(j.m ? `Un chef-d’œuvre ! « ${it.name} » rejoint votre sac.` : `« ${it.name} » rejoint votre sac.`), 0);
+}
+// ---------------- l'écran de l'atelier ----------------
+const atIcon = r => hm$(() => itemIcon({ name: r.out[0], cat: r.out[1], sub: r.out[2], rarity: r.out[3], look: r.out[4], color: r.out[5] }), '');
+hmStationHTML = R => {
+  const q = atQ(R.id), slots = atSlots(R.id), now = Date.now(), full = q.length >= slots;
+  let h = `<section class="atl"><h3 class="hm-h">En fabrication <small>${q.length}/${slots}</small></h3><div class="atl-q">`;
+  q.forEach((j, i) => { const r = RECIPES.find(x => x.id === j.rid); if (!r) return; const f = Math.min(1, (now - j.t0) / j.ms), done = f >= 1;
+    h += `<div class="atl-j${done ? ' done' : ''}"><span class="atl-i">${atIcon(r)}</span><b>${esc(r.out[0])}</b>${done ? `<button class="btn green sm" data-stget="${i}">Récupérer</button>` : `<span class="atl-bar"><i data-stbar="${j.t0},${j.ms}" style="width:${Math.round(f * 100)}%"></i></span><small data-stleft="${j.t0},${j.ms}">encore ${atTime(j.ms - (now - j.t0))}</small>`}</div>`; });
+  for (let i = q.length; i < slots; i++) h += `<div class="atl-j free"><span class="atl-i">＋</span><b>Place libre</b><small>Choisissez une recette ci-dessous</small></div>`;
+  if (slots < 2 && R.id !== 'salon') h += `<p class="hm-tip">Au niveau 2, l’atelier fabrique deux choses à la fois.</p>`;
+  h += `</div>`;
+  const L = atRecipes(R).map(r => [r, canCraft(r)]).sort((a, b) => b[1] - a[1]);
+  h += `<h3 class="hm-h">Recettes <small>${L.filter(x => x[1]).length} possibles</small></h3><div class="atl-g">${L.map(([r, ok]) => `<div class="atl-r${ok ? ' ok' : ''}"><span class="atl-i">${atIcon(r)}</span><b>${esc(r.out[0])}</b><small>⏱ ${atTime(atMs(r, R))}${r.coins ? ` · ${r.coins} 🪙` : ''}</small>
+    <span class="atl-n">${r.ing.map(([k, n]) => { const c = hm$(() => ingCount(k), 0); return `<i class="${c >= n ? 'ok' : ''}">${Math.min(c, n)}/${n} ${esc((ING[k] && ING[k][1]) || k)}</i>`; }).join('')}</span>
+    <button class="btn ${ok && !full ? 'green' : 'cream'} sm" data-ststart="${r.id}"${ok && !full ? '' : ' disabled'}>${full && ok ? 'Atelier occupé' : 'Fabriquer'}</button></div>`).join('') || '<p class="hm-none">Pas encore de recette ici.</p>'}</div>`;
+  if (R.id === 'cuisine') h += `<p class="hm-tip">Les en-cas à vendre se préparent au comptoir de la Boutique. Pour nourrir un compagnon : onglet Compagnons.</p>`;
+  if (R.id === 'forge' || R.id === 'couture') h += `<p class="hm-tip">On s’équipe au départ (onglet Préparation) ou dans l’onglet Compagnons.</p>`;
+  if (AT_UP[R.id]) { const l = atLvl(R.id), c = AT_UP[R.id][l]; h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b>${c != null ? `<small>Niveau ${l + 1} : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}</small><button class="btn ${(S.coins || 0) >= c ? 'green' : 'cream'} sm" data-stup="${R.id}"${(S.coins || 0) >= c ? '' : ' disabled'}>Améliorer · ${c} 🪙</button>` : '<small>Niveau maximum</small>'}</div>`; }
+  return h + `</section>`;
+};
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-ststart],[data-stget],[data-stup]'); if (!b || b.disabled || !b.closest('#panelBody')) return;
+  ev.stopPropagation(); const R = hmR(hmRoom); if (!R) return;
+  if (b.dataset.ststart) atStart(R, b.dataset.ststart);
+  if (b.dataset.stget != null) atCollect(R, +b.dataset.stget);
+  if (b.dataset.stup) { const id = b.dataset.stup, l = atLvl(id), c = AT_UP[id] && AT_UP[id][l]; if (c != null && (S.coins || 0) >= c) { S.coins -= c; atS().lv[id] = l + 1; save(); hm$(() => renderTop(), 0); hm$(() => toast(`${R.nm} : niveau ${l + 1} !`), 0); } }
+  const p = $('panelBody'), top = p ? p.scrollTop : 0; renderPanel(); const p2 = $('panelBody'); if (p2) p2.scrollTop = top;
+}, true);
+// les barres avancent toutes seules ; quand une fabrication finit, l'écran se met à jour
+setInterval(() => {
+  try {
+    const now = Date.now(); let fin = false;
+    document.querySelectorAll('#panelBody [data-stbar]').forEach(e => { const [t0, ms] = e.dataset.stbar.split(',').map(Number), f = Math.min(1, (now - t0) / ms); e.style.width = Math.round(f * 100) + '%'; if (f >= 1) fin = true; });
+    document.querySelectorAll('#panelBody [data-stleft]').forEach(e => { const [t0, ms] = e.dataset.stleft.split(',').map(Number); e.textContent = `encore ${atTime(ms - (now - t0))}`; });
+    if (fin && !hmEdit) renderPanel();
+  } catch (e) {}
+}, 5000);
+// ---------------- pastilles et étape du moment ----------------
+if (typeof hmDot === 'function') hmDot = (orig => function (R) { if (R && R.st) { const n = atQ(R.id).filter(j => Date.now() - j.t0 >= j.ms).length; if (n) return n; } return orig.apply(this, arguments); })(hmDot);
+hmStNext = () => {
+  const now = Date.now(), ST = HM_ROOMS.filter(R => R.st);
+  for (const R of ST) { const j = atQ(R.id).find(x => now - x.t0 >= x.ms), r = j && RECIPES.find(x => x.id === j.rid); if (r) return { r: R.id, t: `${r.out[0]} est prêt à la ${R.nm} !`, b: 'Récupérer', ready: 1 }; }
+  for (const R of ST) if (R.id !== 'salon' && atQ(R.id).length < atSlots(R.id) && atRecipes(R).some(r => canCraft(r))) return { r: R.id, t: `${R.nm} : vous avez de quoi fabriquer quelque chose.`, b: 'Fabriquer' };
+  return null;
+};
+// ---------------- les ateliers en 3D (même style que 76) ----------------
+Object.assign(HM_ISO, {
+  forge: () => ({ s: '', g: '', blk: [[0, 0, 3.4, 1.8], [3.6, 3.6, 2, 1.4], [6.4, 0, 2.6, 1.4], [0, 4.2, 1.2, 2.4], [9.6, .6, 1.2, 1.2]], spots: [] }),
+  couture: () => ({ s: '', g: '', blk: [[1.6, 1.6, 2.4, 1.4], [6, 0, 3.2, .9], [0, 5, 1, 3], [4.6, 3.8, 1.2, 1.2], [9.6, .6, 1.2, 1.2]], spots: [] }),
+  herbo: () => ({ s: '', g: '', blk: [[4.3, 3.2, 1.8, 1.6], [0, 0, 4, .9], [6, 0, 3.2, 1.4], [0, 4.4, 1, 3.4], [9.6, .6, 1.2, 1.2]], spots: [] }),
+});
+Object.assign(H3R, {
+  forge(l) {
+    h3Shell('#c9b8a6', '#9a8a7a', { pat: 'wood', tiles: 1 }); h3Win('L', 7, 2.6, 2, 1.8);
+    // le foyer de forge en briques, avec ses braises
+    hB(0, 0, 0, 3.2, 1.6, 1.2, '#b0603c', .06); hB(.2, .2, 1.2, 2.8, 1.2, 2.2, '#a0563a', .08); hB(.8, .5, 3.4, 1.6, .9, 2.4, '#8a4a32', .06);
+    hB(.6, 1.55, .5, 2, .08, .7, '#2a1a14', .02, { ns: 1 }); const coal = hB(.75, 1.2, 1.2, 1.7, .5, .12, '#ff7a30', .04, { e: '#ff5a10', ei: 1.4, ns: 1 }); const fl = hLt(1.6, 2, 1.5, '#ff8a40', 1.4, 8);
+    h3Anim(t => { coal.material.emissiveIntensity = 1.2 + Math.sin(t * 7) * .25 + Math.sin(t * 13) * .15; fl.intensity = (hmNight() ? 2.2 : 1.4) * (1 + Math.sin(t * 9) * .12); });
+    for (let k = 0; k < 4; k++) { const sp = h3Sprite('spark', 1.6, 1.6, 1.5, .25); h3Anim(t => { const u = (t * .7 + k / 4) % 1; sp.position.set(1.2 + k * .25 + Math.sin(u * 8) * .1, 1.4 + u * 1.6, 1.6); sp.material.opacity = 1 - u; }); }
+    // soufflet, enclume, baquet d'eau
+    hB(3.3, .3, .6, .9, .7, .25, '#8a5a3c', .1); hB(3.3, .3, .85, .9, .7, .08, '#5a3a28', .03);
+    hB(3.9, 3.8, 0, 1, .8, .7, '#5f666d', .08); hB(3.6, 3.75, .7, 1.7, 1, .35, '#7d858c', .1, { metal: .6, rough: .35 }); hCo(5.3, 4.25, .75, .25, .5, '#7d858c', { metal: .6, rough: .35 }).rotation.z = Math.PI / 2;
+    hCy(1.4, 5.6, 0, .55, .8, '#9a6a4a', { tex: 'wood' }); hCy(1.4, 5.6, .75, .5, .04, '#4f8fb0', { op: .85, rough: .05 }); [0, 1, 2].forEach(k => hB(.9, 5.1, .2 + k * .25, 1, 1, .04, '#5f666d', .01, { ns: 1 }));
+    // râtelier d'outils au mur, lingots, sacs de charbon
+    hB(6.4, .02, 2.2, 2.6, .08, 1.6, '#b98a5e', .03); [6.7, 7.2, 7.7, 8.2, 8.6].forEach((x, k) => { hB(x, .1, 2.4, .08, .08, 1.1, '#7a5236', .01); hB(x - .12, .08, 3.3 - (k % 2) * .2, .32, .12, .22, '#8a8f95', .03, { metal: .6, rough: .35 }); });
+    hB(6.4, 0, 0, 2.6, 1.4, .9, '#c99a6a', .05); [[6.7, .3], [7.2, .4], [7.7, .3]].forEach(([x, y]) => hB(x, y, .9, .4, .25, .15, '#e0a01e', .04, { metal: .8, rough: .25 })); hB(8.3, .3, .9, .4, .25, .15, '#c0c6cc', .04, { metal: .8, rough: .25 });
+    hSp(.6, 5, .45, .5, '#4a3a30', 1, .9, 1); hSp(.6, 6.1, .4, .45, '#4a3a30', 1, .9, 1);
+    if (l >= 2) { hB(.03, 8, 2.4, .05, 1.6, 1.2, '#f3e6cf', .01); hB(.06, 8.2, 2.6, .03, 1.2, .8, '#7fb3e0', .01); }
+    h3Plant(10.2, 1.2, .9, '#8a8f95');
+  },
+  couture(l) {
+    h3Shell('#f4c6d8', '#e9c48e', { pat: 'flowers' }); h3Win('R', 2, 2.6, 2.4, 2.2);
+    // table de couture avec sa machine
+    h3Legs(1.6, 1.6, 2.4, 1.4, .85, '#b98a5e', .06); hB(1.6, 1.6, .85, 2.4, 1.4, .1, '#c99a6a', .04);
+    hB(2.2, 1.8, .95, 1.2, .6, .35, '#f6f1e7', .1); hB(2.25, 1.9, 1.3, .3, .4, .55, '#f6f1e7', .08); hB(2.25, 1.9, 1.75, 1.1, .4, .25, '#f6f1e7', .1); hB(3.2, 1.95, 1.4, .12, .3, .35, '#e5587f', .03);
+    const needle = hCy(2.4, 2.1, 1.25, .02, .3, '#c9c2b8', { metal: .7, rough: .3 }); h3Anim(t => { needle.position.y = 1.2 + Math.abs(Math.sin(t * 9)) * .12; });
+    hCy(3.3, 2.05, 1.85, .1, .2, '#7fb3e0'); hB(1.8, 2.2, .96, .6, .5, .03, '#f7a8bd', .01);
+    // mannequin avec une veste
+    hCy(5.2, 4.2, 0, .35, .06, '#8a6448'); hCy(5.2, 4.2, 0, .04, 1.2, '#8a6448'); hSp(5.2, 4.2, 1.7, .45, '#e0685a', 1, 1.25, .8); hSp(5.2, 4.2, 2.35, .14, '#c9b8a6');
+    [1.5, 1.8].forEach(z => hSp(5.2, 4.55, z, .045, '#f2c14e'));
+    // étagère de rouleaux de tissu
+    hB(6, 0, 0, 3.2, .8, 2.6, '#c99a6a', .04); [[.5, ['#e0685a', '#7fb3e0', '#f2c14e', '#9fd08a']], [1.35, ['#c9a0dc', '#f7a8bd', '#fffaf0', '#7fc38a']], [2.2, ['#6fa8dc', '#f2a58c', '#e5587f', '#b98a5e']]].forEach(([z, cs]) => { hB(6.05, .05, z - .05, 3.1, .7, .05, '#b98a5e', .01); cs.forEach((c, k) => { const r = hCy(6.4 + k * .75, .45, z, .3, .7, c, { tex: 'fabric' }); r.rotation.x = Math.PI / 2; r.position.y = z + .3; }); });
+    // corbeilles de laine
+    [[1.2, 5.2, '#f2c14e'], [1.2, 6.4, '#7fb3e0']].forEach(([x, y, c]) => { hCy(x - .6, y, 0, .45, .45, '#d9a86a', { rt: .5, tex: 'wood' }); [[-.15, 0], [.15, .1], [0, -.18]].forEach(([dx, dy], k) => hSp(x - .6 + dx, y + dy, .55, .18, k ? h3Shade(c, -.1 * k) : c, 1, 1, 1, { tex: 'fabric' })); });
+    hCy(4.4, 7.4, 0, 2, .03, '#f7c8dd', { ns: 1, seg: 40, tex: 'fabric' });
+    if (l >= 2) { hB(.03, 2, 2.6, .05, 2, 1.4, '#fffaf0', .02); hB(.06, 2.2, 2.8, .03, 1.6, 1, '#cfe3f5', .01); }
+    h3Plant(10.2, 1.2, .9, '#f7a8bd');
+  },
+  herbo(l) {
+    h3Shell('#b7d8a8', '#c9a37a', { pat: 'wood' }); h3Win('L', 5, 2.6, 2.2, 2);
+    // le chaudron qui bouillonne
+    hCy(5.2, 4, 0, .75, .2, '#3b3b3b'); [[-.5, 0], [.5, .2], [0, -.5]].forEach(([dx, dy]) => hB(5.2 + dx - .08, 4 + dy - .08, 0, .16, .16, .5, '#5a5a5a', .03)); hSp(5.2, 4, .95, .75, '#3b3b3b', 1, .75, 1, { metal: .4, rough: .5 });
+    const brew = hCy(5.2, 4, 1.35, .6, .05, '#7fd07a', { e: '#5fd06a', ei: .6, ns: 1 }); hLt(5.2, 4, 1.8, '#9fffa0', .6, 5); hTo(5.2, 4, 1.38, .62, .06, '#3b3b3b');
+    for (let k = 0; k < 4; k++) { const b = hSp(5.2, 4, 1.45, .08, '#a9f0a0', 1, 1, 1, { op: .8, ns: 1 }); h3Anim(t => { const u = (t * .8 + k / 4) % 1; b.position.set(5.2 + Math.cos(k * 1.7) * .3, 1.45 + u * .9, 4 + Math.sin(k * 1.7) * .3); b.scale.setScalar(1 + u); b.material.opacity = .8 * (1 - u); }); }
+    h3Anim(t => { brew.material.emissiveIntensity = .5 + Math.sin(t * 3) * .15; });
+    // étagères de bocaux
+    hB(0, 0, 0, 4, .8, .9, '#c99a6a', .05); hB(0, 0, 2.6, 4, .55, .1, '#b98a5e', .02); hB(0, 0, 3.6, 4, .55, .1, '#b98a5e', .02);
+    ['#e0685a', '#f2c14e', '#7fc38a', '#c9a0dc', '#6fa8dc', '#f7a8bd'].forEach((c, k) => { hCy(.4 + k * .6, .3, 2.7, .18, .45, '#e8f4f8', { op: .45, rough: .05 }); hCy(.4 + k * .6, .3, 2.72, .15, .3, c); hCy(.4 + k * .6, .3, 3.15, .14, .07, '#b98a5e'); hCy(.6 + k * .55, .3, 3.7, .13 + (k % 2) * .04, .35, ['#7fc38a', '#e0a01e', '#c9a0dc'][k % 3], { op: .8 }); });
+    hCy(1, .4, .9, .25, .25, '#9a8a7a', { rt: .3 }); hCy(1, .4, 1.1, .05, .35, '#7a6a5a');
+    // herbes qui sèchent au plafond
+    for (let k = 0; k < 6; k++) { const g = new THREE.Group(); g.position.set(6.4 + (k % 3) * .9, 5.3, .5 + Math.floor(k / 3) * .6); H3P.add(g); const P = H3P; H3P = g; hCy(0, 0, -.5, .01, .5, '#7a5236'); [0, 1, 2, 3].forEach(m => hSp(Math.cos(m * 1.6) * .08, Math.sin(m * 1.6) * .08, -.75 - m * .05, .1, ['#7fbf6a', '#9b86d6', '#c9d4a6'][k % 3], .7, 1.6, .7)); H3P = P; h3Anim(t => { g.rotation.z = Math.sin(t * 1.2 + k) * .06; }); }
+    hB(6, 0, 0, 3.2, 1.4, .95, '#c99a6a', .05); [[6.4, .5], [7.3, .6], [8.2, .4]].forEach(([x, y], k) => h3Plant(x + .2, y + .2, .55, ['#d98a5f', '#7fb3e0', '#f7a8bd'][k], .95));
+    if (l >= 2) { hB(.03, 1.5, 2.5, .05, 2.2, 1.5, '#f3e6cf', .01); [2, 2.6, 3.2].forEach((y, k) => hSp(.08, y, 3.2, .14, ['#7fbf6a', '#e5587f', '#9b86d6'][k], .3, 1, 1)); }
+    h3Plant(10.2, 1.2, 1.1);
+  },
+});
+{
+  const st = document.createElement('style');
+  st.textContent = `.atl{margin:8px 0}.atl-q{display:flex;flex-direction:column;gap:6px}
+.atl-j{display:grid;grid-template-columns:40px 1fr auto;grid-template-rows:auto auto;gap:2px 10px;align-items:center;padding:8px 10px;border:2px solid var(--line,#eadfce);border-radius:14px;background:#fff}
+.atl-j.done{border-color:#9fd08a;background:#f3faef}.atl-j.free{border-style:dashed;background:#fffaf2;opacity:.8}.atl-j .atl-i{grid-row:span 2}.atl-j b{font-size:13px;color:var(--ink,#4a3528)}.atl-j .btn{grid-row:span 2}
+.atl-j small{font-size:11.5px;color:#9a8470}.atl-bar{grid-column:2;height:8px;border-radius:9px;background:#eee4d6;overflow:hidden}.atl-bar i{display:block;height:100%;background:linear-gradient(90deg,#f2c14e,#e0a01e);transition:width .6s}
+.atl-i{display:flex;align-items:center;justify-content:center;width:40px;height:40px;font-size:22px;color:#c9b8a6}.atl-i svg{width:40px;height:40px}
+.atl-g{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.atl-r{display:grid;grid-template-columns:40px 1fr;gap:0 8px;align-items:center;padding:8px;border:2px solid var(--line,#eadfce);border-radius:14px;background:#fffdf8;opacity:.78}.atl-r.ok{opacity:1;border-color:#9fd08a;background:#f6fbf3}
+.atl-r .atl-i{grid-row:span 2}.atl-r b{font-size:12.5px;line-height:1.15;color:var(--ink,#4a3528)}.atl-r small{font-size:11px;color:#9a8470}
+.atl-n{grid-column:span 2;display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}.atl-n i{font-style:normal;font-size:10.5px;padding:1px 6px;border-radius:8px;background:#f7efe3;color:#a8927c}.atl-n i.ok{background:#e6f5e2;color:#2f7f4c;font-weight:700}
+.atl-r .btn{grid-column:span 2;margin-top:6px;width:100%}
+.atl-up{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:12px 0 4px;padding:10px 12px;border-radius:14px;background:#fff7ea}.atl-up b{font-size:13.5px;color:var(--ink,#4a3528)}.atl-up small{flex:1 1 100%;font-size:12px;color:#9a8470}.atl-up .btn{margin-left:auto}`;
+  document.head.appendChild(st);
+}
