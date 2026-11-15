@@ -13,7 +13,7 @@ const HM_ROOMS = [
   // v51 : une pièce = un rôle, et le familier qui y travaille (j = poste de 40_foyer.js)
   // v56 : les 4 premières pièces suivent le cycle (le jardin nourrit la cuisine, la cuisine et le lit rechargent, l'entrée fait partir)
   { id: 'jardin', nm: 'Jardin', v: 'Planter', e: '🌱', b: 'serre', blocks: ['.fy2-jar'], j: 'jard', cy: 1 },
-  { id: 'cuisine', nm: 'Cuisine', v: 'Nourrir', e: '🍲', b: 'repas', blocks: ['.fy2-list'], j: 'comm', cy: 1 },
+  { id: 'cuisine', nm: 'Cuisine', v: 'Nourrir', e: '🍲', b: 'repas', blocks: [], cy: 1 }, // v57 : on y nourrit seulement ; on cuisine à la Boutique
   { id: 'chambres', nm: 'Chambres', v: 'Dormir', e: '🛏️', b: 'chambre', b2: 'cheminee', blocks: [], j: 'repos', cy: 1 },
   { id: 'entree', nm: 'Entrée', v: 'Partir', e: '🚪', b: null, blocks: [], cy: 1 },
   { id: 'salon', nm: 'Salon', v: 'Décorer', e: '🛋️', b: null, blocks: [] },
@@ -25,7 +25,7 @@ const HM_INFO = {
   entree: 'Ici attendent les compagnons en forme, prêts à partir. Les fatigués sont au lit.',
   salon: 'Votre pièce à vous : aménagez-la comme vous voulez.',
   chambres: 'Au lit, l’énergie remonte toute seule. La cheminée fait dormir plus vite.',
-  cuisine: 'Un repas redonne tout de suite de l’énergie. Les fruits viennent du jardin.',
+  cuisine: 'Touchez un compagnon pour lui donner à manger : un repas = +30 d’énergie tout de suite.',
   nurserie: 'Les œufs éclosent ici. Agrandissez-la pour accueillir plus de familiers.',
   jardin: 'Touchez une parcelle pour semer ou récolter : 🍎 fruits pour la cuisine, 🌸 fleurs et feuilles pour fabriquer des meubles.',
   atelier: 'Fabriquez le matériel de voyage et vos décorations.',
@@ -46,10 +46,12 @@ function hmWho() {
   let alt = 0; const team = hm$(() => teamIds(), []);
   hm$(() => fwHome(), []).forEach(k => {
     const j = hm$(() => fwJob(k), 'repos');
-    if (j === 'jard') put('jardin', k); else if (j === 'comm') put('cuisine', k); else if (j === 'nurs') put('nurserie', k);
+    if (j === 'jard') put('jardin', k); else if (j === 'comm') return; /* il aide à la Boutique */ else if (j === 'nurs') put('nurserie', k);
     else if (team.includes(k) && hmNrg(k) >= 70) put('entree', k); // en forme : attend à l'entrée, sac prêt
     else if (alt++ < 3) put('chambres', k); else put('salon', k); // fatigué : au lit
   });
+  // à table : les compagnons à la maison qui ont le plus besoin d'un repas (moins d'énergie d'abord)
+  W.cuisine = hm$(() => fwHome(), []).filter(k => hm$(() => fwJob(k), 'repos') !== 'comm').sort((a, b) => hmNrg(a) - hmNrg(b)).slice(0, 3);
   return W;
 }
 // ---------------- projection 3/4 ----------------
@@ -323,7 +325,7 @@ const HM_ACT = {
   entree: { fx: 'go', all: 1, p: [[5.6, 2.6], [6.6, 4.8], [4.2, 4.9]] },
   salon: { fx: 'read', p: l => [[1.2, 4.3, .9], [6, 6.6], [7.6, 5.4]] },
   chambres: { fx: 'zzz', all: 1, p: l => l >= 1 ? [[2, 1.8, 1.05], [2, 5.6, 1.05], [5.4, 6.6]] : [[2, 1.8, 1.05], [5.4, 6.6], [7, 5.2]] },
-  cuisine: { fx: 'stir', p: [[4.4, 2.1], [6.6, 6.8], [3.8, 7.2]] },
+  cuisine: { fx: 'eat', all: 1, p: [[3.7, 5.6], [6.9, 5.2], [5.3, 7.2]] },
   nurserie: { fx: 'love', all: 1, p: [[6.2, 4.6], [4.6, 6.8], [3, 5.8]] },
   jardin: { fx: 'water', all: 1, p: [[3.95, 3.95], [6.95, 3.95], [3.95, 7.2]] },
   atelier: { fx: 'hammer', p: [[2.7, 2.3], [5.8, 6.4], [3, 6.8]] },
@@ -429,6 +431,17 @@ if (typeof fyFeed === 'function') fyFeed = (orig => function (k, id) {
   try { if (had && !S.inv.some(i => i.id === id)) { const c = fyC(k); c.nrg = fyClamp(c.nrg + 30); save(); toast(`${CHARS[k].name} : +30 d’énergie${c.nrg >= 70 ? ', en forme !' : ''}`); renderPanel(); } } catch (e) {}
   return r;
 })(fyFeed);
+// nourrir : on touche un compagnon dans la scène, ses plats apparaissent ici
+let hmFeedK = null;
+function hmFeedHTML() {
+  const at = hmWho().cuisine || [];
+  if (!at.length) return `<p class="hm-none">Personne à table : tous vos compagnons sont en voyage ou au travail.</p>`;
+  if (!hmFeedK || !at.includes(hmFeedK)) return `<p class="hm-tap">👆 Touchez un compagnon à table pour lui donner à manger.</p>`;
+  const k = hmFeedK, nm = esc(CHARS[k].name), food = (S.inv || []).some(i => i && i.cat === 'n');
+  try { fySel = k; fyMode = 'food'; } catch (e) {}
+  return `<section class="hm-feed"><h3 class="hm-h">Que donner à ${nm} ? <small>⚡ ${hmNrg(k)}/100</small></h3>${food ? hm$(() => fyFoodHTML(k), '') : '<p class="hm-none">Plus rien à manger : récoltez au Jardin ou cuisinez des en-cas à la Boutique.</p>'}
+    <p class="hm-tip">❤️ = son plat préféré. Chaque repas : +30 d’énergie.</p></section>`;
+}
 let hmPanelExtra = () => {}; // aménagement, souvenirs (75_amenager.js)
 if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   if (!box || hm$(() => pgTuto(), false)) return orig.apply(this, arguments);
@@ -442,7 +455,7 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   if (!locked) {
     if (R.id === 'entree') box.insertAdjacentHTML('beforeend', hmTeamHTML());
     if (R.j) box.insertAdjacentHTML('beforeend', hmWorkHTML(R));
-    if (R.id === 'cuisine') { const sel = tmp.querySelector('.fw-post.j-comm .fw-sel'), w = box.querySelector('.hm-work'); if (sel && w) w.insertBefore(sel, w.querySelector('.hm-tip')); box.insertAdjacentHTML('beforeend', hmProvHTML()); }
+    if (R.id === 'cuisine') box.insertAdjacentHTML('beforeend', hmFeedHTML());
     R.blocks.forEach(sel => tmp.querySelectorAll(sel).forEach(e => box.appendChild(e)));
     if (R.id === 'nurserie') box.insertAdjacentHTML('beforeend', `<button class="btn cream hm-go" data-hmgo="nurserie">🥚 Toute la nurserie (croisements, habitats)</button>`);
     if (R.id === 'atelier') box.insertAdjacentHTML('beforeend', hmGearHTML());
@@ -472,11 +485,21 @@ if (typeof rfgHTML === 'function') rfgHTML = (orig => function () {
 })(rfgHTML);
 document.addEventListener('click', ev => {
   const b = ev.target.closest && ev.target.closest('[data-fwjob]'); if (!b) return;
-  const k = b.dataset.fk, j = b.dataset.fwjob, to = { jard: 'au jardin', comm: hm$(() => pgLvl('repas') > 0, false) ? 'à la cuisine' : 'à l’atelier', nurs: 'à la nurserie', repos: 'se reposer' }[j];
+  const k = b.dataset.fk, j = b.dataset.fwjob, to = { jard: 'au jardin', comm: 'aider à la Boutique', nurs: 'à la nurserie', repos: 'se reposer' }[j];
   hm$(() => toast(`${CHARS[k].name} ${j === 'repos' ? 'va ' : 'part '}${to}`), 0);
 });
 if (typeof openSheet === 'function') openSheet = (orig => function (name) { if (name === 'village' && (typeof tab === 'undefined' || tab !== 'village')) hmRoom = null; return orig.apply(this, arguments); })(openSheet);
-window.__hm = { room: () => hmRoom, svg: id => hmSceneSVG(hmR(id)) };
+// le commis travaille au comptoir de la Boutique, là où l'on cuisine les en-cas
+function hmCommisHTML() {
+  const home = hm$(() => fwHome(), []); if (!home.length) return '';
+  const on = home.filter(k => hm$(() => fwJob(k), 'repos') === 'comm'), F = hm$(() => fwState(), {}), rs = hm$(() => fwRecipes(), []);
+  return `<section class="hm-work hm-commis"><h3 class="hm-h">Un commis au comptoir <small>${on.length ? on.map(k => esc(CHARS[k].name)).join(', ') : 'personne'}</small></h3>
+    <p class="hm-tip">Un familier resté à la maison peut cuisiner ici pour vous, même jeu fermé.</p>
+    <div class="hm-who">${home.map(k => { const me = on.includes(k); return `<button class="hm-wk${me ? ' on' : ''}" data-fwjob="${me ? 'repos' : 'comm'}" data-fk="${k}" aria-pressed="${me}">${hmPic(k)}<b>${esc(CHARS[k].name)}</b><small>${me ? 'au comptoir ✓' : 'à la maison'}</small></button>`; }).join('')}</div>
+    ${on.length && rs.length ? `<label class="fw-sel"><span>Il prépare :</span><select data-fwrec="1"><option value="">Rien (il aide)</option>${rs.map(R => `<option value="${R.id}"${F.cmr === R.id ? ' selected' : ''}>${esc(R.def[0])}${hm$(() => cmCanIng(R), true) ? '' : ' (ingrédients ?)'}</option>`).join('')}</select></label>` : ''}</section>`;
+}
+if (typeof czBodyHTML === 'function') czBodyHTML = (orig => function () { const h = orig.apply(this, arguments); try { if (czTab !== 'cli' && cmT()) return h + hmCommisHTML(); } catch (e) {} return h; })(czBodyHTML);
+window.__hm = { feed: k => { hmFeedK = k; renderPanel(); }, room: () => hmRoom, svg: id => hmSceneSVG(hmR(id)) };
 {
   const st = document.createElement('style');
   st.textContent = `.hm-tabs{display:grid;grid-template-columns:repeat(4,1fr) 6px repeat(4,1fr);gap:3px;margin:0 0 8px}.hm-tabs button:nth-child(5){grid-column:6}
@@ -496,6 +519,7 @@ window.__hm = { room: () => hmRoom, svg: id => hmSceneSVG(hmR(id)) };
 .hm-tip{margin:2px 2px 0;font-size:12px;color:#a8927c}.hm-none{font-size:13px;color:#9a8470}
 .hm-prov{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.hm-prov span{display:flex;flex-direction:column;align-items:center;padding:7px 2px;border-radius:12px;background:#f7f1e8;font-size:11.5px;color:#a8927c}
 .hm-prov span.on{background:#fff;box-shadow:inset 0 0 0 2px var(--pc);color:var(--ink,#4a3528)}.hm-prov b{font:800 18px var(--display,inherit);color:var(--pc)}
+.hm-tap{margin:10px 2px;padding:10px 12px;border-radius:14px;background:#fff7ea;font-size:13.5px;font-weight:700;color:var(--ink,#4a3528)}.hm-feed .fy-food{margin:4px 0}
 .hm-work .fw-sel{margin:4px 2px 6px;font-size:12.5px}
 .hm-tabs button{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0 5px;border:2px solid transparent;border-radius:14px;background:#fff7ea;font:inherit;color:var(--ink2,#7a6250);cursor:pointer}
 .hm-tabs button[aria-selected=true]{background:#fff;border-color:#f2c14e;color:var(--ink,#4a3528);box-shadow:0 2px 0 #ecd9b6}

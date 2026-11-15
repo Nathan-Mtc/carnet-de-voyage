@@ -359,7 +359,8 @@ function h3Chars(R, l, who, blk) {
     if (fx === 'hammer') { const hm = new THREE.Group(); hm.position.set(.6, .95, .15); fxg.add(hm); { const W = H3P; H3P = hm; hCy(0, 0, 0, .045, .65, '#b98a5e'); hB(-.16, -.08, .6, .32, .16, .16, '#8a8f95', .04); H3P = W; } h3Anim(t => { hm.rotation.z = -.4 - Math.sin((t + i) * 7) * .5; }); up('spark', 2, .3, .9); }
     if (fx === 'stir') { const sp2 = hCy(-.55, .2, .8, .04, .8, '#b98a5e'); h3Anim(t => { sp2.rotation.z = Math.sin(t * 6 + i) * .4; sp2.rotation.x = Math.cos(t * 6 + i) * .4; }); up('spark', 1, .26, -.4); }
     if (fx === 'star') up('spark', 2, .28, .4);
-    H3P = G; if (R.id === 'entree' || R.id === 'chambres') { const n = hmNrg(k), ok = n >= 70; h3TagSprite(ok ? '⚡ En forme !' : `⚡ ${hmEtaTxt(hmNrgEta(k))}`, ok ? -2 : n / 100, 0, 0, SH + .55 + (fx === 'zzz' ? .1 : 0), .85); }
+    if (R.id === 'cuisine') { sp.userData.feed = k; H3.hit.unshift(sp); if (hmFeedK === k) { const ring = hTo(0, 0, .03, .6, .05, '#ffd866', { ns: 1, e: '#ffd866', ei: .6 }); G.add(ring); h3Anim(t => { ring.scale.setScalar(1 + Math.sin(t * 4) * .06); }); } }
+    H3P = G; if (R.id === 'entree' || R.id === 'chambres' || R.id === 'cuisine') { const n = hmNrg(k), ok = n >= 70; h3TagSprite(ok ? '⚡ En forme !' : `⚡ ${hmEtaTxt(hmNrgEta(k))}`, ok ? -2 : n / 100, 0, 0, SH + .55 + (fx === 'zzz' ? .1 : 0), .85); }
     H3P = Q;
     // il vit sa vie : travaille à son poste, puis fait un petit tour dans la pièce et revient
     const tgt = walk ? free[(i * 7 + k.length * 3) % free.length] : null, CY = 16 + i * 3;
@@ -445,6 +446,7 @@ function h3Tap(e) {
   rc.setFromCamera(v, H3.cam); const hits = rc.intersectObjects(H3.hit, false); if (!hits.length) return;
   const h = hits[0], o = h.object;
   if (o.userData.plot != null) { const i = o.userData.plot, b = document.querySelector(`#panelBody [data-jharv="${i}"]`) || document.querySelector(`#panelBody [data-jplot="${i}"]`); if (b) { b.click(); setTimeout(() => { renderPanel(); const sel = document.querySelector('#panelBody .famjs'); if (sel) sel.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 30); } return; }
+  if (o.userData.feed) { hmFeedK = o.userData.feed; renderPanel(); setTimeout(() => { const f = document.querySelector('#panelBody .hm-feed'); if (f) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 30); return; }
   if (o.userData.hire) { const w = document.querySelector('#panelBody .hm-work'); if (w) w.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
   if (!hmEdit) return;
   const P = h.point, cl = v => Math.max(0, Math.min(HMN - 1, Math.floor(v)));
