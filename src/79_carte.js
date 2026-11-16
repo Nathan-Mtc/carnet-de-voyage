@@ -218,3 +218,9 @@ body:has(#tripCard:not([hidden])) .wdpin .wdn,body:has(#tripCard:not([hidden])) 
   document.head.appendChild(st);
 }
 window.__cm = { places: () => PLACES, choosePlace: p => choosePlace(p), closeSheet: () => closeSheet(), renderComps: () => renderComps(), drawMarks: () => drawMarks(), startTrip: () => startTrip(), km: (a, b) => kmBetween(a, b), home: () => homeObj() };
+
+// v74 : plus de lieux cachés « notés sur la carte » (ex. Clocher aux pigeons, posé sur la maison) : on reçoit un objet à la place ;
+// plus de grand rectangle orange de zone à explorer ni d'étiquette « À explorer » (la ligne « Explorer… » en haut suffit).
+if (typeof avAddPlace === 'function') avAddPlace = () => null;
+if (typeof exTargetData === 'function') exTargetData = () => ({ type: 'FeatureCollection', features: [] });
+{ const st = document.createElement('style'); st.textContent = '.ovm.avpin,.ovm.cm-tgt{display:none!important}'; document.head.appendChild(st); }
