@@ -18,20 +18,21 @@ function cmTray() {
   let b = document.getElementById('cmMore');
   if (!b) {
     b = document.createElement('button'); b.id = 'cmMore'; b.className = 'icon-btn'; b.type = 'button';
-    b.setAttribute('aria-label', 'Plus de boutons : zoom, 3D, maison, monde'); b.setAttribute('aria-expanded', 'false');
+    b.setAttribute('aria-label', 'Vue monde ou vue maison'); b.setAttribute('aria-expanded', 'false');
     b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="#fff3e2" stroke="currentColor" stroke-width="2"/><path d="M12 5.5 L14.2 12 L12 18.5 L9.8 12Z" fill="#d9604f" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>';
     const g = document.getElementById('gear');
     if (g && g.parentElement === z) g.insertAdjacentElement('afterend', b); else z.prepend(b);
   }
-  ['zIn', 'zOut', 'z3d', 'zHome', 'zWorld'].forEach(id => { const e = document.getElementById(id); if (e) e.classList.add('cm-fold'); });
+  ['zHome', 'zWorld'].forEach(id => { const e = document.getElementById(id); if (e) e.classList.add('cm-fold'); });
+  /* v73 : le menu ne garde que la vue monde et la vue maison ; zoom au doigt */
+  ['zIn', 'zOut', 'z3d'].forEach(id => { const e = document.getElementById(id); if (e) e.classList.add('cm-gone'); });
 }
 document.addEventListener('click', ev => {
   const b = ev.target.closest && ev.target.closest('#cmMore');
   const z = document.querySelector('.zoom'); if (!z) return;
   if (b) { const on = !z.classList.contains('cm-open'); z.classList.toggle('cm-open', on); b.setAttribute('aria-expanded', on); return; }
   // un bouton de la colonne utilisé, ou un toucher ailleurs : on replie (sauf zoom +/− qu'on enchaîne)
-  if (ev.target.closest('#zIn,#zOut')) return;
-  if (z.classList.contains('cm-open')) { z.classList.remove('cm-open'); const m = document.getElementById('cmMore'); if (m) m.setAttribute('aria-expanded', 'false'); }
+    if (z.classList.contains('cm-open')) { z.classList.remove('cm-open'); const m = document.getElementById('cmMore'); if (m) m.setAttribute('aria-expanded', 'false'); }
 });
 
 // ---------- 2 · la barre des compagnons ----------
@@ -103,14 +104,28 @@ if (typeof bfPlay === 'function') bfPlay = (orig => function () {
 })(bfPlay);
 
 // ---------- 5 + 9 · la prochaine étape ----------
+// v73 : deux lignes — l'histoire (quête) en premier, l'exploration en dessous, en plus petit
+function cmQuest() {
+  const s = qtState(), L = QT_STORIES.filter(q => qtOpen(q) && !(s.st[q.id] || {}).done);
+  const q = L.find(q => q.id === s.follow && s.st[q.id]) || L.find(q => s.st[q.id]) || L[0]; if (!q) return null;
+  const rec = s.st[q.id]; if (!rec) return { h: `${esc(q.title)} <small>· nouvelle</small>` };
+  const st = q.steps[rec.i]; if (!st) return null;
+  const P = cm$(() => qtStepProg(st, rec), { n: 1, cur: 0 });
+  return { h: `${esc(st.txt)}${P.n > 1 ? ` <small>${P.cur}/${P.n}</small>` : ''}` };
+}
 function cmGoal() {
   const tuto = cm$(() => mdTuto(), false) || document.body.classList.contains('firstrun');
-  const A = tuto ? null : cm$(() => exAdvice(), null);
+  const A = tuto ? null : cm$(() => exAdvice(), null), Q = tuto ? null : cm$(cmQuest, null);
   let g = document.getElementById('cmGoal');
-  if (!g) { g = document.createElement('button'); g.id = 'cmGoal'; g.type = 'button'; const hud = document.querySelector('.hud'); if (!hud) return; hud.insertAdjacentElement('afterend', g); }
-  const show = !!A && (typeof tab === 'undefined' || tab === 'carte');
-  g.hidden = !show;
-  if (show) { const h = `<span>🧭</span><b>Prochaine étape :</b> ${esc((A.story ? '' : 'explorer ') + String(A.name).replace(/\s*\(.*\)\s*$/, ''))}<i>›</i>`; if (g.innerHTML !== h) g.innerHTML = h; }
+  if (!g) { g = document.createElement('div'); g.id = 'cmGoal'; const hud = document.querySelector('.hud'); if (!hud) return; hud.insertAdjacentElement('afterend', g); }
+  const onMap = typeof tab === 'undefined' || tab === 'carte';
+  g.hidden = !onMap || (!A && !Q);
+  if (!g.hidden) {
+    const h = (Q ? `<button type="button" class="cm-gq" data-cmq="1"><span>📜</span><b>Quête :</b> ${Q.h}<i>›</i></button>` : '')
+      + (A ? `<button type="button" class="cm-ge" data-cmx="1"><span>🧭</span>Explorer ${esc(String(A.name).replace(/\s*\(.*\)\s*$/, ''))}<i>›</i></button>` : '');
+    if (g.innerHTML !== h) g.innerHTML = h;
+  }
+  const show = onMap && !!A;
   // l'étiquette posée sur la zone orange
   if (typeof ovEls === 'undefined' || !$('ov')) return;
   let o = ovEls.cmTgt;
@@ -119,7 +134,11 @@ function cmGoal() {
   if (show) { o.lon = A.d.lon; o.lat = A.d.lat; o.el.title = A.txt || ''; }
 }
 document.addEventListener('click', ev => {
-  if (!(ev.target.closest && ev.target.closest('#cmGoal, .cm-tgt'))) return;
+  if (!(ev.target.closest && ev.target.closest('[data-cmq]'))) return;
+  ev.stopPropagation(); cm$(() => qtOpenPage());
+});
+document.addEventListener('click', ev => {
+  if (!(ev.target.closest && ev.target.closest('[data-cmx], .cm-tgt'))) return;
   ev.stopPropagation();
   cm$(() => exGoAdvice());
 });
@@ -166,7 +185,7 @@ if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
 {
   const st = document.createElement('style');
   st.textContent = `
-.zoom .cm-fold{display:none}.zoom.cm-open .cm-fold{display:flex}
+.zoom .cm-gone{display:none!important}.zoom .cm-fold{display:none}.zoom.cm-open .cm-fold{display:flex}
 #cmMore[aria-expanded="true"]{background:#ffe9a8}
 .hc-btn .nm.cm-away{background:#fde3e9;color:#a3405a;border-radius:8px;padding:0 4px}
 .hc-btn .nm.cm-done{background:#dff3d6;color:#2f7f3c;border-radius:8px;padding:0 4px}
@@ -182,8 +201,13 @@ if (typeof renderVoyage === 'function') renderVoyage = (orig => function (box) {
 
 .ovm.cm-fog .pinb::after{content:'?';position:absolute;right:-6px;top:-6px;width:17px;height:17px;border-radius:50%;background:#f2c14e;border:2px solid #5b4636;color:#5b4636;font:900 11px/13px var(--display,system-ui);text-align:center}
 .ovm.cm-fog .pinl{font-style:italic;opacity:.8}
-#cmGoal{position:absolute;z-index:6;top:104px;left:10px;max-width:calc(100% - 76px);display:flex;align-items:center;gap:5px;padding:6px 11px;border-radius:999px;border:2px solid #5b4636;background:rgba(255,250,240,.95);color:#4a3528;font:600 12.5px var(--body,system-ui);box-shadow:0 3px 0 rgba(74,53,40,.18);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#cmGoal b{font-weight:800;color:#c0603f}#cmGoal i{font-style:normal;font-weight:900;margin-left:2px}
+#cmGoal{position:absolute;z-index:6;top:102px;left:10px;max-width:calc(100% - 76px);display:flex;flex-direction:column;align-items:flex-start;gap:4px}
+#cmGoal[hidden]{display:none}
+#cmGoal button{display:flex;align-items:center;gap:5px;max-width:100%;border-radius:999px;color:#4a3528;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+#cmGoal button i{font-style:normal;font-weight:900;margin-left:2px}
+.cm-gq{padding:6px 11px;border:2px solid #5b4636;background:rgba(255,250,240,.96);font:600 12.5px var(--body,system-ui);box-shadow:0 3px 0 rgba(74,53,40,.18)}
+.cm-gq b{font-weight:800;color:#7a5bb5}.cm-gq small{font-weight:800;color:#8a6a4a;margin-left:3px}
+.cm-ge{padding:3px 9px;border:1.5px solid rgba(91,70,54,.45);background:rgba(255,250,240,.82);font:600 11px var(--body,system-ui);color:#8a5a2a!important}
 body.sheet-open #cmGoal,body.firstrun #cmGoal{display:none}
 .ovm.cm-tgt span{display:block;transform:translate(-50%,-50%);padding:3px 9px;border-radius:999px;background:#e8963a;color:#fff;border:2px solid #fff;font:800 11.5px var(--body,system-ui);white-space:nowrap;box-shadow:0 2px 6px rgba(74,53,40,.25);cursor:pointer}
 .walker .cm-wbar{position:absolute;left:50%;transform:translateX(-50%);bottom:-24px;width:46px;height:5px;border-radius:3px;background:rgba(255,255,255,.85);border:1.5px solid #5b4636;overflow:hidden}
