@@ -107,3 +107,5 @@ tr$(() => { if (czTab === 'cli') czTab = 'prep'; });
 `;
   document.head.appendChild(st);
 }
+// v79b : les trésors sont retirés : plus de notes « la zone du trésor s'est resserrée » au retour
+if (typeof tzHaulDecorate === 'function') tzHaulDecorate = function () {};

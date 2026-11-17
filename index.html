@@ -38800,6 +38800,8 @@ tr$(() => { if (czTab === 'cli') czTab = 'prep'; });
 `;
   document.head.appendChild(st);
 }
+// v79b : les trésors sont retirés : plus de notes « la zone du trésor s'est resserrée » au retour
+if (typeof tzHaulDecorate === 'function') tzHaulDecorate = function () {};
 
 // ================= 83 · LE MOMENT FORT DU VOYAGE : LA CUEILLETTE (v79) =================
 // Le joueur (17/11) : « le gameplay est trop figé » ; « pas des mini-jeux moches et simplistes » ; « intuitif, sans charge mentale ».
@@ -39218,7 +39220,7 @@ function cuEnd() {
   CU.el.appendChild(card);
   cuMood(stars >= 2 ? 'rire' : 'triste');
 }
-window.__cu = { render: () => renderTripCard(), open: k => cuOpen(k), force: k => { const t = S.trips[k]; if (t) { t.mf = t.mf || { k: 'cueil', b: 'prairie', at: 0, st: 'wait' }; t.mf.st = 'ready'; } }, biome: (k, b) => { const t = S.trips[k]; if (t && t.mf) t.mf.b = b; }, state: () => CU && { st: CU.st, good: CU.good, err: CU.err, n: CU.plants.length }, end: () => { if (CU) { CU.time = CU_TIME; } }, tapGood: () => { if (!CU) return 0; const p = CU.plants.find(x => x.kind === 'good' && !x.pick); if (!p) return 0; cuTap({ clientX: p.x, clientY: p.y - p.u * 0.4 }); return 1; } };
+window.__cu = { render: () => renderTripCard(), collect: () => collect(), open: k => cuOpen(k), force: k => { const t = S.trips[k]; if (t) { t.mf = t.mf || { k: 'cueil', b: 'prairie', at: 0, st: 'wait' }; t.mf.st = 'ready'; } }, biome: (k, b) => { const t = S.trips[k]; if (t && t.mf) t.mf.b = b; }, state: () => CU && { st: CU.st, good: CU.good, err: CU.err, n: CU.plants.length }, end: () => { if (CU) { CU.time = CU_TIME; } }, tapGood: () => { if (!CU) return 0; const p = CU.plants.find(x => x.kind === 'good' && !x.pick); if (!p) return 0; cuTap({ clientX: p.x, clientY: p.y - p.u * 0.4 }); return 1; } };
 
 {
   const st = document.createElement('style');
@@ -39267,6 +39269,27 @@ body.cu-on{overflow:hidden}
 `;
   document.head.appendChild(st);
 }
+
+// ---------- v79b : au retour, les objets identiques sont regroupés avec leur nombre (×3) ----------
+if (typeof showHaul === 'function') showHaul = (orig => function (h) {
+  const r = orig.apply(this, arguments);
+  const stack = () => cu$(() => {
+    const box = document.querySelector('#modal .haul'); if (!box) return;
+    const byId = {}; (h.items || []).forEach(it => { if (it) byId[it.id] = it; });
+    const seen = {};
+    box.querySelectorAll('.hcard').forEach(c => {
+      if (c.dataset.cust) return;
+      const it = byId[c.dataset.fiche]; const key = it ? [it.name, it.rarity, it.edition || '', it.special ? 1 : 0].join('|') : (c.querySelector('b') || {}).textContent;
+      if (!key) return;
+      if (seen[key]) { seen[key].n++; c.remove(); const x = seen[key].c.querySelector('.cu-hx'); x.textContent = '×' + seen[key].n; x.hidden = false; return; }
+      seen[key] = { c, n: 1 }; c.dataset.cust = '1';
+      c.insertAdjacentHTML('beforeend', '<span class="cu-hx" hidden></span>');
+    });
+  });
+  setTimeout(stack, 40); setTimeout(stack, 160);
+  return r;
+})(showHaul);
+{ const st = document.createElement('style'); st.textContent = `.haul .hcard .cu-hx{position:absolute;right:5px;bottom:5px;min-width:24px;padding:1px 6px;border-radius:999px;background:#4a3528;color:#fffaf0;font:800 12.5px var(--display,system-ui);text-align:center;z-index:3}`; document.head.appendChild(st); }
 
 })();
 </script>
