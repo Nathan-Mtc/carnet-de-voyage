@@ -206,8 +206,8 @@ window.__ch = { force: (k, kind, lead) => { const t = S.trips[k]; if (!t) return
 .ch-ov{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;background:radial-gradient(120% 90% at 50% 30%,#ffe9c9,#e9cfa4)}
 .ch-ov.ch-mer{background:radial-gradient(120% 90% at 50% 30%,#dff3fb,#9fd0e6)}.ch-ov.ch-desert{background:radial-gradient(120% 90% at 50% 30%,#fff1c8,#efc27a)}
 .ch-ov.ch-monu{background:radial-gradient(120% 90% at 50% 30%,#f6ecdc,#d9c4a0)}.ch-ov.ch-route{background:radial-gradient(120% 90% at 50% 30%,#eef6df,#bcd9a0)}
-.ch-card{width:min(100%,400px);max-height:92vh;overflow:auto;padding:14px 16px 12px;border-radius:24px;background:#fffaf0;border:3px solid #4a3528;box-shadow:0 6px 0 rgba(74,53,40,.3);text-align:center;animation:cuIn .35s ease-out}
-@keyframes cuIn{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.ch-card{width:min(100%,400px);max-height:92vh;overflow:auto;padding:14px 16px 12px;border-radius:24px;background:#fffaf0;border:3px solid #4a3528;box-shadow:0 6px 0 rgba(74,53,40,.3);text-align:center;animation:chIn .35s ease-out}
+@keyframes chIn{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
 .ch-hero{position:relative;height:118px;margin:-4px -6px 4px;border-radius:18px;background:linear-gradient(#fff3d6,#ffe2b0);display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
 .ch-hero img{height:112px;width:auto;filter:drop-shadow(0 3px 0 rgba(74,53,40,.2))}
 .ch-ico{position:absolute;left:14px;top:10px;font-size:40px;filter:drop-shadow(0 2px 0 rgba(74,53,40,.2))}
