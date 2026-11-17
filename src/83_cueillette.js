@@ -56,12 +56,12 @@ function cuGive(t, res) {
   add(B.good.it, res.nGood); add(B.bonus.it, res.nBonus); add(B.rare.it, res.nRare);
   return out;
 }
-function cuAuto(t) { if (!t.mf || (t.mf.st !== 'wait' && t.mf.st !== 'ready')) return; t.mf.st = 'auto'; t.mf.res = { stars: 1, nGood: 1, nBonus: 1, nRare: 0, auto: 1 }; cuGive(t, t.mf.res); cu$(save); }
+function cuAuto(t) { if (!t.mf || t.mf.k !== 'cueil' || (t.mf.st !== 'wait' && t.mf.st !== 'ready')) return; t.mf.st = 'auto'; t.mf.res = { stars: 1, nGood: 1, nBonus: 1, nRare: 0, auto: 1 }; cuGive(t, t.mf.res); cu$(save); }
 function cuTick() {
   if (!S || !S.trips) return;
   let ch = false;
   for (const [k, t] of Object.entries(S.trips)) {
-    if (!t || !t.mf) continue;
+    if (!t || !t.mf || t.mf.k !== 'cueil') continue;
     if (t.done) { if (t.mf.st === 'wait' || t.mf.st === 'ready') { cuAuto(t); ch = true; } continue; }
     if (t.mf.st === 'wait' && t.elapsed >= t.total * t.mf.at) {
       t.mf.st = 'ready'; ch = true;
@@ -75,7 +75,7 @@ setInterval(() => { if (!document.hidden) cu$(cuTick); }, 2000);
 if (typeof collect === 'function') collect = (orig => function () { cu$(() => Object.values(S.trips).forEach(t => { if (t && t.done && t.mf) cuAuto(t); })); return orig.apply(this, arguments); })(collect);
 
 // ---------- la carte d'action du bas ----------
-function cuReady() { for (const [k, t] of Object.entries(S.trips || {})) if (t && !t.done && t.mf && t.mf.st === 'ready') return { k, t }; return null; }
+function cuReady() { for (const [k, t] of Object.entries(S.trips || {})) if (t && !t.done && t.mf && t.mf.k === 'cueil' && t.mf.st === 'ready') return { k, t }; return null; }
 if (typeof nextAction === 'function') nextAction = (orig => function () {
   const a = orig.apply(this, arguments);
   if (a && a.kind === 'collect') return a;
