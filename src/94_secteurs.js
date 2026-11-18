@@ -20,7 +20,7 @@ function sctSt() {
 sct$(sctSt);
 
 // ---------- la grille d'une région ----------
-const SCT_GRID = {}, SQ3 = Math.sqrt(3);
+const SCT_GRID = {};
 function sctFlood(id, step, cap) {
   const R = RG[id], out = [], seen = new Set(), q = [];
   const push = (ix, iy) => { const k = ix + '_' + iy; if (seen.has(k)) return; seen.add(k); q.push([ix, iy]); };
@@ -38,89 +38,84 @@ function sctFlood(id, step, cap) {
   return { out, over, seeds };
 }
 const sctDl = (a, b) => { let d = a - b; while (d > 180) d -= 360; while (d < -180) d += 360; return d; };
-function sctKey(g, lon, lat) {
-  const x = sctDl(lon, g.lon0) * g.kx, y = (lat - g.lat0) * g.ky;
-  const qf = (SQ3 / 3 * x - y / 3) / g.R, rf = (2 / 3 * y) / g.R, sf = -qf - rf;
-  let q = Math.round(qf), r = Math.round(rf); const s = Math.round(sf);
-  const dq = Math.abs(q - qf), dr = Math.abs(r - rf), ds = Math.abs(s - sf);
-  if (dq > dr && dq > ds) q = -r - s; else if (dr > ds) r = -q - s;
-  return q + '_' + r;
-}
-function sctCenter(g, k) {
-  const i = k.indexOf('_'), q = +k.slice(0, i), r = +k.slice(i + 1);
-  const x = g.R * SQ3 * (q + r / 2), y = g.R * 1.5 * r;
-  return [g.lon0 + x / g.kx, g.lat0 + y / g.ky];
-}
-function sctPoly(g, k) {
-  const [lon, lat] = sctCenter(g, k), ring = [];
-  for (let i = 0; i <= 6; i++) { const a = (Math.PI / 180) * (60 * (i % 6) - 30); ring.push([lon + g.R * 0.985 * Math.cos(a) / g.kx, lat + g.R * 0.985 * Math.sin(a) / g.ky]); }
-  return ring;
-}
+// v93 : plus de secteurs ni de formes. La brume se lève autour de chaque lieu visité (rayon selon la taille de la région) ;
+// la connaissance = la part de la SURFACE de la région découverte. Revenir au même endroit ne découvre rien.
+const SQ3 = Math.sqrt(3);
+function sctKeyOld(R, lon0, lat0, kx, ky, k) { const i = k.indexOf('_'), q = +k.slice(0, i), r = +k.slice(i + 1); return [lon0 + R * SQ3 * (q + r / 2) / kx, lat0 + R * 1.5 * r / ky]; }
 function sctGrid(id) {
   if (SCT_GRID[id]) return SCT_GRID[id];
   const Rg = RG[id]; if (!Rg) return null;
-  const lon0 = Rg.anchor[0], lat0 = Rg.anchor[1], kx = 111.32 * Math.max(0.15, Math.cos(lat0 * Math.PI / 180)), ky = 110.57;
+  const lat0 = Rg.anchor[1], ky = 110.57;
   let p1 = sctFlood(id, 0.5, 4000); if (p1.over) p1 = sctFlood(id, 2, 4000);
   const st1 = p1.over ? 2 : 0.5;
   let area = 0; p1.out.forEach(([, lat]) => { area += (st1 * 111.32 * Math.cos(lat * Math.PI / 180)) * (st1 * ky); });
   area = Math.max(area, 3000);
-  const R = Math.max(30, Math.sqrt(area / (2.598 * 17)));
-  const g = { id, lon0, lat0, kx, ky, R, keys: new Set() };
-  const step = Math.max(0.1, Math.min(3, R * 0.5 / ky));
-  const p2 = sctFlood(id, step, 6000);
-  p2.out.concat(p2.seeds).forEach(([lon, lat]) => g.keys.add(sctKey(g, lon, lat)));
-  g.list = [...g.keys];
-  return (SCT_GRID[id] = g);
+  const r = Math.max(15, Math.sqrt(area) / 12);           // rayon de brume levée autour d'un lieu (km)
+  const step = Math.max(0.08, Math.min(3, r * 0.45 / ky));
+  const p2 = sctFlood(id, step, 8000);
+  const pts = p2.out.length ? p2.out : p2.seeds;
+  // pour la conversion des anciennes parties (secteurs hexagonaux)
+  const Rold = Math.max(30, Math.sqrt(area / (2.598 * 17))), kx0 = 111.32 * Math.max(0.15, Math.cos(lat0 * Math.PI / 180));
+  return (SCT_GRID[id] = { id, area, r, step, pts, old: k => sctKeyOld(Rold, Rg.anchor[0], lat0, kx0, ky, k) });
 }
+const sctKm = (a, b, c, d) => { const x = sctDl(c, a) * 111.32 * Math.cos((b + d) / 2 * Math.PI / 180), y = (d - b) * 110.57; return Math.sqrt(x * x + y * y); };
 
 // ---------- connaissance ----------
 const SCT_LV = [
   { nm: 'Inconnue', red: 0 },
-  { nm: 'Visiteur', red: 0, f: 0.04, fx: 'La région est sur votre carte.' },
-  { nm: 'Habitué', red: 0.15, f: 0.12, fx: 'Trajets −15 % · les régions voisines s’ouvrent · un indice d’Augustine apparaît' },
-  { nm: 'Connaisseur', red: 0.30, f: 0.28, fx: 'Trajets −30 %' },
-  { nm: 'Comme chez soi', red: 0.45, f: 0.48, fx: 'Trajets −45 %' },
-  { nm: 'Enfant du pays', red: 0.60, f: 0.72, fx: 'Trajets −60 %' },
+  { nm: 'Visiteur', red: 0, f: 0.001, fx: 'La région est sur votre carte.' },
+  { nm: 'Habitué', red: 0.15, f: 0.06, fx: 'Trajets −15 % · les régions voisines s’ouvrent · un indice d’Augustine apparaît' },
+  { nm: 'Connaisseur', red: 0.30, f: 0.15, fx: 'Trajets −30 % · on vous parle des autres passages' },
+  { nm: 'Comme chez soi', red: 0.45, f: 0.30, fx: 'Trajets −45 %' },
+  { nm: 'Enfant du pays', red: 0.60, f: 0.50, fx: 'Trajets −60 %' },
 ];
-function sctTh(T) { const th = []; let prev = 0; for (let i = 1; i <= 5; i++) { let v = Math.max(prev + 1, Math.round(SCT_LV[i].f * T)); if (i === 1) v = 1; th.push(v); prev = v; } return th; }
-const sctDisc = id => sctSt().d[id] || {};
+const sctPct = f => f <= 0 ? 0 : Math.max(1, Math.round(f * 100));
+const sctVis = id => { const s = sctSt(); if (!s.v || typeof s.v !== 'object') s.v = {}; return s.v[id] || []; };
+function sctCov(id) {
+  const g = sctGrid(id), V = sctVis(id); if (!g || !V.length) return 0;
+  const sig = V.length + ':' + (V[V.length - 1] || []).join(',');
+  if (g.covSig === sig) return g.cov;
+  let c = 0; g.pts.forEach(([lon, lat]) => { if (V.some(([a, b]) => sctKm(a, b, lon, lat) < g.r)) c++; });
+  g.covSig = sig; g.cov = g.pts.length ? Math.min(1, c / g.pts.length) : 0;
+  return g.cov;
+}
 function sctInfo(id) {
-  const g = sctGrid(id), D = sctDisc(id), n = Object.keys(D).length;
-  const T = Math.max(g ? g.keys.size : 1, n), th = sctTh(T);
-  let lvl = 0; th.forEach((v, i) => { if (n >= v) lvl = i + 1; });
-  return { n, T, th, lvl, nm: SCT_LV[lvl].nm, red: SCT_LV[lvl].red, next: lvl < 5 ? th[lvl] : null };
+  const f = sctCov(id); let lvl = 0;
+  SCT_LV.forEach((L, i) => { if (i && (f >= L.f || (i === 1 && sctVis(id).length))) lvl = i; });
+  return { f, pct: sctPct(f), lvl, nm: SCT_LV[lvl].nm, red: SCT_LV[lvl].red, next: lvl < 5 ? Math.round(SCT_LV[lvl + 1].f * 100) : null, th: SCT_LV.slice(1).map(L => Math.round(L.f * 100)) };
 }
 const sctLvl = id => sct$(() => sctInfo(id).lvl, 0);
 const sctStars = l => '★'.repeat(l) + '☆'.repeat(5 - l);
 const sctRegOf = d => sct$(() => regionAt(d.lon, d.lat), null);
-function sctKeyOf(d) { const R = sctRegOf(d); if (!R || !rcOk(R)) return null; const g = sctGrid(R.id); return g ? { R, k: sctKey(g, d.lon, d.lat) } : null; }
-function sctKnown(d) { const K = sctKeyOf(d); return !K || !!sctDisc(K.R.id)[K.k]; }
+// le lieu fait-il découvrir quelque chose ? (déjà connu = un lieu visité tout près)
+function sctNear(d) { const R = sctRegOf(d); if (!R || !rcOk(R)) return null; const g = sctGrid(R.id); if (!g) return null; const near = sctVis(R.id).some(([a, b]) => sctKm(a, b, d.lon, d.lat) < g.r * 0.45); return { R, g, near }; }
+function sctKnown(d) { const K = sctNear(d); return !K || K.near; }
 const sctRed = d => { const R = sctRegOf(d); return R && rcOk(R) ? SCT_LV[sctLvl(R.id)].red : 0; };
 
-// un lieu visité : on découvre son secteur (quiet = sans annonce)
+// un lieu visité : la brume se lève autour (quiet = sans annonce)
 function sctVisit(d, quiet) {
-  const K = sct$(() => sctKeyOf(d), null); if (!K) return null;
-  const s = sctSt(), id = K.R.id; if (!s.d[id]) s.d[id] = {};
-  if (s.d[id][K.k]) return null;
-  const before = sctLvl(id); s.d[id][K.k] = Date.now();
+  const K = sct$(() => sctNear(d), null); if (!K || K.near) return null;
+  const s = sctSt(), id = K.R.id; if (!s.v[id]) s.v[id] = [];
+  const before = sctInfo(id);
+  s.v[id].push([+(+d.lon).toFixed(4), +(+d.lat).toFixed(4)]);
   const I = sctInfo(id); sctDirty = true;
-  if (!quiet) setTimeout(() => sct$(() => {
-    if (I.lvl > before) {
-      toast(`⭐ ${K.R.short} : vous êtes « ${I.nm} » ! ${I.red ? `Trajets ${Math.round(I.red * 100)} % plus rapides dans la région.` : ''}`);
-      sct$(() => confetti(true));
-    } else toast(`🌫️ Nouveau secteur découvert en ${K.R.short} (${I.n}/${I.T})${I.next ? ` · niveau suivant à ${I.next}` : ''}`);
+  if (!quiet && I.pct > before.pct) setTimeout(() => sct$(() => {
+    if (I.lvl > before.lvl) { toast(`⭐ ${K.R.short} : vous êtes « ${I.nm} » ! ${I.red ? `Trajets ${Math.round(I.red * 100)} % plus rapides dans la région.` : ''}`); sct$(() => confetti(true)); }
+    else toast(`🌫️ La brume se lève : ${K.R.short} découverte à ${I.pct} %${I.next ? ` (niveau suivant à ${I.next} %)` : ''}`);
   }), 900);
-  return { id, k: K.k, I, up: I.lvl > before };
+  return { id, I, up: I.lvl > before.lvl };
 }
 // au retour d'un compagnon
 GAME.on('trip:return', e => sct$(() => { if (e && e.dest && !(e.trip && e.trip.tuto)) { sctVisit(e.dest, false); sct$(save); sct$(() => rcCheck(false)); } }));
-// mise en route : la maison est connue, et les anciens voyages comptent
+// mise en route : la maison est connue, les anciens voyages comptent (et les anciens secteurs)
 function sctMig() {
-  const s = sctSt(); if (s.mig) return; if (document.body.classList.contains('firstrun')) return;
-  s.mig = 1;
+  const s = sctSt(); if (s.mig3) return; if (document.body.classList.contains('firstrun')) return;
+  s.mig3 = 1; if (!s.v || typeof s.v !== 'object') s.v = {};
   sct$(() => sctVisit(homeObj(), true));
+  sct$(() => Object.entries(s.d || {}).forEach(([id, D]) => { const g = sctGrid(id); if (g) Object.keys(D).forEach(k => { const c = g.old(k); sctVisit({ lon: c[0], lat: c[1] }, true); }); }));
   sct$(() => (bfX().o || []).forEach(([lon, lat]) => sctVisit({ lon, lat }, true)));
   sct$(() => PLACES.forEach(p => { if (S.found && S.found[p.name]) sctVisit(p, true); }));
+  sct$(() => Object.values(s.camp || {}).forEach(c => sctVisit(c, true)));
   sct$(save);
 }
 
@@ -153,7 +148,7 @@ if (typeof fdCard === 'function') fdCard = (orig => function (id) {
     const el = document.querySelector('#fdC .fd-how'); if (!el || !/voyages/.test(el.textContent)) return;
     const lib = psEdgesOf(id).filter(x => x[2] === 'libre').map(x => psOther(x, id)).find(o => rcIsOpen(o)); if (!lib) return;
     const I = sctInfo(lib);
-    el.innerHTML = `Elle s’ouvrira quand vous serez <b>Habitué</b> de ${esc(RG[lib].short)} : ${Math.min(I.n, I.th[1])}/${I.th[1]} secteurs découverts. Visitez des lieux dans la brume là-bas.`;
+    el.innerHTML = `Elle s’ouvrira quand vous serez <b>Habitué</b> de ${esc(RG[lib].short)} : ${I.pct}/${I.th[1]} % de la région découverte. Visitez des lieux dans la brume là-bas.`;
   });
   return r;
 })(fdCard);
@@ -162,31 +157,46 @@ if (typeof fdCard === 'function') fdCard = (orig => function (id) {
 if (typeof fdMist === 'function') fdMist = function () { sct$(() => { if (map.getLayer('fdMist')) map.setLayoutProperty('fdMist', 'visibility', 'none'); }); };
 let sctDirty = true, sctBuild = 0;
 function sctOpenIds() { return Object.keys(rcSt().open).filter(id => RG[id] && rcOk(RG[id])); }
-// v92 : plus d'hexagones dessinés (le joueur : « ces octogones qui se superposent, je n'ai pas envie de voir ça »).
-// Chaque secteur dans la brume = un nuage doux (cercle flouté de la taille du secteur) ; l'indice = une lueur orange.
-const sctPt = (g, k, extra) => { const c = sctCenter(g, k); return { type: 'Feature', properties: Object.assign({ r0: g.R * 1000 / (156543.03 * Math.cos(c[1] * Math.PI / 180)) }, extra || {}), geometry: { type: 'Point', coordinates: c } }; };
-function sctFogFC() {
-  const F = [], C = [], s = sctSt();
-  sctOpenIds().forEach(id => {
-    const g = SCT_GRID[id]; if (!g) return; const D = sctDisc(id), clue = !s.camp[id] && s.clue[id];
-    g.list.forEach(k => { if (clue === k) C.push(sctPt(g, k)); else if (!D[k]) F.push(sctPt(g, k)); });
-  });
-  return { fog: { type: 'FeatureCollection', features: F }, clue: { type: 'FeatureCollection', features: C } };
+// v93 : une vraie brume continue (image dessinée), sans formes : un voile blanc sur les régions ouvertes,
+// qui s'efface doucement autour des lieux visités.
+let sctImgSig = '';
+function sctFogImage() {
+  const ids = sctOpenIds().filter(id => SCT_GRID[id]); if (!ids.length) return null;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  ids.forEach(id => { const g = SCT_GRID[id]; g.pts.forEach(([lon, lat]) => { x0 = Math.min(x0, lon - g.step); x1 = Math.max(x1, lon + g.step); y0 = Math.min(y0, lat - g.step); y1 = Math.max(y1, lat + g.step); }); });
+  const pad = 0.6; x0 -= pad; x1 += pad; y0 = Math.max(-80, y0 - pad); y1 = Math.min(80, y1 + pad);
+  const M = lat => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)), m0 = M(y0), m1 = M(y1);
+  const wDeg = x1 - x0, hM = (m1 - m0) * 180 / Math.PI, sc = 1100 / Math.max(wDeg, hM);
+  const W = Math.max(64, Math.round(wDeg * sc)), H = Math.max(64, Math.round(hM * sc));
+  const X = lon => (lon - x0) / wDeg * W, Y = lat => (m1 - M(lat)) / (m1 - m0) * H;
+  const a = document.createElement('canvas'); a.width = W; a.height = H; const c = a.getContext('2d');
+  c.fillStyle = '#fff';
+  ids.forEach(id => { const g = SCT_GRID[id], hw = g.step * sc * 0.62; g.pts.forEach(([lon, lat]) => { const px = X(lon), py = Y(lat); c.fillRect(px - hw, py - hw * 1.4, hw * 2, hw * 2.8); }); });
+  const b = document.createElement('canvas'); b.width = W; b.height = H; const d = b.getContext('2d');
+  d.filter = `blur(${Math.max(2, Math.round(W / 220))}px)`; d.drawImage(a, 0, 0); d.filter = 'none';
+  // la brume s'efface autour des lieux visités
+  d.globalCompositeOperation = 'destination-out';
+  ids.forEach(id => { const g = SCT_GRID[id]; sctVis(id).forEach(([lon, lat]) => {
+    const px = X(lon), py = Y(lat), rr = g.r / (111.32 * Math.max(0.2, Math.cos(lat * Math.PI / 180))) * sc * 1.05;
+    const gr = d.createRadialGradient(px, py, 0, px, py, rr); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(0.55, 'rgba(0,0,0,.95)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    d.fillStyle = gr; d.beginPath(); d.arc(px, py, rr, 0, Math.PI * 2); d.fill();
+  }); });
+  return { url: b.toDataURL('image/png'), coordinates: [[x0, y1], [x1, y1], [x1, y0], [x0, y0]] };
 }
-const sctRad = f => ['interpolate', ['exponential', 2], ['zoom'], 0, ['*', ['get', 'r0'], f], 20, ['*', ['get', 'r0'], f * 1048576]];
 function sctPaint() {
   if (typeof map === 'undefined' || !map || !map.getSource || !sct$(() => map.getLayer('exFog'), null)) return;
+  ['sctLine', 'sctClueF', 'sctClueL'].forEach(l => sct$(() => { if (map.getLayer(l)) map.removeLayer(l); }));
+  sct$(() => { if (map.getLayer('sctFog') && map.getLayer('sctFog').type !== 'raster') map.removeLayer('sctFog'); });
   const miss = sctOpenIds().find(id => !SCT_GRID[id]);
   if (miss) { sctGrid(miss); sctDirty = true; if (++sctBuild < 50) return; }
-  if (!sctDirty && map.getLayer('sctFog')) return;
-  sctDirty = false;
-  const { fog, clue } = sctFogFC();
-  if (map.getSource('sctFog') && map.getLayer('sctFog') && map.getLayer('sctFog').type === 'circle') { map.getSource('sctFog').setData(fog); map.getSource('sctClue').setData(clue); return; }
-  ['sctFog', 'sctLine', 'sctClueF', 'sctClueL'].forEach(l => { if (map.getLayer(l)) map.removeLayer(l); });
-  if (map.getSource('sctFog')) map.getSource('sctFog').setData(fog); else map.addSource('sctFog', { type: 'geojson', data: fog });
-  if (map.getSource('sctClue')) map.getSource('sctClue').setData(clue); else map.addSource('sctClue', { type: 'geojson', data: clue });
-  map.addLayer({ id: 'sctFog', type: 'circle', source: 'sctFog', paint: { 'circle-color': '#ffffff', 'circle-blur': 0.7, 'circle-radius': sctRad(1.6), 'circle-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.62, 9, 0.5, 12, 0.3] } }, 'exFog');
-  map.addLayer({ id: 'sctClueF', type: 'circle', source: 'sctClue', paint: { 'circle-color': '#f2a33a', 'circle-blur': 0.6, 'circle-radius': sctRad(1.3), 'circle-opacity': 0.5 } }, 'exFog');
+  const sig = sctOpenIds().map(id => id + ':' + sctVis(id).length).join('|');
+  if (!sctDirty && sig === sctImgSig && map.getLayer('sctFog')) return;
+  sctDirty = false; sctImgSig = sig;
+  const I = sctFogImage(); if (!I) return;
+  const src = map.getSource('sctFogImg');
+  if (src && src.updateImage) src.updateImage(I);
+  else map.addSource('sctFogImg', { type: 'image', url: I.url, coordinates: I.coordinates });
+  if (!map.getLayer('sctFog')) map.addLayer({ id: 'sctFog', type: 'raster', source: 'sctFogImg', paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.6, 9, 0.5, 12, 0.32], 'raster-fade-duration': 0, 'raster-resampling': 'linear' } }, 'exFog');
 }
 
 // ---------- étiquettes des régions ouvertes (vue Monde) ----------
@@ -205,13 +215,13 @@ function sctLabels() {
 
 // ---------- la fiche d'une région : à quoi sert de la découvrir ----------
 function sctCardHTML(id) {
-  const R = RG[id], I = sctInfo(id), pct = Math.round(100 * Math.min(1, I.n / I.T));
-  const lad = SCT_LV.slice(1).map((L, i) => { const lv = i + 1, ok = I.lvl >= lv; return `<li class="${ok ? 'ok' : lv === I.lvl + 1 ? 'cur' : ''}"><span>${ok ? '✓' : lv}</span><div><b>${L.nm} <small>${I.th[i]} secteur${I.th[i] > 1 ? 's' : ''}</small></b><small>${L.fx}</small></div></li>`; }).join('');
+  const R = RG[id], I = sctInfo(id), pct = I.pct;
+  const lad = SCT_LV.slice(1).map((L, i) => { const lv = i + 1, ok = I.lvl >= lv; return `<li class="${ok ? 'ok' : lv === I.lvl + 1 ? 'cur' : ''}"><span>${ok ? '✓' : lv}</span><div><b>${L.nm} <small>${i ? I.th[i] + ' % de la région' : 'un premier voyage'}</small></b><small>${L.fx}</small></div></li>`; }).join('');
   const camp = sct$(() => augCampLine(id), '');
   return `<div class="ch-card sct-card"><p class="cu-k">Votre connaissance de la région</p><h3 class="ps-h">${esc(R.name)}</h3>
 <p class="sct-lv"><b>${I.nm}</b> <i>${sctStars(I.lvl)}</i>${I.red ? ` <em>Trajets −${Math.round(I.red * 100)} %</em>` : ''}</p>
-<div class="sct-bar"><i style="width:${pct}%"></i><span>${I.n}/${I.T} secteurs découverts</span></div>
-<p class="sct-how">Chaque <b>coin dans la brume</b> (nuage blanc sur la carte) se découvre en y envoyant un compagnon. Deux lieux du même secteur comptent pour un.</p>
+<div class="sct-bar"><i style="width:${pct}%"></i><span>${I.pct} % de la région découverte</span></div>
+<p class="sct-how">La <b>brume</b> se lève autour de chaque lieu où vont vos compagnons. Plus vous découvrez la région, plus le niveau monte. Retourner au même endroit ne découvre rien de neuf : allez voir plus loin !</p>
 <ul class="cn-steps sct-lad">${lad}</ul>${camp}
 <button class="cu-later" data-sctquit="1">Fermer</button></div>`;
 }
@@ -230,12 +240,11 @@ document.addEventListener('click', ev => {
 
 // ---------- la fiche de départ : ce que ce voyage apporte ----------
 function sctTipHTML(d) {
-  const K = sct$(() => sctKeyOf(d), null); if (!K) return '';
+  const K = sct$(() => sctNear(d), null); if (!K) return '';
   const I = sctInfo(K.R.id), out = [];
-  const clue = sct$(() => augClueAt(d), false);
-  if (clue) out.push(`<span class="sct-t clue">📖 Le camp d’Augustine est dans ce secteur !</span>`);
-  if (!sctDisc(K.R.id)[K.k]) out.push(`<span class="sct-t new">🌫️ Secteur inconnu : +1 secteur en ${esc(K.R.short)} <small>(${I.n}/${I.T})</small></span>`);
-  else out.push(`<span class="sct-t">Secteur déjà découvert</span>`);
+  if (sct$(() => augClueAt(d), false)) out.push(`<span class="sct-t clue">📖 Le camp d’Augustine est par ici !</span>`);
+  if (!K.near) out.push(`<span class="sct-t new">🌫️ Coin dans la brume : ce voyage fera découvrir ${esc(K.R.short)} <small>(${I.pct} % aujourd’hui)</small></span>`);
+  else out.push(`<span class="sct-t">Coin déjà découvert</span>`);
   if (I.red) out.push(`<span class="sct-t fast">⚡ ${esc(K.R.short)}, niveau ${I.nm} : trajet −${Math.round(I.red * 100)} %</span>`);
   const O = sct$(() => augOrigin(d), null); if (O && O.camp) out.push(`<span class="sct-t camp">⛺ Départ du camp d’Augustine (${esc(RG[O.camp].short)})</span>`);
   return `<div class="sct-tip" data-sctreg="${K.R.id}">${out.join('')}</div>`;
@@ -254,7 +263,7 @@ if (typeof trjDecorate === 'function') trjDecorate = (orig => function (box) {
 // ---------- rafraîchissement ----------
 setInterval(() => { if (document.hidden) return; sct$(sctMig); sct$(sctPaint); sct$(sctLabels); }, 2000);
 if (typeof drawMarks === 'function') drawMarks = (orig => function () { const r = orig.apply(this, arguments); sct$(sctLabels); return r; })(drawMarks);
-window.__sct = { info: id => sctInfo(id), grid: id => { const g = sctGrid(id); return g && { R: g.R, n: g.keys.size }; }, visit: (lon, lat) => sctVisit({ lon, lat }, false), card: id => sctCard(id), ev: s => eval(s) };
+window.__sct = { info: id => sctInfo(id), grid: id => { const g = sctGrid(id); return g && { r: g.r, n: g.pts.length, area: g.area }; }, visit: (lon, lat) => sctVisit({ lon, lat }, false), card: id => sctCard(id), ev: s => eval(s) };
 
 {
   const css = document.createElement('style');

@@ -41350,9 +41350,9 @@ rcPaint = function () {
   if (map.getPaintProperty('exFog', 'fill-color') === '#e6cf9f') return;
   fd$(() => {
     map.setPaintProperty('exFog', 'fill-color', '#e6cf9f'); map.setPaintProperty('exFog', 'fill-antialias', false);
-    map.setPaintProperty('exFog', 'fill-opacity', ['interpolate', ['linear'], ['zoom'], 3, 0.62, 9, 0.5]);
+    map.setPaintProperty('exFog', 'fill-opacity', ['interpolate', ['linear'], ['zoom'], 3, 0.3, 9, 0.22]);
     fdHatch();
-    if (!map.getLayer('fdHatch')) map.addLayer({ id: 'fdHatch', type: 'fill', source: 'exFog', paint: { 'fill-pattern': 'fdHatch', 'fill-opacity': 0.9 } }, 'exEdge');
+    if (!map.getLayer('fdHatch')) map.addLayer({ id: 'fdHatch', type: 'fill', source: 'exFog', paint: { 'fill-pattern': 'fdHatch', 'fill-opacity': 0.45 } }, 'exEdge');
     map.setPaintProperty('exEdge', 'line-color', '#e8963a'); map.setPaintProperty('exEdge', 'line-opacity', 0.55);
     map.setPaintProperty('exEdge', 'line-width', ['interpolate', ['linear'], ['zoom'], 3, 3, 9, 8]); map.setPaintProperty('exEdge', 'line-blur', ['interpolate', ['linear'], ['zoom'], 3, 2, 9, 6]);
   });
@@ -41566,7 +41566,7 @@ function sctSt() {
 sct$(sctSt);
 
 // ---------- la grille d'une région ----------
-const SCT_GRID = {}, SQ3 = Math.sqrt(3);
+const SCT_GRID = {};
 function sctFlood(id, step, cap) {
   const R = RG[id], out = [], seen = new Set(), q = [];
   const push = (ix, iy) => { const k = ix + '_' + iy; if (seen.has(k)) return; seen.add(k); q.push([ix, iy]); };
@@ -41584,89 +41584,84 @@ function sctFlood(id, step, cap) {
   return { out, over, seeds };
 }
 const sctDl = (a, b) => { let d = a - b; while (d > 180) d -= 360; while (d < -180) d += 360; return d; };
-function sctKey(g, lon, lat) {
-  const x = sctDl(lon, g.lon0) * g.kx, y = (lat - g.lat0) * g.ky;
-  const qf = (SQ3 / 3 * x - y / 3) / g.R, rf = (2 / 3 * y) / g.R, sf = -qf - rf;
-  let q = Math.round(qf), r = Math.round(rf); const s = Math.round(sf);
-  const dq = Math.abs(q - qf), dr = Math.abs(r - rf), ds = Math.abs(s - sf);
-  if (dq > dr && dq > ds) q = -r - s; else if (dr > ds) r = -q - s;
-  return q + '_' + r;
-}
-function sctCenter(g, k) {
-  const i = k.indexOf('_'), q = +k.slice(0, i), r = +k.slice(i + 1);
-  const x = g.R * SQ3 * (q + r / 2), y = g.R * 1.5 * r;
-  return [g.lon0 + x / g.kx, g.lat0 + y / g.ky];
-}
-function sctPoly(g, k) {
-  const [lon, lat] = sctCenter(g, k), ring = [];
-  for (let i = 0; i <= 6; i++) { const a = (Math.PI / 180) * (60 * (i % 6) - 30); ring.push([lon + g.R * 0.985 * Math.cos(a) / g.kx, lat + g.R * 0.985 * Math.sin(a) / g.ky]); }
-  return ring;
-}
+// v93 : plus de secteurs ni de formes. La brume se lève autour de chaque lieu visité (rayon selon la taille de la région) ;
+// la connaissance = la part de la SURFACE de la région découverte. Revenir au même endroit ne découvre rien.
+const SQ3 = Math.sqrt(3);
+function sctKeyOld(R, lon0, lat0, kx, ky, k) { const i = k.indexOf('_'), q = +k.slice(0, i), r = +k.slice(i + 1); return [lon0 + R * SQ3 * (q + r / 2) / kx, lat0 + R * 1.5 * r / ky]; }
 function sctGrid(id) {
   if (SCT_GRID[id]) return SCT_GRID[id];
   const Rg = RG[id]; if (!Rg) return null;
-  const lon0 = Rg.anchor[0], lat0 = Rg.anchor[1], kx = 111.32 * Math.max(0.15, Math.cos(lat0 * Math.PI / 180)), ky = 110.57;
+  const lat0 = Rg.anchor[1], ky = 110.57;
   let p1 = sctFlood(id, 0.5, 4000); if (p1.over) p1 = sctFlood(id, 2, 4000);
   const st1 = p1.over ? 2 : 0.5;
   let area = 0; p1.out.forEach(([, lat]) => { area += (st1 * 111.32 * Math.cos(lat * Math.PI / 180)) * (st1 * ky); });
   area = Math.max(area, 3000);
-  const R = Math.max(30, Math.sqrt(area / (2.598 * 17)));
-  const g = { id, lon0, lat0, kx, ky, R, keys: new Set() };
-  const step = Math.max(0.1, Math.min(3, R * 0.5 / ky));
-  const p2 = sctFlood(id, step, 6000);
-  p2.out.concat(p2.seeds).forEach(([lon, lat]) => g.keys.add(sctKey(g, lon, lat)));
-  g.list = [...g.keys];
-  return (SCT_GRID[id] = g);
+  const r = Math.max(15, Math.sqrt(area) / 12);           // rayon de brume levée autour d'un lieu (km)
+  const step = Math.max(0.08, Math.min(3, r * 0.45 / ky));
+  const p2 = sctFlood(id, step, 8000);
+  const pts = p2.out.length ? p2.out : p2.seeds;
+  // pour la conversion des anciennes parties (secteurs hexagonaux)
+  const Rold = Math.max(30, Math.sqrt(area / (2.598 * 17))), kx0 = 111.32 * Math.max(0.15, Math.cos(lat0 * Math.PI / 180));
+  return (SCT_GRID[id] = { id, area, r, step, pts, old: k => sctKeyOld(Rold, Rg.anchor[0], lat0, kx0, ky, k) });
 }
+const sctKm = (a, b, c, d) => { const x = sctDl(c, a) * 111.32 * Math.cos((b + d) / 2 * Math.PI / 180), y = (d - b) * 110.57; return Math.sqrt(x * x + y * y); };
 
 // ---------- connaissance ----------
 const SCT_LV = [
   { nm: 'Inconnue', red: 0 },
-  { nm: 'Visiteur', red: 0, f: 0.04, fx: 'La région est sur votre carte.' },
-  { nm: 'Habitué', red: 0.15, f: 0.12, fx: 'Trajets −15 % · les régions voisines s’ouvrent · un indice d’Augustine apparaît' },
-  { nm: 'Connaisseur', red: 0.30, f: 0.28, fx: 'Trajets −30 %' },
-  { nm: 'Comme chez soi', red: 0.45, f: 0.48, fx: 'Trajets −45 %' },
-  { nm: 'Enfant du pays', red: 0.60, f: 0.72, fx: 'Trajets −60 %' },
+  { nm: 'Visiteur', red: 0, f: 0.001, fx: 'La région est sur votre carte.' },
+  { nm: 'Habitué', red: 0.15, f: 0.06, fx: 'Trajets −15 % · les régions voisines s’ouvrent · un indice d’Augustine apparaît' },
+  { nm: 'Connaisseur', red: 0.30, f: 0.15, fx: 'Trajets −30 % · on vous parle des autres passages' },
+  { nm: 'Comme chez soi', red: 0.45, f: 0.30, fx: 'Trajets −45 %' },
+  { nm: 'Enfant du pays', red: 0.60, f: 0.50, fx: 'Trajets −60 %' },
 ];
-function sctTh(T) { const th = []; let prev = 0; for (let i = 1; i <= 5; i++) { let v = Math.max(prev + 1, Math.round(SCT_LV[i].f * T)); if (i === 1) v = 1; th.push(v); prev = v; } return th; }
-const sctDisc = id => sctSt().d[id] || {};
+const sctPct = f => f <= 0 ? 0 : Math.max(1, Math.round(f * 100));
+const sctVis = id => { const s = sctSt(); if (!s.v || typeof s.v !== 'object') s.v = {}; return s.v[id] || []; };
+function sctCov(id) {
+  const g = sctGrid(id), V = sctVis(id); if (!g || !V.length) return 0;
+  const sig = V.length + ':' + (V[V.length - 1] || []).join(',');
+  if (g.covSig === sig) return g.cov;
+  let c = 0; g.pts.forEach(([lon, lat]) => { if (V.some(([a, b]) => sctKm(a, b, lon, lat) < g.r)) c++; });
+  g.covSig = sig; g.cov = g.pts.length ? Math.min(1, c / g.pts.length) : 0;
+  return g.cov;
+}
 function sctInfo(id) {
-  const g = sctGrid(id), D = sctDisc(id), n = Object.keys(D).length;
-  const T = Math.max(g ? g.keys.size : 1, n), th = sctTh(T);
-  let lvl = 0; th.forEach((v, i) => { if (n >= v) lvl = i + 1; });
-  return { n, T, th, lvl, nm: SCT_LV[lvl].nm, red: SCT_LV[lvl].red, next: lvl < 5 ? th[lvl] : null };
+  const f = sctCov(id); let lvl = 0;
+  SCT_LV.forEach((L, i) => { if (i && (f >= L.f || (i === 1 && sctVis(id).length))) lvl = i; });
+  return { f, pct: sctPct(f), lvl, nm: SCT_LV[lvl].nm, red: SCT_LV[lvl].red, next: lvl < 5 ? Math.round(SCT_LV[lvl + 1].f * 100) : null, th: SCT_LV.slice(1).map(L => Math.round(L.f * 100)) };
 }
 const sctLvl = id => sct$(() => sctInfo(id).lvl, 0);
 const sctStars = l => '★'.repeat(l) + '☆'.repeat(5 - l);
 const sctRegOf = d => sct$(() => regionAt(d.lon, d.lat), null);
-function sctKeyOf(d) { const R = sctRegOf(d); if (!R || !rcOk(R)) return null; const g = sctGrid(R.id); return g ? { R, k: sctKey(g, d.lon, d.lat) } : null; }
-function sctKnown(d) { const K = sctKeyOf(d); return !K || !!sctDisc(K.R.id)[K.k]; }
+// le lieu fait-il découvrir quelque chose ? (déjà connu = un lieu visité tout près)
+function sctNear(d) { const R = sctRegOf(d); if (!R || !rcOk(R)) return null; const g = sctGrid(R.id); if (!g) return null; const near = sctVis(R.id).some(([a, b]) => sctKm(a, b, d.lon, d.lat) < g.r * 0.45); return { R, g, near }; }
+function sctKnown(d) { const K = sctNear(d); return !K || K.near; }
 const sctRed = d => { const R = sctRegOf(d); return R && rcOk(R) ? SCT_LV[sctLvl(R.id)].red : 0; };
 
-// un lieu visité : on découvre son secteur (quiet = sans annonce)
+// un lieu visité : la brume se lève autour (quiet = sans annonce)
 function sctVisit(d, quiet) {
-  const K = sct$(() => sctKeyOf(d), null); if (!K) return null;
-  const s = sctSt(), id = K.R.id; if (!s.d[id]) s.d[id] = {};
-  if (s.d[id][K.k]) return null;
-  const before = sctLvl(id); s.d[id][K.k] = Date.now();
+  const K = sct$(() => sctNear(d), null); if (!K || K.near) return null;
+  const s = sctSt(), id = K.R.id; if (!s.v[id]) s.v[id] = [];
+  const before = sctInfo(id);
+  s.v[id].push([+(+d.lon).toFixed(4), +(+d.lat).toFixed(4)]);
   const I = sctInfo(id); sctDirty = true;
-  if (!quiet) setTimeout(() => sct$(() => {
-    if (I.lvl > before) {
-      toast(`⭐ ${K.R.short} : vous êtes « ${I.nm} » ! ${I.red ? `Trajets ${Math.round(I.red * 100)} % plus rapides dans la région.` : ''}`);
-      sct$(() => confetti(true));
-    } else toast(`🌫️ Nouveau secteur découvert en ${K.R.short} (${I.n}/${I.T})${I.next ? ` · niveau suivant à ${I.next}` : ''}`);
+  if (!quiet && I.pct > before.pct) setTimeout(() => sct$(() => {
+    if (I.lvl > before.lvl) { toast(`⭐ ${K.R.short} : vous êtes « ${I.nm} » ! ${I.red ? `Trajets ${Math.round(I.red * 100)} % plus rapides dans la région.` : ''}`); sct$(() => confetti(true)); }
+    else toast(`🌫️ La brume se lève : ${K.R.short} découverte à ${I.pct} %${I.next ? ` (niveau suivant à ${I.next} %)` : ''}`);
   }), 900);
-  return { id, k: K.k, I, up: I.lvl > before };
+  return { id, I, up: I.lvl > before.lvl };
 }
 // au retour d'un compagnon
 GAME.on('trip:return', e => sct$(() => { if (e && e.dest && !(e.trip && e.trip.tuto)) { sctVisit(e.dest, false); sct$(save); sct$(() => rcCheck(false)); } }));
-// mise en route : la maison est connue, et les anciens voyages comptent
+// mise en route : la maison est connue, les anciens voyages comptent (et les anciens secteurs)
 function sctMig() {
-  const s = sctSt(); if (s.mig) return; if (document.body.classList.contains('firstrun')) return;
-  s.mig = 1;
+  const s = sctSt(); if (s.mig3) return; if (document.body.classList.contains('firstrun')) return;
+  s.mig3 = 1; if (!s.v || typeof s.v !== 'object') s.v = {};
   sct$(() => sctVisit(homeObj(), true));
+  sct$(() => Object.entries(s.d || {}).forEach(([id, D]) => { const g = sctGrid(id); if (g) Object.keys(D).forEach(k => { const c = g.old(k); sctVisit({ lon: c[0], lat: c[1] }, true); }); }));
   sct$(() => (bfX().o || []).forEach(([lon, lat]) => sctVisit({ lon, lat }, true)));
   sct$(() => PLACES.forEach(p => { if (S.found && S.found[p.name]) sctVisit(p, true); }));
+  sct$(() => Object.values(s.camp || {}).forEach(c => sctVisit(c, true)));
   sct$(save);
 }
 
@@ -41699,7 +41694,7 @@ if (typeof fdCard === 'function') fdCard = (orig => function (id) {
     const el = document.querySelector('#fdC .fd-how'); if (!el || !/voyages/.test(el.textContent)) return;
     const lib = psEdgesOf(id).filter(x => x[2] === 'libre').map(x => psOther(x, id)).find(o => rcIsOpen(o)); if (!lib) return;
     const I = sctInfo(lib);
-    el.innerHTML = `Elle s’ouvrira quand vous serez <b>Habitué</b> de ${esc(RG[lib].short)} : ${Math.min(I.n, I.th[1])}/${I.th[1]} secteurs découverts. Visitez des lieux dans la brume là-bas.`;
+    el.innerHTML = `Elle s’ouvrira quand vous serez <b>Habitué</b> de ${esc(RG[lib].short)} : ${I.pct}/${I.th[1]} % de la région découverte. Visitez des lieux dans la brume là-bas.`;
   });
   return r;
 })(fdCard);
@@ -41708,31 +41703,46 @@ if (typeof fdCard === 'function') fdCard = (orig => function (id) {
 if (typeof fdMist === 'function') fdMist = function () { sct$(() => { if (map.getLayer('fdMist')) map.setLayoutProperty('fdMist', 'visibility', 'none'); }); };
 let sctDirty = true, sctBuild = 0;
 function sctOpenIds() { return Object.keys(rcSt().open).filter(id => RG[id] && rcOk(RG[id])); }
-// v92 : plus d'hexagones dessinés (le joueur : « ces octogones qui se superposent, je n'ai pas envie de voir ça »).
-// Chaque secteur dans la brume = un nuage doux (cercle flouté de la taille du secteur) ; l'indice = une lueur orange.
-const sctPt = (g, k, extra) => { const c = sctCenter(g, k); return { type: 'Feature', properties: Object.assign({ r0: g.R * 1000 / (156543.03 * Math.cos(c[1] * Math.PI / 180)) }, extra || {}), geometry: { type: 'Point', coordinates: c } }; };
-function sctFogFC() {
-  const F = [], C = [], s = sctSt();
-  sctOpenIds().forEach(id => {
-    const g = SCT_GRID[id]; if (!g) return; const D = sctDisc(id), clue = !s.camp[id] && s.clue[id];
-    g.list.forEach(k => { if (clue === k) C.push(sctPt(g, k)); else if (!D[k]) F.push(sctPt(g, k)); });
-  });
-  return { fog: { type: 'FeatureCollection', features: F }, clue: { type: 'FeatureCollection', features: C } };
+// v93 : une vraie brume continue (image dessinée), sans formes : un voile blanc sur les régions ouvertes,
+// qui s'efface doucement autour des lieux visités.
+let sctImgSig = '';
+function sctFogImage() {
+  const ids = sctOpenIds().filter(id => SCT_GRID[id]); if (!ids.length) return null;
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  ids.forEach(id => { const g = SCT_GRID[id]; g.pts.forEach(([lon, lat]) => { x0 = Math.min(x0, lon - g.step); x1 = Math.max(x1, lon + g.step); y0 = Math.min(y0, lat - g.step); y1 = Math.max(y1, lat + g.step); }); });
+  const pad = 0.6; x0 -= pad; x1 += pad; y0 = Math.max(-80, y0 - pad); y1 = Math.min(80, y1 + pad);
+  const M = lat => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)), m0 = M(y0), m1 = M(y1);
+  const wDeg = x1 - x0, hM = (m1 - m0) * 180 / Math.PI, sc = 1100 / Math.max(wDeg, hM);
+  const W = Math.max(64, Math.round(wDeg * sc)), H = Math.max(64, Math.round(hM * sc));
+  const X = lon => (lon - x0) / wDeg * W, Y = lat => (m1 - M(lat)) / (m1 - m0) * H;
+  const a = document.createElement('canvas'); a.width = W; a.height = H; const c = a.getContext('2d');
+  c.fillStyle = '#fff';
+  ids.forEach(id => { const g = SCT_GRID[id], hw = g.step * sc * 0.62; g.pts.forEach(([lon, lat]) => { const px = X(lon), py = Y(lat); c.fillRect(px - hw, py - hw * 1.4, hw * 2, hw * 2.8); }); });
+  const b = document.createElement('canvas'); b.width = W; b.height = H; const d = b.getContext('2d');
+  d.filter = `blur(${Math.max(2, Math.round(W / 220))}px)`; d.drawImage(a, 0, 0); d.filter = 'none';
+  // la brume s'efface autour des lieux visités
+  d.globalCompositeOperation = 'destination-out';
+  ids.forEach(id => { const g = SCT_GRID[id]; sctVis(id).forEach(([lon, lat]) => {
+    const px = X(lon), py = Y(lat), rr = g.r / (111.32 * Math.max(0.2, Math.cos(lat * Math.PI / 180))) * sc * 1.05;
+    const gr = d.createRadialGradient(px, py, 0, px, py, rr); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(0.55, 'rgba(0,0,0,.95)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    d.fillStyle = gr; d.beginPath(); d.arc(px, py, rr, 0, Math.PI * 2); d.fill();
+  }); });
+  return { url: b.toDataURL('image/png'), coordinates: [[x0, y1], [x1, y1], [x1, y0], [x0, y0]] };
 }
-const sctRad = f => ['interpolate', ['exponential', 2], ['zoom'], 0, ['*', ['get', 'r0'], f], 20, ['*', ['get', 'r0'], f * 1048576]];
 function sctPaint() {
   if (typeof map === 'undefined' || !map || !map.getSource || !sct$(() => map.getLayer('exFog'), null)) return;
+  ['sctLine', 'sctClueF', 'sctClueL'].forEach(l => sct$(() => { if (map.getLayer(l)) map.removeLayer(l); }));
+  sct$(() => { if (map.getLayer('sctFog') && map.getLayer('sctFog').type !== 'raster') map.removeLayer('sctFog'); });
   const miss = sctOpenIds().find(id => !SCT_GRID[id]);
   if (miss) { sctGrid(miss); sctDirty = true; if (++sctBuild < 50) return; }
-  if (!sctDirty && map.getLayer('sctFog')) return;
-  sctDirty = false;
-  const { fog, clue } = sctFogFC();
-  if (map.getSource('sctFog') && map.getLayer('sctFog') && map.getLayer('sctFog').type === 'circle') { map.getSource('sctFog').setData(fog); map.getSource('sctClue').setData(clue); return; }
-  ['sctFog', 'sctLine', 'sctClueF', 'sctClueL'].forEach(l => { if (map.getLayer(l)) map.removeLayer(l); });
-  if (map.getSource('sctFog')) map.getSource('sctFog').setData(fog); else map.addSource('sctFog', { type: 'geojson', data: fog });
-  if (map.getSource('sctClue')) map.getSource('sctClue').setData(clue); else map.addSource('sctClue', { type: 'geojson', data: clue });
-  map.addLayer({ id: 'sctFog', type: 'circle', source: 'sctFog', paint: { 'circle-color': '#ffffff', 'circle-blur': 0.7, 'circle-radius': sctRad(1.6), 'circle-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.62, 9, 0.5, 12, 0.3] } }, 'exFog');
-  map.addLayer({ id: 'sctClueF', type: 'circle', source: 'sctClue', paint: { 'circle-color': '#f2a33a', 'circle-blur': 0.6, 'circle-radius': sctRad(1.3), 'circle-opacity': 0.5 } }, 'exFog');
+  const sig = sctOpenIds().map(id => id + ':' + sctVis(id).length).join('|');
+  if (!sctDirty && sig === sctImgSig && map.getLayer('sctFog')) return;
+  sctDirty = false; sctImgSig = sig;
+  const I = sctFogImage(); if (!I) return;
+  const src = map.getSource('sctFogImg');
+  if (src && src.updateImage) src.updateImage(I);
+  else map.addSource('sctFogImg', { type: 'image', url: I.url, coordinates: I.coordinates });
+  if (!map.getLayer('sctFog')) map.addLayer({ id: 'sctFog', type: 'raster', source: 'sctFogImg', paint: { 'raster-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.6, 9, 0.5, 12, 0.32], 'raster-fade-duration': 0, 'raster-resampling': 'linear' } }, 'exFog');
 }
 
 // ---------- étiquettes des régions ouvertes (vue Monde) ----------
@@ -41751,13 +41761,13 @@ function sctLabels() {
 
 // ---------- la fiche d'une région : à quoi sert de la découvrir ----------
 function sctCardHTML(id) {
-  const R = RG[id], I = sctInfo(id), pct = Math.round(100 * Math.min(1, I.n / I.T));
-  const lad = SCT_LV.slice(1).map((L, i) => { const lv = i + 1, ok = I.lvl >= lv; return `<li class="${ok ? 'ok' : lv === I.lvl + 1 ? 'cur' : ''}"><span>${ok ? '✓' : lv}</span><div><b>${L.nm} <small>${I.th[i]} secteur${I.th[i] > 1 ? 's' : ''}</small></b><small>${L.fx}</small></div></li>`; }).join('');
+  const R = RG[id], I = sctInfo(id), pct = I.pct;
+  const lad = SCT_LV.slice(1).map((L, i) => { const lv = i + 1, ok = I.lvl >= lv; return `<li class="${ok ? 'ok' : lv === I.lvl + 1 ? 'cur' : ''}"><span>${ok ? '✓' : lv}</span><div><b>${L.nm} <small>${i ? I.th[i] + ' % de la région' : 'un premier voyage'}</small></b><small>${L.fx}</small></div></li>`; }).join('');
   const camp = sct$(() => augCampLine(id), '');
   return `<div class="ch-card sct-card"><p class="cu-k">Votre connaissance de la région</p><h3 class="ps-h">${esc(R.name)}</h3>
 <p class="sct-lv"><b>${I.nm}</b> <i>${sctStars(I.lvl)}</i>${I.red ? ` <em>Trajets −${Math.round(I.red * 100)} %</em>` : ''}</p>
-<div class="sct-bar"><i style="width:${pct}%"></i><span>${I.n}/${I.T} secteurs découverts</span></div>
-<p class="sct-how">Chaque <b>coin dans la brume</b> (nuage blanc sur la carte) se découvre en y envoyant un compagnon. Deux lieux du même secteur comptent pour un.</p>
+<div class="sct-bar"><i style="width:${pct}%"></i><span>${I.pct} % de la région découverte</span></div>
+<p class="sct-how">La <b>brume</b> se lève autour de chaque lieu où vont vos compagnons. Plus vous découvrez la région, plus le niveau monte. Retourner au même endroit ne découvre rien de neuf : allez voir plus loin !</p>
 <ul class="cn-steps sct-lad">${lad}</ul>${camp}
 <button class="cu-later" data-sctquit="1">Fermer</button></div>`;
 }
@@ -41776,12 +41786,11 @@ document.addEventListener('click', ev => {
 
 // ---------- la fiche de départ : ce que ce voyage apporte ----------
 function sctTipHTML(d) {
-  const K = sct$(() => sctKeyOf(d), null); if (!K) return '';
+  const K = sct$(() => sctNear(d), null); if (!K) return '';
   const I = sctInfo(K.R.id), out = [];
-  const clue = sct$(() => augClueAt(d), false);
-  if (clue) out.push(`<span class="sct-t clue">📖 Le camp d’Augustine est dans ce secteur !</span>`);
-  if (!sctDisc(K.R.id)[K.k]) out.push(`<span class="sct-t new">🌫️ Secteur inconnu : +1 secteur en ${esc(K.R.short)} <small>(${I.n}/${I.T})</small></span>`);
-  else out.push(`<span class="sct-t">Secteur déjà découvert</span>`);
+  if (sct$(() => augClueAt(d), false)) out.push(`<span class="sct-t clue">📖 Le camp d’Augustine est par ici !</span>`);
+  if (!K.near) out.push(`<span class="sct-t new">🌫️ Coin dans la brume : ce voyage fera découvrir ${esc(K.R.short)} <small>(${I.pct} % aujourd’hui)</small></span>`);
+  else out.push(`<span class="sct-t">Coin déjà découvert</span>`);
   if (I.red) out.push(`<span class="sct-t fast">⚡ ${esc(K.R.short)}, niveau ${I.nm} : trajet −${Math.round(I.red * 100)} %</span>`);
   const O = sct$(() => augOrigin(d), null); if (O && O.camp) out.push(`<span class="sct-t camp">⛺ Départ du camp d’Augustine (${esc(RG[O.camp].short)})</span>`);
   return `<div class="sct-tip" data-sctreg="${K.R.id}">${out.join('')}</div>`;
@@ -41800,7 +41809,7 @@ if (typeof trjDecorate === 'function') trjDecorate = (orig => function (box) {
 // ---------- rafraîchissement ----------
 setInterval(() => { if (document.hidden) return; sct$(sctMig); sct$(sctPaint); sct$(sctLabels); }, 2000);
 if (typeof drawMarks === 'function') drawMarks = (orig => function () { const r = orig.apply(this, arguments); sct$(sctLabels); return r; })(drawMarks);
-window.__sct = { info: id => sctInfo(id), grid: id => { const g = sctGrid(id); return g && { R: g.R, n: g.keys.size }; }, visit: (lon, lat) => sctVisit({ lon, lat }, false), card: id => sctCard(id), ev: s => eval(s) };
+window.__sct = { info: id => sctInfo(id), grid: id => { const g = sctGrid(id); return g && { r: g.r, n: g.pts.length, area: g.area }; }, visit: (lon, lat) => sctVisit({ lon, lat }, false), card: id => sctCard(id), ev: s => eval(s) };
 
 {
   const css = document.createElement('style');
@@ -41872,36 +41881,35 @@ if (typeof dfRange === 'function') dfRange = (orig => function (k, d) {
 })(dfRange);
 
 // ---------- l'indice ----------
+// v93 : l'indice = un point dans la brume (environ 2 rayons au-delà de ce qu'on connaît) ; on le trouve en allant tout près
 function augPickClue(id) {
   const g = sctGrid(id); if (!g) return null;
-  const D = sctDisc(id), disc = Object.keys(D).map(k => sctCenter(g, k));
-  const orig = [homeObj()].concat(Object.values(augCamps()));
-  const P = ([lon, lat]) => ({ lon, lat });
+  const V = sctVis(id), orig = [homeObj()].concat(Object.values(augCamps()));
   let best = null, bs = 1e9;
-  g.list.forEach(k => {
-    if (D[k]) return;
-    const c = sctCenter(g, k), X = aug$(() => regionAt(c[0], c[1]), null); if (!X || X.id !== id) return;
-    const dd = disc.length ? Math.min(...disc.map(p => kmExact(P(p), P(c)))) : 0;
-    const dO = Math.min(...orig.map(o => kmExact(o, P(c))));
-    const ring = dd / (g.R * SQ3);
-    const sc = Math.abs(ring - 2) * 3 + (dO / (g.R * SQ3)) * 0.5 + (hashStr(id + k) % 100) / 300;
-    if (sc < bs) { bs = sc; best = k; }
+  g.pts.forEach(([lon, lat], i) => {
+    if (i % 2) return;
+    const dd = V.length ? Math.min(...V.map(([a, b]) => sctKm(a, b, lon, lat))) : 0; if (V.length && dd < g.r) return;
+    const dO = Math.min(...orig.map(o => sctKm(o.lon, o.lat, lon, lat)));
+    const sc = Math.abs(dd / g.r - 2.3) * 3 + (dO / g.r) * 0.25 + (hashStr(id + i) % 100) / 300;
+    if (sc < bs) { bs = sc; best = [+lon.toFixed(4), +lat.toFixed(4)]; }
   });
-  return best || g.list.find(k => !D[k]) || null;
+  return best;
 }
+function augClueCenter(id) { const c = sctSt().clue[id]; return Array.isArray(c) ? c : null; }
 function augClueAt(d) {
-  const K = sctKeyOf(d); if (!K) return false;
-  const s = sctSt(); return !s.camp[K.R.id] && s.clue[K.R.id] === K.k;
+  const R = sctRegOf(d); if (!R) return false;
+  const s = sctSt(), C = augClueCenter(R.id), g = sctGrid(R.id);
+  return !s.camp[R.id] && !!C && !!g && sctKm(C[0], C[1], d.lon, d.lat) < g.r * 0.8;
 }
-function augClueCenter(id) { const g = sctGrid(id), k = sctSt().clue[id]; return g && k ? sctCenter(g, k) : null; }
 function augTick() {
   if (document.body.classList.contains('firstrun')) return;
   const s = sctSt();
+  Object.keys(s.clue).forEach(id => { if (!Array.isArray(s.clue[id])) delete s.clue[id]; });
   sctOpenIds().forEach(id => {
     if (s.camp[id] || s.clue[id] || sctLvl(id) < 2) return;
     const k = augPickClue(id);
     if (!k) { const a = RG[id].anchor; s.camp[id] = { lon: a[0], lat: a[1], name: RG[id].short, at: Date.now() }; s.pend = id; augLearn(id); }
-    else { s.clue[id] = k; if (s.mig2) aug$(() => toast(`📖 Augustine a laissé un indice en ${RG[id].short} : une zone orange sur la carte.`)); }
+    else { s.clue[id] = k; if (s.mig2) aug$(() => toast(`📖 Augustine a laissé un indice en ${RG[id].short} : un 📖 sur la carte : son camp est dans les environs.`)); }
     sctDirty = true; aug$(save);
   });
   if (!s.mig2) { s.mig2 = 1; aug$(save); }
@@ -41943,12 +41951,11 @@ const augPlural = sp => aug$(() => NS_PLURAL[sp], null) || aug$(() => spName(sp)
 
 // ---------- trouver le camp ----------
 GAME.on('trip:return', e => aug$(() => {
-  if (!e || !e.dest || (e.trip && e.trip.tuto)) return;
-  const K = sctKeyOf(e.dest); if (!K) return;
-  const s = sctSt(), id = K.R.id; if (s.camp[id] || s.clue[id] !== K.k) return;
-  s.camp[id] = { lon: e.dest.lon, lat: e.dest.lat, name: e.dest.name || K.R.short, at: Date.now() };
+  if (!e || !e.dest || (e.trip && e.trip.tuto) || !augClueAt(e.dest)) return;
+  const R = sctRegOf(e.dest), s = sctSt(), id = R.id;
+  s.camp[id] = { lon: e.dest.lon, lat: e.dest.lat, name: e.dest.name || R.short, at: Date.now() };
   delete s.clue[id]; augLearn(id); s.pend = id; sctDirty = true; save();
-  setTimeout(() => aug$(() => toast(`⛺ Vous avez trouvé le camp d’Augustine en ${K.R.short} !`)), 1500);
+  setTimeout(() => aug$(() => toast(`⛺ Vous avez trouvé le camp d’Augustine en ${R.short} !`)), 1500);
 }));
 // où est-elle partie ensuite : un passage vers une région encore fermée
 function augNext(id) {
@@ -41971,7 +41978,7 @@ function augCampPage(id) {
 function augCampLine(id) {
   const s = sctSt(), c = s.camp[id];
   if (c) return `<p class="aug-ln ok">⛺ <b>Camp d’Augustine trouvé</b>${c.sp ? ` · recette : ${esc(augBaitNm(c.sp))}` : ''}</p>`;
-  if (s.clue[id]) return `<p class="aug-ln clue">📖 <b>Le camp d’Augustine</b> est dans la zone orange sur la carte.</p>`;
+  if (s.clue[id]) return `<p class="aug-ln clue">📖 <b>Le camp d’Augustine</b> est près du 📖 sur la carte.</p>`;
   return `<p class="aug-ln">📖 Devenez <b>Habitué</b> : Augustine vous laissera un indice vers son camp.</p>`;
 }
 
@@ -41992,7 +41999,7 @@ function augMarks() {
 function augClueCard(id) {
   if (document.getElementById('sctC')) return;
   const el = document.createElement('div'); el.id = 'sctC'; el.className = 'ch-ov ch-route';
-  el.innerHTML = `<div class="ch-card"><p class="cu-k">Un indice d’Augustine</p><h3 class="ps-h">📖 Son camp en ${esc(RG[id].short)}</h3><p class="ch-q">« Mon camp était par là, dans ce coin que tu ne connais pas encore. »</p><p class="fd-how">Envoyez un compagnon vers <b>n’importe quel lieu</b> de la zone orange : il trouvera le camp. Zoomez pour voir les lieux.</p><button class="btn green big wide" data-augzoom="${id}">Voir la zone</button><button class="cu-later" data-sctquit="1">Fermer</button></div>`;
+  el.innerHTML = `<div class="ch-card"><p class="cu-k">Un indice d’Augustine</p><h3 class="ps-h">📖 Son camp en ${esc(RG[id].short)}</h3><p class="ch-q">« Mon camp était par là, dans ce coin que tu ne connais pas encore. »</p><p class="fd-how">Envoyez un compagnon vers <b>n’importe quel lieu</b> tout près du 📖 : il trouvera le camp. Zoomez pour voir les lieux.</p><button class="btn green big wide" data-augzoom="${id}">Voir la zone</button><button class="cu-later" data-sctquit="1">Fermer</button></div>`;
   document.body.appendChild(el); document.body.classList.add('cu-on');
 }
 function augZoom(id) {
@@ -42011,7 +42018,7 @@ document.addEventListener('click', ev => {
 // ---------- le fil rouge : les chapitres ----------
 const augHomeId = () => aug$(() => rgHome().id, '');
 const augHasCamp = id => !!(id && augCamps()[id]);
-const augSecCt = id => { const I = aug$(() => sctInfo(id), null); return I ? `${Math.min(I.n, I.th[1])}/${I.th[1]} secteurs` : ''; };
+const augSecCt = id => { const I = aug$(() => sctInfo(id), null); return I ? `${I.pct}/${I.th[1]} %` : ''; };
 Object.assign(akGo, {
   clue: () => { const id = Object.keys(sctSt().clue).find(x => !augHasCamp(x) && rcIsOpen(x)); if (id) augZoom(id); else akGo.map(); },
   region: () => { aug$(() => { $('modal').hidden = true; }); const P = akStep(); sctCard((P && P.C.reg) || augHomeId()); },
@@ -42020,9 +42027,9 @@ AK_CH.splice(0, AK_CH.length,
   { nm: 'Le carnet au grenier', page: 'Si tu lis ces lignes, c’est que tu habites ma maison. Je m’appelle Augustine. Toute ma vie, j’ai suivi les compagnons sauvages à travers le monde. Avant mon dernier voyage, j’ai laissé au grenier ce carnet et mon dernier œuf : prends-en soin, c’est ton premier compagnon. Dans chaque région où je suis passée, j’ai laissé un camp. Retrouve-les, et tu me retrouveras.',
     steps: AK_CH[0].steps },
   { nm: 'Connaître son pays', page: 'Avant de partir loin, apprends à connaître ton pays. Chaque coin découvert rend la route plus facile : on connaît les raccourcis, les gens, les chemins. Quand tu seras d’ici, je te montrerai où était mon premier camp.',
-    steps: [{ tx: () => `Découvrir ${aug$(() => akHome().short, 'votre région')}`, ct: () => augSecCt(augHomeId()), sub: 'Envoyez vos compagnons dans les coins encore dans la brume (nuages blancs) : chaque secteur découvert rend les voyages plus rapides dans la région.', ok: () => aug$(() => sctLvl(augHomeId()), 0) >= 2, go: 'region', btn: 'Voir' }] },
-  { nm: 'Le premier camp', page: 'Mon premier camp n’était pas loin de chez nous. Je t’ai laissé un indice : cherche le coin orange sur ta carte. Là-bas, tu trouveras mes notes… et un endroit d’où partir.',
-    steps: [{ tx: 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon vers un lieu de la zone orange (📖) sur la carte.', ok: () => augHasCamp(augHomeId()), go: 'clue', btn: 'Voir' }] },
+    steps: [{ tx: () => `Découvrir ${aug$(() => akHome().short, 'votre région')}`, ct: () => augSecCt(augHomeId()), sub: 'Envoyez vos compagnons là où la carte est encore dans la brume : plus vous découvrez la région, plus les voyages y sont rapides.', ok: () => aug$(() => sctLvl(augHomeId()), 0) >= 2, go: 'region', btn: 'Voir' }] },
+  { nm: 'Le premier camp', page: 'Mon premier camp n’était pas loin de chez nous. Je t’ai laissé un indice : cherche le 📖 sur ta carte. Là-bas, tu trouveras mes notes… et un endroit d’où partir.',
+    steps: [{ tx: 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon vers un lieu tout près du 📖 sur la carte.', ok: () => augHasCamp(augHomeId()), go: 'clue', btn: 'Voir' }] },
   { nm: 'Un nouveau compagnon', page: 'Les compagnons sauvages ne viennent pas à n’importe qui. Avec le bon appât et un peu de patience, ils te suivront. Ma recette est dans mon camp.',
     steps: [{ tx: 'Fabriquer l’appât d’Augustine à l’Herboristerie', ok: () => (S.inv || []).some(i => i && i.sub === 'appat') || akSt().bait || Object.keys(S.comps || {}).length > akSt().base.comps, go: 'herbo', btn: 'Herboristerie' },
       { tx: 'Partir avec l’appât et faire éclore un œuf', sub: 'Allez là où vit l’espèce : l’appât l’attire, l’œuf rejoint la Couveuse.', ok: () => Object.keys(S.comps || {}).length > akSt().base.comps, go: 'couv', btn: 'Couveuse' }] },
@@ -42044,8 +42051,8 @@ akLoop = function (n) {
   return { nm: F ? `Sur ses traces : ${F.short}` : 'Sur ses traces', reg: F && F.id,
     page: F ? `${F.name}. ${F.mood || ''} J’y suis passée moi aussi, et j’y ai laissé un camp. Apprends à connaître la région : je te dirai où le trouver.` : 'Le monde est grand. Continue.',
     steps: [
-      { tx: () => F ? `Découvrir ${F.short}` : 'Découvrir une nouvelle région', ct: () => F ? augSecCt(F.id) : '', sub: 'Visitez les secteurs dans la brume pour devenir Habitué.', ok: () => !F || sctLvl(F.id) >= 2, go: 'region', btn: 'Voir' },
-      { tx: () => F ? `Trouver le camp d’Augustine (${F.short})` : 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon dans la zone orange (📖).', ok: () => !F || augHasCamp(F.id), go: 'clue', btn: 'Voir' },
+      { tx: () => F ? `Découvrir ${F.short}` : 'Découvrir une nouvelle région', ct: () => F ? augSecCt(F.id) : '', sub: 'Visitez des lieux dans la brume pour devenir Habitué.', ok: () => !F || sctLvl(F.id) >= 2, go: 'region', btn: 'Voir' },
+      { tx: () => F ? `Trouver le camp d’Augustine (${F.short})` : 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon tout près du 📖 sur la carte.', ok: () => !F || augHasCamp(F.id), go: 'clue', btn: 'Voir' },
       { tx: 'Suivre ses traces plus loin', ct: () => `${akPsDone()} passage${akPsDone() > 1 ? 's' : ''} franchi${akPsDone() > 1 ? 's' : ''}`, sub: 'Sa page dit où elle est partie : franchissez le passage, ou explorez la région suivante.', ok: () => akPsDone() > base || (!!augFront() && augFront() !== F), go: 'passage', btn: 'Y aller' },
     ] };
 };
@@ -42254,14 +42261,14 @@ sxApply = (orig => function (k, t, e) {
 // la fenêtre du passage (remplace celle de 90)
 function tvReq(E, k) {
   const T = tvTerr(E), g = PS_T[E[2]].gear, G = PS_GEAR[g], s = psSt(), from = psFrom(E), A = RG[from];
-  const I = tv$(() => sctInfo(from), { lvl: 0, n: 0, th: [1, 1, 1, 1, 1], nm: 'Inconnue' }), st = (tvSt()[psKey(E)] || {}).stage || 0;
+  const I = tv$(() => sctInfo(from), { lvl: 0, pct: 0, th: [0, 6, 15, 30, 50], nm: 'Inconnue' }), st = (tvSt()[psKey(E)] || {}).stage || 0;
   const lv = psLv(E), myLv = tv$(() => S.prog[k].lvl, 1), nP = tvProvs(T.pk).length, need = 3 - st;
   const okG = psHas(g), okK = I.lvl >= T.kn, okL = myLv >= lv, okP = nP >= 1;
   const gearTx = okG ? `✓ ${esc(G.nm)}` : s.learn[g] ? `${esc(G.nm)} : à fabriquer à la Forge (${esc(TV_GEAR[g].why)})` : s.hab[g] ? `${esc(G.nm)} : aidez ${esc(G.hab.who)} (Quêtes › Habitants)` : `${esc(G.nm)} : ${esc(G.hab.who)}, ${esc(G.hab.job)}, vous l’apprendra. On le croise en voyage en ${esc(A.short)}.`;
   return { T, okG, okK, okL, okP, ok: okG && okK && okL && okP, st, html: `<ul class="ps-req">
 <li class="${okG ? 'ok' : ''}">🎒 ${gearTx}</li>
 <li class="${nP >= need ? 'ok' : okP ? 'mid' : ''}">🍲 ${need} provision${need > 1 ? 's' : ''} ${TV_PK[T.pk][0]} (une par étape, plus une de réserve conseillée) · vous en avez ${nP}<small>${TV_PK[T.pk][1]}</small></li>
-<li class="${okK ? 'ok' : ''}">🗺️ Être ${SCT_LV[T.kn].nm} de ${esc(A.short)} · vous êtes ${esc(I.nm)} (${Math.min(I.n, I.th[T.kn - 1])}/${I.th[T.kn - 1]} secteurs)</li>
+<li class="${okK ? 'ok' : ''}">🗺️ Être ${SCT_LV[T.kn].nm} de ${esc(A.short)} · vous êtes ${esc(I.nm)} (${I.pct}/${I.th[T.kn - 1]} % découverts)</li>
 <li class="${okL ? 'ok' : ''}">⭐ ${esc(tv$(() => CHARS[k].name, ''))} niveau ${lv} minimum · niveau ${myLv}</li></ul>` };
 }
 psOpen = function (key) {
@@ -42323,7 +42330,7 @@ GAME.on('trip:return', e => tv$(() => {
   tv$(() => rcCheck(true)); save();
   setTimeout(() => tv$(() => {
     showModal(`<div class="cn-page"><p class="cn-k">Traversée réussie</p><h2>${PS_T[E[2]].ico} ${esc(E[3] || PS_T[E[2]].nm)}</h2><p class="cn-txt">${esc((PS_TXT[E[2]] || ['', '', '', 'Une nouvelle région s’ouvre.'])[3].replace(/\{n\}/g, tv$(() => CHARS[t.comp || e.who].name, '')))} Augustine est passée par ici avant vous. Son camp vous attend quelque part en ${esc(B.short)}.</p>
-<ul class="cn-steps aug-gain"><li><span>🗺️</span><div><b>Nouvelle région : ${esc(B.name)}</b><small>Découvrez ses secteurs pour trouver le camp d’Augustine.</small></div></li><li><span>✨</span><div><b>+80 expérience</b><small>pour ${esc(tv$(() => CHARS[t.comp || e.who].name, ''))}</small></div></li></ul><button class="btn green big wide" data-closemodal="1">Découvrir ${esc(B.short)}</button></div>`);
+<ul class="cn-steps aug-gain"><li><span>🗺️</span><div><b>Nouvelle région : ${esc(B.name)}</b><small>Découvrez la région pour trouver le camp d’Augustine.</small></div></li><li><span>✨</span><div><b>+80 expérience</b><small>pour ${esc(tv$(() => CHARS[t.comp || e.who].name, ''))}</small></div></li></ul><button class="btn green big wide" data-closemodal="1">Découvrir ${esc(B.short)}</button></div>`);
     confetti(true); drawMarks();
     map.flyTo({ center: [B.anchor[0], B.anchor[1]], zoom: Math.max(4.5, map.getZoom() - 0.5), duration: 1600 });
   }), 1600);

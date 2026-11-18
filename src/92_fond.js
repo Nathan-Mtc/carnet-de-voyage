@@ -22,9 +22,9 @@ rcPaint = function () {
   if (map.getPaintProperty('exFog', 'fill-color') === '#e6cf9f') return;
   fd$(() => {
     map.setPaintProperty('exFog', 'fill-color', '#e6cf9f'); map.setPaintProperty('exFog', 'fill-antialias', false);
-    map.setPaintProperty('exFog', 'fill-opacity', ['interpolate', ['linear'], ['zoom'], 3, 0.62, 9, 0.5]);
+    map.setPaintProperty('exFog', 'fill-opacity', ['interpolate', ['linear'], ['zoom'], 3, 0.3, 9, 0.22]);
     fdHatch();
-    if (!map.getLayer('fdHatch')) map.addLayer({ id: 'fdHatch', type: 'fill', source: 'exFog', paint: { 'fill-pattern': 'fdHatch', 'fill-opacity': 0.9 } }, 'exEdge');
+    if (!map.getLayer('fdHatch')) map.addLayer({ id: 'fdHatch', type: 'fill', source: 'exFog', paint: { 'fill-pattern': 'fdHatch', 'fill-opacity': 0.45 } }, 'exEdge');
     map.setPaintProperty('exEdge', 'line-color', '#e8963a'); map.setPaintProperty('exEdge', 'line-opacity', 0.55);
     map.setPaintProperty('exEdge', 'line-width', ['interpolate', ['linear'], ['zoom'], 3, 3, 9, 8]); map.setPaintProperty('exEdge', 'line-blur', ['interpolate', ['linear'], ['zoom'], 3, 2, 9, 6]);
   });

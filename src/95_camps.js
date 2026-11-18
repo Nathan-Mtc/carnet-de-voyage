@@ -50,36 +50,35 @@ if (typeof dfRange === 'function') dfRange = (orig => function (k, d) {
 })(dfRange);
 
 // ---------- l'indice ----------
+// v93 : l'indice = un point dans la brume (environ 2 rayons au-delà de ce qu'on connaît) ; on le trouve en allant tout près
 function augPickClue(id) {
   const g = sctGrid(id); if (!g) return null;
-  const D = sctDisc(id), disc = Object.keys(D).map(k => sctCenter(g, k));
-  const orig = [homeObj()].concat(Object.values(augCamps()));
-  const P = ([lon, lat]) => ({ lon, lat });
+  const V = sctVis(id), orig = [homeObj()].concat(Object.values(augCamps()));
   let best = null, bs = 1e9;
-  g.list.forEach(k => {
-    if (D[k]) return;
-    const c = sctCenter(g, k), X = aug$(() => regionAt(c[0], c[1]), null); if (!X || X.id !== id) return;
-    const dd = disc.length ? Math.min(...disc.map(p => kmExact(P(p), P(c)))) : 0;
-    const dO = Math.min(...orig.map(o => kmExact(o, P(c))));
-    const ring = dd / (g.R * SQ3);
-    const sc = Math.abs(ring - 2) * 3 + (dO / (g.R * SQ3)) * 0.5 + (hashStr(id + k) % 100) / 300;
-    if (sc < bs) { bs = sc; best = k; }
+  g.pts.forEach(([lon, lat], i) => {
+    if (i % 2) return;
+    const dd = V.length ? Math.min(...V.map(([a, b]) => sctKm(a, b, lon, lat))) : 0; if (V.length && dd < g.r) return;
+    const dO = Math.min(...orig.map(o => sctKm(o.lon, o.lat, lon, lat)));
+    const sc = Math.abs(dd / g.r - 2.3) * 3 + (dO / g.r) * 0.25 + (hashStr(id + i) % 100) / 300;
+    if (sc < bs) { bs = sc; best = [+lon.toFixed(4), +lat.toFixed(4)]; }
   });
-  return best || g.list.find(k => !D[k]) || null;
+  return best;
 }
+function augClueCenter(id) { const c = sctSt().clue[id]; return Array.isArray(c) ? c : null; }
 function augClueAt(d) {
-  const K = sctKeyOf(d); if (!K) return false;
-  const s = sctSt(); return !s.camp[K.R.id] && s.clue[K.R.id] === K.k;
+  const R = sctRegOf(d); if (!R) return false;
+  const s = sctSt(), C = augClueCenter(R.id), g = sctGrid(R.id);
+  return !s.camp[R.id] && !!C && !!g && sctKm(C[0], C[1], d.lon, d.lat) < g.r * 0.8;
 }
-function augClueCenter(id) { const g = sctGrid(id), k = sctSt().clue[id]; return g && k ? sctCenter(g, k) : null; }
 function augTick() {
   if (document.body.classList.contains('firstrun')) return;
   const s = sctSt();
+  Object.keys(s.clue).forEach(id => { if (!Array.isArray(s.clue[id])) delete s.clue[id]; });
   sctOpenIds().forEach(id => {
     if (s.camp[id] || s.clue[id] || sctLvl(id) < 2) return;
     const k = augPickClue(id);
     if (!k) { const a = RG[id].anchor; s.camp[id] = { lon: a[0], lat: a[1], name: RG[id].short, at: Date.now() }; s.pend = id; augLearn(id); }
-    else { s.clue[id] = k; if (s.mig2) aug$(() => toast(`📖 Augustine a laissé un indice en ${RG[id].short} : une zone orange sur la carte.`)); }
+    else { s.clue[id] = k; if (s.mig2) aug$(() => toast(`📖 Augustine a laissé un indice en ${RG[id].short} : un 📖 sur la carte : son camp est dans les environs.`)); }
     sctDirty = true; aug$(save);
   });
   if (!s.mig2) { s.mig2 = 1; aug$(save); }
@@ -121,12 +120,11 @@ const augPlural = sp => aug$(() => NS_PLURAL[sp], null) || aug$(() => spName(sp)
 
 // ---------- trouver le camp ----------
 GAME.on('trip:return', e => aug$(() => {
-  if (!e || !e.dest || (e.trip && e.trip.tuto)) return;
-  const K = sctKeyOf(e.dest); if (!K) return;
-  const s = sctSt(), id = K.R.id; if (s.camp[id] || s.clue[id] !== K.k) return;
-  s.camp[id] = { lon: e.dest.lon, lat: e.dest.lat, name: e.dest.name || K.R.short, at: Date.now() };
+  if (!e || !e.dest || (e.trip && e.trip.tuto) || !augClueAt(e.dest)) return;
+  const R = sctRegOf(e.dest), s = sctSt(), id = R.id;
+  s.camp[id] = { lon: e.dest.lon, lat: e.dest.lat, name: e.dest.name || R.short, at: Date.now() };
   delete s.clue[id]; augLearn(id); s.pend = id; sctDirty = true; save();
-  setTimeout(() => aug$(() => toast(`⛺ Vous avez trouvé le camp d’Augustine en ${K.R.short} !`)), 1500);
+  setTimeout(() => aug$(() => toast(`⛺ Vous avez trouvé le camp d’Augustine en ${R.short} !`)), 1500);
 }));
 // où est-elle partie ensuite : un passage vers une région encore fermée
 function augNext(id) {
@@ -149,7 +147,7 @@ function augCampPage(id) {
 function augCampLine(id) {
   const s = sctSt(), c = s.camp[id];
   if (c) return `<p class="aug-ln ok">⛺ <b>Camp d’Augustine trouvé</b>${c.sp ? ` · recette : ${esc(augBaitNm(c.sp))}` : ''}</p>`;
-  if (s.clue[id]) return `<p class="aug-ln clue">📖 <b>Le camp d’Augustine</b> est dans la zone orange sur la carte.</p>`;
+  if (s.clue[id]) return `<p class="aug-ln clue">📖 <b>Le camp d’Augustine</b> est près du 📖 sur la carte.</p>`;
   return `<p class="aug-ln">📖 Devenez <b>Habitué</b> : Augustine vous laissera un indice vers son camp.</p>`;
 }
 
@@ -170,7 +168,7 @@ function augMarks() {
 function augClueCard(id) {
   if (document.getElementById('sctC')) return;
   const el = document.createElement('div'); el.id = 'sctC'; el.className = 'ch-ov ch-route';
-  el.innerHTML = `<div class="ch-card"><p class="cu-k">Un indice d’Augustine</p><h3 class="ps-h">📖 Son camp en ${esc(RG[id].short)}</h3><p class="ch-q">« Mon camp était par là, dans ce coin que tu ne connais pas encore. »</p><p class="fd-how">Envoyez un compagnon vers <b>n’importe quel lieu</b> de la zone orange : il trouvera le camp. Zoomez pour voir les lieux.</p><button class="btn green big wide" data-augzoom="${id}">Voir la zone</button><button class="cu-later" data-sctquit="1">Fermer</button></div>`;
+  el.innerHTML = `<div class="ch-card"><p class="cu-k">Un indice d’Augustine</p><h3 class="ps-h">📖 Son camp en ${esc(RG[id].short)}</h3><p class="ch-q">« Mon camp était par là, dans ce coin que tu ne connais pas encore. »</p><p class="fd-how">Envoyez un compagnon vers <b>n’importe quel lieu</b> tout près du 📖 : il trouvera le camp. Zoomez pour voir les lieux.</p><button class="btn green big wide" data-augzoom="${id}">Voir la zone</button><button class="cu-later" data-sctquit="1">Fermer</button></div>`;
   document.body.appendChild(el); document.body.classList.add('cu-on');
 }
 function augZoom(id) {
@@ -189,7 +187,7 @@ document.addEventListener('click', ev => {
 // ---------- le fil rouge : les chapitres ----------
 const augHomeId = () => aug$(() => rgHome().id, '');
 const augHasCamp = id => !!(id && augCamps()[id]);
-const augSecCt = id => { const I = aug$(() => sctInfo(id), null); return I ? `${Math.min(I.n, I.th[1])}/${I.th[1]} secteurs` : ''; };
+const augSecCt = id => { const I = aug$(() => sctInfo(id), null); return I ? `${I.pct}/${I.th[1]} %` : ''; };
 Object.assign(akGo, {
   clue: () => { const id = Object.keys(sctSt().clue).find(x => !augHasCamp(x) && rcIsOpen(x)); if (id) augZoom(id); else akGo.map(); },
   region: () => { aug$(() => { $('modal').hidden = true; }); const P = akStep(); sctCard((P && P.C.reg) || augHomeId()); },
@@ -198,9 +196,9 @@ AK_CH.splice(0, AK_CH.length,
   { nm: 'Le carnet au grenier', page: 'Si tu lis ces lignes, c’est que tu habites ma maison. Je m’appelle Augustine. Toute ma vie, j’ai suivi les compagnons sauvages à travers le monde. Avant mon dernier voyage, j’ai laissé au grenier ce carnet et mon dernier œuf : prends-en soin, c’est ton premier compagnon. Dans chaque région où je suis passée, j’ai laissé un camp. Retrouve-les, et tu me retrouveras.',
     steps: AK_CH[0].steps },
   { nm: 'Connaître son pays', page: 'Avant de partir loin, apprends à connaître ton pays. Chaque coin découvert rend la route plus facile : on connaît les raccourcis, les gens, les chemins. Quand tu seras d’ici, je te montrerai où était mon premier camp.',
-    steps: [{ tx: () => `Découvrir ${aug$(() => akHome().short, 'votre région')}`, ct: () => augSecCt(augHomeId()), sub: 'Envoyez vos compagnons dans les coins encore dans la brume (nuages blancs) : chaque secteur découvert rend les voyages plus rapides dans la région.', ok: () => aug$(() => sctLvl(augHomeId()), 0) >= 2, go: 'region', btn: 'Voir' }] },
-  { nm: 'Le premier camp', page: 'Mon premier camp n’était pas loin de chez nous. Je t’ai laissé un indice : cherche le coin orange sur ta carte. Là-bas, tu trouveras mes notes… et un endroit d’où partir.',
-    steps: [{ tx: 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon vers un lieu de la zone orange (📖) sur la carte.', ok: () => augHasCamp(augHomeId()), go: 'clue', btn: 'Voir' }] },
+    steps: [{ tx: () => `Découvrir ${aug$(() => akHome().short, 'votre région')}`, ct: () => augSecCt(augHomeId()), sub: 'Envoyez vos compagnons là où la carte est encore dans la brume : plus vous découvrez la région, plus les voyages y sont rapides.', ok: () => aug$(() => sctLvl(augHomeId()), 0) >= 2, go: 'region', btn: 'Voir' }] },
+  { nm: 'Le premier camp', page: 'Mon premier camp n’était pas loin de chez nous. Je t’ai laissé un indice : cherche le 📖 sur ta carte. Là-bas, tu trouveras mes notes… et un endroit d’où partir.',
+    steps: [{ tx: 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon vers un lieu tout près du 📖 sur la carte.', ok: () => augHasCamp(augHomeId()), go: 'clue', btn: 'Voir' }] },
   { nm: 'Un nouveau compagnon', page: 'Les compagnons sauvages ne viennent pas à n’importe qui. Avec le bon appât et un peu de patience, ils te suivront. Ma recette est dans mon camp.',
     steps: [{ tx: 'Fabriquer l’appât d’Augustine à l’Herboristerie', ok: () => (S.inv || []).some(i => i && i.sub === 'appat') || akSt().bait || Object.keys(S.comps || {}).length > akSt().base.comps, go: 'herbo', btn: 'Herboristerie' },
       { tx: 'Partir avec l’appât et faire éclore un œuf', sub: 'Allez là où vit l’espèce : l’appât l’attire, l’œuf rejoint la Couveuse.', ok: () => Object.keys(S.comps || {}).length > akSt().base.comps, go: 'couv', btn: 'Couveuse' }] },
@@ -222,8 +220,8 @@ akLoop = function (n) {
   return { nm: F ? `Sur ses traces : ${F.short}` : 'Sur ses traces', reg: F && F.id,
     page: F ? `${F.name}. ${F.mood || ''} J’y suis passée moi aussi, et j’y ai laissé un camp. Apprends à connaître la région : je te dirai où le trouver.` : 'Le monde est grand. Continue.',
     steps: [
-      { tx: () => F ? `Découvrir ${F.short}` : 'Découvrir une nouvelle région', ct: () => F ? augSecCt(F.id) : '', sub: 'Visitez les secteurs dans la brume pour devenir Habitué.', ok: () => !F || sctLvl(F.id) >= 2, go: 'region', btn: 'Voir' },
-      { tx: () => F ? `Trouver le camp d’Augustine (${F.short})` : 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon dans la zone orange (📖).', ok: () => !F || augHasCamp(F.id), go: 'clue', btn: 'Voir' },
+      { tx: () => F ? `Découvrir ${F.short}` : 'Découvrir une nouvelle région', ct: () => F ? augSecCt(F.id) : '', sub: 'Visitez des lieux dans la brume pour devenir Habitué.', ok: () => !F || sctLvl(F.id) >= 2, go: 'region', btn: 'Voir' },
+      { tx: () => F ? `Trouver le camp d’Augustine (${F.short})` : 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon tout près du 📖 sur la carte.', ok: () => !F || augHasCamp(F.id), go: 'clue', btn: 'Voir' },
       { tx: 'Suivre ses traces plus loin', ct: () => `${akPsDone()} passage${akPsDone() > 1 ? 's' : ''} franchi${akPsDone() > 1 ? 's' : ''}`, sub: 'Sa page dit où elle est partie : franchissez le passage, ou explorez la région suivante.', ok: () => akPsDone() > base || (!!augFront() && augFront() !== F), go: 'passage', btn: 'Y aller' },
     ] };
 };
