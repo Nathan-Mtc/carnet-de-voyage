@@ -187,7 +187,7 @@ document.addEventListener('click', ev => {
 // ---------- le fil rouge : les chapitres ----------
 const augHomeId = () => aug$(() => rgHome().id, '');
 const augHasCamp = id => !!(id && augCamps()[id]);
-const augSecCt = id => { const I = aug$(() => sctInfo(id), null); return I ? `${I.pct}/${I.th[1]} %` : ''; };
+const augSecCt = id => { const I = aug$(() => sctInfo(id), null); return I ? `${I.pct} % → ${I.th[1]} %` : ''; };
 Object.assign(akGo, {
   clue: () => { const id = Object.keys(sctSt().clue).find(x => !augHasCamp(x) && rcIsOpen(x)); if (id) augZoom(id); else akGo.map(); },
   region: () => { aug$(() => { $('modal').hidden = true; }); const P = akStep(); sctCard((P && P.C.reg) || augHomeId()); },
