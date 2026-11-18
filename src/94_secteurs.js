@@ -162,32 +162,31 @@ if (typeof fdCard === 'function') fdCard = (orig => function (id) {
 if (typeof fdMist === 'function') fdMist = function () { sct$(() => { if (map.getLayer('fdMist')) map.setLayoutProperty('fdMist', 'visibility', 'none'); }); };
 let sctDirty = true, sctBuild = 0;
 function sctOpenIds() { return Object.keys(rcSt().open).filter(id => RG[id] && rcOk(RG[id])); }
+// v92 : plus d'hexagones dessinés (le joueur : « ces octogones qui se superposent, je n'ai pas envie de voir ça »).
+// Chaque secteur dans la brume = un nuage doux (cercle flouté de la taille du secteur) ; l'indice = une lueur orange.
+const sctPt = (g, k, extra) => { const c = sctCenter(g, k); return { type: 'Feature', properties: Object.assign({ r0: g.R * 1000 / (156543.03 * Math.cos(c[1] * Math.PI / 180)) }, extra || {}), geometry: { type: 'Point', coordinates: c } }; };
 function sctFogFC() {
   const F = [], C = [], s = sctSt();
   sctOpenIds().forEach(id => {
     const g = SCT_GRID[id]; if (!g) return; const D = sctDisc(id), clue = !s.camp[id] && s.clue[id];
-    g.list.forEach(k => {
-      const f = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [sctPoly(g, k)] } };
-      if (clue === k) C.push(f); else if (!D[k]) F.push(f);
-    });
+    g.list.forEach(k => { if (clue === k) C.push(sctPt(g, k)); else if (!D[k]) F.push(sctPt(g, k)); });
   });
   return { fog: { type: 'FeatureCollection', features: F }, clue: { type: 'FeatureCollection', features: C } };
 }
+const sctRad = f => ['interpolate', ['exponential', 2], ['zoom'], 0, ['*', ['get', 'r0'], f], 20, ['*', ['get', 'r0'], f * 1048576]];
 function sctPaint() {
   if (typeof map === 'undefined' || !map || !map.getSource || !sct$(() => map.getLayer('exFog'), null)) return;
-  // une grille par tour (pas d'à-coup)
   const miss = sctOpenIds().find(id => !SCT_GRID[id]);
   if (miss) { sctGrid(miss); sctDirty = true; if (++sctBuild < 50) return; }
   if (!sctDirty && map.getLayer('sctFog')) return;
   sctDirty = false;
   const { fog, clue } = sctFogFC();
-  if (map.getSource('sctFog')) { map.getSource('sctFog').setData(fog); map.getSource('sctClue').setData(clue); return; }
-  map.addSource('sctFog', { type: 'geojson', data: fog });
-  map.addSource('sctClue', { type: 'geojson', data: clue });
-  map.addLayer({ id: 'sctFog', type: 'fill', source: 'sctFog', paint: { 'fill-color': '#ffffff', 'fill-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.42, 9, 0.34, 12, 0.2] } }, 'exFog');
-  map.addLayer({ id: 'sctLine', type: 'line', source: 'sctFog', paint: { 'line-color': '#ffffff', 'line-opacity': 0.9, 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 0.8, 9, 1.8], 'line-dasharray': [2, 1.5] } }, 'exFog');
-  map.addLayer({ id: 'sctClueF', type: 'fill', source: 'sctClue', paint: { 'fill-color': '#f2a33a', 'fill-opacity': 0.2 } }, 'exFog');
-  map.addLayer({ id: 'sctClueL', type: 'line', source: 'sctClue', paint: { 'line-color': '#e0701a', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 2, 9, 4], 'line-dasharray': [1.6, 1.2] } }, 'exFog');
+  if (map.getSource('sctFog') && map.getLayer('sctFog') && map.getLayer('sctFog').type === 'circle') { map.getSource('sctFog').setData(fog); map.getSource('sctClue').setData(clue); return; }
+  ['sctFog', 'sctLine', 'sctClueF', 'sctClueL'].forEach(l => { if (map.getLayer(l)) map.removeLayer(l); });
+  if (map.getSource('sctFog')) map.getSource('sctFog').setData(fog); else map.addSource('sctFog', { type: 'geojson', data: fog });
+  if (map.getSource('sctClue')) map.getSource('sctClue').setData(clue); else map.addSource('sctClue', { type: 'geojson', data: clue });
+  map.addLayer({ id: 'sctFog', type: 'circle', source: 'sctFog', paint: { 'circle-color': '#ffffff', 'circle-blur': 0.7, 'circle-radius': sctRad(1.6), 'circle-opacity': ['interpolate', ['linear'], ['zoom'], 4, 0.62, 9, 0.5, 12, 0.3] } }, 'exFog');
+  map.addLayer({ id: 'sctClueF', type: 'circle', source: 'sctClue', paint: { 'circle-color': '#f2a33a', 'circle-blur': 0.6, 'circle-radius': sctRad(1.3), 'circle-opacity': 0.5 } }, 'exFog');
 }
 
 // ---------- étiquettes des régions ouvertes (vue Monde) ----------
@@ -212,7 +211,7 @@ function sctCardHTML(id) {
   return `<div class="ch-card sct-card"><p class="cu-k">Votre connaissance de la région</p><h3 class="ps-h">${esc(R.name)}</h3>
 <p class="sct-lv"><b>${I.nm}</b> <i>${sctStars(I.lvl)}</i>${I.red ? ` <em>Trajets −${Math.round(I.red * 100)} %</em>` : ''}</p>
 <div class="sct-bar"><i style="width:${pct}%"></i><span>${I.n}/${I.T} secteurs découverts</span></div>
-<p class="sct-how">Chaque <b>secteur dans la brume</b> (hexagone blanc sur la carte) se découvre en y envoyant un compagnon. Deux lieux du même secteur comptent pour un.</p>
+<p class="sct-how">Chaque <b>coin dans la brume</b> (nuage blanc sur la carte) se découvre en y envoyant un compagnon. Deux lieux du même secteur comptent pour un.</p>
 <ul class="cn-steps sct-lad">${lad}</ul>${camp}
 <button class="cu-later" data-sctquit="1">Fermer</button></div>`;
 }
