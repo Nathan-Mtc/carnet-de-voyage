@@ -522,7 +522,7 @@ nextAction = (orig => function () {
       if (o && !S.trips[k]) return { kind: 'order', k, o, r: o.req[0] };
     }
     // à la fin du tutoriel, la carte d'action montre la checklist de l'histoire (51_histoire.js prend le relais d'une carte « libre »)
-    if (tuStoryOn() && a && a.kind !== 'away' && !$('styBD')) return { kind: 'idle' };
+    // v102 : retiré ({ kind: 'idle' } sans compagnon faisait planter la carte d'action et réaffichait l'ancien « Habiller ») ; le carnet (91) prend le relais
   } catch (e) {}
   return a;
 })(nextAction);

@@ -37,7 +37,8 @@ function rtCardHTML() {
     const id = P.C.reg || rt$(() => rgHome().id, ''), I = rt$(() => sctInfo(id), null);
     if (I) { const goal = I.th[1], f = Math.min(1, I.pct / Math.max(1, goal)); gauge = `<div class="rt-g"><i style="width:${Math.round(f * 100)}%"></i><span class="rt-gm" style="left:100%"></span></div><p class="rt-gt"><b>${I.pct} %</b> de ${esc(RG[id].short)} découvert → <b>Habitué à ${goal} %</b></p>`; }
   } else if (ct) gauge = `<p class="rt-gt"><b>${esc(ct)}</b></p>`;
-  const gains = (RT_GAIN[go] || []).map(g => `<li>${esc(g)}</li>`).join('');
+  const gk = /habitant/i.test(akVal(st.tx)) ? 'hab' : go;
+  const gains = (RT_GAIN[gk] || []).map(g => `<li>${esc(g)}</li>`).join('');
   const btn = go === 'region' ? `<button class="btn green big wide" data-rtgo="brume">Où aller ?</button>` : `<button class="btn green big wide" data-cngo="1">${esc(st.btn || 'Y aller')}</button>`;
   return `<div class="rt-card"><p class="rt-ck">Chapitre ${P.n} · ${esc(P.C.nm)}</p><h3>${esc(akVal(st.tx))}</h3>${gauge}${gains ? `<p class="rt-gk">🎁 À la clé</p><ul class="rt-gain">${gains}</ul>` : ''}${btn}</div>`;
 }
