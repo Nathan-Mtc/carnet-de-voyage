@@ -42550,6 +42550,28 @@ function mrPickSpec(c, L, T) {
   for (const [r, w] of pool) { v -= w; if (v <= 0) return r; }
   return pool[pool.length - 1][0];
 }
+// les tranches : le quartier, les alentours (< 60 km), la région (60-250 km), le lointain (> 250 km ou région fermée)
+const MR_BANDS = [[0, 0], [0, 60], [60, 250], [250, 1e9]];
+function mrPickBand(c, L, T) {
+  const { open, front } = mrRegions(), maxR = [0, 1, 1, 2, 3, 3][L] || 0, all = [];
+  open.concat(front).forEach(id => (RG[id].res || []).forEach(x => {
+    const lock = !open.includes(id); if ((x.rar || 0) > (lock ? Math.min(1, maxR) : maxR)) return;
+    const O = mrOrigin(x.id); if (!O) return;
+    const r = { k: 'reg', rid: x.id, name: x.name, n: 1, src: { region: x.region } };
+    let w = (x.rar || 0) ? 0.7 : 1;
+    if (T && mr$(() => bqFitReq(T, r), true)) w *= 2.2; else if (T) w *= 0.6;
+    if (c.likes.some(k => ING[k] && ING[k][0].includes(x.sub))) w *= 2;
+    all.push({ r, w, km: lock ? Math.max(O.km, 250) : O.km });
+  }));
+  // les alentours : aussi la nature autour de chez soi (forêt, lac, campagne, rivière) ; toujours de quoi faire à moins de 60 km
+  ['foret', 'lac', 'campagne', 'riviere', 'montagne'].forEach(tag => (LOOT[tag] || []).forEach(d => { if (d[3] <= Math.min(1, maxR) && d[1] !== 't') all.push({ r: { k: 'item', name: d[0], def: d, n: 1, src: { tag }, near: 1 }, w: 0.5, km: 30 }); }));
+  const bands = MR_BANDS.map(([a, b], i) => i === 0 ? 'local' : all.filter(x => x.km >= a && x.km < b)).filter(b => b === 'local' || b.length);
+  const B = bands[Math.floor(Math.random() * bands.length)];
+  if (B === 'local') return 'local';
+  const t = B.reduce((a, x) => a + x.w, 0); let v = Math.random() * t;
+  for (const x of B) { v -= x.w; if (v <= 0) return x.r; }
+  return B[B.length - 1].r;
+}
 // le merci de chaque client, lié à qui il est
 const MR_MERCI = {
   noisette: 'recette', ondine: 'passage', roussette: 'rare', pompon: 'appat', hulotte: 'chemin', bruno: 'provisions', mimi: 'provisions',
@@ -42570,9 +42592,10 @@ if (typeof bqNewOrder === 'function') bqNewOrder = (orig => function (forceEasy)
     if (!o) return;
     const s = bqState(), L = s.lvl, T = bqType(), c = BQC(o.client);
     if (o.req.some(r => r.k === 'comp' || r.k === 'egg' || r.k === 'bait')) return;
-    // la plupart des demandes deviennent une vraie spécialité d'un vrai lieu (les premières restent dans le quartier)
-    const hasReg = o.req.find(r => r.k === 'reg');
-    if (!hasReg && s.served >= 1 && Math.random() < (s.served < 4 ? 0.5 : 0.7)) { const r = mrPickSpec(c, L, T); if (r) o.req = [r]; }
+    // v97 (le joueur : « une disparité linéaire, autant de 2 km que de 50 ») : on tire d'abord une TRANCHE DE DISTANCE,
+    // toutes aussi probables, puis une demande dans cette tranche. Les demandes ne s'éloignent pas avec le temps.
+    if (s.served >= 1) { const r = mrPickBand(c, L, T); if (r === 'local') o.req = o.req.filter(x => x.k !== 'reg').length ? o.req.filter(x => x.k !== 'reg') : o.req; else if (r) o.req = [r]; }
+    if (o.req.some(r => r.near)) { o.km = 30; o.coins = bqRound5(o.coins * 1.3); o.rep += 4; }
     const rq = o.req.find(r => r.k === 'reg'); if (!rq) return;
     const R = RG[rq.src.region], O = mrOrigin(rq.rid), km = O ? O.km : mrKm(R), val = o.req.reduce((a, r) => a + bqReqValue(r), 0);
     o.km = km; o.locked = !rcIsOpen(R.id);
@@ -42605,7 +42628,7 @@ if (typeof cmOrderCard === 'function') cmOrderCard = (orig => function (o) {
   mr$(() => {
     if (!o.mr) return;
     const rq = o.req.find(r => r.k === 'reg'), O = rq && mrOrigin(rq.rid);
-    const tag = O ? `📍 ${O.km} km` : '📍 Quartier';
+    const tag = O ? `📍 ${O.km} km` : o.req.some(r => r.near) ? '📍 Alentours' : '📍 Quartier';
     h = h.replace(/<span class="cm-tier">[^<]*<\/span>/, `<span class="cm-tier mr-km">${tag}</span>`);
     const where = rq ? esc(bqReqWhere(rq)) : esc(bqReqWhere(o.req[0]) || '');
     if (where) h = h.replace(/(<p class="b2lbl[^"]*">[\s\S]*?<\/p>)/, `$1<p class="mr-where">${where}</p>`);
