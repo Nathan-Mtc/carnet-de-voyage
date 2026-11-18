@@ -196,7 +196,7 @@ AK_CH.splice(0, AK_CH.length,
   { nm: 'Le carnet au grenier', page: 'Si tu lis ces lignes, c’est que tu habites ma maison. Je m’appelle Augustine. Toute ma vie, j’ai suivi les compagnons sauvages à travers le monde. Avant mon dernier voyage, j’ai laissé au grenier ce carnet et mon dernier œuf : prends-en soin, c’est ton premier compagnon. Dans chaque région où je suis passée, j’ai laissé un camp. Retrouve-les, et tu me retrouveras.',
     steps: AK_CH[0].steps },
   { nm: 'Connaître son pays', page: 'Avant de partir loin, apprends à connaître ton pays. Chaque coin découvert rend la route plus facile : on connaît les raccourcis, les gens, les chemins. Quand tu seras d’ici, je te montrerai où était mon premier camp.',
-    steps: [{ tx: () => `Découvrir ${aug$(() => akHome().short, 'votre région')}`, ct: () => augSecCt(augHomeId()), sub: 'Envoyez vos compagnons là où la carte est encore dans la brume : plus vous découvrez la région, plus les voyages y sont rapides.', ok: () => aug$(() => sctLvl(augHomeId()), 0) >= 2, go: 'region', btn: 'Voir' }] },
+    steps: [{ tx: () => `Découvrir ${aug$(() => akHome().short, 'votre région')}`, ct: () => augSecCt(augHomeId()), sub: 'Envoyez vos compagnons là où la carte est encore dans la brume : plus vous découvrez la région, plus les voyages y sont rapides.', ok: () => aug$(() => sctLvl(augHomeId()), 0) >= 2, go: 'region', btn: 'Où aller ?' }] },
   { nm: 'Le premier camp', page: 'Mon premier camp n’était pas loin de chez nous. Je t’ai laissé un indice : cherche le 📖 sur ta carte. Là-bas, tu trouveras mes notes… et un endroit d’où partir.',
     steps: [{ tx: 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon vers un lieu tout près du 📖 sur la carte.', ok: () => augHasCamp(augHomeId()), go: 'clue', btn: 'Voir' }] },
   { nm: 'Un nouveau compagnon', page: 'Les compagnons sauvages ne viennent pas à n’importe qui. Avec le bon appât et un peu de patience, ils te suivront. Ma recette est dans mon camp.',
@@ -220,7 +220,7 @@ akLoop = function (n) {
   return { nm: F ? `Sur ses traces : ${F.short}` : 'Sur ses traces', reg: F && F.id,
     page: F ? `${F.name}. ${F.mood || ''} J’y suis passée moi aussi, et j’y ai laissé un camp. Apprends à connaître la région : je te dirai où le trouver.` : 'Le monde est grand. Continue.',
     steps: [
-      { tx: () => F ? `Découvrir ${F.short}` : 'Découvrir une nouvelle région', ct: () => F ? augSecCt(F.id) : '', sub: 'Visitez des lieux dans la brume pour devenir Habitué.', ok: () => !F || sctLvl(F.id) >= 2, go: 'region', btn: 'Voir' },
+      { tx: () => F ? `Découvrir ${F.short}` : 'Découvrir une nouvelle région', ct: () => F ? augSecCt(F.id) : '', sub: 'Visitez des lieux dans la brume pour devenir Habitué.', ok: () => !F || sctLvl(F.id) >= 2, go: 'region', btn: 'Où aller ?' },
       { tx: () => F ? `Trouver le camp d’Augustine (${F.short})` : 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon tout près du 📖 sur la carte.', ok: () => !F || augHasCamp(F.id), go: 'clue', btn: 'Voir' },
       { tx: 'Suivre ses traces plus loin', ct: () => `${akPsDone()} passage${akPsDone() > 1 ? 's' : ''} franchi${akPsDone() > 1 ? 's' : ''}`, sub: 'Sa page dit où elle est partie : franchissez le passage, ou explorez la région suivante.', ok: () => akPsDone() > base || (!!augFront() && augFront() !== F), go: 'passage', btn: 'Y aller' },
     ] };

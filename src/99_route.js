@@ -57,13 +57,24 @@ if (typeof qtPageHTML === 'function') qtPageHTML = (orig => function () {
   });
   return h;
 })(qtPageHTML);
+// « Où aller ? » (et « Voir » sur l'étape de découverte) : la vue Monde, où l'on voit la brume de la région
+function rtBrume() {
+  rt$(() => { $('modal').hidden = true; }); rt$(() => { if (tab !== 'carte') { tab = 'carte'; renderPanel(); } }); rt$(() => vwGo('monde'));
+  rt$(() => toast('Les zones blanches sont dans la brume : envoyez un compagnon vers un lieu là-bas.'));
+}
+rt$(() => { akGo.region = rtBrume; });
+// la page Quêtes s'ouvre toujours sur Histoire (sauf si un bouton demande un autre onglet juste avant)
+if (typeof qtOpenPage === 'function') qtOpenPage = (orig => function () {
+  const want = qmTab || 'hist'; const r = orig.apply(this, arguments);
+  if (qmTab !== want) rt$(() => qmShow(want));
+  return r;
+})(qtOpenPage);
+document.addEventListener('click', ev => { if (ev.target.closest && ev.target.closest('.qm-page [data-closemodal]')) rt$(() => { qmTab = 'hist'; }); }, true);
 document.addEventListener('click', ev => {
   const t = ev.target.closest && ev.target.closest('[data-rtgo],[data-rtreg]'); if (!t) return;
   ev.stopPropagation(); ev.preventDefault();
   if (t.dataset.rtreg) { const id = t.dataset.rtreg; if (augHasCamp(id)) return augCampPage(id); rt$(() => { $('modal').hidden = true; }); return sctCard(id); }
-  // « Où aller ? » : la vue Monde, où l'on voit la brume de la région
-  rt$(() => { $('modal').hidden = true; }); rt$(() => { if (tab !== 'carte') { tab = 'carte'; renderPanel(); } }); rt$(() => vwGo('monde'));
-  rt$(() => toast('Les zones blanches sont dans la brume : envoyez un compagnon vers un lieu là-bas.'));
+  rtBrume();
 }, true);
 
 {
