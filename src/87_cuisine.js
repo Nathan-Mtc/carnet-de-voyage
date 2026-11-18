@@ -155,7 +155,7 @@ function ckPlate(q) {
 document.addEventListener('pointerdown', ev => {
   if (!CK) return;
   const m = ev.target.closest && ev.target.closest('[data-ckmix]');
-  if (m && CK.ph === 'mix') { CK.mix = Math.min(1, CK.mix + 0.085); m.classList.remove('tap'); void m.offsetWidth; m.classList.add('tap'); if (CK.mix >= 1) { CK.q.mix = 1; ckPop('Pâte parfaite !', 'ok'); setTimeout(() => { if (CK && CK.ph === 'mix') ckCook(); }, 350); CK.ph = 'mixd'; } return; }
+  if (m && CK.ph === 'mix') { CK.mix = Math.min(1, CK.mix + 0.085); m.classList.remove('tap'); void m.offsetWidth; m.classList.add('tap'); if (CK.mix >= 1) { CK.q.mix = 1; ckPop('Pâte parfaite !', 'ok'); setTimeout(() => { if (CK && CK.ph === 'mixd') ckCook(); }, 350); CK.ph = 'mixd'; } return; }
   const o = ev.target.closest && ev.target.closest('[data-ckcook]');
   if (o && CK.ph === 'cook') {
     const d = Math.abs(CK.nd - CK.zone), q = d < 0.035 ? 1 : d < 0.09 ? 0.6 : 0;

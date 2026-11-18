@@ -102,7 +102,7 @@ function renderTripCard() {
     // le but principal est le rêve (carte du haut, bouton « Partir ») : ici, une aide discrète, sans bouton concurrent
     const dr = typeof curDream === 'function' ? curDream(k) : null;
     // petit tutoriel en 3 étapes (Partir · Livrer · Habiller), affiché ici tant qu'il n'est pas fini
-    const ts = tutoStep();
+    const ts = 0; // v94 : l'ancien mini-tutoriel (Partir · Livrer · Habiller) ne s'affiche plus : le tutoriel et le carnet guident
     if (ts) {
       const rdy = typeof shopReady === 'function' ? shopReady() : 0;
       const T = [null,

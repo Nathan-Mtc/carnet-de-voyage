@@ -4805,7 +4805,7 @@ function renderTripCard() {
     // le but principal est le rêve (carte du haut, bouton « Partir ») : ici, une aide discrète, sans bouton concurrent
     const dr = typeof curDream === 'function' ? curDream(k) : null;
     // petit tutoriel en 3 étapes (Partir · Livrer · Habiller), affiché ici tant qu'il n'est pas fini
-    const ts = tutoStep();
+    const ts = 0; // v94 : l'ancien mini-tutoriel (Partir · Livrer · Habiller) ne s'affiche plus : le tutoriel et le carnet guident
     if (ts) {
       const rdy = typeof shopReady === 'function' ? shopReady() : 0;
       const T = [null,
@@ -14343,13 +14343,13 @@ function tuNewPlace(km0, km1) {
 }
 const tuCompOwned = () => { const k = tuK(); return (S.inv || []).find(it => { const G = xpGearOf(it); if (!G || G.g !== 'boussole') return false; const by = xpWornBy(it.id); return !by || by === k; }) || null; };
 const tuCompOn = () => { try { return xpTierOf(tuK(), 'boussole') >= 1; } catch (e) { return false; } };
-const tuStoryRead = () => { try { return styStep(1) !== 0 || styState().n > 1; } catch (e) { return true; } };
+const tuStoryRead = () => { try { return !!akSt().read[1] || akSt().ch > 1; } catch (e) { return true; } };
 const tuOnMap = txt => { const n = tuNav('carte'); return n ? { ...n, txt: n.txt || txt } : null; };
 const TU_STEPS = [
   // v43 : « Revoir le tutoriel » ne peut pas refaire l'œuf et le choix du commerce (pages 1 et 2) : un rappel en bulle
   { id: 'rappel1', num: 1, ok: 'Suivant', dim: false,
     done: () => !S.tuto.replay || !!S.tuto.f.r1,
-    go: () => ({ el: null, txt: `Tout a commencé par un <b>œuf mystère</b>… et c’était moi, ${esc(CHARS[tuK()] ? CHARS[tuK()].name : 'votre compagnon')} ! Vos compagnons voyagent sur la vraie carte du monde et rapportent des objets des lieux qu’ils visitent.` }) },
+    go: () => ({ el: null, txt: `Tout a commencé par l’<b>œuf qu’Augustine a laissé au grenier</b>… et c’était moi, ${esc(CHARS[tuK()] ? CHARS[tuK()].name : 'votre compagnon')} ! Vos compagnons voyagent sur la vraie carte du monde et rapportent des objets des lieux qu’ils visitent.` }) },
   { id: 'rappel2', num: 2, ok: 'C’est parti !', dim: false,
     done: () => !S.tuto.replay || !!S.tuto.f.r2,
     go: () => { let nm = ''; try { const T = bqType(); nm = T ? (T.name || T.n || '') : ''; } catch (e) {} return { el: null, txt: `Ensuite, vous avez ouvert votre commerce${nm ? ` : <b>${esc(nm)}</b>` : ''}. Des clients y passent commande, et nos voyages servent à trouver ce qu’ils veulent. Voyons ça ensemble !` }; } },
@@ -14398,7 +14398,12 @@ const TU_STEPS = [
       // filet de sécurité : la commande du tutoriel doit être livrable (objet vendu, porté ou utilisé entre-temps)
       if (o && !bqReady(o) && !tuModal()) { tuTopUp(o); if (tab === 'boutique') renderPanel(); }
       const M = tuModal();
-      if (M && M.querySelector('.haul')) { const b = tuSel('#modal .bq-haul [data-bopen]', '#modal .obsum [data-obgo="order"]'); if (b) return { el: b, txt }; }
+      if (M && M.querySelector('.haul')) {
+        const b = tuSel('#modal .bq-haul [data-bopen]', '#modal .obsum [data-obgo="order"]'); if (b) return { el: b, txt };
+        // v94 : le butin expliqué avant de tout ranger
+        const r = tuSel('#modal [data-closemodal]');
+        if (r) return { el: r, txt: `Voici mon butin ! Chaque objet sert à quelque chose : <b>livrer vos clients</b>, <b>cuisiner</b> des provisions, <b>fabriquer</b> du matériel à l’atelier, ou <b>vendre</b> pour des pièces. Les pastilles sur chaque objet disent à quoi il sert. Rangeons tout dans le sac, puis livrons ${esc(R.who)} !`, scroll: r };
+      }
       if (tab === 'boutique' && getSub('boutique') === 'comptoir' && !M) { const b = tuSel(`[data-bdeliver="${o.id}"]`); if (b) return { el: b, txt, scroll: b.closest('.bq-order') }; const c = tuVis($q(`.bq-order[data-oid="${o.id}"]`)); if (c) return { el: c, hand: c.querySelector('[data-bdeliver],[data-bgo]'), txt, scroll: c }; }
       if (tab === 'carte' && !M) { const b = tuSel(`#tripCard [data-act="deliver"][data-id="${o.id}"]`); if (b) return { el: b, txt }; }
       const n = tuNav('boutique', 'comptoir'); return n ? { ...n, txt: n.txt || txt } : null;
@@ -14413,7 +14418,7 @@ const TU_STEPS = [
     } },
   { id: 'boussole', num: 7, ok: 'Merci !',
     done: () => !!tuCompOwned() || tuCompOn(),
-    go: () => tuOnMap('Revenez sur la carte : j’ai un cadeau pour vous.') || { el: null, txt: `<span class="tu-gift">${xpGIco('boussole', 1)}</span>Pour voir plus loin, il faut du matériel. Voici une <b>boussole de base</b>, en cadeau ! Les suivantes s’achètent au Magasin ou se fabriquent à l’atelier.` } },
+    go: () => tuOnMap('Revenez sur la carte : j’ai un cadeau pour vous.') || { el: null, txt: `<span class="tu-gift">${xpGIco('boussole', 1)}</span>Pour aller plus loin, il faut du matériel. Voici une <b>boussole de base</b>, en cadeau ! Une fois équipée, mon <b>cercle vert</b> grandit : je peux partir vers des lieux plus éloignés du vrai monde (d’autres villes, la montagne, la mer…). Les meilleures boussoles s’achètent au Magasin ou se fabriquent à l’atelier.` } },
   { id: 'equiper', num: 7,
     done: () => tuCompOn(),
     go: () => {
@@ -14422,8 +14427,10 @@ const TU_STEPS = [
       if (tab !== 'compagnons') return { el: tuSel('#nav [data-nav="compagnons"]'), txt: 'Équipons-la ! Touchez « Compagnons ».' };
       const n = tuNav('compagnons', 'talents'); if (n) return { ...n, txt: 'Le matériel se range dans « Talents ».' };
       if (S.sel !== k) return { el: tuSel(`#hudComps .hc-btn[data-sel="${k}"]`, `#panelBody [data-stc="${k}"]`), txt: `Choisissez-moi d’abord : c’est moi, ${esc(tuName())} !` };
-      if (xpSlot == null) { const a = xpEq(k), i = a[0] && !a[1] ? 1 : 0, b = tuSel(`#panelBody [data-xps="${i}"]`); return { el: b, txt: 'Voici mes 2 cases de matériel. Touchez une case vide.', scroll: b && b.closest('.xpf') }; }
-      const b = tuSel(`#panelBody [data-xpeq="${it.id}"]`);
+      const seen = b => { try { if (!b) return; const r = b.getBoundingClientRect(); if (r.top < 90 || r.bottom > innerHeight - 260) b.scrollIntoView({ block: 'center', behavior: tuReduce() ? 'auto' : 'smooth' }); } catch (e) {} };
+      if (!$q('#panelBody [data-xps]')) { const m = tuSel('#panelBody [data-tlp="mat"]'); if (m) { seen(m); return { el: m, txt: 'Mon matériel est rangé ici. Touchez « Matériel » pour ouvrir mes cases.', scroll: m }; } }
+      if (xpSlot == null) { const a = xpEq(k), i = a[0] && !a[1] ? 1 : 0, b = tuSel(`#panelBody [data-xps="${i}"]`); seen(b); return { el: b, txt: 'Voici mes cases de matériel. Touchez la case vide entourée.', scroll: b }; }
+      const b = tuSel(`#panelBody [data-xpeq="${it.id}"]`); seen(b);
       return { el: b, txt: 'Touchez la boussole pour me l’équiper.', scroll: b };
     } },
   { id: 'accessible', num: 8, ok: 'Super !', round: 1,
@@ -14436,16 +14443,16 @@ const TU_STEPS = [
   { id: 'carnet', num: 9, ok: 'Lire le carnet',
     done: () => tuStoryRead(),
     go: () => {
-      if ($('styBD')) return { hide: 1 };
-      return tuOnMap('Revenez sur la carte : une dernière chose…') || { el: null, txt: 'Une dernière chose… En rangeant le grenier, j’ai trouvé un vieux carnet couvert de poussière. Lisons-le !' };
+      if ($('styBD') || tuModal()) return { hide: 1 };
+      return tuOnMap('Revenez sur la carte : une dernière chose…') || { el: null, txt: 'Une dernière chose… Cette maison était celle d’<b>Augustine</b>, une grande voyageuse. Au grenier, à côté de mon œuf, elle a laissé son carnet. Lisons-le !' };
     } },
   { id: 'fin', num: 10, ok: 'À vous de jouer !',
     done: () => !!S.tuto.f.fin,
     go: () => {
-      if ($('styBD')) return { hide: 1 };
+      if ($('styBD') || tuModal()) return { hide: 1 };
       const n = tuOnMap('Revenez sur la carte.'); if (n) return n;
-      if (!tuSel('#tripCard.act-story')) try { renderTripCard(); } catch (e) {}
-      return { el: tuSel('#tripCard.act-story', '#tripCard'), txt: 'Voici la suite de l’histoire d’Augustine : une petite liste à cocher, avec « Y aller ». Elle est aussi dans Quêtes › Histoire. Bon voyage !' };
+      try { renderTripCard(); } catch (e) {}
+      return { el: tuSel('#cmGoal', '#tripCard'), txt: 'Voici votre fil rouge : <b>retrouver les camps d’Augustine</b>, région après région. Cette ligne vous dit toujours quoi faire ensuite, et la carte du bas a un bouton pour y aller. Bon voyage !' };
     } },
 ];
 const TU_IDX = Object.fromEntries(TU_STEPS.map((s, i) => [s.id, i]));
@@ -14531,7 +14538,18 @@ function tuFallbackDest() {
   const o = tuOrder(), cat = o && o.req[0].src && o.req[0].src.cat || 'boulangerie';
   if (typeof poiDest !== 'function' || !POI_CATS[cat]) return;
   const h = homeObj();
-  plan.dest = poiDest({ cat, name: `${POI_CATS[cat][0]} du quartier`, lon: h.lon + 0.0045, lat: h.lat + 0.0028, city: S.home });
+  // v94 : d'abord un vrai lieu de cette catégorie affiché sur la carte (le joueur : « il va dans l'eau ») ;
+  // sinon un point du quartier qui n'est PAS dans l'eau
+  let real = null;
+  try { real = tilesPOIs(20).filter(p => p.cat === cat).map(p => [p, kmExact(h, p)]).filter(x => x[1] <= 2.5).sort((a, b) => a[1] - b[1])[0]; } catch (e) {}
+  if (real) { plan.dest = poiDest(real[0]); plan.dur = 'eclair'; if (tab !== 'voyage') openSheet('voyage'); else renderPanel(); try { drawMarks(); } catch (e) {} return; }
+  const wet = (lon, lat) => { try { const pt = map.project([lon, lat]), c = map.getContainer(); if (pt.x < 0 || pt.y < 0 || pt.x > c.clientWidth || pt.y > c.clientHeight) return false; return map.queryRenderedFeatures([[pt.x - 6, pt.y - 6], [pt.x + 6, pt.y + 6]], { layers: ['water', 'waterway'].filter(id => map.getLayer(id)) }).length > 0; } catch (e) { return false; } };
+  let spot = [h.lon + 0.0045, h.lat + 0.0028];
+  outer: for (const km of [0.5, 0.7, 0.4, 0.9, 1.1]) for (let a = 0; a < 8; a++) {
+    const t = a * Math.PI / 4 + 0.6, lon = h.lon + km * Math.cos(t) / (111.32 * Math.cos(h.lat * Math.PI / 180)), lat = h.lat + km * Math.sin(t) / 110.57;
+    if (!wet(lon, lat)) { spot = [lon, lat]; break outer; }
+  }
+  plan.dest = poiDest({ cat, name: `${POI_CATS[cat][0]} du quartier`, lon: spot[0], lat: spot[1], city: S.home });
   plan.dur = 'eclair';
   if (tab !== 'voyage') openSheet('voyage'); else renderPanel();
   try { drawMarks(); } catch (e) {}
@@ -14770,7 +14788,7 @@ document.addEventListener('click', ev => {
     if (id === 'portee') { F.portee = 1; F.km0 = tuRangeKm(); }
     if (id === 'boussole') tuGiveCompass();
     if (id === 'accessible') F.acc = 1;
-    if (id === 'carnet') { F.carnet = 1; save(); tuHide(); try { styRead(); } catch (e) { console.error('tuto', e); } }
+    if (id === 'carnet') { F.carnet = 1; save(); tuHide(); try { akPage(1); } catch (e) { console.error('tuto', e); } }
     if (id === 'fin') F.fin = 1;
     save(); tuTick();
   }
@@ -40450,7 +40468,7 @@ function ckPlate(q) {
 document.addEventListener('pointerdown', ev => {
   if (!CK) return;
   const m = ev.target.closest && ev.target.closest('[data-ckmix]');
-  if (m && CK.ph === 'mix') { CK.mix = Math.min(1, CK.mix + 0.085); m.classList.remove('tap'); void m.offsetWidth; m.classList.add('tap'); if (CK.mix >= 1) { CK.q.mix = 1; ckPop('Pâte parfaite !', 'ok'); setTimeout(() => { if (CK && CK.ph === 'mix') ckCook(); }, 350); CK.ph = 'mixd'; } return; }
+  if (m && CK.ph === 'mix') { CK.mix = Math.min(1, CK.mix + 0.085); m.classList.remove('tap'); void m.offsetWidth; m.classList.add('tap'); if (CK.mix >= 1) { CK.q.mix = 1; ckPop('Pâte parfaite !', 'ok'); setTimeout(() => { if (CK && CK.ph === 'mixd') ckCook(); }, 350); CK.ph = 'mixd'; } return; }
   const o = ev.target.closest && ev.target.closest('[data-ckcook]');
   if (o && CK.ph === 'cook') {
     const d = Math.abs(CK.nd - CK.zone), q = d < 0.035 ? 1 : d < 0.09 ? 0.6 : 0;
