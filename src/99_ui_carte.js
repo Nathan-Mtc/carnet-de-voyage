@@ -1,7 +1,7 @@
 // ================= 99 · BOUTONS DE LA CARTE ET FILTRE DES LIEUX (v98) =================
 // Le joueur (19/11) : « les onglets à droite sont trop au centre, quand on déplie ça prend tout l'écran, et il n'y a pas tous les types de lieux ».
 //  - la colonne de boutons se range en haut à droite, juste sous la ligne du chapitre ;
-//  - le menu des lieux devient une petite grille compacte (2 colonnes, sans sous-titres) ;
+//  - le menu des lieux : une petite colonne compacte, ouverte sous le bouton, collée au bord droit (v99) ;
 //  - tous les types de lieux ont leur filtre : + « Sorties et sport » (piscine, terrain de sport, aire de jeux, cinéma, hôtel) et « Rues et routes ».
 const uc$ = (f, d) => { try { return f(); } catch (e) { return d; } };
 uc$(() => {
@@ -23,12 +23,12 @@ addEventListener('resize', () => uc$(ucPlace));
   const css = document.createElement('style');
   css.textContent = `
 .zoom{top:150px;transform:none!important}
-#poiFilt{right:calc(100% + 8px)!important;top:0!important;width:min(250px,calc(100vw - 110px))!important;display:grid!important;grid-template-columns:1fr 1fr;gap:3px!important;padding:6px!important;max-height:calc(100vh - 260px);overflow:auto}
+#poiFilt{right:0!important;left:auto!important;top:62px!important;width:172px!important;display:flex!important;flex-direction:column!important;gap:1px!important;padding:5px!important;max-height:calc(100vh - 330px);overflow:auto;z-index:6}
 #poiFilt[hidden]{display:none!important}
-#poiFilt h4{grid-column:1/-1;margin:0 4px 2px!important;font-size:10.5px!important}
-#poiFilt button{padding:4px 5px!important;gap:6px!important;border-radius:10px!important}
-#poiFilt .pfi{width:22px!important;height:22px!important}#poiFilt .pfi svg{width:13px!important;height:13px!important}
-#poiFilt .pft b{font:800 11.5px/1.15 var(--display)!important}
+#poiFilt h4{margin:1px 4px 3px!important;font-size:10px!important}
+#poiFilt button{padding:3px 5px!important;gap:7px!important;border-radius:9px!important;min-height:0!important}
+#poiFilt .pfi{width:20px!important;height:20px!important;border-width:1.5px!important}#poiFilt .pfi svg{width:12px!important;height:12px!important}
+#poiFilt .pft b{font:800 12px/1.1 var(--display)!important;white-space:nowrap}
 #poiFilt .pft>:not(b){display:none!important}
 `;
   document.head.appendChild(css);
