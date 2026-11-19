@@ -18,7 +18,7 @@ za$(() => {
 za$(() => {
   const C = AK_CH.find(c => c.nm === 'Un nouveau compagnon'); if (!C) return;
   C.steps[0].sub = () => za$(() => {
-    const R = RECIPES.find(r => /^hb_/.test(r.id) && sctSt().learn[r.sp]); if (!R) return 'Sa recette est dans son camp.';
+    const cs = Object.values(sctSt().camp || {}).map(c => c && c.sp).filter(Boolean), R = RECIPES.find(r => /^hb_/.test(r.id) && cs.includes(r.sp)) || RECIPES.find(r => /^hb_/.test(r.id) && sctSt().learn[r.sp]); if (!R) return 'Sa recette est dans son camp.';
     const miss = R.ing.filter(([k, n]) => za$(() => S.inv.filter(i => ING[k] && ING[k][0].includes(i.sub)).length, 0) < n).map(([k, n]) => { const c = za$(() => bqCatFor(k), null), w = c && POI_CATS[c] ? POI_CATS[c][0].toLowerCase() : ''; return `${n} ${ING[k] ? ING[k][1].toLowerCase() : k}${w ? ` (${w})` : ''}`; });
     return miss.length ? `« ${R.out[0]} » : il vous manque ${miss.join(', ')}.` : `Vous avez tout : fabriquez « ${R.out[0]} » à l’Herboristerie.`;
   }, '');

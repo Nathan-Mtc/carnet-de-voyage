@@ -24,7 +24,7 @@ function augRoadMs(d) {
 }
 if (typeof trjPlanInfo === 'function') trjPlanInfo = (orig => function (dest) {
   const r = orig.apply(this, arguments);
-  aug$(() => { if (!dest || dest.tuto) return; const A = augRoadMs(dest); if (!A.O.camp && !A.red) return; r.km = A.O.km; r.road = A.road; r.total = A.road + r.stay; r.back = Date.now() + r.total; });
+  aug$(() => { if (!dest || dest.tuto) return; const A = augRoadMs(dest); if (!A.O.camp && !A.red && !A.fa) return; r.km = A.O.km; r.road = A.road; r.total = A.road + r.stay; r.back = Date.now() + r.total; });
   return r;
 })(trjPlanInfo);
 if (typeof startTrip === 'function') startTrip = (orig => function () {
@@ -32,10 +32,10 @@ if (typeof startTrip === 'function') startTrip = (orig => function () {
   const r = orig.apply(this, arguments);
   aug$(() => {
     const t = S.trips[k]; if (!t || t === before || t.tuto || !t.dest || t.augSet) return;
-    const A = augRoadMs(t.dest); t.augSet = 1; if (!A.O.camp && !A.red) return;
+    const A = augRoadMs(t.dest); t.augSet = 1; if (!A.O.camp && !A.red && !A.fa) return;
     const out = Math.round(A.road / 2), total = 2 * out + (t.stay || 0);
     t.out = out; t.total = total; t.from = { name: A.O.o.name, lat: A.O.o.lat, lon: A.O.o.lon }; t.dist = Math.round(A.O.km);
-    if (A.O.camp) t.fromCamp = A.O.camp; if (A.red) t.sctRed = A.red;
+    if (A.O.camp) t.fromCamp = A.O.camp; if (A.red) t.sctRed = A.red; if (A.fa) t.faRed = A.fa;
     const ar = (t.events || []).find(e => e.type === 'arrivee'); if (ar) ar.at = out / total;
     (t.events || []).sort((a, b) => a.at - b.at);
     save();

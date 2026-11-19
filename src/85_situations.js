@@ -292,6 +292,9 @@ const sxSp = k => sx$(() => CHARS[k].sp, '');
 const sxRegion = t => sx$(() => regionAt(t.dest.lon, t.dest.lat).short, '');
 const sxFill = (s, k, t, p) => String(s).replace(/\{n\}/g, sxName(k)).replace(/\{p\}/g, (t && t.dest && t.dest.name) || 'ce lieu').replace(/\{r\}/g, sxRegion(t)).replace(/\{lp\}/g, p || '');
 const sxAff = (k, kind) => (SX_AFF[kind] || []).includes(sxSp(k));
+// v161 : bonus de réussite des choix risqués (99_zfaune.js le remplace par le bonus de terrain)
+let sxBonus = (k, kind) => sxAff(k, kind) ? 0.2 : 0;
+let sxBonusTx = (k, kind) => sxAff(k, kind) ? `🐾 ${sxName(k)} est à l’aise ici : ${SX_SP_NM[sxSp(k)] || 'son espèce'} adorent ce genre d’endroit (+20 % de réussite).` : '';
 function sxHave(need) {
   for (const n of need) {
     if (n.startsWith('coins:')) { if ((S.coins || 0) >= +n.slice(6)) return { coins: +n.slice(6) }; continue; }
@@ -329,7 +332,7 @@ if (typeof renderActionCard === 'function') renderActionCard = (orig => function
 
 function sxTags(o, k, kind) {
   const e = o.ok, T = [];
-  if (o.t === 'R') { const p = Math.min(0.95, o.p + (sxAff(k, kind) ? 0.2 : 0)); T.push(`<i class="ko">⚠️ ${Math.round((1 - p) * 100)} % de risque</i>`); }
+  if (o.t === 'R') { const p = Math.min(0.95, o.p + sxBonus(k, kind)); T.push(`<i class="ko">⚠️ ${Math.round((1 - p) * 100)} % de risque</i>`); }
   if (o.t === 'S') T.push('<i class="ok">Sans risque</i>');
   if (o.t === 'A') T.push(`<i class="gold">Utilise ${esc(o.nm)}</i>`, '<i class="ok">Réussite assurée</i>');
   if (e.time && e.time < 1) T.push(`<i>⏱️ Retour ${e.time <= 0.5 ? '2× ' : ''}plus tôt</i>`);
@@ -346,14 +349,14 @@ function sxTags(o, k, kind) {
 function sxRender(k, t, step) {
   const s = sxS(t), kind = t.mf.kind, n = sxName(k);
   const q = step ? step.q : s.q, opts = step ? step.o : s.o;
-  const aff = sxAff(k, kind);
+  const aff = sxBonusTx(k, kind);
   const html = opts.map((o, i) => {
     if (o.t === 'A' && !sxHave(o.need)) return '';
     return `<button class="ch-opt ${o.t === 'R' ? 'risk' : o.t === 'A' ? 'lead' : ''}" data-sxpick="${i}"><b>${o.t === 'A' ? '💡 ' : ''}${esc(sxFill(o.lb, k, t))}</b><span class="ch-tags">${sxTags(o, k, kind)}</span></button>`;
   }).join('');
   return `<div class="ch-hero"><span class="ch-ico">${s.ico}</span><img src="${sx$(() => portraitURI(k, 'surpris'), '')}" alt="">${s.tier !== 'c' ? `<span class="sx-tier sx-${s.tier}">${s.tier === 'l' ? '✨ Légendaire' : 'Peu fréquent'}</span>` : ''}</div>
     <p class="cu-k">Moment fort · ${esc(t.dest.name || '')}${sxRegion(t) ? ' · ' + esc(sxRegion(t)) : ''}</p><p class="ch-q">${esc(sxFill(q, k, t))}</p>
-    ${aff && !step ? `<p class="sx-aff">🐾 ${esc(n)} est à l’aise ici : ${esc(SX_SP_NM[sxSp(k)] || 'son espèce')} adorent ce genre d’endroit (+20 % de réussite).</p>` : ''}
+    ${aff && !step ? `<p class="sx-aff">${esc(aff)}</p>` : ''}
     ${html}${step ? '' : '<button class="cu-later" data-chquit="1">Plus tard</button>'}`;
 }
 chOpen = function (k) {
@@ -393,7 +396,7 @@ document.addEventListener('click', ev => {
   let e, mood = 'content';
   if (o.t === 'S') e = o.ok;
   else if (o.t === 'A') { const h = sxHave(o.need); if (!h) return; if (h.it) { const i = S.inv.indexOf(h.it); if (i >= 0) S.inv.splice(i, 1); } if (h.coins) S.coins -= h.coins; e = o.ok; mood = 'rire'; }
-  else { const p = Math.min(0.95, o.p + (sxAff(k, t.mf.kind) ? 0.2 : 0)); if (Math.random() < p) { e = o.ok; mood = 'rire'; } else { e = o.ko; mood = 'triste'; } }
+  else { const p = Math.min(0.95, o.p + sxBonus(k, t.mf.kind)); if (Math.random() < p) { e = o.ok; mood = 'rire'; } else { e = o.ko; mood = 'triste'; } }
   const fx = sxApply(k, t, e);
   if (o.t === 'A') fx.unshift(`💡 ${o.nm} utilisé${/^une /.test(o.nm) ? 'e' : ''}`);
   const txt = sxFill(e.tx, k, t);

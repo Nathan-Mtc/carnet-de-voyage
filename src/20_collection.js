@@ -76,6 +76,8 @@ const SP_INFO = {
       tap: ['Souris ! Comme moi !', 'Un pique-nique ? Oh oui !', 'Bonjour ! Bonjour ! Bonjour !', 'Tu es mon ami. C’est décidé.'],
       night: ['…zzz… pique-nique… zzz…'], away: ['Je dis bonjour à tout le monde !', 'Tout le monde est gentil ici !'] } },
 };
+// v161 : les nouvelles espèces (02_faune_dessin.js) avant de relire les compagnons sauvegardés
+if (typeof FA_SP !== 'undefined') FA_SP.forEach(f => { if (!SP_IDS.includes(f.id)) SP_IDS.push(f.id); if (!SP_INFO[f.id]) SP_INFO[f.id] = faInfo(f); });
 const COMP_FROM = { depart: 'Compagnon de départ', oeuf: 'Né d’un œuf', rencontre: 'Rencontré en chemin', magasin: 'Adopté au magasin', quete: 'Reçu en récompense', croisement: 'Né à la nurserie' };
 
 // ---------- fonctions de base (déclarations : utilisables par les fichiers chargés avant celui-ci) ----------

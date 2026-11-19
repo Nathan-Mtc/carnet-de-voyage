@@ -75,7 +75,7 @@ function sctCov(id) {
   const g = sctGrid(id), V = sctVis(id); if (!g || !V.length) return 0;
   const sig = V.length + ':' + (V[V.length - 1] || []).join(',');
   if (g.covSig === sig) return g.cov;
-  let c = 0; g.pts.forEach(([lon, lat]) => { if (V.some(([a, b]) => sctKm(a, b, lon, lat) < g.r)) c++; });
+  let c = 0; g.pts.forEach(([lon, lat]) => { if (V.some(([a, b, rk]) => sctKm(a, b, lon, lat) < g.r * (rk || 1))) c++; });
   g.covSig = sig; g.cov = g.pts.length ? Math.min(1, c / g.pts.length) : 0;
   return g.cov;
 }
@@ -97,7 +97,7 @@ function sctVisit(d, quiet) {
   const K = sct$(() => sctNear(d), null); if (!K || K.near) return null;
   const s = sctSt(), id = K.R.id; if (!s.v[id]) s.v[id] = [];
   const before = sctInfo(id);
-  s.v[id].push([+(+d.lon).toFixed(4), +(+d.lat).toFixed(4)]);
+  s.v[id].push(d.rk > 1 ? [+(+d.lon).toFixed(4), +(+d.lat).toFixed(4), +(+d.rk).toFixed(2)] : [+(+d.lon).toFixed(4), +(+d.lat).toFixed(4)]);
   const I = sctInfo(id); sctDirty = true;
   if (!quiet && I.pct > before.pct) setTimeout(() => sct$(() => {
     if (I.lvl > before.lvl) { toast(`⭐ ${K.R.short} : vous êtes « ${I.nm} » ! ${I.red ? `Trajets ${Math.round(I.red * 100)} % plus rapides dans la région.` : ''}`); sct$(() => confetti(true)); }
@@ -106,7 +106,7 @@ function sctVisit(d, quiet) {
   return { id, I, up: I.lvl > before.lvl };
 }
 // au retour d'un compagnon
-GAME.on('trip:return', e => sct$(() => { if (e && e.dest && !(e.trip && e.trip.tuto)) { sctVisit(e.dest, false); sct$(save); sct$(() => rcCheck(false)); } }));
+GAME.on('trip:return', e => sct$(() => { if (e && e.dest && !(e.trip && e.trip.tuto)) { sctVisit(e.trip && e.trip.faRk > 1 ? { ...e.dest, rk: e.trip.faRk } : e.dest, false); sct$(save); sct$(() => rcCheck(false)); } }));
 // mise en route : la maison est connue, les anciens voyages comptent (et les anciens secteurs)
 function sctMig() {
   const s = sctSt(); if (s.mig3) return; if (document.body.classList.contains('firstrun')) return;
@@ -176,8 +176,8 @@ function sctFogImage() {
   d.filter = `blur(${Math.max(2, Math.round(W / 220))}px)`; d.drawImage(a, 0, 0); d.filter = 'none';
   // la brume s'efface autour des lieux visités
   d.globalCompositeOperation = 'destination-out';
-  ids.forEach(id => { const g = SCT_GRID[id]; sctVis(id).forEach(([lon, lat]) => {
-    const px = X(lon), py = Y(lat), rr = g.r / (111.32 * Math.max(0.2, Math.cos(lat * Math.PI / 180))) * sc * 1.05;
+  ids.forEach(id => { const g = SCT_GRID[id]; sctVis(id).forEach(([lon, lat, rk]) => {
+    const px = X(lon), py = Y(lat), rr = g.r * (rk || 1) / (111.32 * Math.max(0.2, Math.cos(lat * Math.PI / 180))) * sc * 1.05;
     const gr = d.createRadialGradient(px, py, 0, px, py, rr); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(0.55, 'rgba(0,0,0,.95)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
     d.fillStyle = gr; d.beginPath(); d.arc(px, py, rr, 0, Math.PI * 2); d.fill();
   }); });

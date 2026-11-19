@@ -175,17 +175,18 @@ sxApply = (orig => function (k, t, e) {
 })(sxApply);
 
 // la fenêtre du passage (remplace celle de 90)
+let tvLvBonus = (k, E) => 0; // v161 : 99_zfaune.js (terrain familier)
 function tvReq(E, k) {
   const T = tvTerr(E), g = PS_T[E[2]].gear, G = PS_GEAR[g], s = psSt(), from = psFrom(E), A = RG[from];
   const I = tv$(() => sctInfo(from), { lvl: 0, pct: 0, th: [0, 6, 15, 30, 50], nm: 'Inconnue' }), st = (tvSt()[psKey(E)] || {}).stage || 0;
-  const lv = psLv(E), myLv = tv$(() => S.prog[k].lvl, 1), nP = tvProvs(T.pk).length, need = 3 - st;
+  const lvB = tv$(() => tvLvBonus(k, E), 0) || 0, lv = Math.max(1, psLv(E) - lvB), myLv = tv$(() => S.prog[k].lvl, 1), nP = tvProvs(T.pk).length, need = 3 - st;
   const okG = psHas(g), okK = I.lvl >= T.kn, okL = myLv >= lv, okP = nP >= 1;
   const gearTx = okG ? `✓ ${esc(G.nm)}` : s.learn[g] ? `${esc(G.nm)} : à fabriquer à la Forge (${esc(TV_GEAR[g].why)})` : s.hab[g] ? `${esc(G.nm)} : aidez ${esc(G.hab.who)} (Quêtes › Habitants)` : `${esc(G.nm)} : ${esc(G.hab.who)}, ${esc(G.hab.job)}, vous l’apprendra. On le croise en voyage en ${esc(A.short)}.`;
   return { T, okG, okK, okL, okP, ok: okG && okK && okL && okP, st, html: `<ul class="ps-req">
 <li class="${okG ? 'ok' : ''}">🎒 ${gearTx}</li>
 <li class="${nP >= need ? 'ok' : okP ? 'mid' : ''}">🍲 ${need} provision${need > 1 ? 's' : ''} ${TV_PK[T.pk][0]} (une par étape, plus une de réserve conseillée) · vous en avez ${nP}<small>${TV_PK[T.pk][1]}</small></li>
 <li class="${okK ? 'ok' : ''}">🗺️ Être ${SCT_LV[T.kn].nm} de ${esc(A.short)} · vous êtes ${esc(I.nm)} (${I.pct}/${I.th[T.kn - 1]} % découverts)</li>
-<li class="${okL ? 'ok' : ''}">⭐ ${esc(tv$(() => CHARS[k].name, ''))} niveau ${lv} minimum · niveau ${myLv}</li></ul>` };
+<li class="${okL ? 'ok' : ''}">⭐ ${esc(tv$(() => CHARS[k].name, ''))} niveau ${lv} minimum${lvB ? ` <small>(−${lvB} : terrain familier)</small>` : ''} · niveau ${myLv}</li></ul>` };
 }
 psOpen = function (key) {
   const E = PS_EDGES.find(x => psKey(x) === key); if (!E || psSt().done[key]) return;
