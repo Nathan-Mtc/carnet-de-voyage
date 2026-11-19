@@ -33,7 +33,8 @@ try { ['lampe', 'boussole'].forEach(g => { if (!BQ_CAT.some(a => a.key === 'xg_'
 
 // ---------------- quel bouton pour quel matériel ----------------
 const ppRecipe = (g, t) => pp$(() => RECIPES.find(r => r.kind === 'Équipement' && (G => G && G.g === g && G.tier === t)(xpGearOf({ name: r.out[0] }))), null);
-const ppShopKey = (g, t) => (t === 1 && pp$(() => BQ_CAT.some(a => a.key === 'xg_' + g), false) ? 'xg_' + g : null);
+// v162 : le magasin ne vend plus le matériel (v43b : le magasin = l'épicerie) : il se fabrique à l'atelier
+const ppShopKey = (g, t) => null;
 const ppPrice = key => pp$(() => bqArticle(bqStockArticle({ key })).price, 0);
 function ppOwned(k, g, t) {
   return pp$(() => S.inv.filter(it => { const G = xpGearOf(it); if (!G || G.g !== g || G.tier < t) return false; const by = xpWornBy(it.id); return !by || by === k; }).sort((a, b) => xpGearOf(b).tier - xpGearOf(a).tier)[0], null);

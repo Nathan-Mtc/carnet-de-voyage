@@ -84,6 +84,8 @@ const gdToPanel = txt => ({ id: 'back', el: tuSel('#nav [data-nav="carte"]'), ba
 function gdNav(t, sub, nm) {
   const n = tuNav(t, sub); if (!n) return null;
   const lbl = n.el ? ((n.el.querySelector('span') || n.el).textContent || '').trim() : '';
+  // v162 : l'onglet à toucher peut être caché en haut du panneau (ex. sous les onglets du marché mondial) : on le ramène à l'écran
+  if (n.el && n.el.closest && n.el.closest('#panelBody')) gd$(() => { const r = n.el.getBoundingClientRect(), P = $('panelBody').getBoundingClientRect(); if (r.top < P.top + 4 || r.bottom > P.bottom - 4) $('panelBody').scrollTop = 0; }, 0);
   return { id: `nav:${t}:${sub || ''}`, el: n.el, txt: n.txt || `${nm} Touchez « ${lbl || t} ».` };
 }
 // la case de matériel à remplir : une vide, sinon celle dont on n'a pas besoin ici
@@ -107,7 +109,7 @@ function gdGearStep(k, g, t, pre) {
       return { id: 'buy:' + g, el: b, txt: `Voici ${nm.toLowerCase()} (${price} pièces). Touchez le prix pour l’acheter.` };
     }
     if (R) {
-      const n = gdNav('village', 'atelier', `${pre} On peut le fabriquer à l’atelier du Foyer.`); if (n) return { ...n, id: n.id + ':' + g };
+      const n = gdNav('village', 'atelier', `${pre} Ça se fabrique à l’atelier du Foyer (le magasin ne vend que des ingrédients).`); if (n) return { ...n, id: n.id + ':' + g };
       if (craftFilter !== 'Équipement') return { id: 'cf:' + g, el: tuSel('#panelBody [data-cf="Équipement"]'), txt: 'Touchez l’onglet « Équipement ».' };
       const b = document.querySelector(`#panelBody [data-craft="${R.id}"]`), card = b && b.closest('.rec');
       if (canCraft(R)) return { id: 'craft:' + g, el: b, txt: `Touchez « Fabriquer » : ${nm.toLowerCase()}.` };
