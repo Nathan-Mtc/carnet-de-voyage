@@ -30,7 +30,9 @@ if (typeof renderPanel === 'function') renderPanel = (orig => function () { tr$(
 if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
   const r = orig.apply(this, arguments);
   tr$(() => {
-    box.querySelectorAll('.msec').forEach(s => { const h = s.querySelector('h3'); const t = h ? h.textContent.trim() : ''; if (/^(Rendez-vous|Aujourd’hui|Événement)$/.test(t)) s.remove(); });
+    box.querySelectorAll('.msec').forEach(s => { const h = s.querySelector('h3'); const t = h ? h.textContent.trim() : ''; if (/^(Aujourd’hui|Événement)$/.test(t)) s.remove(); });
+    // v105 : la machine à souvenirs revient (le joueur la garde) ; le tournoi de style reste retiré
+    box.querySelectorAll('[data-eco-go="tournoi"]').forEach(b => { const row = b.closest('.mrow'); if (row) row.remove(); });
     box.querySelectorAll('[data-menu="event"]').forEach(b => { const row = b.closest('.mrow'); if (row) row.remove(); });
   });
   return r;
