@@ -14,8 +14,16 @@ const US_MAX = [0, 3, 4, 5]; // défis réussis avant d'être usé, selon la ver
 // ---------- 1) les recettes ----------
 // v178 : tout l'équipement de base des défis se fabrique dès le début, sans habitant (la lampe et la boussole n'avaient pas de recette)
 us$(() => {
-  if (!RECIPES.some(r => r.id === 'xg_lampe1')) RECIPES.push({ id: 'xg_lampe1', kind: 'Équipement', out: xpGearDef('lampe', 1), ing: [['metal', 2], ['verre', 1]], coins: 15 });
-  if (!RECIPES.some(r => r.id === 'xg_boussole1')) RECIPES.push({ id: 'xg_boussole1', kind: 'Équipement', out: xpGearDef('boussole', 1), ing: [['metal', 1], ['verre', 1], ['pierre', 1]], coins: 15 });
+  const has = (g, t) => RECIPES.some(r => r.kind === 'Équipement' && us$(() => { const G = xpGearOf({ name: r.out[0] }); return G && G.g === g && G.tier === t; }, false));
+  if (!has('lampe', 1)) RECIPES.push({ id: 'xg_lampe1', kind: 'Équipement', out: xpGearDef('lampe', 1), ing: [['metal', 2], ['verre', 1]], coins: 15 });
+  if (!has('boussole', 1)) RECIPES.push({ id: 'xg_boussole1', kind: 'Équipement', out: xpGearDef('boussole', 1), ing: [['metal', 1], ['verre', 1], ['pierre', 1]], coins: 15 });
+});
+// v182 : derniers doublons de l'atelier — la « Corde d'escalade » et le « Masque de plongée » (anciens outils d'aventure)
+// existaient à côté de la « Corde d'alpinisme » et des « Palmes et tuba ». On garde l'équipement principal (il ouvre
+// les mêmes actions en aventure) ; les anciens objets déjà fabriqués comptent comme sa version de base.
+us$(() => {
+  for (let i = RECIPES.length - 1; i >= 0; i--) if (['eq_corde', 'eq_masque'].includes(RECIPES[i].id)) RECIPES.splice(i, 1);
+  XP_GBY['Corde d’escalade'] = { g: 'corde', tier: 1 }; XP_GBY['Masque de plongée'] = { g: 'palmes', tier: 1 };
 });
 function usPatch() {
   for (const fam of Object.keys(LD_FAM)) LD_FAM[fam].mats.forEach((nm, t) => { ING[`ldm_${fam}_${t}`] = [['defi'], nm]; });
