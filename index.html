@@ -44393,8 +44393,9 @@ function zrHTML(rid) {
   return `<div class="zr-p" style="--zc:${col}">
     <div class="zr-h"><div><p class="cn-k">Carnet de région</p><h2>${esc(R.name)}</h2></div><button class="ld-x" data-closemodal="1" aria-label="Fermer"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="#4a3528" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
     ${tabs}
-    <div class="zr-bar"><span style="width:${Math.round(n / 20 * 100)}%"></span><i style="left:${ZR_NEED / 20 * 100}%" title="Gardien"></i></div>
+    <div class="zr-bar"><span style="width:${Math.round(n / 20 * 100)}%"></span><i style="left:${ZR_OPEN / 20 * 100}%" title="Régions voisines"></i><i style="left:${ZR_NEED / 20 * 100}%" title="Gardien"></i></div>
     <p class="zr-sum"><b>${n}/20 tampons</b> · ⭐ ${st} pierres d’étoile${r.full ? ` · <b>Connaisseur de ${esc(nm)}</b>` : ''}</p>
+    <p class="zr-gd">${n >= ZR_OPEN ? `🗺️ ${ZR_OPEN} tampons : les régions voisines s’ouvrent dès que vous êtes Habitué de ${esc(nm)}.` : `🗺️ Pour ouvrir les régions voisines : ${ZR_OPEN} tampons (encore ${ZR_OPEN - n}) et être Habitué de ${esc(nm)}.`}</p>
     <p class="zr-gd">${n >= ZR_NEED ? `👑 Le gardien de la frontière vous attend : touchez un passage de ${esc(nm)} sur la carte.` : `👑 Le gardien de la frontière ne reçoit que les vrais connaisseurs : ${ZR_NEED} tampons de ${esc(nm)} (encore ${ZR_NEED - n}).`}</p>
     ${th}
     <p class="zr-n">Chaque tampon rapporte 3 pierres d’étoile (6 pour ceux marqués ★), un thème complet +5, la page entière +30.</p>
@@ -44421,6 +44422,29 @@ const zrStep = alt => ({ tx: () => { const id = zrFrontId(); return `Remplir le 
   sub: 'Explorez, relevez des défis, goûtez, rencontrez : le gardien de la frontière ne reçoit que les connaisseurs.', ok: () => { const id = zrFrontId(); return !id || zrCount(id) >= ZR_NEED || !!zr$(() => alt && alt(), false); }, go: 'zr', btn: 'Carnet' });
 zr$(() => { const C = AK_CH.find(c => c.nm === 'La première frontière'); if (C && !C.steps.some(s => s.go === 'zr')) C.steps.unshift(zrStep(() => akPsDone() >= 1)); }); // une partie déjà avancée n'est pas bloquée
 akLoop = (orig => function () { const C = orig.apply(this, arguments); zr$(() => { if (C && C.steps && !C.steps.some(s => s.go === 'zr')) { const last = C.steps[C.steps.length - 1]; C.steps.splice(Math.max(0, C.steps.length - 1), 0, zrStep(() => last && last.ok())); } }); return C; })(akLoop);
+
+// ================= v187 : CHANGER DE RÉGION DEMANDE AUSSI LE CARNET =================
+// Le joueur : « je parlais aussi pour changer de région ». Une région n'est plus « explorée » (et n'ouvre ses voisines)
+// qu'avec : être Habitué (94, comme avant) ET 10 tampons de son carnet. Les régions déjà explorées le restent.
+const ZR_OPEN = 10;
+rcCheck = (orig => function (quiet) {
+  const s = rcSt(), held = {};
+  // on retient les régions Habituées mais pas assez tamponnées : orig ne doit pas les marquer explorées
+  zr$(() => { for (const X of REGIONS) if (s.open[X.id] && !s.done[X.id] && zrCount(X.id) < ZR_OPEN) { held[X.id] = 1; s.done[X.id] = -1; } });
+  try { return orig.apply(this, arguments); }
+  finally { let fix = 0; for (const id of Object.keys(held)) if (s.done[id] === -1) { delete s.done[id]; fix = 1; } if (fix) zr$(save); }
+})(rcCheck);
+// la fiche d'une région encore fermée le dit
+if (typeof fdCard === 'function') fdCard = (orig => function (id) {
+  const r = orig.apply(this, arguments);
+  zr$(() => {
+    const el = document.querySelector('#fdC .fd-how'); if (!el || el.querySelector('.zr-fd')) return;
+    const lib = psEdgesOf(id).filter(x => x[2] === 'libre').map(x => psOther(x, id)).find(o => rcIsOpen(o)) || zr$(() => rcFront().id, null); if (!lib || !RG[lib]) return;
+    const n = zrCount(lib);
+    el.insertAdjacentHTML('beforeend', ` <span class="zr-fd">Il faut aussi <b>${ZR_OPEN} tampons</b> du carnet de ${esc(RG[lib].short || RG[lib].name)} (vous en avez ${n}). <button class="zr-gdgo" data-zropen="${lib}">Voir le carnet</button></span>`);
+  });
+  return r;
+})(fdCard);
 
 // ================= C. LE GARDIEN DE LA FRONTIÈRE =================
 const ZR_GD_NM = {
