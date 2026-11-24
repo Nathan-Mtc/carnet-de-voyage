@@ -43807,9 +43807,9 @@ GAME.on('trip:return', e => ld$(() => {
   if (t.ld.ok) {
     give(F.mats[D.s - 1], D.s, D.s === 1 ? 1 + (Math.random() < .5 ? 1 : 0) : 1);
     if (D.s >= 2 && Math.random() < .5) give(F.mats[D.s - 2], D.s - 1, 1);
-    if (!s.done[D.id]) { const it = makeItem([D.tr, 'd', 'tresor', D.s + 1, null, F.col], 0, D.p.name, ['defi', 'tresor'], { fixed: D.s + 1 }); it.special = true; S.inv.push(it); got.unshift(`le trésor « ${D.tr} »`); }
+    if (!s.done[D.id]) { const it = makeItem([D.tr, 'd', 'tresor', D.s + 1, null, F.col], 0, D.p.name, ['defi', 'tresor'], { fixed: D.s + 1 }); it.special = true; it.tresor = true; S.inv.push(it); got.unshift(`le trésor « ${D.tr} » (trophée pour la vitrine du Foyer : confort doublé)`); }
     // v191 : un butin qui ressemble au lieu (les vraies trouvailles de son type, plus belles avec les étoiles)
-    ld$(() => { const pool = lootTable([D.p.cat]).filter(x => x.d[1] !== 'v'); for (let i = 0; i < D.s; i++) { const x = pool[Math.floor(Math.random() * pool.length)]; if (!x) break; const it = makeItem(x.d, 0.6 * D.s, D.p.name, [D.p.cat, 'defi']); S.inv.push(it); got.push(it.name); } });
+    ld$(() => { const pool = lootTable([D.p.cat]).filter(x => x.d[1] !== 'v'); for (let i = 0; i < D.s; i++) { const x = pool[Math.floor(Math.random() * pool.length)]; if (!x) break; const it = makeItem(x.d, 0.6 * D.s, D.p.name, [D.p.cat, 'defi']); S.inv.push(it); const u = ld$(() => itemUses(it)[0].txt, ''); got.push(u ? `${it.name} (${u.toLowerCase()})` : it.name); } });
     // les familiers : de temps en temps seulement (★ 3 %, ★★ 10 %, ★★★ 25 % : forme locale du lieu)
     ld$(() => { if (Math.random() < [0, 0.03, 0.10, 0.25][D.s]) { const sp = ldEggSp(D); if (!sp) return; const local = D.s >= 3 ? D.p.name : null;
       addEgg({ sp, rarity: D.s >= 3 ? 3 : 2, from: { how: 'defi', place: D.p.name, local } }); const e = S.eggs[S.eggs.length - 1]; if (e) e.known = true;
@@ -44544,7 +44544,7 @@ setInterval(() => zr$(() => {
     if (s.gd[key]) continue; s.gd[key] = Date.now();
     const E = PS_EDGES.find(x => psKey(x) === key); if (!E || E[2] === 'libre') continue;
     if (Date.now() - psSt().done[key] > 10 * 60e3) continue; // anciens passages : pas de trophée rétroactif
-    const it = makeItem([`Trophée · ${zrGdNm(E)}`, 'd', 'tresor', 4, null, '#e8b13a'], 0, zrGdNm(E), ['gardien'], { fixed: 4 }); it.special = true; S.inv.push(it);
+    const it = makeItem([`Trophée · ${zrGdNm(E)}`, 'd', 'tresor', 4, null, '#e8b13a'], 0, zrGdNm(E), ['gardien'], { fixed: 4 }); it.special = true; it.tresor = true; S.inv.push(it);
     gainStones(15); save();
     setTimeout(() => zr$(() => toast(`👑 Trophée du gardien : ${zrGdNm(E)} ! +15 pierres d’étoile`)), 4000);
   }
@@ -45110,6 +45110,8 @@ function zfMissHTML(r) {
 // 2) Pour les matériaux d'atelier, « Où le trouver » propose d'abord les lieux LOGIQUES (quincaillerie, brocante, caviste…),
 //    parmi ceux qui en donnent vraiment, au plus près de la maison.
 zf$(() => { ING.metal = [['metal'], 'Métal']; });
+// v192 : « tout ce qu'on obtient doit être utile » — les derniers objets qu'aucune recette n'utilisait trouvent leur place
+zf$(() => { const add = (k, sub) => { if (ING[k] && !ING[k][0].includes(sub)) ING[k][0].push(sub); }; add('tissu', 'masque'); add('papier', 'eventail'); add('cristal', 'scarabee'); });
 // v183 : appliqué à TOUS les matériaux, strictement — plus de repli sur « n'importe quel lieu qui en donne un peu »
 // (le joueur : « je trouve toujours du métal à l'hôtel de ville… applique ton patch une bonne fois pour toutes »).
 const ZF_SRC = {

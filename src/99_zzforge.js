@@ -33,6 +33,8 @@ function zfMissHTML(r) {
 // 2) Pour les matériaux d'atelier, « Où le trouver » propose d'abord les lieux LOGIQUES (quincaillerie, brocante, caviste…),
 //    parmi ceux qui en donnent vraiment, au plus près de la maison.
 zf$(() => { ING.metal = [['metal'], 'Métal']; });
+// v192 : « tout ce qu'on obtient doit être utile » — les derniers objets qu'aucune recette n'utilisait trouvent leur place
+zf$(() => { const add = (k, sub) => { if (ING[k] && !ING[k][0].includes(sub)) ING[k][0].push(sub); }; add('tissu', 'masque'); add('papier', 'eventail'); add('cristal', 'scarabee'); });
 // v183 : appliqué à TOUS les matériaux, strictement — plus de repli sur « n'importe quel lieu qui en donne un peu »
 // (le joueur : « je trouve toujours du métal à l'hôtel de ville… applique ton patch une bonne fois pour toutes »).
 const ZF_SRC = {

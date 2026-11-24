@@ -349,9 +349,9 @@ GAME.on('trip:return', e => ld$(() => {
   if (t.ld.ok) {
     give(F.mats[D.s - 1], D.s, D.s === 1 ? 1 + (Math.random() < .5 ? 1 : 0) : 1);
     if (D.s >= 2 && Math.random() < .5) give(F.mats[D.s - 2], D.s - 1, 1);
-    if (!s.done[D.id]) { const it = makeItem([D.tr, 'd', 'tresor', D.s + 1, null, F.col], 0, D.p.name, ['defi', 'tresor'], { fixed: D.s + 1 }); it.special = true; S.inv.push(it); got.unshift(`le trésor « ${D.tr} »`); }
+    if (!s.done[D.id]) { const it = makeItem([D.tr, 'd', 'tresor', D.s + 1, null, F.col], 0, D.p.name, ['defi', 'tresor'], { fixed: D.s + 1 }); it.special = true; it.tresor = true; S.inv.push(it); got.unshift(`le trésor « ${D.tr} » (trophée pour la vitrine du Foyer : confort doublé)`); }
     // v191 : un butin qui ressemble au lieu (les vraies trouvailles de son type, plus belles avec les étoiles)
-    ld$(() => { const pool = lootTable([D.p.cat]).filter(x => x.d[1] !== 'v'); for (let i = 0; i < D.s; i++) { const x = pool[Math.floor(Math.random() * pool.length)]; if (!x) break; const it = makeItem(x.d, 0.6 * D.s, D.p.name, [D.p.cat, 'defi']); S.inv.push(it); got.push(it.name); } });
+    ld$(() => { const pool = lootTable([D.p.cat]).filter(x => x.d[1] !== 'v'); for (let i = 0; i < D.s; i++) { const x = pool[Math.floor(Math.random() * pool.length)]; if (!x) break; const it = makeItem(x.d, 0.6 * D.s, D.p.name, [D.p.cat, 'defi']); S.inv.push(it); const u = ld$(() => itemUses(it)[0].txt, ''); got.push(u ? `${it.name} (${u.toLowerCase()})` : it.name); } });
     // les familiers : de temps en temps seulement (★ 3 %, ★★ 10 %, ★★★ 25 % : forme locale du lieu)
     ld$(() => { if (Math.random() < [0, 0.03, 0.10, 0.25][D.s]) { const sp = ldEggSp(D); if (!sp) return; const local = D.s >= 3 ? D.p.name : null;
       addEgg({ sp, rarity: D.s >= 3 ? 3 : 2, from: { how: 'defi', place: D.p.name, local } }); const e = S.eggs[S.eggs.length - 1]; if (e) e.known = true;

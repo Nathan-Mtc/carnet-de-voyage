@@ -260,7 +260,7 @@ setInterval(() => zr$(() => {
     if (s.gd[key]) continue; s.gd[key] = Date.now();
     const E = PS_EDGES.find(x => psKey(x) === key); if (!E || E[2] === 'libre') continue;
     if (Date.now() - psSt().done[key] > 10 * 60e3) continue; // anciens passages : pas de trophée rétroactif
-    const it = makeItem([`Trophée · ${zrGdNm(E)}`, 'd', 'tresor', 4, null, '#e8b13a'], 0, zrGdNm(E), ['gardien'], { fixed: 4 }); it.special = true; S.inv.push(it);
+    const it = makeItem([`Trophée · ${zrGdNm(E)}`, 'd', 'tresor', 4, null, '#e8b13a'], 0, zrGdNm(E), ['gardien'], { fixed: 4 }); it.special = true; it.tresor = true; S.inv.push(it);
     gainStones(15); save();
     setTimeout(() => zr$(() => toast(`👑 Trophée du gardien : ${zrGdNm(E)} ! +15 pierres d’étoile`)), 4000);
   }
