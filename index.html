@@ -43556,7 +43556,7 @@ function ldShow(D, st) {
 function ldRefresh() {
   if (!map || !mapReady) return;
   const z = map.getZoom(), seen = new Set(), c = map.getCenter();
-  const all = z < 11 ? [] : ldCandidates().map(ldOf).filter(Boolean);
+  const all = z < 12 ? [] : ldCandidates().map(ldOf).filter(Boolean);
   const uniq = [...new Map(all.map(D => [D.id, D])).values()];
   ldList = uniq;
   const k = S.sel;
@@ -43578,6 +43578,9 @@ function ldRefresh() {
 }
 refreshPOIs = (orig => function () { const r = orig.apply(this, arguments); ld$(() => { clearTimeout(ldRefresh._t); ldRefresh._t = setTimeout(ldRefresh, 120); }); return r; })(refreshPOIs);
 renderAll = (orig => function () { const r = orig.apply(this, arguments); ld$(() => { clearTimeout(ldRefresh._u); ldRefresh._u = setTimeout(ldRefresh, 200); }); return r; })(renderAll);
+// la carte écoute « moveend » avec l'ancienne fonction (branchée avant ce fichier) : on s'y abonne nous-mêmes
+ld$(() => { if (map) { map.on('moveend', () => { clearTimeout(ldRefresh._m); ldRefresh._m = setTimeout(ldRefresh, 150); }); map.on('load', () => setTimeout(ldRefresh, 400)); } });
+setInterval(() => ld$(() => { if (mapReady && !document.hidden && (!$('ldFilt') || !ldList.length)) ldRefresh(); }), 2500);
 
 // ---------- le filtre ----------
 const LD_F = [['tout', 'Tous les défis'], ['ouverts', 'Tous cadenas ouverts'], ['presque', 'Il manque un cadenas'], ['masque', 'Masquer les défis']];
