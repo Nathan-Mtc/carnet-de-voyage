@@ -100,7 +100,8 @@ const LD_GLYPH = {
   nature: '<path d="M12 2l6 9h-3l4 6H5l4-6H6zM12 17v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
 };
 function ldMarkHTML(D, st) {
-  return `<span class="ld-g" style="color:${LD_FAM[D.fam].col}"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">${LD_GLYPH[D.fam]}</svg><i>${'★'.repeat(D.s)}</i></span><span class="ld-lk">${st.o.map(o => LD_LOCK(o, o ? '#3f7f3a' : '#4a3528')).join('')}</span>`;
+  const left = D.locks.length - st.n, ok = st.all;
+  return `<span class="ld-s">${'<i></i>'.repeat(D.s)}</span><span class="ld-c" style="--c:${LD_FAM[D.fam].col}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">${LD_GLYPH[D.fam]}</svg></span><span class="ld-b${ok ? ' ok' : ''}">${LD_LOCK(ok, '#fff')}${ok ? '' : left}</span>`;
 }
 
 // ---------- sur la carte ----------
@@ -133,7 +134,7 @@ function ldRefresh() {
   ldList = uniq;
   const k = S.sel;
   const vis = uniq.map(D => ({ D, st: ldState(D, k) })).filter(o => ldShow(o.D, o.st))
-    .sort((a, b) => kmExact({ lon: c.lng, lat: c.lat }, a.D.p) - kmExact({ lon: c.lng, lat: c.lat }, b.D.p)).slice(0, z < 13 ? 10 : 16);
+    .sort((a, b) => kmExact({ lon: c.lng, lat: c.lat }, a.D.p) - kmExact({ lon: c.lng, lat: c.lat }, b.D.p)).slice(0, z < 14 ? 8 : 12);
   for (const { D, st } of vis) {
     seen.add(D.id);
     let m = ldMk.get(D.id);
@@ -247,10 +248,11 @@ trjDecorate = (orig => function (box) {
 
 (function ldStyle() {
   const st = document.createElement('style'); st.id = 'ldStyle';
-  st.textContent = `.ld-mk{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 7px 5px;border-radius:12px;background:#fffaf0;border:2px solid #4a3528;box-shadow:0 3px 0 rgba(74,53,40,.25);cursor:pointer;font:inherit}
-.ld-mk::after{content:"";position:absolute;bottom:-7px;left:50%;margin-left:-6px;border:6px solid transparent;border-top-color:#4a3528;border-bottom:0}
-.ld-g{display:flex;align-items:center;gap:3px}.ld-g i{font-style:normal;font-size:11px;color:#c8902a;letter-spacing:-1px}
-.ld-lk{display:flex;gap:1px}
+  st.textContent = `.ld-mk{position:relative;width:30px;height:34px;padding:0;border:0;background:none;cursor:pointer;display:block}
+.ld-c{position:absolute;left:1px;bottom:0;width:28px;height:28px;border-radius:50%;background:#fffaf0;border:2px solid var(--c);color:var(--c);display:grid;place-items:center;box-shadow:0 2px 5px rgba(74,53,40,.28)}
+.ld-s{position:absolute;left:0;right:0;top:0;display:flex;justify-content:center;gap:2px;z-index:1}.ld-s i{width:5px;height:5px;border-radius:50%;background:#e8b13a;box-shadow:0 0 0 1.2px #fffaf0}
+.ld-b{position:absolute;right:-7px;bottom:-3px;z-index:1;display:flex;align-items:center;gap:1px;height:15px;padding:0 4px 0 3px;border-radius:8px;background:#4a3528;color:#fff;font:800 9.5px/1 var(--body,system-ui);box-shadow:0 0 0 1.5px #fffaf0}
+.ld-b svg{width:8px;height:9px}.ld-b.ok{background:#3f7f3a;padding:0 3px}
 #ldFilt{position:relative;z-index:6;font-family:inherit}
 .zoom #ldFilt{margin-top:6px}
 .ld-fb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;width:46px;min-height:46px;padding:4px 2px;border-radius:14px;border:2px solid #4a3528;background:#fffaf0;font:800 10px var(--body,system-ui);color:#4a3528;position:relative}
