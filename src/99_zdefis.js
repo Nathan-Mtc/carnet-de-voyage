@@ -206,12 +206,12 @@ function ldFiche(id) {
     <ul class="ld-l">${locks}</ul>
     <p class="ld-k">Ce qu’on y trouve</p>
     <div class="ld-r">${done ? '' : `<div><b>${esc(D.tr)}</b><small>trésor unique, la première fois</small></div>`}<div><b>${esc(mat)}</b><small>matériau ${'★'.repeat(D.s)}, à chaque réussite</small></div></div>
-    <p class="ld-n">${st.all ? 'Tous les cadenas sont ouverts.' : 'Vous pouvez tenter sans tout ouvrir, mais on en revient rarement avec quelque chose.'}${done ? ` Déjà réussi ${done} fois.` : ''}</p>
-    <div class="ld-b"><button class="btn" data-closemodal="1">Fermer</button><button class="btn ${st.all ? 'green' : 'gold'}" data-ldgo="${id}">${st.all ? 'Y aller' : 'Tenter quand même'}</button></div></div>`);
+    ${done ? `<p class="ld-n">Déjà réussi ${done} fois.</p>` : ''}
+    <div class="ld-b">${st.all ? `<button class="btn green" data-ldgo="${id}">Y aller avec ${esc(faNm(k))}</button>` : `<button class="btn" disabled aria-disabled="true">Encore ${D.locks.length - st.n} cadenas à ouvrir</button>`}</div></div>`);
 }
 document.addEventListener('click', ev => {
   const b = ev.target.closest && ev.target.closest('[data-ldgo]'); if (!b) return;
-  const D = LD_CACHE[b.dataset.ldgo]; if (!D) return;
+  const D = LD_CACHE[b.dataset.ldgo]; if (!D || !ldState(D, S.sel).all) return;
   ld$(() => { $('modal').hidden = true; });
   choosePOI({ ...D.p, ld: D.id });
 });
@@ -222,6 +222,7 @@ poiDest = (orig => function (p) { const d = orig.apply(this, arguments); if (p &
 startTrip = (orig => function () {
   const k = S.sel, before = S.trips[k], d = plan.dest, D = d && d.ld ? LD_CACHE[d.ld] : null;
   const st = D ? ldState(D, k) : null;
+  if (D && !st.all && !S.trips[k]) { toast(`Défi fermé : il reste ${D.locks.length - st.n} cadenas pour ${faNm(k)}`); return; }
   const r = orig.apply(this, arguments);
   ld$(() => {
     const t = S.trips[k]; if (!t || t === before || !D) return;
@@ -242,9 +243,9 @@ GAME.on('trip:return', e => ld$(() => {
     if (!s.done[D.id]) { const it = makeItem([D.tr, 'd', 'tresor', D.s + 1, null, F.col], 0, D.p.name, ['defi', 'tresor'], { fixed: D.s + 1 }); it.special = true; S.inv.push(it); got.unshift(`le trésor « ${D.tr} »`); }
     s.done[D.id] = (s.done[D.id] || 0) + 1;
     ld$(() => addXP(k, 12 * D.s * D.s, 'défi'));
-  } else if (Math.random() < .3) give(F.mats[Math.max(0, D.s - 2)], Math.max(1, D.s - 1), 1);
+  }
   save();
-  const html = `<div class="nsfind ld-win"><span class="ld-wi">${LD_LOCK(t.ld.ok, t.ld.ok ? '#3f7f3a' : '#4a3528')}</span><div><span class="nsfk">${t.ld.ok ? 'Défi réussi' : 'Tentative'} · ${'★'.repeat(D.s)}</span><b>${esc(D.p.name)}</b><span>${got.length ? 'Rapporté : ' + esc(got.join(', ')) + '.' : 'Rien cette fois : il manquait des cadenas.'}</span></div></div>`;
+  const html = `<div class="nsfind ld-win"><span class="ld-wi">${LD_LOCK(t.ld.ok, t.ld.ok ? '#3f7f3a' : '#4a3528')}</span><div><span class="nsfk">Défi réussi · ${'★'.repeat(D.s)}</span><b>${esc(D.p.name)}</b><span>${got.length ? 'Rapporté : ' + esc(got.join(', ')) + '.' : 'Rien cette fois : il manquait des cadenas.'}</span></div></div>`;
   const m = $('modal'), box = m && !m.hidden && m.querySelector('.mbox');
   if (box && box.querySelector('.haul')) { const btn = box.querySelector('button[data-closemodal]'); if (btn) btn.insertAdjacentHTML('beforebegin', html); else box.insertAdjacentHTML('beforeend', html); }
   else toast(t.ld.ok ? `Défi réussi : ${D.p.name} !` : `Tentative à ${D.p.name} : ${got.length ? got.join(', ') : 'rien cette fois'}`);
@@ -257,7 +258,8 @@ trjDecorate = (orig => function (box) {
     const d = plan.dest, D = d && d.ld ? LD_CACHE[d.ld] : null;
     if (!D || S.trips[S.sel]) { if (old) old.remove(); return; }
     const st = ldState(D, S.sel), miss = D.locks.filter((L, i) => !st.o[i]).map(ldLabel);
-    const h = `<div class="ld-tip">${D.locks.map((L, i) => LD_LOCK(st.o[i], st.o[i] ? '#3f7f3a' : '#4a3528')).join('')}<span><b>Défi ${'★'.repeat(D.s)}</b> · ${st.all ? 'tous les cadenas sont ouverts' : 'il manque : ' + esc(miss.join(', '))}</span></div>`;
+    ld$(() => { const go = box.querySelector('#goBtn') || $('goBtn'); if (go) { go.disabled = !st.all; go.style.opacity = st.all ? '' : '.55'; } });
+    const h = `<div class="ld-tip">${D.locks.map((L, i) => LD_LOCK(st.o[i], st.o[i] ? '#3f7f3a' : '#4a3528')).join('')}<span><b>Défi ${'★'.repeat(D.s)}</b> · ${st.all ? 'tous les cadenas sont ouverts' : 'départ impossible, il manque : ' + esc(miss.join(', '))}</span></div>`;
     if (old) { if (old.outerHTML !== h) old.outerHTML = h; return; }
     const a = box.querySelector('.fa-tip') || box.querySelector('.sct-tip') || box.querySelector('.trjline'); if (a) a.insertAdjacentHTML('afterend', h);
   });
@@ -293,7 +295,7 @@ trjDecorate = (orig => function (box) {
 .ld-l span{display:flex;flex-direction:column}.ld-l b{font-size:14px}.ld-l small{font-size:12px;color:#7a6250}
 .ld-r{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px}.ld-r div{padding:8px 10px;border-radius:12px;background:#fff3c4;display:flex;flex-direction:column}.ld-r b{font-size:13.5px}.ld-r small{font-size:11.5px;color:#7a6250}
 .ld-n{font-size:12.5px;color:#7a6250;margin:10px 0 0}
-.ld-b{display:flex;gap:8px;margin-top:12px}.ld-b .btn{flex:1}
+.ld-b{display:flex;gap:8px;margin-top:12px;position:sticky;bottom:-20px;padding:10px 0 4px;background:var(--paper,#fffaf0)}.ld-b .btn{flex:1}.ld-b .btn[disabled]{opacity:.6;cursor:not-allowed}
 .ld-tip{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:6px 0;padding:7px 10px;border-radius:12px;background:#fbf3e4;border:1.5px solid #eadcc4;font-size:12.5px;line-height:1.35}
 .ld-tip span{flex:1;min-width:170px}
 .ld-win .ld-wi{flex:none;width:46px;display:grid;place-items:center}.ld-win .ld-wi svg{width:28px;height:32px}`;
