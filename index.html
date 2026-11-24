@@ -44406,6 +44406,9 @@ document.addEventListener('click', ev => {
   const t = ev.target; if (!t.closest) return;
   const b = t.closest('[data-zrtab],[data-zropen]'); if (!b) return;
   ev.stopPropagation(); ev.preventDefault();
+  // la fiche d'une région ou d'un passage est un plein écran posé AU-DESSUS des fenêtres : on la ferme d'abord
+  if (document.getElementById('fdC')) zr$(() => fdClose());
+  if (document.getElementById('psG')) zr$(() => psClose());
   zrPage(b.dataset.zrtab || b.dataset.zropen || null);
 }, true);
 
