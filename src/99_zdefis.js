@@ -118,14 +118,55 @@ const ldState = (D, k) => { const o = D.locks.map(L => ldOpen(L, k)); return { o
 // ---------- dessins ----------
 const LD_LOCK = (open, col) => `<svg viewBox="0 0 16 18" width="13" height="15" aria-hidden="true">${open ? `<path d="M4.5 8V5.5a3.5 3.5 0 0 1 6.8-1.2" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round"/>` : `<path d="M4.5 8V5.5a3.5 3.5 0 0 1 7 0V8" fill="none" stroke="${col}" stroke-width="2"/>`}<rect x="2" y="8" width="12" height="9" rx="2" fill="${open ? 'none' : col}" stroke="${col}" stroke-width="1.8"/></svg>`;
 const LD_GLYPH = {
-  ancien: '<path d="M4 20V10l8-6 8 6v10M9 20v-5h6v5M12 4V1M10.5 2.5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
+  ancien: '<path d="M3 9l9-5 9 5zM5.5 9v9M10 9v9M14 9v9M18.5 9v9M3 20h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
   eau: '<path d="M12 3s7 7.5 7 12a7 7 0 0 1-14 0c0-4.5 7-12 7-12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   hauteur: '<path d="M2 20L9 7l4 6 3-4 6 11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   nature: '<path d="M12 2l6 9h-3l4 6H5l4-6H6zM12 17v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
 };
+// une icône par type de lieu (avant, tous les lieux « anciens » avaient une église)
+const ldP = d => `<path d="${d}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+const LD_SG = {
+  place_of_worship: ldP('M4 20V10l8-6 8 6v10M9 20v-5h6v5M12 4V1M10.5 2.5h3'),
+  wayside_shrine: ldP('M7 21V9l5-5 5 5v12zM10 21v-6h4v6M12 7v4M10.5 9h3'),
+  castle: ldP('M5 21V9h2V6h2v3h2V6h2v3h2V6h2v3h2v12zM10 21v-4a2 2 0 0 1 4 0v4'),
+  fort: ldP('M3 21V11l3-2 3 2V7h6v4l3-2 3 2v10zM10 21v-4a2 2 0 0 1 4 0v4'),
+  ruins: ldP('M3 21h18M5 21V8h4v13M5 8l1-2 1 1 2-1M14 21v-8l2-2 3 1v9'),
+  monument: ldP('M10 20l1-14 1-3 1 3 1 14zM6 21h12'),
+  memorial: ldP('M10 20l1-14 1-3 1 3 1 14zM6 21h12'),
+  attraction: ldP('M12 3l2.6 5.6 6 .7-4.5 4 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.5-4 6-.7z'),
+  musee: ldP('M3 9l9-5 9 5zM5.5 9v9M10 9v9M14 9v9M18.5 9v9M3 20h18'),
+  mairie: ldP('M4 21V11h16v10M2 11l10-5 10 5M12 6V2l4 1-4 1M10 21v-5h4v5'),
+  bibliotheque: ldP('M12 6C9 4 5 4 3 5v14c2-1 6-1 9 1 3-2 7-2 9-1V5c-2-1-6-1-9 1zM12 6v14'),
+  archaeological_site: ldP('M9 3h6M10 3v3c-3 1-4 4-4 7s2 6 6 8c4-2 6-5 6-8s-1-6-4-7V3'),
+  windmill: ldP('M10 21l1-9h2l1 9zM12 11L6 5M12 11l6-6M12 11l-6 6M12 11l6 6'),
+  watermill: ldP('M12 5a7 7 0 1 1 0 14a7 7 0 1 1 0-14zM12 5v14M5 12h14M7 7l10 10M17 7L7 17'),
+  city_gate: ldP('M4 21V6h16v15M9 21v-5a3 3 0 0 1 6 0v5M4 6V3h3v3M10.5 6V3h3v3M17 6V3h3v3'),
+  tower: ldP('M8 21V8h8v13M7 8l5-5 5 5M11 12h2M11 16h2'),
+  theatre: ldP('M5 4h14v7a7 7 0 0 1-14 0zM9 13c1.5 1.5 4.5 1.5 6 0M8.5 8.5h1.5M14 8.5h1.5'),
+  lake: ldP('M3 10c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0'),
+  river: ldP('M8 3c-4 5 6 7 2 11s-1 7 0 7M15 3c-4 5 6 7 2 11s-1 7 0 7'),
+  waterfall: ldP('M4 3h16M8 3v10M12 3v13M16 3v10M4 19c2-1.5 4-1.5 6 0s4 1.5 6 0 3-1 4-.5'),
+  dam: ldP('M4 20V5h16v15M4 10h16M4 15h16M10 5v5M14 10v5M10 15v5'),
+  port: ldP('M12 3a2 2 0 1 1 0 4a2 2 0 1 1 0-4zM12 7v14M8 11h8M4 14c0 4 4 7 8 7s8-3 8-7'),
+  plage: ldP('M3 11a9 7 0 0 1 18 0zM12 11v10M4 21h16'),
+  phare: ldP('M9 21l1-12h4l1 12zM10 9V5h4v4M7 21h10M3 5l4 1M21 5l-4 1'),
+  peak: ldP('M2 20L9 7l4 6 3-4 6 11z'),
+  saddle: ldP('M2 20L7 8l5 7 5-7 5 12z'),
+  hut: ldP('M3 12l9-8 9 8M5 10v11h14V10M10 21v-5h4v5'),
+  trailhead: ldP('M12 3v18M12 5h7l2 2-2 2h-7M12 11H5l-2 2 2 2h7'),
+  belvedere: ldP('M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 1 0 6a3 3 0 1 1 0-6z'),
+  foret: ldP('M12 2l6 9h-3l4 6H5l4-6H6zM12 17v5'),
+  parc: ldP('M12 22v-8M12 4a5 5 0 1 1 0 10a5 5 0 1 1 0-10z'),
+  jardin: ldP('M12 21v-9M12 6a3 3 0 1 1 0 6a3 3 0 1 1 0-6zM12 18c-2-2-5-2-6 0M12 18c2-2 5-2 6 0'),
+  camping: ldP('M2 21L12 4l10 17zM12 21l-3-6h6z'),
+  ferme: ldP('M3 21V10l9-6 9 6v11zM8 21v-6h8v6M8 15l8 6M16 15l-8 6'),
+  zoo: '<path d="M12 12c-3 0-5 3-5 5.5S9 21 12 21s5-1 5-3.5-2-5.5-5-5.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="5.5" cy="10" r="2" fill="currentColor"/><circle cx="18.5" cy="10" r="2" fill="currentColor"/><circle cx="9" cy="5" r="2" fill="currentColor"/><circle cx="15" cy="5" r="2" fill="currentColor"/>',
+};
+const LD_SGA = {'opera': 'theatre', 'pond': 'lake', 'reservoir': 'lake', 'stream': 'river', 'weir': 'dam', 'lock_gate': 'dam', 'alpine_hut': 'hut', 'wilderness_hut': 'hut'};
+const ldGlyph = D => LD_SG[D.sk] || LD_SG[LD_SGA[D.sk]] || LD_GLYPH[D.fam];
 function ldMarkHTML(D, st) {
   const left = D.locks.length - st.n, ok = st.all;
-  return `<span class="ld-s">${'<i></i>'.repeat(D.s)}</span><span class="ld-c" style="--c:${LD_FAM[D.fam].col}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">${LD_GLYPH[D.fam]}</svg></span><span class="ld-pk${ok ? ' ok' : ''}">${LD_LOCK(ok, '#fff')}${ok ? '' : left}</span>`;
+  return `<span class="ld-s">${'<i></i>'.repeat(D.s)}</span><span class="ld-c" style="--c:${LD_FAM[D.fam].col}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">${ldGlyph(D)}</svg></span><span class="ld-pk${ok ? ' ok' : ''}">${LD_LOCK(ok, '#fff')}${ok ? '' : left}</span>`;
 }
 
 // ---------- sur la carte ----------
@@ -220,7 +261,7 @@ function ldFiche(id) {
   const locks = D.locks.map((L, i) => `<li class="${st.o[i] ? 'op' : ''}">${LD_LOCK(st.o[i], st.o[i] ? '#3f7f3a' : '#4a3528')}<span><b>${esc(ldLabel(L))}</b>${st.o[i] ? '' : `<small>${esc(ldHint(L, k))}</small>`}</span></li>`).join('');
   const mat = F.mats[D.s - 1];
   showModal(`<div class="ld-f">
-    <div class="ld-fh" style="--c:${F.col}"><span class="ld-fi"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">${LD_GLYPH[D.fam]}</svg></span><div><small>${esc(D.kind || F.nm)} · ${'★'.repeat(D.s)}${'☆'.repeat(3 - D.s)}</small><h3>${esc(D.p.name)}</h3></div><button class="ld-x" data-closemodal="1" aria-label="Fermer"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="#4a3528" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
+    <div class="ld-fh" style="--c:${F.col}"><span class="ld-fi"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">${ldGlyph(D)}</svg></span><div><small>${esc(D.kind || F.nm)} · ${'★'.repeat(D.s)}${'☆'.repeat(3 - D.s)}</small><h3>${esc(D.p.name)}</h3></div><button class="ld-x" data-closemodal="1" aria-label="Fermer"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="#4a3528" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
     <p class="ld-k">Cadenas · ${st.n} ouvert${st.n > 1 ? 's' : ''} sur ${D.locks.length}${k ? ` pour ${esc(faNm(k))}` : ''}</p>
     <ul class="ld-l">${locks}</ul>
     <p class="ld-k">Ce qu’on y trouve</p>
