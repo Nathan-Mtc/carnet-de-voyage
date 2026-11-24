@@ -120,6 +120,14 @@ function ldOf(p) {
   return (LD_CACHE[id] = { id, fam, sk, kind: SB[0], s, locks: L, tr, p: { cat: p.cat, name: p.name, lon: +p.lon, lat: +p.lat, city: p.city, osm: p.osm } });
 }
 
+// l'espèce liée au défi : son terrain (LD_REQ) et sa région ; sinon le terrain seul ; sinon n'importe laquelle
+function ldEggSp(D) {
+  const ter = ldReq(D.sk).c[0], rid = ld$(() => regionAt(D.p.lon, D.p.lat).id, '');
+  const L = ld$(() => FA_SP, []), a = L.filter(f => (f.ter || []).includes(ter) && f.reg && f.reg[rid]), b = L.filter(f => (f.ter || []).includes(ter));
+  const P = a.length ? a : b.length ? b : L; return P.length ? P[Math.floor(Math.random() * P.length)].id : null;
+}
+// le familier né d'un œuf de forme locale porte le nom de son lieu
+GAME.on('comp:new', e => ld$(() => { const c = e && e.comp; if (!c || !c.from || !c.from.local) return; c.local = c.from.local; save(); setTimeout(() => toast(`✨ ${c.name}, forme locale de « ${c.local} » : on ne la trouve nulle part ailleurs !`), 1500); }));
 // ---------- les cadenas ----------
 const ldLvl = k => ld$(() => (S.prog[k] || {}).lvl || 1, 1);
 const ldMatN = nm => S.inv.filter(it => it && it.name === nm).length;
@@ -306,7 +314,7 @@ function ldFiche(id) {
     <p class="ld-k">Cadenas · ${st.n} ouvert${st.n > 1 ? 's' : ''} sur ${D.locks.length}${k ? ` pour ${esc(faNm(k))}` : ''}</p>
     <ul class="ld-l">${locks}</ul>
     <p class="ld-k">Ce qu’on y trouve</p>
-    <div class="ld-r">${done ? '' : `<div><b>${esc(D.tr)}</b><small>trésor unique, la première fois</small></div>`}<div><b>${esc(mat)}</b><small>matériau ${'★'.repeat(D.s)}, à chaque réussite</small></div></div>
+    <div class="ld-r">${done ? '' : `<div><b>${esc(D.tr)}</b><small>trésor unique, la première fois</small></div>`}<div><b>${esc(mat)}</b><small>matériau ${'★'.repeat(D.s)}, à chaque réussite</small></div><div><b>${D.s} trouvaille${D.s > 1 ? 's' : ''} du lieu</b><small>à chaque réussite</small></div><div><b>${D.s >= 3 ? 'Œuf de forme locale' : 'Œuf de familier'}</b><small>${[0, 3, 10, 25][D.s]} % de chance</small></div></div>
     ${done ? `<p class="ld-n">Déjà réussi ${done} fois.</p>` : ''}
     <div class="ld-b">${st.all ? `<button class="btn green" data-ldgo="${id}">Y aller avec ${esc(faNm(k))}</button>` : `<button class="btn" disabled aria-disabled="true">Encore ${D.locks.length - st.n} cadenas à ouvrir</button>`}</div></div>`);
 }
@@ -342,6 +350,12 @@ GAME.on('trip:return', e => ld$(() => {
     give(F.mats[D.s - 1], D.s, D.s === 1 ? 1 + (Math.random() < .5 ? 1 : 0) : 1);
     if (D.s >= 2 && Math.random() < .5) give(F.mats[D.s - 2], D.s - 1, 1);
     if (!s.done[D.id]) { const it = makeItem([D.tr, 'd', 'tresor', D.s + 1, null, F.col], 0, D.p.name, ['defi', 'tresor'], { fixed: D.s + 1 }); it.special = true; S.inv.push(it); got.unshift(`le trésor « ${D.tr} »`); }
+    // v191 : un butin qui ressemble au lieu (les vraies trouvailles de son type, plus belles avec les étoiles)
+    ld$(() => { const pool = lootTable([D.p.cat]).filter(x => x.d[1] !== 'v'); for (let i = 0; i < D.s; i++) { const x = pool[Math.floor(Math.random() * pool.length)]; if (!x) break; const it = makeItem(x.d, 0.6 * D.s, D.p.name, [D.p.cat, 'defi']); S.inv.push(it); got.push(it.name); } });
+    // les familiers : de temps en temps seulement (★ 3 %, ★★ 10 %, ★★★ 25 % : forme locale du lieu)
+    ld$(() => { if (Math.random() < [0, 0.03, 0.10, 0.25][D.s]) { const sp = ldEggSp(D); if (!sp) return; const local = D.s >= 3 ? D.p.name : null;
+      addEgg({ sp, rarity: D.s >= 3 ? 3 : 2, from: { how: 'defi', place: D.p.name, local } }); const e = S.eggs[S.eggs.length - 1]; if (e) e.known = true;
+      got.unshift(local ? `un œuf rare : ${ld$(() => spName(sp), sp)} forme locale « ${local} » !` : `un œuf de ${ld$(() => spName(sp), sp)} !`); } });
     s.done[D.id] = (s.done[D.id] || 0) + 1;
     ld$(() => addXP(k, 12 * D.s * D.s, 'défi'));
   }
