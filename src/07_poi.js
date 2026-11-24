@@ -1,6 +1,6 @@
 // ================= LIEUX AU ZOOM =================
 const hashStr = s => { let h = 2166136261; for (const ch of s) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
-const POI_MIN_Z = () => mapMode === 'tiles' ? 14 : 12;
+const POI_MIN_Z = () => mapMode === 'tiles' ? 13 : 12; // v169 : 13 (au lieu de 14) pour voir les vrais lieux à l'échelle d'un village
 let poiCache = {}, poiShown = {}, townKey = '';
 const fillName = (tpl, r, cityName) => tpl.replace('{N}', NOMS[Math.floor(r() * NOMS.length)]).replace('{A2}', ['Moulin', 'Chêne', 'Ruisseau', 'Coteau'][Math.floor(r() * 4)]).replace('{A}', ARBRES[Math.floor(r() * ARBRES.length)]).replace('{S}', SAINTS[Math.floor(r() * SAINTS.length)]).replace('{V}', cityName);
 function rng(seedN) { let s = seedN % 2147483646 || 1; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
