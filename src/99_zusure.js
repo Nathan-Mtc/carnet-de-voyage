@@ -135,3 +135,19 @@ us$(() => {
   document.head.appendChild(st);
 });
 window.__us = { gear: usGear, repair: usRepair, cost: usCost, FAM: US_FAM };
+
+// ---------- v184 : l'équipement pro / légendaire et les matériaux de défi ne s'achètent pas ----------
+// Le joueur : « je peux acheter Palmes et tuba pro au marché, c'est pas normal ». Ils se MÉRITENT (défis) : le marché mondial
+// et le magasin ne les proposent plus, et « Acheter » n'apparaît plus pour eux dans « Il manque ».
+const usEarned = d => !!d && (d.sub === 'defi' || d.sub === 'tresor' && (d.tags || []).includes('defi') || us$(() => { const G = xpGearOf(d); return !!G && G.tier >= 2; }, false));
+if (typeof mkGen === 'function') mkGen = (orig => function () {
+  let l = orig.apply(this, arguments);
+  for (let i = 0; i < 12 && l && l.kind === 'item' && usEarned(l.data); i++) l = orig.apply(this, arguments);
+  return l && l.kind === 'item' && usEarned(l.data) ? orig.call(this, 'res') : l;
+})(mkGen);
+us$(() => { const m = mkState(); const n = m.list.length; m.list = m.list.filter(l => !(l && l.kind === 'item' && usEarned(l.data))); if (m.list.length !== n) save(); });
+if (typeof cfShop === 'function') cfShop = (orig => function (k) {
+  if (typeof k === 'string' && (/^(xgp_|xgb_|ldm_)/.test(k) || k === 'gemme')) return null;
+  const r = orig.apply(this, arguments);
+  return r && us$(() => /pro$|légendaires?$/.test(String(r.name || '')) && xpGearOf({ name: r.name }), null) ? null : r;
+})(cfShop);
