@@ -16,6 +16,10 @@ const US_MAX = [0, 3, 4, 5]; // défis réussis avant d'être usé, selon la ver
 us$(() => {
   const has = (g, t) => RECIPES.some(r => r.kind === 'Équipement' && us$(() => { const G = xpGearOf({ name: r.out[0] }); return G && G.g === g && G.tier === t; }, false));
   if (!has('lampe', 1)) RECIPES.push({ id: 'xg_lampe1', kind: 'Équipement', out: xpGearDef('lampe', 1), ing: [['metal', 2], ['verre', 1]], coins: 15 });
+  // v193 : la boussole pro et légendaire n'avaient AUCUNE recette (défis ★★/★★★ « boussole » impossibles)
+  if (!has('boussole', 2)) RECIPES.push({ id: 'xg_boussole2', kind: 'Équipement', out: xpGearDef('boussole', 2), ing: [['metal', 2], ['verre', 2], ['cristal', 1]], coins: 80 });
+  if (!ING.xgp_boussole) ING.xgp_boussole = [['outil'], 'Boussole pro'];
+  if (!has('boussole', 3)) RECIPES.push({ id: 'xg_boussole3', kind: 'Équipement', out: xpGearDef('boussole', 3), ing: [['xgp_boussole', 1], ['gemme', 1]], coins: 150 });
   if (!has('boussole', 1)) RECIPES.push({ id: 'xg_boussole1', kind: 'Équipement', out: xpGearDef('boussole', 1), ing: [['metal', 1], ['verre', 1], ['pierre', 1]], coins: 15 });
 });
 // v182 : derniers doublons de l'atelier — la « Corde d'escalade » et le « Masque de plongée » (anciens outils d'aventure)
