@@ -44679,7 +44679,7 @@ function zfWhere(key) {
   if (m) return zf$(() => `Se rapporte des lieux à défi ${'★'.repeat(+m[2] + 1)} « ${LD_FAM[m[1]].nm.toLowerCase()} » (touchez « Défis » sur la carte).`, '');
   if (key === 'gemme') return 'Une pierre précieuse trouvée en voyage, à tailler ici à l’atelier.';
   if (/^xg[pb]_/.test(key || '')) return 'À fabriquer d’abord, dans cette même liste.';
-  return '';
+  return zfSrcTxt(key);
 }
 function zfMissHTML(r) {
   let h = zf$(() => usMissAtHTML(r), '');
@@ -44700,27 +44700,32 @@ function zfMissHTML(r) {
 // 2) Pour les matériaux d'atelier, « Où le trouver » propose d'abord les lieux LOGIQUES (quincaillerie, brocante, caviste…),
 //    parmi ceux qui en donnent vraiment, au plus près de la maison.
 zf$(() => { ING.metal = [['metal'], 'Métal']; });
+// v183 : appliqué à TOUS les matériaux, strictement — plus de repli sur « n'importe quel lieu qui en donne un peu »
+// (le joueur : « je trouve toujours du métal à l'hôtel de ville… applique ton patch une bonne fois pour toutes »).
 const ZF_SRC = {
-  metal: ['bricolage', 'puces', 'ferme', 'gare', 'port', 'caviste'], verre: ['caviste', 'epicerie', 'puces', 'pharmacie', 'bricolage', 'plage'],
-  tissu: ['friperie', 'mode', 'laverie', 'puces', 'poste'], laine: ['friperie', 'ferme', 'mode', 'laverie'], bois: ['bricolage', 'foret', 'parc', 'riviere', 'poste'],
-  pierre: ['riviere', 'sentier', 'etang', 'patrimoine', 'bricolage'], papier: ['librairie', 'poste', 'bibliotheque', 'hotel'], plume: ['ferme', 'etang', 'parc', 'foret'],
-  coquillage: ['plage', 'poissonnerie', 'port', 'mer'], sable: ['plage', 'riviere', 'desert'], cristal: ['sentier', 'montagne', 'musee', 'puces'],
-  lumiere: ['phare', 'patrimoine', 'camping', 'bricolage'], champignon: ['foret', 'parc', 'jardin', 'marche'],
+  metal: ['bricolage', 'puces', 'ferme'], verre: ['caviste', 'epicerie', 'puces', 'bricolage', 'pharmacie'],
+  tissu: ['friperie', 'mode', 'laverie', 'puces'], laine: ['friperie', 'ferme', 'laverie'], bois: ['bricolage', 'foret', 'parc', 'riviere'],
+  pierre: ['riviere', 'sentier', 'etang', 'patrimoine'], papier: ['librairie', 'poste', 'bibliotheque'], plume: ['ferme', 'etang', 'parc', 'foret'],
+  coquillage: ['plage', 'poissonnerie', 'port'], sable: ['plage', 'riviere', 'desert'], cristal: ['sentier', 'montagne', 'musee'],
+  lumiere: ['patrimoine', 'phare', 'camping'], champignon: ['foret', 'parc', 'jardin', 'marche'], feuille: ['parc', 'jardin', 'foret', 'fleuriste'],
+  fruit: ['marche', 'epicerie', 'foret', 'jardin'], pomme: ['marche', 'ferme', 'epicerie', 'jardin'], agrume: ['marche', 'epicerie'],
+  sucre: ['boulangerie', 'chocolaterie', 'glacier', 'epicerie'], mer: ['poissonnerie', 'port', 'plage', 'marche'], ble: ['ferme', 'boulangerie', 'marche'],
+  graine: ['jardin', 'fleuriste', 'ferme'], flocon: ['montagne'],
 };
 const zfGives = (c, k) => zf$(() => (LOOT[c] || []).some(d => (d[1] === 'm' || d[1] === 'n') && ING[k][0].includes(d[2])), false);
+const zfCats = k => (ZF_SRC[k] || []).filter(c => zfGives(c, k));
+const zfCatNm = c => zf$(() => POI_CATS[c][0], c);
 cfLocs = (orig => function (k) {
-  const pref = ZF_SRC[k];
-  if (pref) {
-    const out = [], seen = new Set();
-    for (const c of pref) {
-      if (!zfGives(c, k)) continue;
-      const step = { t: 'visit', cat: [c] }, L = zf$(() => qtLoc(step), null); if (!L || seen.has(L.label)) continue; seen.add(L.label);
-      out.push({ label: L.label, sub: POI_CATS[c] ? POI_CATS[c][0] : c, km: zf$(() => qtKm(L), null), step });
-    }
-    if (out.length) return out.sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9)).slice(0, 3);
+  if (!ZF_SRC[k]) return orig.apply(this, arguments);
+  const out = [], seen = new Set();
+  for (const c of zfCats(k)) {
+    const step = { t: 'visit', cat: [c] }, L = zf$(() => qtLoc(step), null); if (!L || seen.has(L.label)) continue; seen.add(L.label);
+    out.push({ label: L.label, sub: zfCatNm(c), km: zf$(() => qtKm(L), null), step });
   }
-  return orig.apply(this, arguments);
+  return out.sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9)).slice(0, 3);
 })(cfLocs);
+// une phrase claire : « Se trouve chez : quincaillerie, brocante, ferme. »
+const zfSrcTxt = k => { const C = zfCats(k); return C.length ? `Se trouve surtout : ${C.map(c => zfCatNm(c).toLowerCase()).join(', ')}.` : ''; };
 
 function zfShow(btn, rid) {
   const old = document.getElementById('cfMiss'); if (old) old.remove();
