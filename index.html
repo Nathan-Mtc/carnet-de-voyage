@@ -43578,6 +43578,12 @@ function ldOf(p) {
   return (LD_CACHE[id] = { id, fam, sk, kind: SB[0], s, locks: L, tr, p: { cat: p.cat, name: p.name, lon: +p.lon, lat: +p.lat, city: p.city, osm: p.osm } });
 }
 
+// un objet est utile s'il entre dans une recette (matériau), se mange, se porte ou décore le Foyer
+function ldUseful(d) {
+  if (d[1] === 'n' || d[1] === 'v' || d[1] === 'd') return true;
+  if (d[1] !== 'm') return false;
+  return ld$(() => Object.keys(ING).some(k => ING[k][0].includes(d[2]) && RECIPES.some(r => r.ing.some(x => x[0] === k))), false);
+}
 // les ingrédients ordinaires de la version pro d'un équipement (métal, verre, lumière…) : ce que le défi rapporte
 function ldGearIngs(g) { return ld$(() => { const F = t => RECIPES.find(r => r.kind === 'Équipement' && (x => x && x.g === g && x.tier === t)(xpGearOf({ name: r.out[0] }))), R = F(2) || F(1); return R ? R.ing.map(x => x[0]).filter(k => ING[k] && !/^(xg[pb]_|ldm_|gemme)/.test(k)) : []; }, []); }
 // un vrai objet de ce matériau, de préférence trouvé dans ce type de lieu
@@ -43781,7 +43787,7 @@ function ldFiche(id) {
     <p class="ld-k">Cadenas · ${st.n} ouvert${st.n > 1 ? 's' : ''} sur ${D.locks.length}${k ? ` pour ${esc(faNm(k))}` : ''}</p>
     <ul class="ld-l">${locks}</ul>
     <p class="ld-k">Ce qu’on y trouve</p>
-    <div class="ld-r">${done ? '' : `<div><b>${esc(D.tr)}</b><small>trésor unique, la première fois</small></div>`}<div><b>${esc(mat)}</b><small>matériau ${'★'.repeat(D.s)}, à chaque réussite</small></div><div><b>${D.s + 1} matériaux d’équipement</b><small>pour améliorer ${esc(ld$(() => xpGName((D.locks.find(L => L.t === 'g') || {}).g || ldReq(D.sk).g[0][0], 1), '').toLowerCase())}</small></div>${D.s >= 3 ? '<div><b>Pierre précieuse</b><small>35 % : pour le légendaire</small></div>' : ''}<div><b>${D.s >= 3 ? 'Œuf de forme locale' : 'Œuf de familier'}</b><small>${[0, 3, 10, 25][D.s]} % de chance</small></div></div>
+    <div class="ld-r">${done ? '' : `<div><b>${esc(D.tr)}</b><small>trésor unique, la première fois</small></div>`}<div><b>${esc(mat)}</b><small>matériau ${'★'.repeat(D.s)}, à chaque réussite</small></div><div><b>${D.s + 1} trouvailles du lieu</b><small>toutes utiles : atelier, repas, tenue ou Foyer</small></div>${D.s >= 3 ? '<div><b>Pierre précieuse</b><small>35 % : pour le légendaire</small></div>' : ''}<div><b>${D.s >= 3 ? 'Œuf de forme locale' : 'Œuf de familier'}</b><small>${[0, 3, 10, 25][D.s]} % de chance</small></div></div>
     ${done ? `<p class="ld-n">Déjà réussi ${done} fois.</p>` : ''}
     <div class="ld-b">${st.all ? `<button class="btn green" data-ldgo="${id}">Y aller avec ${esc(faNm(k))}</button>` : `<button class="btn" disabled aria-disabled="true">Encore ${D.locks.length - st.n} cadenas à ouvrir</button>`}</div></div>`);
 }
@@ -43817,11 +43823,11 @@ GAME.on('trip:return', e => ld$(() => {
     give(F.mats[D.s - 1], D.s, D.s === 1 ? 1 + (Math.random() < .5 ? 1 : 0) : 1);
     if (D.s >= 2 && Math.random() < .5) give(F.mats[D.s - 2], D.s - 1, 1);
     if (!s.done[D.id]) { const it = makeItem([D.tr, 'd', 'tresor', D.s + 1, null, F.col], 0, D.p.name, ['defi', 'tresor'], { fixed: D.s + 1 }); it.special = true; it.tresor = true; S.inv.push(it); got.unshift(`le trésor « ${D.tr} » (trophée pour la vitrine du Foyer : confort doublé)`); }
-    // v193 : « tout ce qu'on obtient dans un défi doit être utile » — plus de trouvailles au hasard :
-    //  les matériaux de l'ÉQUIPEMENT QUE CE LIEU DEMANDE (de quoi l'améliorer), une pierre précieuse en ★★★ (pour le légendaire)
+    // v194 : des objets DU LIEU (ses vraies trouvailles), mais seulement ceux qui servent à quelque chose :
+    //  matériau d'une recette, nourriture (repas, cuisine), vêtement (à porter), décoration (Foyer). Rien « à vendre » seulement.
     ld$(() => {
-      const g = (D.locks.find(L => L.t === 'g') || {}).g || ldReq(D.sk).g[0][0], ings = ldGearIngs(g);
-      for (let i = 0; i < D.s + 1 && ings.length; i++) { const key = ings[i % ings.length], def = ldDefFor(key, D.p.cat); if (!def) continue; const it = makeItem(def, 0.6 * D.s, D.p.name, [D.p.cat, 'defi']); S.inv.push(it); got.push(`${it.name} (pour ${ld$(() => xpGName(g, 2), g).toLowerCase()})`); }
+      const pool = lootTable([D.p.cat]).map(x => x.d).filter(d => !/\{/.test(d[0]) && ldUseful(d));
+      for (let i = 0; i < D.s + 1 && pool.length; i++) { const it = makeItem(pool[Math.floor(Math.random() * pool.length)], 0.6 * D.s, D.p.name, [D.p.cat, 'defi']); S.inv.push(it); const u = ld$(() => itemUses(it)[0].txt, ''); got.push(u ? `${it.name} (${u.toLowerCase()})` : it.name); }
       if (D.s >= 3 && Math.random() < 0.35 && typeof famGemItem === 'function') { const it = famGemItem(D.p, D.p.name); S.inv.push(it); got.push(`${it.name} (pierre précieuse : équipement légendaire)`); }
     });
     // les familiers : de temps en temps seulement (★ 3 %, ★★ 10 %, ★★★ 25 % : forme locale du lieu)
