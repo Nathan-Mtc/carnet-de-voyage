@@ -12,6 +12,11 @@ const usFam = g => US_FAM[g] || 'nature';
 const US_MAX = [0, 3, 4, 5]; // défis réussis avant d'être usé, selon la version (base, pro, légendaire)
 
 // ---------- 1) les recettes ----------
+// v178 : tout l'équipement de base des défis se fabrique dès le début, sans habitant (la lampe et la boussole n'avaient pas de recette)
+us$(() => {
+  if (!RECIPES.some(r => r.id === 'xg_lampe1')) RECIPES.push({ id: 'xg_lampe1', kind: 'Équipement', out: xpGearDef('lampe', 1), ing: [['metal', 2], ['verre', 1]], coins: 15 });
+  if (!RECIPES.some(r => r.id === 'xg_boussole1')) RECIPES.push({ id: 'xg_boussole1', kind: 'Équipement', out: xpGearDef('boussole', 1), ing: [['metal', 1], ['verre', 1], ['pierre', 1]], coins: 15 });
+});
 function usPatch() {
   for (const fam of Object.keys(LD_FAM)) LD_FAM[fam].mats.forEach((nm, t) => { ING[`ldm_${fam}_${t}`] = [['defi'], nm]; });
   for (const r of RECIPES) {
@@ -79,10 +84,22 @@ ldFiche = (orig => function (id) {
       const ok = usGear(k, L.g, L.tier), w = !ok && usGear(k, L.g, L.tier, true);
       if (ok) sp.insertAdjacentHTML('beforeend', `<small class="us-l">${esc(ok.name)} ${usDots(ok)} encore ${usMax(ok) - (ok.wear || 0)} défi${usMax(ok) - (ok.wear || 0) > 1 ? 's' : ''}</small>`);
       else if (w) { const c = usCost(w), can = usCan(c); sp.insertAdjacentHTML('beforeend', `<button class="btn us-r" data-usrep="${w.id}" data-usld="${id}"${can ? '' : ' disabled aria-disabled="true"'}>Réparer · ${esc(usCostTxt(c))}</button>`); }
+      else {
+        const R = us$(() => ppRecipe(L.g, L.tier), null); if (!R) return;
+        const small = sp.querySelector('small'); const miss = R.ing.filter(([key, n]) => ingCount(key) < n).map(([key, n]) => `${n - ingCount(key)} × ${ING[key] ? ING[key][1] : key}`);
+        if (S.coins < R.coins) miss.push(`${R.coins - S.coins} pièces`);
+        if (small) small.textContent = miss.length ? `À fabriquer à l’atelier, onglet Équipement. Il vous manque : ${miss.join(', ')}` : 'Vous avez tout pour le fabriquer !';
+        if (!miss.length) sp.insertAdjacentHTML('beforeend', `<button class="btn green us-r" data-uscraft="${R.id}" data-usld="${id}">Fabriquer maintenant</button>`);
+      }
     });
   });
   return r;
 })(ldFiche);
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-uscraft]'); if (!b) return;
+  ev.stopPropagation(); const id = b.dataset.usld;
+  us$(() => craft(b.dataset.uscraft)); setTimeout(() => { ldFiche(id); us$(() => ldRefresh()); }, 60);
+});
 document.addEventListener('click', ev => {
   const b = ev.target.closest && ev.target.closest('[data-usrep]'); if (!b || b.disabled) return;
   ev.stopPropagation();
