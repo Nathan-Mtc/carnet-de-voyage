@@ -117,7 +117,7 @@ const LD_GLYPH = {
 };
 function ldMarkHTML(D, st) {
   const left = D.locks.length - st.n, ok = st.all;
-  return `<span class="ld-s">${'<i></i>'.repeat(D.s)}</span><span class="ld-c" style="--c:${LD_FAM[D.fam].col}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">${LD_GLYPH[D.fam]}</svg></span><span class="ld-b${ok ? ' ok' : ''}">${LD_LOCK(ok, '#fff')}${ok ? '' : left}</span>`;
+  return `<span class="ld-s">${'<i></i>'.repeat(D.s)}</span><span class="ld-c" style="--c:${LD_FAM[D.fam].col}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">${LD_GLYPH[D.fam]}</svg></span><span class="ld-pk${ok ? ' ok' : ''}">${LD_LOCK(ok, '#fff')}${ok ? '' : left}</span>`;
 }
 
 // ---------- sur la carte ----------
@@ -274,8 +274,8 @@ trjDecorate = (orig => function (box) {
 .ld-mk:focus-visible{outline:3px solid #e8b13a;outline-offset:3px;border-radius:50%}
 .ld-c{position:absolute;left:1px;bottom:0;width:28px;height:28px;border-radius:50%;background:#fffaf0;border:2px solid var(--c);color:var(--c);display:grid;place-items:center;box-shadow:0 2px 5px rgba(74,53,40,.28)}
 .ld-s{position:absolute;left:0;right:0;top:0;display:flex;justify-content:center;gap:2px;z-index:1}.ld-s i{width:5px;height:5px;border-radius:50%;background:#e8b13a;box-shadow:0 0 0 1.2px #fffaf0}
-.ld-b{position:absolute;right:-17px;bottom:-1px;z-index:1;display:flex;align-items:center;gap:1px;height:14px;padding:0 4px 0 3px;border-radius:8px;background:#4a3528;color:#fff;font:800 9.5px/1 var(--body,system-ui);box-shadow:0 0 0 1.5px #fffaf0}
-.ld-b svg{width:7px;height:8px}.ld-b.ok{background:#3f7f3a;padding:0 3px;right:-11px}
+.ld-pk{position:absolute;right:-17px;bottom:-1px;z-index:1;display:flex;align-items:center;gap:1px;height:14px;padding:0 4px 0 3px;border-radius:8px;background:#4a3528;color:#fff;font:800 9.5px/1 var(--body,system-ui);box-shadow:0 0 0 1.5px #fffaf0}
+.ld-pk svg{width:7px;height:8px}.ld-pk.ok{background:#3f7f3a;padding:0 3px;right:-11px}
 #ldFilt{position:relative;z-index:6;font-family:inherit}
 .zoom #ldFilt{margin-top:6px}
 .ld-fb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;width:46px;min-height:46px;padding:4px 2px;border-radius:14px;border:2px solid #4a3528;background:#fffaf0;font:800 10px var(--body,system-ui);color:#4a3528;position:relative}
