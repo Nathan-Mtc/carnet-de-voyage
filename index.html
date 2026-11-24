@@ -44509,7 +44509,7 @@ function usPatch() {
 }
 us$(usPatch);
 // les recettes apprises plus tard auprès d'un habitant (barque, cotre…) suivent la même règle
-psSyncRecipes = (orig => function () { const r = orig.apply(this, arguments); us$(usPatch); return r; })(psSyncRecipes);
+if (typeof psSyncRecipes === 'function') psSyncRecipes = (orig => function () { const r = orig.apply(this, arguments); us$(usPatch); return r; })(psSyncRecipes);
 us$(usPatch);
 ingExtra = (orig => function (key, i) {
   if (typeof key === 'string' && key.startsWith('ldm_')) return !!(i && ING[key] && i.name === ING[key][1]);
