@@ -7,12 +7,12 @@
 const us$ = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch (e) { console.error('usure', e); return d; } };
 
 // famille de lieux dont viennent les matériaux de chaque équipement
-const US_FAM = { lampe: 'ancien', lanterne: 'ancien', plan: 'ancien', palmes: 'eau', bottes: 'eau', cire: 'eau', crampons: 'hauteur', corde: 'hauteur', bonnet: 'hauteur', manteau: 'hauteur', gourde: 'hauteur', jumelles: 'nature', boussole: 'nature', chapeau: 'nature' };
+const US_FAM = { lampe: 'ancien', lanterne: 'ancien', plan: 'ancien', palmes: 'eau', bottes: 'eau', cire: 'eau', crampons: 'hauteur', corde: 'hauteur', bonnet: 'hauteur', manteau: 'hauteur', gourde: 'hauteur', jumelles: 'nature', boussole: 'nature', chapeau: 'nature', barque: 'eau', cotre: 'eau', navire: 'eau', machette: 'nature' };
 const usFam = g => US_FAM[g] || 'nature';
 const US_MAX = [0, 3, 4, 5]; // défis réussis avant d'être usé, selon la version (base, pro, légendaire)
 
 // ---------- 1) les recettes ----------
-us$(() => {
+function usPatch() {
   for (const fam of Object.keys(LD_FAM)) LD_FAM[fam].mats.forEach((nm, t) => { ING[`ldm_${fam}_${t}`] = [['defi'], nm]; });
   for (const r of RECIPES) {
     if (r.kind !== 'Équipement' || r._us) continue;
@@ -22,7 +22,11 @@ us$(() => {
     if (G.tier === 3) r.ing = r.ing.concat([[`ldm_${f}_1`, 2], [`ldm_${f}_0`, 3]]);
     r._us = 1;
   }
-});
+}
+us$(usPatch);
+// les recettes apprises plus tard auprès d'un habitant (barque, cotre…) suivent la même règle
+psSyncRecipes = (orig => function () { const r = orig.apply(this, arguments); us$(usPatch); return r; })(psSyncRecipes);
+us$(usPatch);
 ingExtra = (orig => function (key, i) {
   if (typeof key === 'string' && key.startsWith('ldm_')) return !!(i && ING[key] && i.name === ING[key][1]);
   return orig.apply(this, arguments);

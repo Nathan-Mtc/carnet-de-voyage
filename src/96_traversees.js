@@ -181,7 +181,7 @@ function tvReq(E, k) {
   const I = tv$(() => sctInfo(from), { lvl: 0, pct: 0, th: [0, 6, 15, 30, 50], nm: 'Inconnue' }), st = (tvSt()[psKey(E)] || {}).stage || 0;
   const lvB = tv$(() => tvLvBonus(k, E), 0) || 0, lv = Math.max(1, psLv(E) - lvB), myLv = tv$(() => S.prog[k].lvl, 1), nP = tvProvs(T.pk).length, need = 3 - st;
   const okG = psHas(g), okK = I.lvl >= T.kn, okL = myLv >= lv, okP = nP >= 1;
-  const gearTx = okG ? `✓ ${esc(G.nm)}` : s.learn[g] ? `${esc(G.nm)} : à fabriquer à la Forge (${esc(TV_GEAR[g].why)})` : s.hab[g] ? `${esc(G.nm)} : aidez ${esc(G.hab.who)} (Quêtes › Habitants)` : `${esc(G.nm)} : ${esc(G.hab.who)}, ${esc(G.hab.job)}, vous l’apprendra. On le croise en voyage en ${esc(A.short)}.`;
+  const gearTx = okG ? `✓ ${esc(G.nm)} (n’importe quelle version)` : PS_SHARED.includes(g) ? `${esc(G.nm)} : au magasin ou à l’atelier, ou ${esc(G.hab.who)} vous en offrira en voyage en ${esc(A.short)}` : s.learn[g] ? `${esc(G.nm)} : à fabriquer à l’atelier (${esc(TV_GEAR[g].why)})` : s.hab[g] ? `${esc(G.nm)} : aidez ${esc(G.hab.who)} (Quêtes › Habitants)` : `${esc(G.nm)} : ${esc(G.hab.who)}, ${esc(G.hab.job)}, vous l’apprendra. On le croise en voyage en ${esc(A.short)}.`;
   return { T, okG, okK, okL, okP, ok: okG && okK && okL && okP, st, html: `<ul class="ps-req">
 <li class="${okG ? 'ok' : ''}">🎒 ${gearTx}</li>
 <li class="${nP >= need ? 'ok' : okP ? 'mid' : ''}">🍲 ${need} provision${need > 1 ? 's' : ''} ${TV_PK[T.pk][0]} (une par étape, plus une de réserve conseillée) · vous en avez ${nP}<small>${TV_PK[T.pk][1]}</small></li>

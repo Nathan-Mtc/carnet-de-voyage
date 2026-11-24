@@ -43,7 +43,7 @@ const psOther = (E, id) => E[0] === id ? E[1] : E[0];
 // ---------- équipement : recettes, et les habitants qui les apprennent ----------
 // ING : une « trouvaille rare » = une plante ou un poisson de rareté 3+ (cueillette, pêche)
 try { Object.assign(ING, { p_rare: [['feuille', 'fleur', 'legume', 'mer', 'fruit'], 'Trouvaille rare (cueillette ou pêche)'], provision: [['plat', 'pain', 'sucre', 'boisson', 'fromage', 'legume', 'fruit', 'mer'], 'Provision'] }); } catch (e) {}
-if (typeof ingExtra === 'function') ingExtra = (orig => function (key, i) { if (key === 'p_rare') return !!(i && i.rarity >= 3); if (key === 'provision') return !!(i && i.cat === 'n'); return orig.apply(this, arguments); })(ingExtra);
+if (typeof ingExtra === 'function') ingExtra = (orig => function (key, i) { if (typeof key === 'string' && key.startsWith('xgb_')) return !!(i && ING[key] && String(i.name || '').replace(/ \(chef-d’œuvre\)$/, '') === ING[key][1]); if (key === 'p_rare') return !!(i && i.rarity >= 3); if (key === 'provision') return !!(i && i.cat === 'n'); return orig.apply(this, arguments); })(ingExtra);
 const PS_GEAR = {
   crampons: { nm: 'Crampons', ing: [['metal', 2], ['cristal', 1], ['laine', 1]], col: '#8f9cb3', hab: { who: 'Jules', job: 'guide de haute montagne', ico: '🧗', ask: [['pierre', 3]], txt: 'Je t’apprends à forger des crampons si tu me rapportes 3 belles pierres pour baliser le sentier.' } },
   barque: { nm: 'Barque calfatée', ing: [['bois', 3], ['tissu', 1], ['feuille', 2]], col: '#a5784f', hab: { who: 'Bernat', job: 'éclusier', ico: '🛶', ask: [['bois', 2]], txt: 'Rapporte-moi 2 morceaux de bois pour réparer mon écluse, et je te montre comment construire une barque.' } },
@@ -59,13 +59,36 @@ function psSt() {
   const s = S.ps; if (!s.done) s.done = {}; if (!s.learn) s.learn = {}; if (!s.hab) s.hab = {};
   return s;
 }
-const psRid = g => 'ps_' + g;
+const psRid = g => 'xg_' + g + '1';
+// v177 : UNE SEULE LISTE D'ÉQUIPEMENT (le joueur : « crampons, gourde, manteau, lanterne existaient en double »).
+// - Crampons, gourde, manteau, lanterne : ce sont les objets de l'équipement principal (magasin / atelier, 3 versions).
+//   L'habitant ne les « apprend » plus : il vous OFFRE la version de base quand vous lui rendez service.
+// - Barque, cotre, grand voilier, machette rejoignent l'équipement principal (3 versions) ; leur recette, elle, s'apprend
+//   toujours auprès de l'habitant (base, puis pro et légendaire).
+// - Un passage demande l'objet principal, n'importe quelle version.
+const PS_SHARED = ['crampons', 'lanterne', 'gourde', 'manteau'];
+try { PS_GEAR.lanterne.nm = 'Lanterne de bivouac'; XP_GBY['Lanterne de marche'] = { g: 'lanterne', tier: 1 }; } catch (e) {}
+const PS_NEW = { barque: ['Navigation sur les fleuves et les marais', ['riviere', 'marais'], 'bois'], cotre: ['Traverser un bras de mer', ['mer'], 'tissu'], navire: ['Traverser les océans', ['mer'], 'tissu'], machette: ['S’ouvrir un chemin dans la jungle', ['jungle'], 'metal'] };
+try {
+  for (const [g, [desc, ter]] of Object.entries(PS_NEW)) {
+    if (XP_G[g]) continue; const nm = PS_GEAR[g].nm, G = [g, [nm, nm + ' pro', nm + ' légendaire'], desc, PS_GEAR[g].col, ter, '', ''];
+    XP_GEAR.push(G); XP_G[g] = G; G[1].forEach((n, i) => { XP_GBY[n] = { g, tier: i + 1 }; });
+    ING['xgb_' + g] = [['outil'], nm]; ING['xgp_' + g] = [['outil'], nm + ' pro'];
+  }
+} catch (e) {}
 function psSyncRecipes() {
   const s = psSt();
-  for (const [g, G] of Object.entries(PS_GEAR)) if (s.learn[g] && !RECIPES.some(r => r.id === psRid(g))) RECIPES.push({ id: psRid(g), kind: 'Équipement', out: [G.nm, 'm', 'outil', 2, null, G.col], ing: G.ing, coins: 0 });
+  for (const g of Object.keys(PS_NEW)) {
+    if (!s.learn[g] || RECIPES.some(r => r.id === psRid(g))) continue;
+    RECIPES.push({ id: psRid(g), kind: 'Équipement', out: xpGearDef(g, 1), ing: PS_GEAR[g].ing, coins: 20 });
+    RECIPES.push({ id: 'xg_' + g + '2', kind: 'Équipement', out: xpGearDef(g, 2), ing: [['xgb_' + g, 1], [PS_NEW[g][2], 3], ['cristal', 1]], coins: 90 });
+    RECIPES.push({ id: 'xg_' + g + '3', kind: 'Équipement', out: xpGearDef(g, 3), ing: [['xgp_' + g, 1], ['gemme', 1]], coins: 160 });
+  }
+  // les anciennes recettes en double disparaissent
+  for (let i = RECIPES.length - 1; i >= 0; i--) if (/^ps_/.test(RECIPES[i].id)) RECIPES.splice(i, 1);
 }
 ps$(psSyncRecipes);
-const psHas = g => (S.inv || []).some(i => i && String(i.name || '').replace(/ \(chef-d’œuvre\)$/, '').replace(/ (pro|légendaires?)$/, '') === PS_GEAR[g].nm);
+const psHas = g => (S.inv || []).some(i => i && ps$(() => (xpGearOf(i) || {}).g === g, false));
 const psProv = () => (S.inv || []).filter(i => i && i.cat === 'n' && i.sub !== 'appat').length;
 
 // ---------- quelles régions s'ouvrent seules (plaine) ----------
@@ -155,9 +178,9 @@ function psHabHTML() {
   let h = '';
   if (L.length) h += `<h3 class="qt-h3">🏘️ Savoir-faire à apprendre</h3>` + L.map(g => {
     const G = PS_GEAR[g], H = G.hab, ok = H.ask.every(([key, n]) => psCount(key) >= n);
-    return `<div class="ps-hab"><span class="ps-hi">${H.ico}</span><div><b>${esc(H.who)}, ${esc(H.job)}</b><span>Apprend : <b>${esc(G.nm)}</b></span><div class="ps-need">${H.ask.map(([key, n]) => { const c = psCount(key); return `<i class="${c >= n ? 'ok' : ''}">${esc(ING[key] ? ING[key][1] : key)} ${Math.min(c, n)}/${n}</i>`; }).join('')}</div></div><button class="btn ${ok ? 'green' : 'cream'} sm" data-pshab="${g}" ${ok ? '' : 'disabled'}>Donner</button></div>`;
+    return `<div class="ps-hab"><span class="ps-hi">${H.ico}</span><div><b>${esc(H.who)}, ${esc(H.job)}</b><span>${PS_SHARED.includes(g) ? 'Vous offre' : 'Apprend'} : <b>${esc(G.nm)}</b></span><div class="ps-need">${H.ask.map(([key, n]) => { const c = psCount(key); return `<i class="${c >= n ? 'ok' : ''}">${esc(ING[key] ? ING[key][1] : key)} ${Math.min(c, n)}/${n}</i>`; }).join('')}</div></div><button class="btn ${ok ? 'green' : 'cream'} sm" data-pshab="${g}" ${ok ? '' : 'disabled'}>Donner</button></div>`;
   }).join('');
-  if (lern.length) h += `<p class="ps-learned">Savoir-faire appris : ${lern.map(g => `<b>${esc(PS_GEAR[g].nm)}</b>`).join(', ')} (à fabriquer à la Forge).</p>`;
+  if (lern.length) h += `<p class="ps-learned">Savoir-faire appris : ${lern.map(g => `<b>${esc(PS_GEAR[g].nm)}</b>`).join(', ')} (à fabriquer à l’atelier, onglet Équipement).</p>`;
   return h;
 }
 if (typeof QM_HTML !== 'undefined' && QM_HTML.hab) QM_HTML.hab = (orig => function () { return ps$(psHabHTML, '') + orig.apply(this, arguments); })(QM_HTML.hab);
@@ -167,8 +190,10 @@ document.addEventListener('click', ev => {
   const g = b.dataset.pshab, G = PS_GEAR[g], s = psSt();
   if (!G.hab.ask.every(([key, n]) => psCount(key) >= n)) return;
   for (const [key, n] of G.hab.ask) { let left = n; for (let i = S.inv.length - 1; i >= 0 && left > 0; i--) { const it = S.inv[i]; if (it && ps$(() => ingIt(key, it), false) && !ps$(() => styleWornBy(it.id), false)) { S.inv.splice(i, 1); left--; } } }
-  s.learn[g] = Date.now(); delete s.hab[g]; psSyncRecipes(); ps$(save);
-  ps$(() => toast(`📜 ${G.hab.who} vous apprend : ${G.nm} ! La recette est à la Forge.`)); ps$(() => confetti(true));
+  s.learn[g] = Date.now(); delete s.hab[g]; psSyncRecipes();
+  if (PS_SHARED.includes(g)) { ps$(() => S.inv.push(makeItem(xpGearDef(g, 1), 0, G.hab.who, [], { fixed: 1 }))); ps$(() => toast(`🎁 ${G.hab.who} vous offre : ${G.nm} !`)); }
+  else ps$(() => toast(`📜 ${G.hab.who} vous apprend : ${G.nm} ! La recette est à l’atelier.`));
+  ps$(save); ps$(() => confetti(true));
   ps$(() => qmShow('hab'));
 }, true);
 
