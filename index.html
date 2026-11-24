@@ -44686,6 +44686,34 @@ function zfMissHTML(r) {
   if (r.coins && S.coins < r.coins) box.firstElementChild.insertAdjacentHTML('beforeend', `<p class="cf-lt">Et ${r.coins - S.coins} pièces de plus.</p>`);
   return box.innerHTML;
 }
+// ---------- v181 : des matériaux qui ont du sens ----------
+// Le joueur : « à quel moment je trouve du métal dans un salon de coiffure, et pourquoi aller à Chamonix pour du verre ? »
+// 1) « Métal ou plastique » devient « Métal » : un peigne en plastique ne fait pas des crampons.
+// 2) Pour les matériaux d'atelier, « Où le trouver » propose d'abord les lieux LOGIQUES (quincaillerie, brocante, caviste…),
+//    parmi ceux qui en donnent vraiment, au plus près de la maison.
+zf$(() => { ING.metal = [['metal'], 'Métal']; });
+const ZF_SRC = {
+  metal: ['bricolage', 'puces', 'ferme', 'gare', 'port', 'caviste'], verre: ['caviste', 'epicerie', 'puces', 'pharmacie', 'bricolage', 'plage'],
+  tissu: ['friperie', 'mode', 'laverie', 'puces', 'poste'], laine: ['friperie', 'ferme', 'mode', 'laverie'], bois: ['bricolage', 'foret', 'parc', 'riviere', 'poste'],
+  pierre: ['riviere', 'sentier', 'etang', 'patrimoine', 'bricolage'], papier: ['librairie', 'poste', 'bibliotheque', 'hotel'], plume: ['ferme', 'etang', 'parc', 'foret'],
+  coquillage: ['plage', 'poissonnerie', 'port', 'mer'], sable: ['plage', 'riviere', 'desert'], cristal: ['sentier', 'montagne', 'musee', 'puces'],
+  lumiere: ['phare', 'patrimoine', 'camping', 'bricolage'], champignon: ['foret', 'parc', 'jardin', 'marche'],
+};
+const zfGives = (c, k) => zf$(() => (LOOT[c] || []).some(d => (d[1] === 'm' || d[1] === 'n') && ING[k][0].includes(d[2])), false);
+cfLocs = (orig => function (k) {
+  const pref = ZF_SRC[k];
+  if (pref) {
+    const out = [], seen = new Set();
+    for (const c of pref) {
+      if (!zfGives(c, k)) continue;
+      const step = { t: 'visit', cat: [c] }, L = zf$(() => qtLoc(step), null); if (!L || seen.has(L.label)) continue; seen.add(L.label);
+      out.push({ label: L.label, sub: POI_CATS[c] ? POI_CATS[c][0] : c, km: zf$(() => qtKm(L), null), step });
+    }
+    if (out.length) return out.sort((a, b) => (a.km ?? 1e9) - (b.km ?? 1e9)).slice(0, 3);
+  }
+  return orig.apply(this, arguments);
+})(cfLocs);
+
 function zfShow(btn, rid) {
   const old = document.getElementById('cfMiss'); if (old) old.remove();
   document.querySelectorAll('#panelBody .zf-sel').forEach(e => e.classList.remove('zf-sel'));
