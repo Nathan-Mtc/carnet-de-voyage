@@ -94,7 +94,7 @@ ldFiche = (orig => function (id) {
       else if (w) { const c = usCost(w), can = usCan(c); sp.insertAdjacentHTML('beforeend', `<button class="btn us-r" data-usrep="${w.id}" data-usld="${id}"${can ? '' : ' disabled aria-disabled="true"'}>Réparer · ${esc(usCostTxt(c))}</button>`); }
       else {
         const R = us$(() => ppRecipe(L.g, L.tier), null); if (!R) return;
-        const small = sp.querySelector('small'); const miss = R.ing.filter(([key, n]) => ingCount(key) < n).map(([key, n]) => `${n - ingCount(key)} × ${ING[key] ? ING[key][1] : key}`);
+        const small = sp.querySelector('small:not(.d3-h):not(.us-l)'); const miss = R.ing.filter(([key, n]) => ingCount(key) < n).map(([key, n]) => `${n - ingCount(key)} × ${ING[key] ? ING[key][1] : key}`);
         if (S.coins < R.coins) miss.push(`${R.coins - S.coins} pièces`);
         if (small) small.textContent = miss.length ? `À fabriquer à l’atelier, onglet Équipement. Il vous manque : ${miss.join(', ')}` : 'Vous avez tout pour le fabriquer !';
         if (!miss.length) sp.insertAdjacentHTML('beforeend', `<button class="btn green us-r" data-uscraft="${R.id}" data-usld="${id}">Fabriquer maintenant</button>`);
