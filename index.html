@@ -44437,6 +44437,28 @@ rcCheck = (orig => function (quiet) {
   try { return orig.apply(this, arguments); }
   finally { let fix = 0; for (const id of Object.keys(held)) if (s.done[id] === -1) { delete s.done[id]; fix = 1; } if (fix) zr$(save); }
 })(rcCheck);
+// v189 : « je veux la même logique partout » — une seule fois, on remet les régions ouvertes avec l'ANCIENNE règle
+// à la nouvelle : restent ouvertes la région de la maison, celles atteintes par un passage franchi, et les voisines
+// d'une région vraiment explorée (Habitué + 10 tampons). Rien d'autre n'est perdu : la brume levée, les tampons,
+// les objets restent ; une région refermée se rouvre normalement.
+function zrMigOpen() {
+  const z = zrSt(); if (z.mig1) return; if (document.body.classList.contains('firstrun')) return;
+  const home = zr$(() => rgHome().id, ''); if (!home) return;
+  const s = rcSt(); z.mig1 = Date.now();
+  const before = Object.keys(s.open).filter(id => RG[id]);
+  const keep = {}; keep[home] = 1;
+  zr$(() => { for (const key of Object.keys(psSt().done || {})) { const E = PS_EDGES.find(x => psKey(x) === key); if (E) { keep[E[0]] = 1; keep[E[1]] = 1; } } });
+  // les explorées qui ne remplissent plus la règle ne le sont plus
+  for (const id of Object.keys(s.done)) if (zrCount(id) < ZR_OPEN || zr$(() => sctLvl(id), 0) < 2) delete s.done[id];
+  const old = s.open; s.open = {};
+  for (const id of Object.keys(keep)) if (RG[id]) s.open[id] = old[id] || { need: 3, at: Date.now() };
+  for (const id of Object.keys(s.done)) if (!s.open[id]) delete s.done[id];
+  zr$(() => rcCheck(true)); // rouvre, avec la nouvelle règle, ce qui doit l'être
+  const closed = before.filter(id => !s.open[id]);
+  zr$(save);
+  if (closed.length) setTimeout(() => zr$(() => toast(`🗺️ Nouvelle règle pour tout le monde : ${closed.map(id => RG[id].short || RG[id].name).join(', ')} ${closed.length > 1 ? 'se rouvriront' : 'se rouvrira'} avec 10 tampons du carnet. Votre progression est gardée.`)), 2500);
+}
+{ let n = 0; const t = setInterval(() => { if (++n > 40) clearInterval(t); zr$(() => { if (typeof S !== 'undefined' && S && zr$(() => rgHome().id, '')) { zrMigOpen(); clearInterval(t); } }); }, 1500); }
 // la fiche d'une région encore fermée le dit
 if (typeof fdCard === 'function') fdCard = (orig => function (id) {
   const r = orig.apply(this, arguments);
