@@ -75,8 +75,8 @@ window.__vw = { go: m => vwGo(m), mode: () => vwMode };
   const css = document.createElement('style');
   css.textContent = `
 #cmMore{display:none!important}
-.vw-btn{flex-direction:column;gap:0;width:auto!important;min-width:52px;height:auto!important;padding:5px 6px 4px!important}
-.vw-btn span{font-size:22px;line-height:1.1}.vw-btn small{font:800 10px var(--body,system-ui);color:#4a3528;white-space:nowrap}
+.vw-btn{flex-direction:column;gap:0;width:44px!important;min-width:0;height:44px!important;padding:0!important;overflow:hidden}
+.vw-btn span{font-size:17px;line-height:1}.vw-btn small{font:800 8px/1.1 var(--body,system-ui);color:#4a3528;white-space:nowrap;letter-spacing:-.1px}
 #ov.vw-coin .fdl,#ov.vw-coin .psg{display:none!important}
 .ex-q{display:none!important} /* les « ? » de l’ancien carnet (secrets du brouillard) */
 `;

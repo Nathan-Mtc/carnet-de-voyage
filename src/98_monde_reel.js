@@ -32,7 +32,7 @@ vwAuto = function () {
 };
 vwSync = function () {
   const ov = document.getElementById('ov'); if (ov) { ov.classList.toggle('vw-coin', vwMode === 'coin'); ov.classList.toggle('vw-monde', vwMode === 'monde'); }
-  const b = document.getElementById('vwBtn'); if (b) { const toW = vwMode === 'coin'; b.innerHTML = `<span>${toW ? '🗺️' : '🏠'}</span><small>${toW ? 'Le monde' : 'Mon quartier'}</small>`; b.setAttribute('aria-label', toW ? 'Voir le monde' : 'Revenir à mon quartier'); }
+  const b = document.getElementById('vwBtn'); if (b) { const toW = vwMode === 'coin'; b.innerHTML = `<span>${toW ? '🗺️' : '🏠'}</span><small>${toW ? 'Monde' : 'Quartier'}</small>`; b.setAttribute('aria-label', toW ? 'Voir le monde' : 'Revenir à mon quartier'); }
 };
 
 // ---------- 2 · des demandes de vraies spécialités ----------

@@ -378,7 +378,7 @@ trjDecorate = (orig => function (box) {
 .ld-pk svg{width:7px;height:8px}.ld-pk.ok{background:#3f7f3a;padding:0 3px;right:-11px}
 #ldFilt{position:relative;z-index:6;font-family:inherit}
 .zoom #ldFilt{margin-top:6px}
-.ld-fb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;width:46px;min-height:46px;padding:4px 2px;border-radius:14px;border:2px solid #4a3528;background:#fffaf0;font:800 10px var(--body,system-ui);color:#4a3528;position:relative}
+.ld-fb{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;width:44px;height:44px;padding:0;border-radius:14px;border:2.5px solid #4a3528;box-shadow:0 3px 0 #4a3528;background:#fffaf0;font:800 10px var(--body,system-ui);color:#4a3528;position:relative}
 .ld-fb svg{width:16px;height:18px}
 .ld-fb i{position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:#e5584f;border:2px solid #fffaf0}
 .ld-fm{display:none;position:absolute;right:calc(100% + 8px);top:0;background:#fffaf0;border:2px solid #4a3528;border-radius:14px;padding:6px;width:200px;box-shadow:0 6px 16px rgba(74,53,40,.2)}

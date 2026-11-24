@@ -343,8 +343,8 @@ function poiMarkerHTML(p) { const c = POI_CATS[p.cat]; return `<div class="poib"
 // 4 le reste ; 5 rues et routes. La destination et les compagnons en route restent des marqueurs HTML et
 // réservent leur place (aucune icône dessous), tout comme la maison, les lieux célèbres et le trésor suivi (27_tresors.js).
 const POI_FILTERS = [
-  ['utile', 'Utiles maintenant', null],
   ['tout', 'Tout', null],
+  ['utile', 'Utiles maintenant', null],
   ['nourriture', 'Nourriture', ['boulangerie', 'cafe', 'restaurant', 'marche', 'epicerie', 'poissonnerie', 'glacier', 'fromagerie', 'boucherie', 'chocolaterie', 'caviste']],
   ['nature', 'Nature', ['parc', 'plage', 'port', 'foret', 'campagne', 'ferme', 'jardin', 'etang', 'riviere', 'sentier', 'belvedere', 'camping', 'zoo', 'phare']],
   ['boutiques', 'Boutiques', ['fleuriste', 'librairie', 'mode', 'friperie', 'bricolage', 'jouets', 'boutique', 'puces', 'coiffeur', 'laverie', 'pharmacie']],
