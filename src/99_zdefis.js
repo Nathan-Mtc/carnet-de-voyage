@@ -41,6 +41,50 @@ const LD_SUB = {
   camping: ['Bivouac', 'Bougie de bivouac', ['lanterne', 'gourde']], ferme: ['Ferme', 'Œuf doré', ['bottes', 'chapeau']], zoo: ['Parc animalier', 'Plume rare', ['jumelles', 'gourde']],
 };
 const ldSub = p => LD_SUB[(p.osm && p.osm.subclass) || ''] && ['patrimoine', 'etang', 'riviere', 'sentier', 'cinema'].includes(p.cat) ? (p.osm.subclass) : (LD_SUB[p.cat] ? p.cat : null);
+// ---------- ce que chaque type de lieu exige, et POURQUOI (v174 : « pas de cohérence entre le lieu et les prérequis ») ----------
+// g : équipements possibles [clé, raison] (uniquement ceux qui existent : lampe, jumelles, palmes, crampons, manteau, gourde)
+// c : familier [terrain, raison] ; m : moment [moment, raison] ; rel : famille des matériaux demandés en plus des siens
+const LD_REQ = {
+  place_of_worship: { g: [['lampe', 'La crypte est plongée dans le noir']], c: ['ville', 'Un familier qui connaît les ruelles du bourg'], m: ['hiver', 'La crèche n’est installée qu’en hiver'], rel: 'ancien' },
+  wayside_shrine: { g: [['lampe', 'La niche de l’oratoire est sombre']], c: ['campagne', 'L’oratoire se cache au bord des champs'], m: ['printemps', 'On le fleurit au printemps'], rel: 'nature' },
+  castle: { g: [['lampe', 'Les souterrains du château sont sombres']], c: ['montagne', 'Le château est perché sur sa colline'], m: ['nuit', 'On dit qu’une lueur brille dans la tour la nuit'], rel: 'hauteur' },
+  fort: { g: [['lampe', 'Les casemates sont dans le noir']], c: ['montagne', 'Le fort garde les hauteurs'], m: ['nuit', 'La relève de la garde se faisait de nuit'], rel: 'hauteur' },
+  ruins: { g: [['lampe', 'Des caves effondrées à explorer'], ['crampons', 'Les murs écroulés sont glissants']], c: ['foret', 'La forêt a envahi les pierres'], m: ['nuit', 'Les vieilles pierres brillent au clair de lune'], rel: 'nature' },
+  monument: { g: [['jumelles', 'L’inscription est tout en haut']], c: ['ville', 'Il trône au cœur de la ville'], m: ['été', 'La fête du village a lieu l’été'], rel: 'ancien' },
+  memorial: { g: [['jumelles', 'Les noms gravés sont tout en haut']], c: ['ville', 'Il se dresse sur la place'], m: ['automne', 'La cérémonie a lieu en automne'], rel: 'ancien' },
+  attraction: { g: [['jumelles', 'Il faut repérer le détail caché']], c: ['ville', 'Un familier curieux de la ville'], m: ['été', 'Le lieu s’anime l’été'], rel: 'ancien' },
+  musee: { g: [['lampe', 'Les réserves du musée sont dans le noir']], c: ['ville', 'Un familier habitué à la ville'], m: ['nuit', 'Comme pour la Nuit des musées'], rel: 'ancien' },
+  mairie: { g: [['lampe', 'Les archives sont au sous-sol']], c: ['ville', 'Un familier qui connaît le bourg'], m: ['printemps', 'Le marché de printemps se tient sur la place'], rel: 'ancien' },
+  bibliotheque: { g: [['lampe', 'Les vieux rayonnages sont mal éclairés']], c: ['ville', 'Un familier habitué à la ville'], m: ['hiver', 'On y lit au chaud l’hiver'], rel: 'ancien' },
+  archaeological_site: { g: [['gourde', 'On fouille en plein soleil'], ['lampe', 'Des galeries sont enfouies']], c: ['campagne', 'Le site est au milieu des champs'], m: ['été', 'Les fouilles ont lieu l’été'], rel: 'nature' },
+  windmill: { g: [['manteau', 'Le vent souffle fort sur la butte']], c: ['campagne', 'Le moulin veille sur les champs'], m: ['automne', 'On moud le grain après la moisson'], rel: 'nature' },
+  watermill: { g: [['palmes', 'La roue tourne dans l’eau du bief']], c: ['riviere', 'Il faut un familier de l’eau douce'], m: ['printemps', 'La rivière est haute au printemps'], rel: 'eau' },
+  city_gate: { g: [['lampe', 'Le passage voûté est sombre']], c: ['ville', 'La porte ouvre sur la vieille ville'], m: ['nuit', 'Les portes se fermaient la nuit'], rel: 'ancien' },
+  tower: { g: [['crampons', 'L’escalier est étroit et usé'], ['jumelles', 'Toute la vue est en haut']], c: ['ville', 'La tour domine les toits'], m: ['été', 'Le sommet n’ouvre qu’aux beaux jours'], rel: 'hauteur' },
+  theatre: { g: [['lampe', 'Les coulisses sont dans le noir']], c: ['ville', 'Un familier qui aime la ville'], m: ['nuit', 'Le spectacle commence le soir'], rel: 'ancien' },
+  lake: { g: [['palmes', 'Il faut plonger au fond du lac']], c: ['riviere', 'Il faut un familier de l’eau douce'], m: ['été', 'L’eau n’est bonne qu’en été'], rel: 'nature' },
+  pond: { g: [['jumelles', 'Les oiseaux de l’étang sont farouches'], ['palmes', 'L’étang est vaseux et profond']], c: ['marais', 'Il faut un familier des roseaux'], m: ['printemps', 'Les grenouilles chantent au printemps'], rel: 'nature' },
+  river: { g: [['palmes', 'Il faut traverser le courant']], c: ['riviere', 'Il faut un familier de l’eau douce'], m: ['printemps', 'Les eaux montent au printemps'], rel: 'nature' },
+  waterfall: { g: [['crampons', 'Les rochers sont glissants'], ['palmes', 'Le bassin est profond']], c: ['montagne', 'La cascade tombe de la montagne'], m: ['printemps', 'La fonte des neiges la réveille'], rel: 'hauteur' },
+  dam: { g: [['lampe', 'Les galeries de l’ouvrage sont sombres']], c: ['riviere', 'Il faut un familier de l’eau douce'], m: ['été', 'Les vannes s’ouvrent l’été'], rel: 'ancien' },
+  port: { g: [['palmes', 'Le trésor est sous les pontons']], c: ['mer', 'Il faut un familier marin'], m: ['nuit', 'Les pêcheurs rentrent de nuit'], rel: 'eau' },
+  plage: { g: [['palmes', 'Il faut nager jusqu’aux rochers'], ['gourde', 'Le soleil tape fort']], c: ['mer', 'Il faut un familier marin'], m: ['été', 'La plage est vivante l’été'], rel: 'nature' },
+  phare: { g: [['lampe', 'L’escalier en colimaçon est sombre'], ['jumelles', 'Il faut guetter les bateaux au large']], c: ['mer', 'Il faut un familier marin'], m: ['nuit', 'Le phare ne s’allume que la nuit'], rel: 'hauteur' },
+  peak: { g: [['crampons', 'La pente finale est verglacée'], ['manteau', 'Il fait glacial là-haut']], c: ['montagne', 'Il faut un familier montagnard'], m: ['été', 'Le sommet n’est accessible qu’en été'], rel: 'hauteur' },
+  saddle: { g: [['crampons', 'Le passage est verglacé'], ['manteau', 'Le vent du col est glacial']], c: ['montagne', 'Il faut un familier montagnard'], m: ['été', 'Le col est fermé le reste de l’année'], rel: 'hauteur' },
+  hut: { g: [['manteau', 'Les nuits au refuge sont glaciales'], ['crampons', 'Le chemin du refuge est raide']], c: ['montagne', 'Il faut un familier montagnard'], m: ['hiver', 'Le refuge d’hiver n’ouvre qu’à la neige'], rel: 'hauteur' },
+  wilderness_hut: { g: [['lampe', 'La cabane n’a pas d’électricité']], c: ['foret', 'La cabane est perdue dans les bois'], m: ['automne', 'On y trouve refuge à l’automne'], rel: 'nature' },
+  trailhead: { g: [['gourde', 'Une longue marche vous attend'], ['crampons', 'Le sentier grimpe sec']], c: ['montagne', 'Il faut un bon marcheur'], m: ['été', 'Le sentier est praticable l’été'], rel: 'hauteur' },
+  belvedere: { g: [['jumelles', 'Pour profiter de la vue']], c: ['montagne', 'Il faut un familier à l’aise en hauteur'], m: ['automne', 'L’air est limpide en automne'], rel: 'hauteur' },
+  foret: { g: [['jumelles', 'Les animaux de la forêt sont timides'], ['lampe', 'Les sous-bois sont sombres']], c: ['foret', 'Il faut un familier de la forêt'], m: ['automne', 'Champignons et feuilles d’or'], rel: 'nature' },
+  parc: { g: [['jumelles', 'Les écureuils se cachent dans les arbres']], c: ['ville', 'Un familier habitué aux parcs de ville'], m: ['printemps', 'Le parc fleurit au printemps'], rel: 'nature' },
+  jardin: { g: [['jumelles', 'Des papillons rares s’y posent']], c: ['campagne', 'Il faut un familier qui aime la terre'], m: ['printemps', 'Tout fleurit au printemps'], rel: 'nature' },
+  camping: { g: [['lampe', 'La nuit tombe vite au bivouac'], ['gourde', 'Pas de point d’eau sur place']], c: ['foret', 'Le bivouac est en lisière de forêt'], m: ['été', 'On campe l’été'], rel: 'nature' },
+  ferme: { g: [['lampe', 'La vieille grange est sombre']], c: ['campagne', 'Il faut un familier de la campagne'], m: ['automne', 'C’est le temps des récoltes'], rel: 'nature' },
+  zoo: { g: [['jumelles', 'Les animaux rares se cachent']], c: ['foret', 'Il faut un familier qui rassure les animaux'], m: ['printemps', 'Les petits naissent au printemps'], rel: 'nature' },
+};
+const LD_REQA = { opera: 'theatre', reservoir: 'lake', stream: 'river', weir: 'dam', lock_gate: 'dam', alpine_hut: 'hut' };
+const ldReq = sk => LD_REQ[sk] || LD_REQ[LD_REQA[sk]] || LD_REQ.place_of_worship;
 const LD_BIG = ['ruins', 'castle', 'fort', 'archaeological_site', 'peak', 'waterfall', 'alpine_hut', 'lighthouse', 'saddle', 'monument'];
 const LD_CACHE = {};
 const ldHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -59,21 +103,18 @@ function ldOf(p) {
   const F = LD_FAM[fam], big = p.osm && LD_BIG.includes(p.osm.subclass) ? 1 : 0, x = r();
   const sk = ldSub(p) || ({ ancien: 'place_of_worship', eau: 'pond', hauteur: 'trailhead', nature: 'foret' })[fam], SB = LD_SUB[sk];
   const s = Math.min(3, 1 + (x < .55 ? 0 : x < .88 ? 1 : 2) + big);
-  const terOf = () => { if (!F.ter) return null; if (fam === 'eau') return ['port', 'plage', 'phare'].includes(p.cat) ? 'mer' : p.cat === 'etang' && r() < .4 ? 'marais' : 'riviere'; if (fam === 'nature') return ['ferme', 'camping'].includes(p.cat) ? 'campagne' : 'foret'; return F.ter[0]; };
-  const otherFam = () => ldPick(r, Object.keys(LD_FAM));
-  const g = ldPick(r, SB[2].filter(x => XP_G[x]).length ? SB[2].filter(x => XP_G[x]) : F.gear), L = [];
+  const Q = ldReq(sk), gg = ldPick(r, Q.g.filter(x => XP_G[x[0]])), rel = Q.rel || fam, L = [];
+  const G = t => ({ t: 'g', g: gg[0], tier: t, why: gg[1] }), C = lvl => ({ t: 'c', ter: Q.c[0], lvl, why: Q.c[1] }), M = () => ({ t: 'm', m: Q.m[0], why: Q.m[1] });
   if (s === 1) {
-    if (F.ter && r() < .5) L.push({ t: 'c', ter: terOf(), lvl: 3 }); else L.push({ t: 'g', g, tier: 1 });
+    L.push(r() < .5 ? C(3) : G(1));
   } else if (s === 2) {
-    L.push({ t: 'g', g, tier: 2 });
-    L.push({ t: 'i', fam: otherFam(), tier: 0, n: 3 });
-    const y = r(); if (y < .45) L.push(F.ter ? { t: 'c', ter: terOf(), lvl: 8 } : { t: 'l', lvl: 8 }); else if (y < .7) L.push({ t: 'm', m: ldPick(r, ['nuit', 'nuit', 'hiver', 'été']) });
+    L.push(G(2));
+    L.push({ t: 'i', fam: rel, tier: 0, n: 3 });
+    const y = r(); if (y < .45) L.push(C(8)); else if (y < .75) L.push(M());
   } else {
-    L.push({ t: 'g', g, tier: 3 });
-    L.push(F.ter ? { t: 'c', ter: terOf(), lvl: 15 } : { t: 'l', lvl: 15 });
-    L.push({ t: 'm', m: ldPick(r, fam === 'eau' ? ['été', 'nuit', 'printemps'] : fam === 'hauteur' ? ['hiver', 'nuit', 'été'] : fam === 'nature' ? ['nuit', 'automne', 'printemps'] : ['nuit', 'hiver', 'automne']) });
-    L.push({ t: 'i', fam: otherFam(), tier: 1, n: 3 });
-    L.push({ t: 'i', fam, tier: 0, n: 5 });
+    L.push(G(3)); L.push(C(15)); L.push(M());
+    L.push({ t: 'i', fam: rel, tier: 1, n: 3 });
+    if (rel !== fam) L.push({ t: 'i', fam, tier: 0, n: 5 }); else L.push({ t: 'i', fam, tier: 0, n: 8 });
   }
   const tr = `${SB[1]} · ${p.name}`;
   return (LD_CACHE[id] = { id, fam, sk, kind: SB[0], s, locks: L, tr, p: { cat: p.cat, name: p.name, lon: +p.lon, lat: +p.lat, city: p.city, osm: p.osm } });
@@ -258,7 +299,7 @@ document.addEventListener('click', ev => { const b = $('ldFilt'); if (b && b.cla
 function ldFiche(id) {
   const D = LD_CACHE[id]; if (!D) return;
   const k = S.sel, st = ldState(D, k), s = ldSt(), F = LD_FAM[D.fam], done = s.done[id] || 0;
-  const locks = D.locks.map((L, i) => `<li class="${st.o[i] ? 'op' : ''}">${LD_LOCK(st.o[i], st.o[i] ? '#3f7f3a' : '#4a3528')}<span><b>${esc(ldLabel(L))}</b>${st.o[i] ? '' : `<small>${esc(ldHint(L, k))}</small>`}</span></li>`).join('');
+  const locks = D.locks.map((L, i) => `<li class="${st.o[i] ? 'op' : ''}">${LD_LOCK(st.o[i], st.o[i] ? '#3f7f3a' : '#4a3528')}<span><b>${esc(ldLabel(L))}</b>${L.why ? `<em class="ld-why">${esc(L.why)}</em>` : ''}${st.o[i] ? '' : `<small>${esc(ldHint(L, k))}</small>`}</span></li>`).join('');
   const mat = F.mats[D.s - 1];
   showModal(`<div class="ld-f">
     <div class="ld-fh" style="--c:${F.col}"><span class="ld-fi"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">${ldGlyph(D)}</svg></span><div><small>${esc(D.kind || F.nm)} · ${'★'.repeat(D.s)}${'☆'.repeat(3 - D.s)}</small><h3>${esc(D.p.name)}</h3></div><button class="ld-x" data-closemodal="1" aria-label="Fermer"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="#4a3528" stroke-width="2.4" stroke-linecap="round"/></svg></button></div>
@@ -332,6 +373,7 @@ trjDecorate = (orig => function (box) {
 .ld-mk:focus-visible{outline:3px solid #e8b13a;outline-offset:3px;border-radius:50%}
 .ld-c{position:absolute;left:1px;bottom:0;width:28px;height:28px;border-radius:50%;background:#fffaf0;border:2px solid var(--c);color:var(--c);display:grid;place-items:center;box-shadow:0 2px 5px rgba(74,53,40,.28)}
 .ld-s{position:absolute;left:0;right:0;top:0;display:flex;justify-content:center;gap:2px;z-index:1}.ld-s i{width:5px;height:5px;border-radius:50%;background:#e8b13a;box-shadow:0 0 0 1.2px #fffaf0}
+.ld-why{display:block;font-style:italic;font-size:12px;color:#7a6450;margin-top:1px}
 .ld-pk{position:absolute;right:-17px;bottom:-1px;z-index:1;display:flex;align-items:center;gap:1px;height:14px;padding:0 4px 0 3px;border-radius:8px;background:#4a3528;color:#fff;font:800 9.5px/1 var(--body,system-ui);box-shadow:0 0 0 1.5px #fffaf0}
 .ld-pk svg{width:7px;height:8px}.ld-pk.ok{background:#3f7f3a;padding:0 3px;right:-11px}
 #ldFilt{position:relative;z-index:6;font-family:inherit}
