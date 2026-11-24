@@ -157,10 +157,12 @@ function ldRefresh() {
     let m = ldMk.get(D.id);
     const html = ldMarkHTML(D, st);
     if (!m) {
-      const el = document.createElement('button'); el.className = 'ld-mk'; el.dataset.ld = D.id; el.setAttribute('aria-label', `${D.kind} à défi, ${D.s} étoile${D.s > 1 ? 's' : ''} : ${D.p.name}`);
+      const el = document.createElement('div'); el.className = 'ld-mk'; el.dataset.ld = D.id; el.setAttribute('role', 'button'); el.tabIndex = 0;
+      el.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ldFiche(D.id); } }); el.setAttribute('aria-label', `${D.kind} à défi, ${D.s} étoile${D.s > 1 ? 's' : ''} : ${D.p.name}`);
       el.innerHTML = html; el._h = html;
       el.addEventListener('click', ev => { ev.stopPropagation(); ldFiche(D.id); });
-      m = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([D.p.lon, D.p.lat]).addTo(map); ldMk.set(D.id, m);
+      m = new maplibregl.Marker({ element: el, anchor: 'bottom', opacity: '1', opacityWhenCovered: '1' }).setLngLat([D.p.lon, D.p.lat]).addTo(map); ldMk.set(D.id, m);
+      ld$(() => m.setOpacity && m.setOpacity('1', '1'));
     } else if (m.getElement()._h !== html) { m.getElement().innerHTML = html; m.getElement()._h = html; }
   }
   for (const [id, m] of ldMk) if (!seen.has(id)) { m.remove(); ldMk.delete(id); }
@@ -268,7 +270,8 @@ trjDecorate = (orig => function (box) {
 
 (function ldStyle() {
   const st = document.createElement('style'); st.id = 'ldStyle';
-  st.textContent = `.ld-mk{position:relative;width:30px;height:34px;padding:0;border:0;background:none;cursor:pointer;display:block}
+  st.textContent = `.maplibregl-marker.ld-mk,.ld-mk{width:30px!important;height:34px!important;padding:0!important;margin:0;border:0!important;background:none!important;box-shadow:none!important;min-height:0!important;cursor:pointer;display:block;opacity:1!important}
+.ld-mk:focus-visible{outline:3px solid #e8b13a;outline-offset:3px;border-radius:50%}
 .ld-c{position:absolute;left:1px;bottom:0;width:28px;height:28px;border-radius:50%;background:#fffaf0;border:2px solid var(--c);color:var(--c);display:grid;place-items:center;box-shadow:0 2px 5px rgba(74,53,40,.28)}
 .ld-s{position:absolute;left:0;right:0;top:0;display:flex;justify-content:center;gap:2px;z-index:1}.ld-s i{width:5px;height:5px;border-radius:50%;background:#e8b13a;box-shadow:0 0 0 1.2px #fffaf0}
 .ld-b{position:absolute;right:-17px;bottom:-1px;z-index:1;display:flex;align-items:center;gap:1px;height:14px;padding:0 4px 0 3px;border-radius:8px;background:#4a3528;color:#fff;font:800 9.5px/1 var(--body,system-ui);box-shadow:0 0 0 1.5px #fffaf0}
