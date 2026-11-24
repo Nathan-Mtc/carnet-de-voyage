@@ -46,11 +46,12 @@ const atSlots = id => atLvl(id) >= 2 || (id === 'couture' && agBest(hmR('couture
 const atWorkers = R => R.j ? hm$(() => fwWho(R.j).length, 0) : 0;
 const atSpeed = R => (1 + .25 * atLvl(R.id)) / (1 - AG_SPD[agBest(R).g] * (atWorkers(R) ? 1 : 0));
 const AT_MIN = [6, 15, 30, 60, 120];
-const atMs = (r, R) => Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R));
+// v190 : les appâts se préparent en 10 secondes au plus (le joueur : « fabriquer les appâts met trop de temps »)
+const atMs = (r, R) => (R && R.id === 'herbo') || r.kind === 'Herboristerie' ? 10e3 : Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R));
 const atQ = id => { const H = atS(); if (!Array.isArray(H.st[id])) H.st[id] = []; return H.st[id]; };
 const atOwned = r => { try { return !(BQ_RIDS.has(r.id) && !bqRecOwned(r.id)); } catch (e) { return true; } };
 const atRecipes = R => RECIPES.filter(r => r.kind === R.st && atOwned(r));
-const atTime = ms => { const m = Math.max(1, Math.ceil(ms / 60e3)); return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`; };
+const atTime = ms => { if (ms < 60e3) return `${Math.max(1, Math.ceil(ms / 1e3))} s`; const m = Math.max(1, Math.ceil(ms / 60e3)); return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`; };
 // ---------------- lancer, récupérer ----------------
 function atStart(R, rid, quiet, t0) {
   const r = RECIPES.find(x => x.id === rid), q = atQ(R.id); if (!r || !canCraft(r) || q.length >= atSlots(R.id)) return false;

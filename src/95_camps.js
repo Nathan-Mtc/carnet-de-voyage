@@ -115,6 +115,9 @@ function augLearn(id) {
   const s = sctSt(), X = augSpFor(id); if (!X) return null;
   s.learn[X.sp] = 1; s.camp[id].sp = X.sp; s.camp[id].spWhere = X.where; augSyncHB(); return X;
 }
+// l'espèce dont Augustine a laissé la recette (dans le camp de la maison, sinon le dernier camp trouvé)
+const augCampSp = () => aug$(() => { const C = sctSt().camp || {}, h = C[augHomeId()]; if (h && h.sp) return h.sp; const L = Object.values(C).filter(c => c && c.sp).sort((a, b) => (b.at || 0) - (a.at || 0)); return L.length ? L[0].sp : null; }, null);
+const augCampWhere = () => aug$(() => { const C = sctSt().camp || {}, h = C[augHomeId()]; return (h && h.spWhere) || null; }, null);
 const augBaitNm = sp => (HB_BAITS.find(b => b[0] === sp) || [])[1] || 'un appât';
 const augPlural = sp => aug$(() => NS_PLURAL[sp], null) || aug$(() => spName(sp), sp);
 
@@ -200,8 +203,9 @@ AK_CH.splice(0, AK_CH.length,
   { nm: 'Le premier camp', page: 'Mon premier camp n’était pas loin de chez nous. Je t’ai laissé un indice : cherche le 📖 sur ta carte. Là-bas, tu trouveras mes notes… et un endroit d’où partir.',
     steps: [{ tx: 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon vers un lieu tout près du 📖 sur la carte.', ok: () => augHasCamp(augHomeId()), go: 'clue', btn: 'Voir' }] },
   { nm: 'Un nouveau compagnon', page: 'Les compagnons sauvages ne viennent pas à n’importe qui. Avec le bon appât et un peu de patience, ils te suivront. Ma recette est dans mon camp.',
-    steps: [{ tx: 'Fabriquer l’appât d’Augustine à l’Herboristerie', ok: () => (S.inv || []).some(i => i && i.sub === 'appat') || akSt().bait || Object.keys(S.comps || {}).length > akSt().base.comps, go: 'herbo', btn: 'Herboristerie' },
-      { tx: 'Partir avec l’appât et faire éclore un œuf', sub: 'Allez là où vit l’espèce : l’appât l’attire, l’œuf rejoint la Couveuse.', ok: () => Object.keys(S.comps || {}).length > akSt().base.comps, go: 'couv', btn: 'Couveuse' }] },
+    steps: [{ tx: () => { const sp = augCampSp(); return sp ? `Fabriquer « ${augBaitNm(sp)} » à l’Herboristerie` : 'Fabriquer l’appât d’Augustine à l’Herboristerie'; },
+      sub: () => { const sp = augCampSp(); if (!sp) return 'La recette est dans le camp d’Augustine : trouvez-le d’abord.'; const R = AUG_HB[sp]; const ing = aug$(() => R.ing.map(([k, n]) => `${n} × ${ING[k][1].toLowerCase()}`).join(', '), ''); return `La recette notée par Augustine dans son camp : elle attire les ${augPlural(sp)}.${ing ? ` Il faut ${ing}.` : ''} Prête en 10 secondes.`; }, ok: () => (S.inv || []).some(i => i && i.sub === 'appat') || akSt().bait || Object.keys(S.comps || {}).length > akSt().base.comps, go: 'herbo', btn: 'Herboristerie' },
+      { tx: () => { const sp = augCampSp(); return sp ? `Partir avec l’appât et trouver des ${augPlural(sp)}` : 'Partir avec l’appât et faire éclore un œuf'; }, sub: () => { const sp = augCampSp(), w = augCampWhere(); return sp ? `Les ${augPlural(sp)} vivent ${w && RG[w] ? `en ${RG[w].short || RG[w].name}` : 'dans la région'} : emportez l’appât (préparation du départ), il les attire ; l’œuf rejoint la Couveuse.` : 'Allez là où vit l’espèce : l’appât l’attire, l’œuf rejoint la Couveuse.'; }, ok: () => Object.keys(S.comps || {}).length > akSt().base.comps, go: 'map', btn: 'Partir' }] },
   { nm: 'Le savoir des habitants', page: 'Je suis repartie plus loin. Aux frontières, il y a toujours quelqu’un qui sait : un guide, un marin, un éclusier. Rends-leur service, ils t’apprendront à franchir ce qui semble infranchissable.',
     steps: AK_CH[2].steps },
   { nm: 'L’atelier', page: AK_CH[3].page, steps: AK_CH[3].steps },

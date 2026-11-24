@@ -38230,11 +38230,12 @@ const atSlots = id => atLvl(id) >= 2 || (id === 'couture' && agBest(hmR('couture
 const atWorkers = R => R.j ? hm$(() => fwWho(R.j).length, 0) : 0;
 const atSpeed = R => (1 + .25 * atLvl(R.id)) / (1 - AG_SPD[agBest(R).g] * (atWorkers(R) ? 1 : 0));
 const AT_MIN = [6, 15, 30, 60, 120];
-const atMs = (r, R) => Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R));
+// v190 : les appâts se préparent en 10 secondes au plus (le joueur : « fabriquer les appâts met trop de temps »)
+const atMs = (r, R) => (R && R.id === 'herbo') || r.kind === 'Herboristerie' ? 10e3 : Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R));
 const atQ = id => { const H = atS(); if (!Array.isArray(H.st[id])) H.st[id] = []; return H.st[id]; };
 const atOwned = r => { try { return !(BQ_RIDS.has(r.id) && !bqRecOwned(r.id)); } catch (e) { return true; } };
 const atRecipes = R => RECIPES.filter(r => r.kind === R.st && atOwned(r));
-const atTime = ms => { const m = Math.max(1, Math.ceil(ms / 60e3)); return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`; };
+const atTime = ms => { if (ms < 60e3) return `${Math.max(1, Math.ceil(ms / 1e3))} s`; const m = Math.max(1, Math.ceil(ms / 60e3)); return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`; };
 // ---------------- lancer, récupérer ----------------
 function atStart(R, rid, quiet, t0) {
   const r = RECIPES.find(x => x.id === rid), q = atQ(R.id); if (!r || !canCraft(r) || q.length >= atSlots(R.id)) return false;
@@ -42417,6 +42418,9 @@ function augLearn(id) {
   const s = sctSt(), X = augSpFor(id); if (!X) return null;
   s.learn[X.sp] = 1; s.camp[id].sp = X.sp; s.camp[id].spWhere = X.where; augSyncHB(); return X;
 }
+// l'espèce dont Augustine a laissé la recette (dans le camp de la maison, sinon le dernier camp trouvé)
+const augCampSp = () => aug$(() => { const C = sctSt().camp || {}, h = C[augHomeId()]; if (h && h.sp) return h.sp; const L = Object.values(C).filter(c => c && c.sp).sort((a, b) => (b.at || 0) - (a.at || 0)); return L.length ? L[0].sp : null; }, null);
+const augCampWhere = () => aug$(() => { const C = sctSt().camp || {}, h = C[augHomeId()]; return (h && h.spWhere) || null; }, null);
 const augBaitNm = sp => (HB_BAITS.find(b => b[0] === sp) || [])[1] || 'un appât';
 const augPlural = sp => aug$(() => NS_PLURAL[sp], null) || aug$(() => spName(sp), sp);
 
@@ -42502,8 +42506,9 @@ AK_CH.splice(0, AK_CH.length,
   { nm: 'Le premier camp', page: 'Mon premier camp n’était pas loin de chez nous. Je t’ai laissé un indice : cherche le 📖 sur ta carte. Là-bas, tu trouveras mes notes… et un endroit d’où partir.',
     steps: [{ tx: 'Trouver le camp d’Augustine', sub: 'Envoyez un compagnon vers un lieu tout près du 📖 sur la carte.', ok: () => augHasCamp(augHomeId()), go: 'clue', btn: 'Voir' }] },
   { nm: 'Un nouveau compagnon', page: 'Les compagnons sauvages ne viennent pas à n’importe qui. Avec le bon appât et un peu de patience, ils te suivront. Ma recette est dans mon camp.',
-    steps: [{ tx: 'Fabriquer l’appât d’Augustine à l’Herboristerie', ok: () => (S.inv || []).some(i => i && i.sub === 'appat') || akSt().bait || Object.keys(S.comps || {}).length > akSt().base.comps, go: 'herbo', btn: 'Herboristerie' },
-      { tx: 'Partir avec l’appât et faire éclore un œuf', sub: 'Allez là où vit l’espèce : l’appât l’attire, l’œuf rejoint la Couveuse.', ok: () => Object.keys(S.comps || {}).length > akSt().base.comps, go: 'couv', btn: 'Couveuse' }] },
+    steps: [{ tx: () => { const sp = augCampSp(); return sp ? `Fabriquer « ${augBaitNm(sp)} » à l’Herboristerie` : 'Fabriquer l’appât d’Augustine à l’Herboristerie'; },
+      sub: () => { const sp = augCampSp(); if (!sp) return 'La recette est dans le camp d’Augustine : trouvez-le d’abord.'; const R = AUG_HB[sp]; const ing = aug$(() => R.ing.map(([k, n]) => `${n} × ${ING[k][1].toLowerCase()}`).join(', '), ''); return `La recette notée par Augustine dans son camp : elle attire les ${augPlural(sp)}.${ing ? ` Il faut ${ing}.` : ''} Prête en 10 secondes.`; }, ok: () => (S.inv || []).some(i => i && i.sub === 'appat') || akSt().bait || Object.keys(S.comps || {}).length > akSt().base.comps, go: 'herbo', btn: 'Herboristerie' },
+      { tx: () => { const sp = augCampSp(); return sp ? `Partir avec l’appât et trouver des ${augPlural(sp)}` : 'Partir avec l’appât et faire éclore un œuf'; }, sub: () => { const sp = augCampSp(), w = augCampWhere(); return sp ? `Les ${augPlural(sp)} vivent ${w && RG[w] ? `en ${RG[w].short || RG[w].name}` : 'dans la région'} : emportez l’appât (préparation du départ), il les attire ; l’œuf rejoint la Couveuse.` : 'Allez là où vit l’espèce : l’appât l’attire, l’œuf rejoint la Couveuse.'; }, ok: () => Object.keys(S.comps || {}).length > akSt().base.comps, go: 'map', btn: 'Partir' }] },
   { nm: 'Le savoir des habitants', page: 'Je suis repartie plus loin. Aux frontières, il y a toujours quelqu’un qui sait : un guide, un marin, un éclusier. Rends-leur service, ils t’apprendront à franchir ce qui semble infranchissable.',
     steps: AK_CH[2].steps },
   { nm: 'L’atelier', page: AK_CH[3].page, steps: AK_CH[3].steps },
@@ -44423,6 +44428,7 @@ zr$(() => { akGo.zr = () => { zr$(() => csCloseModal()); zrPage(); }; });
 const zrFrontId = () => zr$(() => rcFront().id, null) || zr$(() => rgHome().id, null);
 const zrStep = alt => ({ tx: () => { const id = zrFrontId(); return `Remplir le carnet de ${id ? (RG[id].short || RG[id].name) : 'votre région'}`; }, ct: () => { const id = zrFrontId(); return id ? `${Math.min(zrCount(id), ZR_NEED)}/${ZR_NEED} tampons` : ''; },
   sub: 'Explorez, relevez des défis, goûtez, rencontrez : le gardien de la frontière ne reçoit que les connaisseurs.', ok: () => { const id = zrFrontId(); return !id || zrCount(id) >= ZR_NEED || !!zr$(() => alt && alt(), false); }, go: 'zr', btn: 'Carnet' });
+zr$(() => { const C = AK_CH.find(c => c.nm === 'La première frontière'), P = C && C.steps.find(x => x.go === 'passage'); if (P) P.sub = 'Touchez l’icône 👑 d’un passage sur la carte : le gardien demande 14 tampons, l’équipement pro, un familier fort et 3 matériaux ★★ ; puis 3 étapes de traversée avec des provisions.'; });
 zr$(() => { const C = AK_CH.find(c => c.nm === 'La première frontière'); if (C && !C.steps.some(s => s.go === 'zr')) C.steps.unshift(zrStep(() => akPsDone() >= 1)); }); // une partie déjà avancée n'est pas bloquée
 akLoop = (orig => function () { const C = orig.apply(this, arguments); zr$(() => { if (C && C.steps && !C.steps.some(s => s.go === 'zr')) { const last = C.steps[C.steps.length - 1]; C.steps.splice(Math.max(0, C.steps.length - 1), 0, zrStep(() => last && last.ok())); } }); return C; })(akLoop);
 

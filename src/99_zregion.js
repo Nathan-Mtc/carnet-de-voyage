@@ -158,6 +158,7 @@ zr$(() => { akGo.zr = () => { zr$(() => csCloseModal()); zrPage(); }; });
 const zrFrontId = () => zr$(() => rcFront().id, null) || zr$(() => rgHome().id, null);
 const zrStep = alt => ({ tx: () => { const id = zrFrontId(); return `Remplir le carnet de ${id ? (RG[id].short || RG[id].name) : 'votre région'}`; }, ct: () => { const id = zrFrontId(); return id ? `${Math.min(zrCount(id), ZR_NEED)}/${ZR_NEED} tampons` : ''; },
   sub: 'Explorez, relevez des défis, goûtez, rencontrez : le gardien de la frontière ne reçoit que les connaisseurs.', ok: () => { const id = zrFrontId(); return !id || zrCount(id) >= ZR_NEED || !!zr$(() => alt && alt(), false); }, go: 'zr', btn: 'Carnet' });
+zr$(() => { const C = AK_CH.find(c => c.nm === 'La première frontière'), P = C && C.steps.find(x => x.go === 'passage'); if (P) P.sub = 'Touchez l’icône 👑 d’un passage sur la carte : le gardien demande 14 tampons, l’équipement pro, un familier fort et 3 matériaux ★★ ; puis 3 étapes de traversée avec des provisions.'; });
 zr$(() => { const C = AK_CH.find(c => c.nm === 'La première frontière'); if (C && !C.steps.some(s => s.go === 'zr')) C.steps.unshift(zrStep(() => akPsDone() >= 1)); }); // une partie déjà avancée n'est pas bloquée
 akLoop = (orig => function () { const C = orig.apply(this, arguments); zr$(() => { if (C && C.steps && !C.steps.some(s => s.go === 'zr')) { const last = C.steps[C.steps.length - 1]; C.steps.splice(Math.max(0, C.steps.length - 1), 0, zrStep(() => last && last.ok())); } }); return C; })(akLoop);
 
