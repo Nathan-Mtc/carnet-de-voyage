@@ -176,7 +176,7 @@ function zfBtn() {
   const rid = zfHome(), L = rid ? zfSps(rid) : [], n = L.filter(f => zfSt(f.id) >= 2).length;
   const tx = `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".6"/><path d="M12 12 L19 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="16" cy="15" r="1.6" fill="currentColor"/></svg><small>${n}/${L.length}</small>`; if (b.innerHTML !== tx) b.innerHTML = tx;
   b.classList.toggle('on', zfRadar); b.setAttribute('aria-pressed', zfRadar ? 'true' : 'false');
-  const chip = document.getElementById('zfChip'); if (chip) { const G = zoGroups(), c2 = G.length ? `📡 ${G.length} piste${G.length > 1 ? 's' : ''} · ✨ vu 👣 trace 🔊 bruit 📚 savoir 👁️ témoin · <b>Liste</b>` : `📡 Aucune piste encore : voyagez, sortez la nuit, visitez un musée · <b>Liste</b>`; if (chip.innerHTML !== c2) chip.innerHTML = c2; }
+  const chip = document.getElementById('zfChip'); if (chip) { const G = zoGroups(), c2 = G.length ? `📡 ${G.length} piste${G.length > 1 ? 's' : ''}` : '📡 Aucune piste'; if (chip.innerHTML !== c2) chip.innerHTML = c2; }
   b.setAttribute('aria-label', `Radar à familiers : ${n} trouvés sur ${L.length}`);
 }
 function zfList() {
@@ -204,7 +204,7 @@ zf2$(() => {
 @keyframes zffade{from{opacity:0}to{opacity:1}}
 .zfm .zfm-c,.zfm .zfm-q,.zfm .zfm-s{animation:zffade .6s ease-out var(--del,0s) both,zfwan var(--dur,3s) ease-in-out var(--del,0s) infinite}
 .zfm .zfm-c{box-shadow:0 0 0 3px rgba(120,255,230,.55),0 0 14px rgba(120,255,230,.8)!important;background:rgba(220,255,250,.9)!important}
-#zfChip{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 140px);z-index:7;max-width:86%;padding:8px 14px;min-height:40px;border-radius:999px;border:2px solid #2b8f86;background:#effffb;color:#1d5c56;font:700 13px var(--body,system-ui);box-shadow:0 3px 0 #2b8f86}
+#zfChip{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 140px);z-index:7;padding:5px 12px;min-height:34px;border-radius:999px;border:2px solid #2b8f86;background:#effffb;color:#1d5c56;font:800 13px var(--body,system-ui);box-shadow:0 2px 0 #2b8f86;white-space:nowrap}
 .zf-b.on{background:#2b8f86!important;color:#fff!important}.zf-b.on small{color:#fff}
 @media (prefers-reduced-motion:reduce){#zfRad .zf-sw{animation:none;opacity:.4}.zfm .zfm-c,.zfm .zfm-q,.zfm .zfm-s{animation:none}}
 .zfm{width:48px;height:54px;cursor:pointer}.zfm-c{position:absolute;left:2px;top:0;width:44px;height:44px;border-radius:50%;background:#fffaf0;border:2.5px solid #4a3528;overflow:hidden;box-shadow:0 2px 0 rgba(74,53,40,.35);display:grid;place-items:center}
