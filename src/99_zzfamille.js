@@ -32,7 +32,16 @@ const zfPic = (sp, st) => zf2$(() => nsPortrait(sp, null, null, st ? 'content' :
 // ---------- les pastilles ----------
 const zfMk = new Map();
 let zfRadar = false, zfRadT = null;
+// v203 : un radar vide au début, ce n'est pas parlant (le joueur : « j'ai aucune piste ») :
+// à la première ouverture, le carnet d'Augustine donne 2 pistes près de chez vous (des espèces communes, sur leur vrai lieu)
+function zoFirst() {
+  const st = zoSt(); if (st.first || st.L.length) return; st.first = Date.now();
+  const rid = zfHome(); const C = zfSps(rid).filter(f => zfSt(f.id) < 2 && f.tier === 0); let n = 0;
+  for (const f of C.concat(zfSps(rid).filter(f => zfSt(f.id) < 2 && f.tier > 0))) { if (n >= 2) break; const Lc = zfLoc(f, rid); if (!Lc) continue; zoAdd(f.id, 'savoir', Lc.poi || { name: Lc.label, lon: Lc.lon, lat: Lc.lat, cat: Lc.cat || 'sentier', tags: [] }, `Carnet d’Augustine : « J’ai souvent vu ${f.art} vers ${Lc.label} »`, 'Augustine'); n++; }
+  if (n) { save(); setTimeout(() => zf2$(() => toast(`📖 Le carnet d’Augustine vous donne ${n} piste${n > 1 ? 's' : ''} pour commencer : touchez les formes !`)), 600); }
+}
 function zfRadarSet(on) {
+  if (on) zf2$(zoFirst);
   zfRadar = !!on; clearTimeout(zfRadT);
   zf2$(() => {
     const cc = map.getCanvasContainer(); let ov = document.getElementById('zfRad');
