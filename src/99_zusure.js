@@ -51,7 +51,7 @@ ingExtra = (orig => function (key, i) {
 
 // ---------- 2) l'usure ----------
 const usTier = it => us$(() => xpGearOf(it).tier, 1);
-const usMax = it => US_MAX[usTier(it)] || 3;
+const usMax = it => (US_MAX[usTier(it)] || 3) + (it && it.solide ? 1 : 0);
 const usWorn = it => !!it && (it.wear || 0) >= usMax(it);
 // le meilleur équipement utilisable pour un défi (pas usé, pas porté par un autre familier)
 function usGear(k, g, t, worn) {

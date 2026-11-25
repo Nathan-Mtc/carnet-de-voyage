@@ -39,7 +39,7 @@ const HB_SP = {}; HB_BAITS.forEach(([sp, nm]) => { HB_SP[nm] = sp; });
 if (typeof nsBaitPower === 'function') nsBaitPower = function (it, sp) { if (!it || it.sub !== 'appat') return 0; return HB_SP[String(it.name || '').replace(/ \(chef-d’œuvre\)$/, '')] === sp ? 1.6 : 0; };
 try { HB_BAITS.forEach(([sp, nm]) => { if (NS_BAIT_HINT[sp] != null) NS_BAIT_HINT[sp] = `« ${nm} », à préparer à l’Herboristerie du foyer`; }); } catch (e) {}
 // ---------------- niveaux, vitesse, places ----------------
-const AT_UP = { couture: [300, 900, 2000], herbo: [250, 800, 1800] };
+const AT_UP = { couture: [400, 1200, 3000], herbo: [300, 1000, 2500] }; // v196 : un peu plus cher, et le niveau 3 donne +10 % de chefs-d'œuvre
 function atS() { const H = hmS(); if (!H.st || typeof H.st !== 'object') H.st = {}; if (!H.lv || typeof H.lv !== 'object') H.lv = {}; return H; }
 function atLvl(id) { if (id === 'forge') return hm$(() => pgLvl('atelier'), 0); if (id === 'cuisine') return hm$(() => pgLvl('repas'), 0); if (id === 'salon') return 1; return atS().lv[id] | 0; }
 const atSlots = id => atLvl(id) >= 2 || (id === 'couture' && agBest(hmR('couture')).g >= 2) ? 2 : 1;
@@ -60,7 +60,7 @@ function atStart(R, rid, quiet, t0) {
   for (const [key, n] of r.ing) { const c = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); c.slice(0, n).forEach(x => { used.push(x); S.inv.splice(S.inv.indexOf(x), 1); }); }
   S.coins -= r.coins || 0;
   if (R.id === 'herbo' && used.length && agRoll(R)) { const x = used[0]; S.inv.push(x); hm$(() => toast(`${agWho(R)} a économisé un ingrédient : « ${x.name} » reste dans le sac.`), 0); }
-  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + hm$(() => lvlLuck(S.sel), 0) * 0.2 || (R.id === 'forge' && agRoll(R)) ? 1 : 0 });
+  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + (atLvl(R.id) >= 3 ? 0.1 : 0) + hm$(() => lvlLuck(S.sel), 0) * 0.2 || (R.id === 'forge' && agRoll(R)) ? 1 : 0 });
   save(); hm$(() => renderTop(), 0); if (!quiet) hm$(() => toast(`${r.out[0]} : c’est parti ! Prêt dans ${atTime(atMs(r, R))}.`), 0);
   return true;
 }
@@ -69,6 +69,7 @@ function atCollect(R, i, quiet) {
   const r = RECIPES.find(x => x.id === j.rid); q.splice(i, 1); if (!r) { save(); return null; }
   const it = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: Math.min(4, (r.out[3] | 0) + (j.m ? 1 : 0)) });
   if (j.m) it.name += ' (chef-d’œuvre)';
+  if (R.id === 'forge' && atLvl('forge') >= 3 && hm$(() => xpGearOf(it), null)) it.solide = 1; // v196 : Forge niveau 3 : l'équipement tient un défi de plus
   S.inv.push(it); S.dex[r.out[0]] = true; S.stats.crafted = (S.stats.crafted || 0) + 1; hm$(() => bump('craft'), 0);
   if (R.id === 'cuisine' && agRoll(R)) { const it2 = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: r.out[3] | 0 }); S.inv.push(it2); hm$(() => setTimeout(() => toast(`${agWho(R)} en a fait une part de plus : 2 × « ${r.out[0]} » !`), 1600), 0); }
   agGain(R); save();
@@ -165,7 +166,9 @@ hmStationHTML = R => {
     ${noArt ? `<button class="btn cream sm" data-stneed="1">Fabriquer</button>` : `<button class="btn ${ok && !full ? 'green' : 'cream'} sm" data-ststart="${r.id}"${ok && !full ? '' : ' disabled'}>${full && ok ? 'Atelier occupé' : 'Fabriquer'}</button>`}</div>`).join('') || '<p class="hm-none">Pas encore de recette ici.</p>'}</div>`;
   if (R.id === 'cuisine') h += `<p class="hm-tip">Les en-cas à vendre se préparent au comptoir de la Boutique. Pour nourrir un compagnon : onglet Compagnons.</p>`;
   if (R.id === 'forge' || R.id === 'couture') h += `<p class="hm-tip">On s’équipe au départ (onglet Préparation) ou dans l’onglet Compagnons.</p>`;
-  if (AT_UP[R.id]) { const l = atLvl(R.id), c = AT_UP[R.id][l]; h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b>${c != null ? `<small>Niveau ${l + 1} : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}</small><button class="btn ${(S.coins || 0) >= c ? 'green' : 'cream'} sm" data-stup="${R.id}"${(S.coins || 0) >= c ? '' : ' disabled'}>Améliorer · ${c} 🪙</button>` : '<small>Niveau maximum</small>'}</div>`; }
+  // v196 : la Forge et la Cuisine montent avec les constructions du Foyer : on le dit ici
+  if (!AT_UP[R.id] && (R.id === 'forge' || R.id === 'cuisine')) { const l = atLvl(R.id), B = hm$(() => PG_BY[R.b], null); if (B) h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b><small>${l >= 3 ? 'Niveau maximum.' : `Pour l’améliorer : construisez « ${esc(B.nm)} » ${l ? `niveau ${l + 1} ` : ''}(Foyer › À construire) : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}${l + 1 === 3 ? (R.id === 'forge' ? ', équipement plus solide (un défi de plus)' : ', +10 % de chefs-d’œuvre') : ''}.`}</small></div>`; }
+  if (AT_UP[R.id]) { const l = atLvl(R.id), c = AT_UP[R.id][l]; h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b>${c != null ? `<small>Niveau ${l + 1} : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}${l + 1 === 3 ? ', +10 % de chefs-d’œuvre' : ''}</small><button class="btn ${(S.coins || 0) >= c ? 'green' : 'cream'} sm" data-stup="${R.id}"${(S.coins || 0) >= c ? '' : ' disabled'}>Améliorer · ${c} 🪙</button>` : '<small>Niveau maximum</small>'}</div>`; }
   return h + `</section>`;
 };
 document.addEventListener('click', ev => {

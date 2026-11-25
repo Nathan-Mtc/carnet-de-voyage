@@ -45,6 +45,9 @@ const PG_B = [
     cost: [[['metal', 3], ['verre', 3]], [['metal', 5], ['verre', 5], ['bois', 3]], [['metal', 8], ['verre', 8], ['cristal', 1]]] },
 ];
 const PG_BY = {}; PG_B.forEach(B => { PG_BY[B.id] = B; });
+// v196 : chaque niveau coûte aussi des PIÈCES (le joueur : « les pièces ne servent à rien ») : 150, 500, 1 500 ; l'Observatoire ×1,5
+const PG_COINS = [150, 500, 1500];
+const pgCoins = (B, l) => Math.round(PG_COINS[l] * (B.id === 'observ' ? 1.5 : 1));
 const PG_LV_RANK = [0, 1, 2, 6]; // niveau 2 : rang Randonneur ; niveau 3 : rang Grand explorateur
 const pgNeedRank = (B, lv) => Math.max(PG_LV_RANK[lv] || 1, lv === 1 && B.rank ? B.rank : 1);
 // un matériau utilisable : la bonne sous-famille, pas un produit du commerce, pas un trésor
@@ -65,12 +68,12 @@ function pgMatIco(k) { const r = pgCall(() => cmIngIcon(k), ''); return r || pgC
 function pgCan(id) {
   const B = PG_BY[id], l = pgLvl(id); if (!B || l >= 3) return { ok: false, max: true };
   const need = pgNeedRank(B, l + 1), rk = pgRank().i + 1;
-  const cost = B.cost[l], miss = cost.filter(([k, n]) => pgHave(k) < n);
-  return { ok: rk >= need && !miss.length, rankOk: rk >= need, need, cost, miss };
+  const cost = B.cost[l], miss = cost.filter(([k, n]) => pgHave(k) < n), coins = pgCoins(B, l), cOk = (S.coins || 0) >= coins;
+  return { ok: rk >= need && !miss.length && cOk, rankOk: rk >= need, need, cost, miss, coins, cOk };
 }
 function pgBuild(id) {
   const B = PG_BY[id], c = pgCan(id); if (!B || !c.ok) return false;
-  c.cost.forEach(([k, n]) => pgTake(k, n));
+  c.cost.forEach(([k, n]) => pgTake(k, n)); S.coins -= c.coins; pgCall(() => renderTop(), 0);
   const P = pgState(); P.b[id] = pgLvl(id) + 1;
   S.stats.built = (S.stats.built || 0) + 1;
   save();
@@ -99,15 +102,15 @@ function pgCardHTML(B) {
   else {
     const costs = c.cost.map(([k, n]) => { const h = pgHave(k); return `<span class="pg-ing${h >= n ? ' ok' : ''}" title="${esc(pgMatTxt(k, n))}">${pgMatIco(k)}<i>${Math.min(h, n)}/${n}</i></span>`; }).join('');
     const btn = !c.rankOk ? `<span class="pg-lock">Rang ${c.need} : ${esc(PG_RANKS[c.need - 1].n)}</span>`
-      : c.ok ? `<button class="btn green sm" data-pgbuild="${B.id}">Construire</button>` : `<button class="btn cream sm" data-pgmiss="${B.id}">Où trouver</button>`;
-    body = `${l ? `<p class="pg-eff on">Actuel : ${esc(B.eff(l))}</p>` : ''}<p class="pg-eff">${l ? 'Niveau suivant' : 'Effet'} : <b>${esc(B.eff(l + 1))}</b></p><span class="pg-cost" aria-label="Coût : ${esc(pgCostTxt(c.cost))}">${costs}</span>${btn}`;
+      : c.ok ? `<button class="btn green sm" data-pgbuild="${B.id}">Construire</button>` : !c.miss.length ? `<span class="pg-lock">Encore ${c.coins - (S.coins || 0)} pièces</span>` : `<button class="btn cream sm" data-pgmiss="${B.id}">Où trouver</button>`;
+    body = `${l ? `<p class="pg-eff on">Actuel : ${esc(B.eff(l))}</p>` : ''}<p class="pg-eff">${l ? 'Niveau suivant' : 'Effet'} : <b>${esc(B.eff(l + 1))}</b></p><span class="pg-cost" aria-label="Coût : ${esc(pgCostTxt(c.cost))} et ${c.coins} pièces">${costs}<span class="pg-ing pg-coin${c.cOk ? ' ok' : ''}" title="${c.coins} pièces">🪙<i>${c.coins}</i></span></span>${btn}`;
   }
   return `<div class="pg-card${c.ok ? ' can' : ''}${l ? ' built' : ''}" data-pgcard="${B.id}"><span class="pg-pic">${pgIconSVG(B.id)}</span><div class="pg-x"><b>${esc(B.nm)}</b>${lv}${body}</div></div>${pgMissOpen === B.id ? pgMissHTML(B.id) : ''}`;
 }
 function pgBuildHTML(w) {
   const list = PG_B.filter(B => B.w === w);
   const n = list.reduce((a, B) => a + pgLvl(B.id), 0);
-  return `<section class="pg-build" id="pgBuild_${w}"><h3 class="pg-h">${pgIconSVG('hammer')}<span>À construire</span><small>${n}/${list.length * 3} · avec les matériaux rapportés de voyage</small></h3><div class="pg-list">${list.map(pgCardHTML).join('')}</div></section>`;
+  return `<section class="pg-build" id="pgBuild_${w}"><h3 class="pg-h">${pgIconSVG('hammer')}<span>À construire</span><small>${n}/${list.length * 3} · avec les matériaux rapportés de voyage et des pièces</small></h3><div class="pg-list">${list.map(pgCardHTML).join('')}</div></section>`;
 }
 // petites icônes des améliorations
 const PG_L = '#5b4636';

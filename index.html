@@ -30236,6 +30236,9 @@ const PG_B = [
     cost: [[['metal', 3], ['verre', 3]], [['metal', 5], ['verre', 5], ['bois', 3]], [['metal', 8], ['verre', 8], ['cristal', 1]]] },
 ];
 const PG_BY = {}; PG_B.forEach(B => { PG_BY[B.id] = B; });
+// v196 : chaque niveau coûte aussi des PIÈCES (le joueur : « les pièces ne servent à rien ») : 150, 500, 1 500 ; l'Observatoire ×1,5
+const PG_COINS = [150, 500, 1500];
+const pgCoins = (B, l) => Math.round(PG_COINS[l] * (B.id === 'observ' ? 1.5 : 1));
 const PG_LV_RANK = [0, 1, 2, 6]; // niveau 2 : rang Randonneur ; niveau 3 : rang Grand explorateur
 const pgNeedRank = (B, lv) => Math.max(PG_LV_RANK[lv] || 1, lv === 1 && B.rank ? B.rank : 1);
 // un matériau utilisable : la bonne sous-famille, pas un produit du commerce, pas un trésor
@@ -30256,12 +30259,12 @@ function pgMatIco(k) { const r = pgCall(() => cmIngIcon(k), ''); return r || pgC
 function pgCan(id) {
   const B = PG_BY[id], l = pgLvl(id); if (!B || l >= 3) return { ok: false, max: true };
   const need = pgNeedRank(B, l + 1), rk = pgRank().i + 1;
-  const cost = B.cost[l], miss = cost.filter(([k, n]) => pgHave(k) < n);
-  return { ok: rk >= need && !miss.length, rankOk: rk >= need, need, cost, miss };
+  const cost = B.cost[l], miss = cost.filter(([k, n]) => pgHave(k) < n), coins = pgCoins(B, l), cOk = (S.coins || 0) >= coins;
+  return { ok: rk >= need && !miss.length && cOk, rankOk: rk >= need, need, cost, miss, coins, cOk };
 }
 function pgBuild(id) {
   const B = PG_BY[id], c = pgCan(id); if (!B || !c.ok) return false;
-  c.cost.forEach(([k, n]) => pgTake(k, n));
+  c.cost.forEach(([k, n]) => pgTake(k, n)); S.coins -= c.coins; pgCall(() => renderTop(), 0);
   const P = pgState(); P.b[id] = pgLvl(id) + 1;
   S.stats.built = (S.stats.built || 0) + 1;
   save();
@@ -30290,15 +30293,15 @@ function pgCardHTML(B) {
   else {
     const costs = c.cost.map(([k, n]) => { const h = pgHave(k); return `<span class="pg-ing${h >= n ? ' ok' : ''}" title="${esc(pgMatTxt(k, n))}">${pgMatIco(k)}<i>${Math.min(h, n)}/${n}</i></span>`; }).join('');
     const btn = !c.rankOk ? `<span class="pg-lock">Rang ${c.need} : ${esc(PG_RANKS[c.need - 1].n)}</span>`
-      : c.ok ? `<button class="btn green sm" data-pgbuild="${B.id}">Construire</button>` : `<button class="btn cream sm" data-pgmiss="${B.id}">Où trouver</button>`;
-    body = `${l ? `<p class="pg-eff on">Actuel : ${esc(B.eff(l))}</p>` : ''}<p class="pg-eff">${l ? 'Niveau suivant' : 'Effet'} : <b>${esc(B.eff(l + 1))}</b></p><span class="pg-cost" aria-label="Coût : ${esc(pgCostTxt(c.cost))}">${costs}</span>${btn}`;
+      : c.ok ? `<button class="btn green sm" data-pgbuild="${B.id}">Construire</button>` : !c.miss.length ? `<span class="pg-lock">Encore ${c.coins - (S.coins || 0)} pièces</span>` : `<button class="btn cream sm" data-pgmiss="${B.id}">Où trouver</button>`;
+    body = `${l ? `<p class="pg-eff on">Actuel : ${esc(B.eff(l))}</p>` : ''}<p class="pg-eff">${l ? 'Niveau suivant' : 'Effet'} : <b>${esc(B.eff(l + 1))}</b></p><span class="pg-cost" aria-label="Coût : ${esc(pgCostTxt(c.cost))} et ${c.coins} pièces">${costs}<span class="pg-ing pg-coin${c.cOk ? ' ok' : ''}" title="${c.coins} pièces">🪙<i>${c.coins}</i></span></span>${btn}`;
   }
   return `<div class="pg-card${c.ok ? ' can' : ''}${l ? ' built' : ''}" data-pgcard="${B.id}"><span class="pg-pic">${pgIconSVG(B.id)}</span><div class="pg-x"><b>${esc(B.nm)}</b>${lv}${body}</div></div>${pgMissOpen === B.id ? pgMissHTML(B.id) : ''}`;
 }
 function pgBuildHTML(w) {
   const list = PG_B.filter(B => B.w === w);
   const n = list.reduce((a, B) => a + pgLvl(B.id), 0);
-  return `<section class="pg-build" id="pgBuild_${w}"><h3 class="pg-h">${pgIconSVG('hammer')}<span>À construire</span><small>${n}/${list.length * 3} · avec les matériaux rapportés de voyage</small></h3><div class="pg-list">${list.map(pgCardHTML).join('')}</div></section>`;
+  return `<section class="pg-build" id="pgBuild_${w}"><h3 class="pg-h">${pgIconSVG('hammer')}<span>À construire</span><small>${n}/${list.length * 3} · avec les matériaux rapportés de voyage et des pièces</small></h3><div class="pg-list">${list.map(pgCardHTML).join('')}</div></section>`;
 }
 // petites icônes des améliorations
 const PG_L = '#5b4636';
@@ -38223,7 +38226,7 @@ const HB_SP = {}; HB_BAITS.forEach(([sp, nm]) => { HB_SP[nm] = sp; });
 if (typeof nsBaitPower === 'function') nsBaitPower = function (it, sp) { if (!it || it.sub !== 'appat') return 0; return HB_SP[String(it.name || '').replace(/ \(chef-d’œuvre\)$/, '')] === sp ? 1.6 : 0; };
 try { HB_BAITS.forEach(([sp, nm]) => { if (NS_BAIT_HINT[sp] != null) NS_BAIT_HINT[sp] = `« ${nm} », à préparer à l’Herboristerie du foyer`; }); } catch (e) {}
 // ---------------- niveaux, vitesse, places ----------------
-const AT_UP = { couture: [300, 900, 2000], herbo: [250, 800, 1800] };
+const AT_UP = { couture: [400, 1200, 3000], herbo: [300, 1000, 2500] }; // v196 : un peu plus cher, et le niveau 3 donne +10 % de chefs-d'œuvre
 function atS() { const H = hmS(); if (!H.st || typeof H.st !== 'object') H.st = {}; if (!H.lv || typeof H.lv !== 'object') H.lv = {}; return H; }
 function atLvl(id) { if (id === 'forge') return hm$(() => pgLvl('atelier'), 0); if (id === 'cuisine') return hm$(() => pgLvl('repas'), 0); if (id === 'salon') return 1; return atS().lv[id] | 0; }
 const atSlots = id => atLvl(id) >= 2 || (id === 'couture' && agBest(hmR('couture')).g >= 2) ? 2 : 1;
@@ -38244,7 +38247,7 @@ function atStart(R, rid, quiet, t0) {
   for (const [key, n] of r.ing) { const c = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); c.slice(0, n).forEach(x => { used.push(x); S.inv.splice(S.inv.indexOf(x), 1); }); }
   S.coins -= r.coins || 0;
   if (R.id === 'herbo' && used.length && agRoll(R)) { const x = used[0]; S.inv.push(x); hm$(() => toast(`${agWho(R)} a économisé un ingrédient : « ${x.name} » reste dans le sac.`), 0); }
-  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + hm$(() => lvlLuck(S.sel), 0) * 0.2 || (R.id === 'forge' && agRoll(R)) ? 1 : 0 });
+  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + (atLvl(R.id) >= 3 ? 0.1 : 0) + hm$(() => lvlLuck(S.sel), 0) * 0.2 || (R.id === 'forge' && agRoll(R)) ? 1 : 0 });
   save(); hm$(() => renderTop(), 0); if (!quiet) hm$(() => toast(`${r.out[0]} : c’est parti ! Prêt dans ${atTime(atMs(r, R))}.`), 0);
   return true;
 }
@@ -38253,6 +38256,7 @@ function atCollect(R, i, quiet) {
   const r = RECIPES.find(x => x.id === j.rid); q.splice(i, 1); if (!r) { save(); return null; }
   const it = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: Math.min(4, (r.out[3] | 0) + (j.m ? 1 : 0)) });
   if (j.m) it.name += ' (chef-d’œuvre)';
+  if (R.id === 'forge' && atLvl('forge') >= 3 && hm$(() => xpGearOf(it), null)) it.solide = 1; // v196 : Forge niveau 3 : l'équipement tient un défi de plus
   S.inv.push(it); S.dex[r.out[0]] = true; S.stats.crafted = (S.stats.crafted || 0) + 1; hm$(() => bump('craft'), 0);
   if (R.id === 'cuisine' && agRoll(R)) { const it2 = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: r.out[3] | 0 }); S.inv.push(it2); hm$(() => setTimeout(() => toast(`${agWho(R)} en a fait une part de plus : 2 × « ${r.out[0]} » !`), 1600), 0); }
   agGain(R); save();
@@ -38349,7 +38353,9 @@ hmStationHTML = R => {
     ${noArt ? `<button class="btn cream sm" data-stneed="1">Fabriquer</button>` : `<button class="btn ${ok && !full ? 'green' : 'cream'} sm" data-ststart="${r.id}"${ok && !full ? '' : ' disabled'}>${full && ok ? 'Atelier occupé' : 'Fabriquer'}</button>`}</div>`).join('') || '<p class="hm-none">Pas encore de recette ici.</p>'}</div>`;
   if (R.id === 'cuisine') h += `<p class="hm-tip">Les en-cas à vendre se préparent au comptoir de la Boutique. Pour nourrir un compagnon : onglet Compagnons.</p>`;
   if (R.id === 'forge' || R.id === 'couture') h += `<p class="hm-tip">On s’équipe au départ (onglet Préparation) ou dans l’onglet Compagnons.</p>`;
-  if (AT_UP[R.id]) { const l = atLvl(R.id), c = AT_UP[R.id][l]; h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b>${c != null ? `<small>Niveau ${l + 1} : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}</small><button class="btn ${(S.coins || 0) >= c ? 'green' : 'cream'} sm" data-stup="${R.id}"${(S.coins || 0) >= c ? '' : ' disabled'}>Améliorer · ${c} 🪙</button>` : '<small>Niveau maximum</small>'}</div>`; }
+  // v196 : la Forge et la Cuisine montent avec les constructions du Foyer : on le dit ici
+  if (!AT_UP[R.id] && (R.id === 'forge' || R.id === 'cuisine')) { const l = atLvl(R.id), B = hm$(() => PG_BY[R.b], null); if (B) h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b><small>${l >= 3 ? 'Niveau maximum.' : `Pour l’améliorer : construisez « ${esc(B.nm)} » ${l ? `niveau ${l + 1} ` : ''}(Foyer › À construire) : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}${l + 1 === 3 ? (R.id === 'forge' ? ', équipement plus solide (un défi de plus)' : ', +10 % de chefs-d’œuvre') : ''}.`}</small></div>`; }
+  if (AT_UP[R.id]) { const l = atLvl(R.id), c = AT_UP[R.id][l]; h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b>${c != null ? `<small>Niveau ${l + 1} : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}${l + 1 === 3 ? ', +10 % de chefs-d’œuvre' : ''}</small><button class="btn ${(S.coins || 0) >= c ? 'green' : 'cream'} sm" data-stup="${R.id}"${(S.coins || 0) >= c ? '' : ' disabled'}>Améliorer · ${c} 🪙</button>` : '<small>Niveau maximum</small>'}</div>`; }
   return h + `</section>`;
 };
 document.addEventListener('click', ev => {
@@ -44949,7 +44955,7 @@ ingExtra = (orig => function (key, i) {
 
 // ---------- 2) l'usure ----------
 const usTier = it => us$(() => xpGearOf(it).tier, 1);
-const usMax = it => US_MAX[usTier(it)] || 3;
+const usMax = it => (US_MAX[usTier(it)] || 3) + (it && it.solide ? 1 : 0);
 const usWorn = it => !!it && (it.wear || 0) >= usMax(it);
 // le meilleur équipement utilisable pour un défi (pas usé, pas porté par un autre familier)
 function usGear(k, g, t, worn) {
@@ -45156,6 +45162,73 @@ cmSell = (orig => function (bid) {
   });
   return r;
 })(cmSell);
+
+// ================= v196 : DES PIÈCES QUI SERVENT (améliorer l'existant) =================
+// 1) les constructions du Foyer et de la boutique coûtent aussi des pièces (48) ; ateliers niveau 3 = bonus (78) ;
+// 2) le magasin a une OFFRE DU JOUR rare et chère ; 3) toucher ses pièces montre « Mes envies ».
+const ZE_OFFER_KINDS = ['egg', 'deco', 'bait', 'rec'];
+function zeOffer() {
+  const st = zeSt(), dk = dayKey();
+  if (st.offer && st.offer.day === dk) return st.offer;
+  const r = (hashStr(String(dk)) >>> 0), kind = ZE_OFFER_KINDS[r % ZE_OFFER_KINDS.length];
+  let o = null;
+  if (kind === 'egg') { const L = ze$(() => FA_SP.filter(f => f.tier >= 1), []); const f = L[r % Math.max(1, L.length)]; if (f) o = { kind, sp: f.id, nm: `Œuf rare : ${ze$(() => spName(f.id), f.id)}`, why: 'Une espèce rare, garantie, éclosion à la Couveuse', price: 1200 }; }
+  if (kind === 'deco') { const P = []; for (const L of Object.values(LOOT)) for (const d of L) if (d[1] === 'd' && FY_EFF[d[2]] && d[3] >= 2 && !/\{/.test(d[0])) P.push(d); const d = P[r % Math.max(1, P.length)]; if (d) o = { kind, def: d, nm: d[0], why: `Décoration rare du Foyer : ${FY_EFF[d[2]][2]}`, price: 700 }; }
+  if (kind === 'bait') { const L = ze$(() => FA_SP.filter(f => !(sctSt().learn || {})[f.id] && typeof augBaitNm === 'function'), []); const f = L[r % Math.max(1, L.length)]; if (f) o = { kind, sp: f.id, nm: `Recette d’appât : ${augBaitNm(f.id)}`, why: `Attire les ${ze$(() => augPlural(f.id), 'animaux')} (Herboristerie)`, price: 500 }; }
+  if (kind === 'rec') { const s = bqState(), x = BQ_RECIPES.filter(x => !s.recipes.includes(x.id))[r % 7]; if (x) o = { kind, rid: x.id, nm: `Recette : ${x.out[0]}`, why: 'Une recette du magasin, à fabriquer à l’atelier', price: 600 }; }
+  if (!o) { const P = []; for (const L of Object.values(LOOT)) for (const d of L) if (d[1] === 'd' && FY_EFF[d[2]] && d[3] >= 2) P.push(d); const d = P[r % Math.max(1, P.length)]; o = d ? { kind: 'deco', def: d, nm: d[0], why: `Décoration rare du Foyer : ${FY_EFF[d[2]][2]}`, price: 700 } : null; }
+  st.offer = o ? Object.assign(o, { day: dk, sold: 0 }) : { day: dk, none: 1 }; ze$(save);
+  return st.offer;
+}
+function zeBuyOffer() {
+  const o = zeOffer(); if (!o || o.none || o.sold || (S.coins || 0) < o.price) return false;
+  S.coins -= o.price; o.sold = 1;
+  if (o.kind === 'egg') { addEgg({ sp: o.sp, rarity: 3, from: { how: 'magasin' } }); const e = S.eggs[S.eggs.length - 1]; if (e) e.known = true; }
+  else if (o.kind === 'deco') { const it = makeItem(o.def, 1, 'Offre du jour', [], { fixed: Math.max(2, o.def[3]) }); S.inv.push(it); S.dex[it.name] = true; }
+  else if (o.kind === 'bait') { sctSt().learn[o.sp] = 1; ze$(() => augSyncHB()); }
+  else if (o.kind === 'rec') { const s = bqState(); if (!s.recipes.includes(o.rid)) s.recipes.push(o.rid); }
+  save(); ze$(() => renderTop()); toast(`🎁 Offre du jour : ${o.nm} !`);
+  return true;
+}
+renderMagasin = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  ze$(() => {
+    const o = zeOffer(); if (!o || o.none || !box) return;
+    const can = (S.coins || 0) >= o.price;
+    const h = `<div class="ze-of${o.sold ? ' sold' : ''}"><span class="ze-ofk">Offre du jour</span><b>${esc(o.nm)}</b><small>${esc(o.why)}</small>${o.sold ? '<span class="bq-sold">Acheté · nouvelle offre demain</span>' : `<button class="btn ${can ? 'gold' : 'cream'} sm" data-zeoffer="1"${can ? '' : ' disabled'}>🪙 ${o.price.toLocaleString('fr-FR')}${can ? '' : ` · encore ${o.price - (S.coins || 0)}`}</button>`}</div>`;
+    const t = box.querySelector('.bq-tmw'); if (t) t.insertAdjacentHTML('afterend', h); else box.insertAdjacentHTML('afterbegin', h);
+  });
+  return r;
+})(renderMagasin);
+document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-zeoffer]'); if (!b || b.disabled) return; ev.stopPropagation(); if (zeBuyOffer()) ze$(() => renderPanel()); }, true);
+
+// 3) « Mes envies » : ce que les pièces peuvent offrir, du moins cher au plus cher
+function zeWishes() {
+  const L = [];
+  ze$(() => { for (const B of PG_B) { const l = pgLvl(B.id); if (l >= 3) continue; const c = pgCan(B.id); if (!c.rankOk) continue; L.push({ nm: `${B.nm} ${l ? 'niveau ' + (l + 1) : ''}`.trim(), p: c.coins, more: c.miss.length ? '+ matériaux' : '', eff: B.eff(l + 1) }); } });
+  ze$(() => { for (const id of Object.keys(AT_UP)) { const l = atLvl(id), c = AT_UP[id][l]; if (c != null) L.push({ nm: `${hmR(id).nm} niveau ${l + 1}`, p: c, eff: '+25 % de vitesse' + (l + 1 === 2 ? ', deux à la fois' : l + 1 === 3 ? ', +10 % de chefs-d’œuvre' : '') }); } });
+  ze$(() => { const n = bqNextSlot(); if (n && n.ok) L.push({ nm: 'Un commerce de plus', p: n.cost, eff: 'une nouvelle spécialité à la boutique' }); });
+  ze$(() => { const o = zeOffer(); if (o && !o.none && !o.sold) L.push({ nm: `Offre du jour : ${o.nm}`, p: o.price, eff: o.why, offer: 1 }); });
+  ze$(() => { for (const it of S.inv) if (xpGearOf(it) && usWorn(it)) { const c = usCost(it); L.push({ nm: `Réparer « ${it.name} »`, p: c.coins, more: c.ing.length ? '+ matériaux' : '', eff: 'il retrouve ses défis' }); } });
+  return L.sort((a, b) => a.p - b.p);
+}
+pgPopHTML = (orig => function () {
+  const h = orig.apply(this, arguments);
+  const W = zeWishes().slice(0, 7); if (!W.length) return h;
+  const c = S.coins || 0;
+  const list = `<div class="ze-w"><p class="ze-wh">Mes envies</p>${W.map(w => `<div class="ze-wi${c >= w.p ? ' ok' : ''}"><span><b>${esc(w.nm)}</b><small>${esc(w.eff || '')}</small></span><em>${c >= w.p ? `🪙 ${w.p.toLocaleString('fr-FR')}${w.more ? ' ' + esc(w.more) : ''}` : `encore ${(w.p - c).toLocaleString('fr-FR')}`}</em></div>`).join('')}</div>`;
+  const i = h.indexOf('</div>'); return i > 0 && h.startsWith('<div class="cm-purse">') ? h.slice(0, i + 6) + list + h.slice(i + 6) : list + h;
+})(pgPopHTML);
+ze$(() => {
+  const st = document.createElement('style');
+  st.textContent = `.ze-of{display:grid;gap:3px;margin:8px 0 10px;padding:12px 12px 10px;border-radius:16px;border:2.5px solid #e8b13a;background:linear-gradient(135deg,#fff6d6,#fffaf0);box-shadow:0 3px 0 #e8b13a;text-align:left}
+.ze-of b{font:800 16px var(--display,inherit);color:#4a3528}.ze-of small{font:600 12.5px var(--body,system-ui);color:#6b5340}.ze-of .btn{justify-self:start;margin-top:5px}.ze-of.sold{opacity:.7}
+.ze-ofk{justify-self:start;padding:2px 9px;border-radius:999px;background:#e8b13a;color:#fff;font:800 11px var(--body,system-ui);letter-spacing:.3px;text-transform:uppercase}
+.ze-w{margin:8px 0 6px;text-align:left}.ze-wh{margin:0 0 5px;font:800 12px var(--body,system-ui);letter-spacing:.4px;text-transform:uppercase;color:#7a6250}
+.ze-wi{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #efe3cc}.ze-wi span{flex:1;min-width:0;display:grid}.ze-wi b{font:700 13px var(--body,system-ui);color:#4a3528}.ze-wi small{font:600 11.5px var(--body,system-ui);color:#7a6250}
+.ze-wi em{flex:none;font:800 12px var(--body,system-ui);font-style:normal;color:#a3403a}.ze-wi.ok em{color:#3f7f3a}`;
+  document.head.appendChild(st);
+});
 
 // ================= FORGE ET ATELIER : « IL MANQUE », COMME À LA BOUTIQUE (v180) =================
 // Le joueur : « dans la forge, quand on n'a pas les matériaux, montrer les matériaux manquants, du même principe que dans la boutique ».
