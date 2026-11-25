@@ -45291,8 +45291,10 @@ function zfRefresh() {
       el.addEventListener('click', ev => { ev.stopPropagation(); zfFiche(id); });
       m = new maplibregl.Marker({ element: el, anchor: 'bottom', opacity: '1', opacityWhenCovered: '1' }).setLngLat([L.lon, L.lat]).addTo(map); zfMk.set(id, m);
     } else m.setLngLat([L.lon, L.lat]);
-    const el = m.getElement(), cls = 'zfm s' + st + ' t' + f.tier;
-    if (el.className !== cls || !el.firstChild) { el.className = cls; el.setAttribute('aria-label', st ? `${f.nm} : où le trouver` : 'Familier inconnu : où le trouver'); el.innerHTML = `<span class="zfm-c"><img src="${zfPic(id, st)}" alt=""></span><span class="zfm-q">${st ? '' : '?'}</span>`; }
+    // v201 : NE JAMAIS remplacer className — MapLibre y a mis « maplibregl-marker » (position absolue). L'écraser faisait
+    // glisser les formes d'une ville à l'autre selon le zoom (le joueur : « dézoomé il est sur Marseille, zoomé sur Lyon »).
+    const el = m.getElement(), key = st + '' + f.tier;
+    if (el.dataset.k !== key || !el.firstChild) { el.dataset.k = key; ['s0', 's1', 's2', 't0', 't1', 't2'].forEach(c => el.classList.remove(c)); el.classList.add('zfm', 's' + st, 't' + f.tier); el.setAttribute('aria-label', st ? `${f.nm} : où le trouver` : 'Familier inconnu : où le trouver'); el.innerHTML = `<span class="zfm-c"><img src="${zfPic(id, st)}" alt=""></span><span class="zfm-q">${st ? '' : '?'}</span>`; }
   }
   for (const [id, m] of zfMk) if (!seen.has(id)) { m.remove(); zfMk.delete(id); }
   zfBtn();
@@ -45357,7 +45359,7 @@ zf2$(() => {
 #zfChip{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 140px);z-index:7;max-width:86%;padding:8px 14px;min-height:40px;border-radius:999px;border:2px solid #2b8f86;background:#effffb;color:#1d5c56;font:700 13px var(--body,system-ui);box-shadow:0 3px 0 #2b8f86}
 .zf-b.on{background:#2b8f86!important;color:#fff!important}.zf-b.on small{color:#fff}
 @media (prefers-reduced-motion:reduce){#zfRad .zf-sw{animation:none;opacity:.4}.zfm .zfm-c,.zfm .zfm-q{animation:none}}
-.zfm{width:48px;height:54px;cursor:pointer;position:relative}.zfm-c{position:absolute;left:2px;top:0;width:44px;height:44px;border-radius:50%;background:#fffaf0;border:2.5px solid #4a3528;overflow:hidden;box-shadow:0 2px 0 rgba(74,53,40,.35);display:grid;place-items:center}
+.zfm{width:48px;height:54px;cursor:pointer}.zfm-c{position:absolute;left:2px;top:0;width:44px;height:44px;border-radius:50%;background:#fffaf0;border:2.5px solid #4a3528;overflow:hidden;box-shadow:0 2px 0 rgba(74,53,40,.35);display:grid;place-items:center}
 .zfm-c::after{content:'';position:absolute;left:50%;bottom:-9px;margin-left:-5px;border:5px solid transparent;border-top-color:#4a3528}
 .zfm-c img{width:54px;height:54px;object-fit:cover;margin-top:8px}.zfm.s0 .zfm-c img{filter:brightness(0);opacity:.5}.zfm.s1 .zfm-c{border-style:dashed;border-color:#7a5aa8}
 .zfm.t1 .zfm-c{border-color:#3d6fb0}.zfm.t2 .zfm-c{border-color:#c98a1a;box-shadow:0 0 0 3px rgba(232,177,58,.45)}
