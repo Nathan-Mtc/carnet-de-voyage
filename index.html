@@ -12668,7 +12668,7 @@ const NS_EGG_P = { eclair: 0.12, court: 0.22, moyen: 0.32, long: 0.45, expe: 0.6
 function nsTripEgg(e) {
   const N = nsState(), t = e.trip; if (!t || !t.dest) return null;
   if (t.avNest) return null; // v16 : ce voyage a déjà eu sa scène de nid (29_aventure.js)
-  if (S.eggs.length >= 8) return null; // le nid est plein : on fait d'abord éclore
+  if (S.eggs.length >= (fuHas('nid_nid') ? 10 : 8)) return null; // le nid est plein : on fait d'abord éclore
   const dest = t.dest, baitSps = t.bait ? t.bait.sps : null, trips = (S.stats && S.stats.trips) || 0;
   let p = NS_EGG_P[t.dur] != null ? NS_EGG_P[t.dur] : 0.2;
   if (t.nsFirst) p += 0.15;                  // première visite dans cette région
@@ -23212,13 +23212,13 @@ if (typeof renderAtelier === 'function') renderAtelier = (orig => function (box)
 })(renderAtelier);
 
 // ---------------- le jardin du foyer ----------------
-const famPlotN = () => Math.min(6, 3 + Math.floor(famState().j.h / 8));
+const famPlotN = () => Math.min(6, 3 + Math.floor(famState().j.h / 8)) + (fuHas('jar_plots') ? 2 : 0); // v197 : amélioration « Parcelles en plus »
 function famSeedsInBag() { const m = new Map(); S.inv.forEach(i => { const s = famSeedOf(i); if (!s) return; const e = m.get(i.name); if (e) e.n++; else m.set(i.name, { it: i, n: 1, s }); }); return [...m.values()].sort((a, b) => a.s.min - b.s.min); }
 function famSow(i, id) {
   const J = famState().j, it = S.inv.find(x => x.id === id), s = it && famSeedOf(it);
   if (!s || i < 0 || i >= famPlotN() || J.plots[i]) return false;
   S.inv.splice(S.inv.indexOf(it), 1);
-  J.plots[i] = { seed: it.name, t0: Date.now(), ms: s.min * 60e3, out: s.out, n: s.n, r: it.rarity || 0 };
+  J.plots[i] = { seed: it.name, t0: Date.now(), ms: s.min * 60e3 * (fuHas('jar_eau') ? 0.7 : 1), out: s.out, n: s.n, r: it.rarity || 0 };
   save(); return true;
 }
 function famHarvest(i) {
@@ -36736,11 +36736,11 @@ const HM_ROOMS = [
   // voyage (fabrication avec un temps, qui continue pendant les voyages ; 78_ateliers.js). Plus de fatigue ni d'énergie.
   // st = atelier (genre de recettes) ; j = poste du familier artisan (40_foyer.js) ; l'équipe de voyage ne travaille jamais.
   { id: 'jardin', nm: 'Potager', v: 'Planter', e: '🌱', b: 'serre', blocks: ['.fy2-jar'], j: 'jard' },
-  { id: 'cuisine', nm: 'Cuisine', v: 'Cuisiner', e: '🍲', b: 'repas', blocks: [], j: 'cuis', st: 'Cuisine' },
+  { id: 'cuisine', nm: 'Cuisine', v: 'Cuisiner', e: '🍲', b: 'repas', b2: 'cheminee', blocks: [], j: 'cuis', st: 'Cuisine' },
   { id: 'herbo', nm: 'Herboristerie', v: 'Appâts', e: '🌿', b: null, blocks: [], j: 'herbo', st: 'Herboristerie' },
   { id: 'forge', nm: 'Forge', v: 'Forger', e: '⚒️', b: 'atelier', blocks: [], j: 'forge', st: 'Équipement' },
   { id: 'couture', nm: 'Couture', v: 'Coudre', e: '🧵', b: null, blocks: [], j: 'couture', st: 'Vêtement' },
-  { id: 'nurserie', nm: 'Couveuse', v: 'Éclore', e: '🥚', b: null, blocks: [], j: 'nurs' },
+  { id: 'nurserie', nm: 'Couveuse', v: 'Éclore', e: '🥚', b: null, b2: 'chambre', blocks: [], j: 'nurs' },
   { id: 'observ', nm: 'Observatoire', v: 'Le ciel', e: '🔭', b: 'observ', blocks: [], lock: 1 },
 ];
 const HM_INFO = {
@@ -37138,7 +37138,7 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   const L = box.querySelector('.fy2-list');
   if (L) { L.querySelectorAll('.fy2-b, .fw-jobs, .fw-away, [data-fy="pet2"]').forEach(e => e.remove()); L.insertAdjacentHTML('beforebegin', `<h3 class="hm-h">Nourrir un familier</h3>`); }
   hm$(() => hmPanelExtra(box, R, 'end'), 0);
-  if (R.b) box.insertAdjacentHTML('beforeend', `<div class="hm-up"><h3 class="hm-h">${l < 1 ? 'Construire' : l < 3 ? 'Améliorer la pièce' : 'Pièce au maximum'}</h3>${hm$(() => pgCardHTML(PG_BY[R.b]), '')}${R.b2 ? hm$(() => pgCardHTML(PG_BY[R.b2]), '') : ''}</div>`);
+  if (R.b || R.b2) box.insertAdjacentHTML('beforeend', `<div class="hm-up"><h3 class="hm-h">${!R.b ? 'Agrandir' : l < 1 ? 'Construire' : l < 3 ? 'Améliorer la pièce' : 'Pièce au maximum'}</h3>${R.b ? hm$(() => pgCardHTML(PG_BY[R.b]), '') : ''}${R.b2 ? hm$(() => pgCardHTML(PG_BY[R.b2]), '') : ''}</div>`);
 })(fyRender);
 function hmGo(d) { const i = HM_ROOMS.findIndex(x => x.id === hmRoom); hmRoom = HM_ROOMS[(i + d + HM_ROOMS.length) % HM_ROOMS.length].id; renderPanel(); }
 document.addEventListener('click', ev => {
@@ -38229,14 +38229,14 @@ try { HB_BAITS.forEach(([sp, nm]) => { if (NS_BAIT_HINT[sp] != null) NS_BAIT_HIN
 const AT_UP = { couture: [400, 1200, 3000], herbo: [300, 1000, 2500] }; // v196 : un peu plus cher, et le niveau 3 donne +10 % de chefs-d'œuvre
 function atS() { const H = hmS(); if (!H.st || typeof H.st !== 'object') H.st = {}; if (!H.lv || typeof H.lv !== 'object') H.lv = {}; return H; }
 function atLvl(id) { if (id === 'forge') return hm$(() => pgLvl('atelier'), 0); if (id === 'cuisine') return hm$(() => pgLvl('repas'), 0); if (id === 'salon') return 1; return atS().lv[id] | 0; }
-const atSlots = id => atLvl(id) >= 2 || (id === 'couture' && agBest(hmR('couture')).g >= 2) ? 2 : 1;
+const atSlots = id => (atLvl(id) >= 2 || (id === 'couture' && agBest(hmR('couture')).g >= 2) ? 2 : 1) + (id === 'couture' && fuHas('cou_machine') ? 1 : 0);
 const atWorkers = R => R.j ? hm$(() => fwWho(R.j).length, 0) : 0;
 const atSpeed = R => (1 + .25 * atLvl(R.id)) / (1 - AG_SPD[agBest(R).g] * (atWorkers(R) ? 1 : 0));
 const AT_MIN = [6, 15, 30, 60, 120];
 // v190 : les appâts se préparent en 10 secondes au plus (le joueur : « fabriquer les appâts met trop de temps »)
-const atMs = (r, R) => (R && R.id === 'herbo') || r.kind === 'Herboristerie' ? 10e3 : Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R));
+const atMs = (r, R) => (R && R.id === 'herbo') || r.kind === 'Herboristerie' ? 10e3 : Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R) * ((R && R.id === 'forge' && fuHas('for_soufflet')) || (R && R.id === 'cuisine' && fuHas('cui_feu')) ? 0.6 : 1));
 const atQ = id => { const H = atS(); if (!Array.isArray(H.st[id])) H.st[id] = []; return H.st[id]; };
-const atOwned = r => { try { return !(BQ_RIDS.has(r.id) && !bqRecOwned(r.id)); } catch (e) { return true; } };
+const atOwned = r => { if (r.fu && !fuHas(r.fu)) return false; try { return !(BQ_RIDS.has(r.id) && !bqRecOwned(r.id)); } catch (e) { return true; } };
 const atRecipes = R => RECIPES.filter(r => r.kind === R.st && atOwned(r));
 const atTime = ms => { if (ms < 60e3) return `${Math.max(1, Math.ceil(ms / 1e3))} s`; const m = Math.max(1, Math.ceil(ms / 60e3)); return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`; };
 // ---------------- lancer, récupérer ----------------
@@ -38247,7 +38247,7 @@ function atStart(R, rid, quiet, t0) {
   for (const [key, n] of r.ing) { const c = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); c.slice(0, n).forEach(x => { used.push(x); S.inv.splice(S.inv.indexOf(x), 1); }); }
   S.coins -= r.coins || 0;
   if (R.id === 'herbo' && used.length && agRoll(R)) { const x = used[0]; S.inv.push(x); hm$(() => toast(`${agWho(R)} a économisé un ingrédient : « ${x.name} » reste dans le sac.`), 0); }
-  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + (atLvl(R.id) >= 3 ? 0.1 : 0) + hm$(() => lvlLuck(S.sel), 0) * 0.2 || (R.id === 'forge' && agRoll(R)) ? 1 : 0 });
+  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + (atLvl(R.id) >= 3 ? 0.1 : 0) + (R.id === 'forge' && fuHas('for_enclume') ? 0.15 : 0) + hm$(() => lvlLuck(S.sel), 0) * 0.2 || (R.id === 'forge' && agRoll(R)) ? 1 : 0 });
   save(); hm$(() => renderTop(), 0); if (!quiet) hm$(() => toast(`${r.out[0]} : c’est parti ! Prêt dans ${atTime(atMs(r, R))}.`), 0);
   return true;
 }
@@ -38258,7 +38258,7 @@ function atCollect(R, i, quiet) {
   if (j.m) it.name += ' (chef-d’œuvre)';
   if (R.id === 'forge' && atLvl('forge') >= 3 && hm$(() => xpGearOf(it), null)) it.solide = 1; // v196 : Forge niveau 3 : l'équipement tient un défi de plus
   S.inv.push(it); S.dex[r.out[0]] = true; S.stats.crafted = (S.stats.crafted || 0) + 1; hm$(() => bump('craft'), 0);
-  if (R.id === 'cuisine' && agRoll(R)) { const it2 = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: r.out[3] | 0 }); S.inv.push(it2); hm$(() => setTimeout(() => toast(`${agWho(R)} en a fait une part de plus : 2 × « ${r.out[0]} » !`), 1600), 0); }
+  if ((R.id === 'cuisine' && (agRoll(R) || fuHas('cui_four') && Math.random() < 0.3)) || (R.id === 'herbo' && fuHas('her_seche') && Math.random() < 0.35)) { const it2 = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: r.out[3] | 0 }); S.inv.push(it2); hm$(() => setTimeout(() => toast(`${agWho(R)} en a fait une part de plus : 2 × « ${r.out[0]} » !`), 1600), 0); }
   agGain(R); save();
   if (!quiet) hm$(() => toast(j.m ? `Un chef-d’œuvre ! « ${it.name} » rejoint votre sac.` : `« ${it.name} » rejoint votre sac.`), 0);
   return it;
@@ -38354,7 +38354,7 @@ hmStationHTML = R => {
   if (R.id === 'cuisine') h += `<p class="hm-tip">Les en-cas à vendre se préparent au comptoir de la Boutique. Pour nourrir un compagnon : onglet Compagnons.</p>`;
   if (R.id === 'forge' || R.id === 'couture') h += `<p class="hm-tip">On s’équipe au départ (onglet Préparation) ou dans l’onglet Compagnons.</p>`;
   // v196 : la Forge et la Cuisine montent avec les constructions du Foyer : on le dit ici
-  if (!AT_UP[R.id] && (R.id === 'forge' || R.id === 'cuisine')) { const l = atLvl(R.id), B = hm$(() => PG_BY[R.b], null); if (B) h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b><small>${l >= 3 ? 'Niveau maximum.' : `Pour l’améliorer : construisez « ${esc(B.nm)} » ${l ? `niveau ${l + 1} ` : ''}(Foyer › À construire) : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}${l + 1 === 3 ? (R.id === 'forge' ? ', équipement plus solide (un défi de plus)' : ', +10 % de chefs-d’œuvre') : ''}.`}</small></div>`; }
+  if (!AT_UP[R.id] && (R.id === 'forge' || R.id === 'cuisine')) { const l = atLvl(R.id), B = hm$(() => PG_BY[R.b], null); if (B) h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b><small>${l >= 3 ? 'Niveau maximum.' : `Pour l’améliorer : construisez « ${esc(B.nm)} » ${l ? `niveau ${l + 1} ` : ''}(en bas de cette pièce) : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}${l + 1 === 3 ? (R.id === 'forge' ? ', équipement plus solide (un défi de plus)' : ', +10 % de chefs-d’œuvre') : ''}.`}</small></div>`; }
   if (AT_UP[R.id]) { const l = atLvl(R.id), c = AT_UP[R.id][l]; h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b>${c != null ? `<small>Niveau ${l + 1} : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}${l + 1 === 3 ? ', +10 % de chefs-d’œuvre' : ''}</small><button class="btn ${(S.coins || 0) >= c ? 'green' : 'cream'} sm" data-stup="${R.id}"${(S.coins || 0) >= c ? '' : ' disabled'}>Améliorer · ${c} 🪙</button>` : '<small>Niveau maximum</small>'}</div>`; }
   return h + `</section>`;
 };
@@ -44966,7 +44966,7 @@ function usGear(k, g, t, worn) {
   }).sort((a, b) => usTier(b) - usTier(a) || (a.wear || 0) - (b.wear || 0))[0], null);
 }
 // coût d'une réparation : base = des pièces ; pro = matériaux ★ ; légendaire = matériaux ★★ et ★
-const usCost = it => { const t = usTier(it), f = usFam(xpGearOf(it).g); return t <= 1 ? { coins: 10, ing: [] } : t === 2 ? { coins: 20, ing: [[`ldm_${f}_0`, 2]] } : { coins: 40, ing: [[`ldm_${f}_1`, 1], [`ldm_${f}_0`, 2]] }; };
+const usCost = it => { const t = usTier(it), f = usFam(xpGearOf(it).g), h = fuHas('for_etabli'); return t <= 1 ? { coins: h ? 5 : 10, ing: [] } : t === 2 ? { coins: h ? 10 : 20, ing: [[`ldm_${f}_0`, h ? 1 : 2]] } : { coins: h ? 20 : 40, ing: [[`ldm_${f}_1`, 1], [`ldm_${f}_0`, h ? 1 : 2]] }; }; // Établi de réparation : moitié prix
 const usCan = c => S.coins >= c.coins && c.ing.every(([key, n]) => ingCount(key) >= n);
 const usCostTxt = c => [c.coins ? `${c.coins} pièces` : '', ...c.ing.map(([key, n]) => `${n} × ${ING[key][1]}`)].filter(Boolean).join(' + ');
 function usRepair(id) {
@@ -45338,6 +45338,122 @@ zf$(() => {
 .recipes>.cf-miss{margin:2px 0 8px}
 .zf-sel{outline:3px solid #e8b13a;outline-offset:1px}
 .zf-off{opacity:.6}`;
+  document.head.appendChild(st);
+});
+
+// ================= LES AMÉLIORATIONS DES PIÈCES DU FOYER (v197) =================
+// Le joueur : « on peut pas avoir d'autres améliorations pour chaque pièce du foyer ? » — « ça y ; pas de pièces inutiles ».
+// Chaque pièce a 3 améliorations achetées en pièces, chacune avec un VRAI effet branché sur le jeu :
+//  Potager : parcelles +2 (36) · arrosage −30 % de pousse (36) · ruche : un pot de miel par jour
+//  Cuisine : grand four 30 % de double portion (78) · feu vif −40 % de temps (78) · livre de grand-mère : 3 plats rares
+//  Herboristerie : séchoir 35 % d'appât en double (78) · alambic : appâts bien plus attirants · serre rare : un ingrédient d'appât par jour
+//  Forge : enclume +15 % de chefs-d'œuvre (78) · établi : réparations moitié prix (99_zusure) · soufflet −40 % de temps (78)
+//  Couture : machine à coudre, 3 à la fois (78) · patrons rares : 2 vêtements rares · métier à tisser : laine → tissu
+//  Couveuse : lampe chauffante −30 % d'incubation · nid douillet 10 œufs au lieu de 8 (21) · berceuse : naissance au niveau 3
+//  Observatoire : lunette, une pierre d'étoile par jour · carte du ciel : un objet de plus en voyage de nuit · comète : une pierre précieuse par semaine
+// Les constructions qui n'étaient visibles nulle part (Cheminée, Chambre d'amis) sont rangées dans la Cuisine et la Couveuse (74).
+const fu$ = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch (e) { console.error('foyer+', e); return d; } };
+function fuSt() { if (!S.fu || typeof S.fu !== 'object') S.fu = {}; if (!S.fu.own) S.fu.own = {}; if (!S.fu.day) S.fu.day = {}; return S.fu; }
+function fuHas(id) { try { return !!(S && S.fu && S.fu.own && S.fu.own[id]); } catch (e) { return false; } }
+const FU_P = [400, 1000, 2500], FU_PO = [800, 1500, 3000];
+const FU = {
+  jardin: [['jar_plots', '🌱', 'Parcelles en plus', '2 parcelles de plus à semer'], ['jar_eau', '💧', 'Arrosage automatique', 'Les plantes poussent 30 % plus vite'], ['jar_ruche', '🐝', 'Ruche', 'Un pot de miel chaque jour (ingrédient de cuisine)']],
+  cuisine: [['cui_four', '🔥', 'Grand four', '30 % de chances de faire une double portion'], ['cui_feu', '⏱️', 'Feu vif', 'Les plats cuisent 40 % plus vite'], ['cui_livre', '📖', 'Livre de grand-mère', '3 plats rares qui font beaucoup grandir les familiers']],
+  herbo: [['her_seche', '🌾', 'Séchoir à plantes', '35 % de chances d’un appât en double'], ['her_alambic', '⚗️', 'Alambic', 'Des appâts bien plus attirants'], ['her_serre', '🪴', 'Serre aux plantes rares', 'Un ingrédient d’appât offert chaque jour']],
+  forge: [['for_enclume', '🔨', 'Enclume de maître', '+15 % de chefs-d’œuvre à la Forge'], ['for_etabli', '🧰', 'Établi de réparation', 'Réparations moitié prix'], ['for_soufflet', '💨', 'Soufflet géant', 'On forge 40 % plus vite']],
+  couture: [['cou_machine', '🧵', 'Machine à coudre', '3 vêtements en même temps'], ['cou_patrons', '📐', 'Patrons rares', '2 vêtements rares à coudre'], ['cou_metier', '🧶', 'Métier à tisser', 'Transformer la laine en tissu']],
+  nurserie: [['nid_lampe', '💡', 'Lampe chauffante', 'Les œufs éclosent 30 % plus vite'], ['nid_nid', '🪺', 'Nid douillet', '10 œufs au nid au lieu de 8'], ['nid_berceuse', '🎵', 'Berceuse', 'Les familiers naissent au niveau 3']],
+  observ: [['obs_lunette', '🔭', 'Lunette', 'Une pierre d’étoile chaque jour'], ['obs_carte', '🗺️', 'Carte du ciel', 'Un objet de plus en voyage de nuit'], ['obs_comete', '☄️', 'Guetteur de comètes', 'Une pierre précieuse chaque semaine']],
+};
+const fuPrice = (room, i) => (room === 'observ' ? FU_PO : FU_P)[i];
+function fuBuy(room, id) {
+  const L = FU[room]; if (!L) return false; const i = L.findIndex(x => x[0] === id); if (i < 0 || fuHas(id)) return false;
+  const p = fuPrice(room, i); if ((S.coins || 0) < p) return false;
+  S.coins -= p; fuSt().own[id] = Date.now(); fu$(() => fuSyncRecipes()); save(); fu$(() => renderTop());
+  toast(`${L[i][1]} ${L[i][2]} : c’est installé ! ${L[i][3]}.`);
+  fu$(() => fuDaily(true));
+  return true;
+}
+
+// ---------- les recettes débloquées (cuisine, couture) ----------
+function fuSyncRecipes() {
+  const add = r => { if (!RECIPES.some(x => x.id === r.id)) RECIPES.push(r); };
+  add({ id: 'fu_gratin', kind: 'Cuisine', fu: 'cui_livre', out: ['Gratin de grand-mère', 'n', 'plat', 3, null, '#e0a050'], ing: [['legume', 2], ['fromage', 1], ['pain', 1]], coins: 10 });
+  add({ id: 'fu_tarte', kind: 'Cuisine', fu: 'cui_livre', out: ['Tarte des bois de grand-mère', 'n', 'plat', 3, null, '#8a4a7a'], ing: [['fruit', 3], ['sucre', 1], ['pain', 1]], coins: 10 });
+  add({ id: 'fu_soupe', kind: 'Cuisine', fu: 'cui_livre', out: ['Soupe du voyageur', 'n', 'plat', 3, null, '#c98a3a'], ing: [['legume', 2], ['champignon', 1], ['feuille', 1]], coins: 10 });
+  fu$(() => { const V = BQ_CAT.filter(a => a.k === 'v' && a.def && a.def[3] >= 3 && a.def[4]).slice(0, 2); V.forEach((a, i) => add({ id: 'fu_patron' + i, kind: 'Vêtement', fu: 'cou_patrons', out: a.def, ing: [['tissu', 4], ['laine', 2], ['cristal', 1]], coins: 60 })); });
+  fu$(() => { const d = ldDefFor('tissu', 'friperie'); if (d) add({ id: 'fu_tissu', kind: 'Vêtement', fu: 'cou_metier', out: d, ing: [['laine', 2]], coins: 0 }); });
+}
+fu$(fuSyncRecipes);
+
+// ---------- les effets ----------
+// Alambic : les appâts attirent bien plus (1,6 → 2,4)
+nsBaitPower = (orig => function () { const v = orig.apply(this, arguments); return v > 0 && fuHas('her_alambic') ? v * 1.5 : v; })(nsBaitPower);
+// Lampe chauffante : incubation −30 %
+nsHatchMs = (orig => function () { const v = orig.apply(this, arguments); return fuHas('nid_lampe') ? Math.round(v * 0.7) : v; })(nsHatchMs);
+// Berceuse : un familier né d'un œuf commence au niveau 3
+GAME.on('comp:new', e => fu$(() => { if (!fuHas('nid_berceuse') || !e || !e.id) return; const P = S.prog[e.id]; if (P && (P.lvl || 1) < 3) { P.lvl = 3; P.xp = 0; save(); } }));
+// Carte du ciel : un objet utile de plus au retour d'un voyage parti la nuit
+GAME.on('trip:return', e => fu$(() => {
+  if (!fuHas('obs_carte')) return; const t = e && e.trip; if (!t || !t.dest) return;
+  const h = new Date(t.startedAt || Date.now()).getHours(); if (h >= 6 && h < 21) return;
+  const pool = lootTable([t.dest.cat || 'parc']).map(x => x.d).filter(d => !/\{/.test(d[0]) && fu$(() => ldUseful(d), true)); const d = pool[Math.floor(Math.random() * pool.length)]; if (!d) return;
+  const it = makeItem(d, 1, t.dest.name || 'La nuit', []); S.inv.push(it); save();
+  setTimeout(() => fu$(() => toast(`🗺️ La carte du ciel a guidé le voyage de nuit : « ${it.name} » en plus !`)), 3200);
+}));
+// les cadeaux quotidiens (ruche, serre, lunette) et hebdomadaires (comète)
+const fuWeek = () => { const d = new Date(); const j = new Date(d.getFullYear(), 0, 1); return d.getFullYear() * 100 + Math.ceil(((d - j) / 864e5 + j.getDay() + 1) / 7); };
+function fuDaily(quiet) {
+  if (document.body.classList.contains('firstrun')) return;
+  const st = fuSt(), dk = dayKey(), wk = fuWeek(), got = [];
+  if (fuHas('jar_ruche') && st.day.ruche !== dk) { st.day.ruche = dk; const it = makeItem(['Pot de miel du Foyer', 'n', 'sucre', 1, null, '#e8b13a'], 0, 'Ruche du Foyer', [], { fixed: 1 }); S.inv.push(it); got.push('🐝 un pot de miel'); }
+  if (fuHas('her_serre') && st.day.serre !== dk) {
+    st.day.serre = dk;
+    const keys = []; fu$(() => RECIPES.filter(r => r.kind === 'Herboristerie' && atOwned(r)).forEach(r => r.ing.forEach(([k]) => { if (ING[k] && !/^r:/.test(k)) keys.push(k); })));
+    const k = keys[Math.floor(Math.random() * keys.length)] || 'feuille', d = fu$(() => ldDefFor(k, 'jardin'), null);
+    if (d) { const it = makeItem(d, 0, 'Serre du Foyer', []); S.inv.push(it); got.push(`🪴 « ${it.name} »`); }
+  }
+  if (fuHas('obs_lunette') && st.day.lune !== dk) { st.day.lune = dk; fu$(() => gainStones(1)); got.push('🔭 une pierre d’étoile'); }
+  if (fuHas('obs_comete') && st.day.comete !== wk) { st.day.comete = wk; const it = fu$(() => famGemItem({ name: 'Le ciel' }, 'Comète'), null); if (it) { S.inv.push(it); got.push(`☄️ « ${it.name} »`); } }
+  if (!got.length) return;
+  save();
+  setTimeout(() => fu$(() => toast(`Le Foyer vous offre ${got.join(', ')}.`)), quiet ? 600 : 2500);
+}
+setInterval(() => fu$(() => { if (!document.hidden) fuDaily(); }), 60e3);
+setTimeout(() => fu$(() => fuDaily()), 8000);
+
+// ---------- dans chaque pièce : la rangée « Améliorations » ----------
+fyRender = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  fu$(() => {
+    if (!box || fu$(() => pgTuto(), false)) return;
+    const R = hmR(hmRoom), L = R && FU[R.id]; if (!L) return;
+    if (R.lock && hmLvl(R) < 1) return; // l'Observatoire se construit d'abord
+    const c = S.coins || 0;
+    const cards = L.map(([id, ico, nm, eff], i) => { const own = fuHas(id), p = fuPrice(R.id, i);
+      return `<div class="fu-c${own ? ' own' : ''}"><span class="fu-i">${ico}</span><span class="fu-x"><b>${esc(nm)}</b><small>${esc(eff)}</small></span>${own ? '<span class="fu-ok">✓ Installé</span>' : `<button class="btn ${c >= p ? 'green' : 'cream'} sm" data-fubuy="${R.id}:${id}"${c >= p ? '' : ' disabled'}>🪙 ${p.toLocaleString('fr-FR')}</button>`}</div>`; }).join('');
+    const h = `<div class="fu-w"><h3 class="hm-h">Améliorations · ${L.filter(x => fuHas(x[0])).length}/3</h3>${cards}</div>`;
+    const up = box.querySelector('.hm-up'); if (up) up.insertAdjacentHTML('beforebegin', h); else box.insertAdjacentHTML('beforeend', h);
+  });
+  return r;
+})(fyRender);
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-fubuy]'); if (!b || b.disabled) return;
+  ev.stopPropagation(); const [room, id] = b.dataset.fubuy.split(':');
+  if (fuBuy(room, id)) { const p = $('panelBody'), top = p ? p.scrollTop : 0; fu$(() => renderPanel()); const p2 = $('panelBody'); if (p2) p2.scrollTop = top; }
+}, true);
+// et dans « Mes envies »
+zeWishes = (orig => function () {
+  const W = orig.apply(this, arguments);
+  fu$(() => { for (const [room, L] of Object.entries(FU)) { const R = hmR(room); if (!R || (R.lock && hmLvl(R) < 1)) continue; const i = L.findIndex(x => !fuHas(x[0])); if (i < 0) continue; W.push({ nm: `${R.nm} : ${L[i][2]}`, p: fuPrice(room, i), eff: L[i][3] }); } });
+  return W.sort((a, b) => a.p - b.p);
+})(zeWishes);
+fu$(() => {
+  const st = document.createElement('style');
+  st.textContent = `.fu-w{margin:14px 0 4px}.fu-c{display:flex;align-items:center;gap:10px;margin:0 0 7px;padding:9px 10px;border-radius:14px;background:#fffaf0;border:2px solid #eadcc4}
+.fu-c.own{border-color:#9cc98f;background:#f3faef}.fu-i{flex:none;width:36px;height:36px;border-radius:11px;background:#fbf0dc;display:grid;place-items:center;font-size:20px}
+.fu-x{flex:1;min-width:0;display:grid;text-align:left}.fu-x b{font:800 14px var(--display,inherit);color:#4a3528}.fu-x small{font:600 12px/1.3 var(--body,system-ui);color:#7a6250}
+.fu-ok{flex:none;font:800 12px var(--body,system-ui);color:#3f7f3a}.fu-c .btn{flex:none}`;
   document.head.appendChild(st);
 });
 

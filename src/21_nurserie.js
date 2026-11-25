@@ -270,7 +270,7 @@ const NS_EGG_P = { eclair: 0.12, court: 0.22, moyen: 0.32, long: 0.45, expe: 0.6
 function nsTripEgg(e) {
   const N = nsState(), t = e.trip; if (!t || !t.dest) return null;
   if (t.avNest) return null; // v16 : ce voyage a déjà eu sa scène de nid (29_aventure.js)
-  if (S.eggs.length >= 8) return null; // le nid est plein : on fait d'abord éclore
+  if (S.eggs.length >= (fuHas('nid_nid') ? 10 : 8)) return null; // le nid est plein : on fait d'abord éclore
   const dest = t.dest, baitSps = t.bait ? t.bait.sps : null, trips = (S.stats && S.stats.trips) || 0;
   let p = NS_EGG_P[t.dur] != null ? NS_EGG_P[t.dur] : 0.2;
   if (t.nsFirst) p += 0.15;                  // première visite dans cette région

@@ -62,7 +62,7 @@ function usGear(k, g, t, worn) {
   }).sort((a, b) => usTier(b) - usTier(a) || (a.wear || 0) - (b.wear || 0))[0], null);
 }
 // coût d'une réparation : base = des pièces ; pro = matériaux ★ ; légendaire = matériaux ★★ et ★
-const usCost = it => { const t = usTier(it), f = usFam(xpGearOf(it).g); return t <= 1 ? { coins: 10, ing: [] } : t === 2 ? { coins: 20, ing: [[`ldm_${f}_0`, 2]] } : { coins: 40, ing: [[`ldm_${f}_1`, 1], [`ldm_${f}_0`, 2]] }; };
+const usCost = it => { const t = usTier(it), f = usFam(xpGearOf(it).g), h = fuHas('for_etabli'); return t <= 1 ? { coins: h ? 5 : 10, ing: [] } : t === 2 ? { coins: h ? 10 : 20, ing: [[`ldm_${f}_0`, h ? 1 : 2]] } : { coins: h ? 20 : 40, ing: [[`ldm_${f}_1`, 1], [`ldm_${f}_0`, h ? 1 : 2]] }; }; // Établi de réparation : moitié prix
 const usCan = c => S.coins >= c.coins && c.ing.every(([key, n]) => ingCount(key) >= n);
 const usCostTxt = c => [c.coins ? `${c.coins} pièces` : '', ...c.ing.map(([key, n]) => `${n} × ${ING[key][1]}`)].filter(Boolean).join(' + ');
 function usRepair(id) {

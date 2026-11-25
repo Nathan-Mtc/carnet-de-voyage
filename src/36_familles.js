@@ -393,13 +393,13 @@ if (typeof renderAtelier === 'function') renderAtelier = (orig => function (box)
 })(renderAtelier);
 
 // ---------------- le jardin du foyer ----------------
-const famPlotN = () => Math.min(6, 3 + Math.floor(famState().j.h / 8));
+const famPlotN = () => Math.min(6, 3 + Math.floor(famState().j.h / 8)) + (fuHas('jar_plots') ? 2 : 0); // v197 : amélioration « Parcelles en plus »
 function famSeedsInBag() { const m = new Map(); S.inv.forEach(i => { const s = famSeedOf(i); if (!s) return; const e = m.get(i.name); if (e) e.n++; else m.set(i.name, { it: i, n: 1, s }); }); return [...m.values()].sort((a, b) => a.s.min - b.s.min); }
 function famSow(i, id) {
   const J = famState().j, it = S.inv.find(x => x.id === id), s = it && famSeedOf(it);
   if (!s || i < 0 || i >= famPlotN() || J.plots[i]) return false;
   S.inv.splice(S.inv.indexOf(it), 1);
-  J.plots[i] = { seed: it.name, t0: Date.now(), ms: s.min * 60e3, out: s.out, n: s.n, r: it.rarity || 0 };
+  J.plots[i] = { seed: it.name, t0: Date.now(), ms: s.min * 60e3 * (fuHas('jar_eau') ? 0.7 : 1), out: s.out, n: s.n, r: it.rarity || 0 };
   save(); return true;
 }
 function famHarvest(i) {

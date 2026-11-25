@@ -42,14 +42,14 @@ try { HB_BAITS.forEach(([sp, nm]) => { if (NS_BAIT_HINT[sp] != null) NS_BAIT_HIN
 const AT_UP = { couture: [400, 1200, 3000], herbo: [300, 1000, 2500] }; // v196 : un peu plus cher, et le niveau 3 donne +10 % de chefs-d'œuvre
 function atS() { const H = hmS(); if (!H.st || typeof H.st !== 'object') H.st = {}; if (!H.lv || typeof H.lv !== 'object') H.lv = {}; return H; }
 function atLvl(id) { if (id === 'forge') return hm$(() => pgLvl('atelier'), 0); if (id === 'cuisine') return hm$(() => pgLvl('repas'), 0); if (id === 'salon') return 1; return atS().lv[id] | 0; }
-const atSlots = id => atLvl(id) >= 2 || (id === 'couture' && agBest(hmR('couture')).g >= 2) ? 2 : 1;
+const atSlots = id => (atLvl(id) >= 2 || (id === 'couture' && agBest(hmR('couture')).g >= 2) ? 2 : 1) + (id === 'couture' && fuHas('cou_machine') ? 1 : 0);
 const atWorkers = R => R.j ? hm$(() => fwWho(R.j).length, 0) : 0;
 const atSpeed = R => (1 + .25 * atLvl(R.id)) / (1 - AG_SPD[agBest(R).g] * (atWorkers(R) ? 1 : 0));
 const AT_MIN = [6, 15, 30, 60, 120];
 // v190 : les appâts se préparent en 10 secondes au plus (le joueur : « fabriquer les appâts met trop de temps »)
-const atMs = (r, R) => (R && R.id === 'herbo') || r.kind === 'Herboristerie' ? 10e3 : Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R));
+const atMs = (r, R) => (R && R.id === 'herbo') || r.kind === 'Herboristerie' ? 10e3 : Math.round(AT_MIN[Math.max(0, Math.min(4, r.out[3] | 0))] * 60e3 / atSpeed(R) * ((R && R.id === 'forge' && fuHas('for_soufflet')) || (R && R.id === 'cuisine' && fuHas('cui_feu')) ? 0.6 : 1));
 const atQ = id => { const H = atS(); if (!Array.isArray(H.st[id])) H.st[id] = []; return H.st[id]; };
-const atOwned = r => { try { return !(BQ_RIDS.has(r.id) && !bqRecOwned(r.id)); } catch (e) { return true; } };
+const atOwned = r => { if (r.fu && !fuHas(r.fu)) return false; try { return !(BQ_RIDS.has(r.id) && !bqRecOwned(r.id)); } catch (e) { return true; } };
 const atRecipes = R => RECIPES.filter(r => r.kind === R.st && atOwned(r));
 const atTime = ms => { if (ms < 60e3) return `${Math.max(1, Math.ceil(ms / 1e3))} s`; const m = Math.max(1, Math.ceil(ms / 60e3)); return m >= 60 ? `${Math.floor(m / 60)} h${m % 60 ? ' ' + String(m % 60).padStart(2, '0') : ''}` : `${m} min`; };
 // ---------------- lancer, récupérer ----------------
@@ -60,7 +60,7 @@ function atStart(R, rid, quiet, t0) {
   for (const [key, n] of r.ing) { const c = S.inv.filter(i => ingIt(key, i)).sort((a, b) => (a.rid ? 1 : 0) - (b.rid ? 1 : 0) || a.rarity - b.rarity); c.slice(0, n).forEach(x => { used.push(x); S.inv.splice(S.inv.indexOf(x), 1); }); }
   S.coins -= r.coins || 0;
   if (R.id === 'herbo' && used.length && agRoll(R)) { const x = used[0]; S.inv.push(x); hm$(() => toast(`${agWho(R)} a économisé un ingrédient : « ${x.name} » reste dans le sac.`), 0); }
-  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + (atLvl(R.id) >= 3 ? 0.1 : 0) + hm$(() => lvlLuck(S.sel), 0) * 0.2 || (R.id === 'forge' && agRoll(R)) ? 1 : 0 });
+  q.push({ rid, t0: t0 || Date.now(), ms: atMs(r, R), m: Math.random() < 0.12 + (atLvl(R.id) >= 3 ? 0.1 : 0) + (R.id === 'forge' && fuHas('for_enclume') ? 0.15 : 0) + hm$(() => lvlLuck(S.sel), 0) * 0.2 || (R.id === 'forge' && agRoll(R)) ? 1 : 0 });
   save(); hm$(() => renderTop(), 0); if (!quiet) hm$(() => toast(`${r.out[0]} : c’est parti ! Prêt dans ${atTime(atMs(r, R))}.`), 0);
   return true;
 }
@@ -71,7 +71,7 @@ function atCollect(R, i, quiet) {
   if (j.m) it.name += ' (chef-d’œuvre)';
   if (R.id === 'forge' && atLvl('forge') >= 3 && hm$(() => xpGearOf(it), null)) it.solide = 1; // v196 : Forge niveau 3 : l'équipement tient un défi de plus
   S.inv.push(it); S.dex[r.out[0]] = true; S.stats.crafted = (S.stats.crafted || 0) + 1; hm$(() => bump('craft'), 0);
-  if (R.id === 'cuisine' && agRoll(R)) { const it2 = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: r.out[3] | 0 }); S.inv.push(it2); hm$(() => setTimeout(() => toast(`${agWho(R)} en a fait une part de plus : 2 × « ${r.out[0]} » !`), 1600), 0); }
+  if ((R.id === 'cuisine' && (agRoll(R) || fuHas('cui_four') && Math.random() < 0.3)) || (R.id === 'herbo' && fuHas('her_seche') && Math.random() < 0.35)) { const it2 = makeItem(r.out, 0, `Fabriqué à la ${R.nm}`, [], { fixed: r.out[3] | 0 }); S.inv.push(it2); hm$(() => setTimeout(() => toast(`${agWho(R)} en a fait une part de plus : 2 × « ${r.out[0]} » !`), 1600), 0); }
   agGain(R); save();
   if (!quiet) hm$(() => toast(j.m ? `Un chef-d’œuvre ! « ${it.name} » rejoint votre sac.` : `« ${it.name} » rejoint votre sac.`), 0);
   return it;
@@ -167,7 +167,7 @@ hmStationHTML = R => {
   if (R.id === 'cuisine') h += `<p class="hm-tip">Les en-cas à vendre se préparent au comptoir de la Boutique. Pour nourrir un compagnon : onglet Compagnons.</p>`;
   if (R.id === 'forge' || R.id === 'couture') h += `<p class="hm-tip">On s’équipe au départ (onglet Préparation) ou dans l’onglet Compagnons.</p>`;
   // v196 : la Forge et la Cuisine montent avec les constructions du Foyer : on le dit ici
-  if (!AT_UP[R.id] && (R.id === 'forge' || R.id === 'cuisine')) { const l = atLvl(R.id), B = hm$(() => PG_BY[R.b], null); if (B) h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b><small>${l >= 3 ? 'Niveau maximum.' : `Pour l’améliorer : construisez « ${esc(B.nm)} » ${l ? `niveau ${l + 1} ` : ''}(Foyer › À construire) : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}${l + 1 === 3 ? (R.id === 'forge' ? ', équipement plus solide (un défi de plus)' : ', +10 % de chefs-d’œuvre') : ''}.`}</small></div>`; }
+  if (!AT_UP[R.id] && (R.id === 'forge' || R.id === 'cuisine')) { const l = atLvl(R.id), B = hm$(() => PG_BY[R.b], null); if (B) h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b><small>${l >= 3 ? 'Niveau maximum.' : `Pour l’améliorer : construisez « ${esc(B.nm)} » ${l ? `niveau ${l + 1} ` : ''}(en bas de cette pièce) : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}${l + 1 === 3 ? (R.id === 'forge' ? ', équipement plus solide (un défi de plus)' : ', +10 % de chefs-d’œuvre') : ''}.`}</small></div>`; }
   if (AT_UP[R.id]) { const l = atLvl(R.id), c = AT_UP[R.id][l]; h += `<div class="atl-up"><b>${esc(R.nm)} · niveau ${l}/3</b>${c != null ? `<small>Niveau ${l + 1} : +25 % de vitesse${l + 1 === 2 ? ', deux fabrications à la fois' : ''}${l + 1 === 3 ? ', +10 % de chefs-d’œuvre' : ''}</small><button class="btn ${(S.coins || 0) >= c ? 'green' : 'cream'} sm" data-stup="${R.id}"${(S.coins || 0) >= c ? '' : ' disabled'}>Améliorer · ${c} 🪙</button>` : '<small>Niveau maximum</small>'}</div>`; }
   return h + `</section>`;
 };

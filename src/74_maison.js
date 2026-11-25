@@ -14,11 +14,11 @@ const HM_ROOMS = [
   // voyage (fabrication avec un temps, qui continue pendant les voyages ; 78_ateliers.js). Plus de fatigue ni d'énergie.
   // st = atelier (genre de recettes) ; j = poste du familier artisan (40_foyer.js) ; l'équipe de voyage ne travaille jamais.
   { id: 'jardin', nm: 'Potager', v: 'Planter', e: '🌱', b: 'serre', blocks: ['.fy2-jar'], j: 'jard' },
-  { id: 'cuisine', nm: 'Cuisine', v: 'Cuisiner', e: '🍲', b: 'repas', blocks: [], j: 'cuis', st: 'Cuisine' },
+  { id: 'cuisine', nm: 'Cuisine', v: 'Cuisiner', e: '🍲', b: 'repas', b2: 'cheminee', blocks: [], j: 'cuis', st: 'Cuisine' },
   { id: 'herbo', nm: 'Herboristerie', v: 'Appâts', e: '🌿', b: null, blocks: [], j: 'herbo', st: 'Herboristerie' },
   { id: 'forge', nm: 'Forge', v: 'Forger', e: '⚒️', b: 'atelier', blocks: [], j: 'forge', st: 'Équipement' },
   { id: 'couture', nm: 'Couture', v: 'Coudre', e: '🧵', b: null, blocks: [], j: 'couture', st: 'Vêtement' },
-  { id: 'nurserie', nm: 'Couveuse', v: 'Éclore', e: '🥚', b: null, blocks: [], j: 'nurs' },
+  { id: 'nurserie', nm: 'Couveuse', v: 'Éclore', e: '🥚', b: null, b2: 'chambre', blocks: [], j: 'nurs' },
   { id: 'observ', nm: 'Observatoire', v: 'Le ciel', e: '🔭', b: 'observ', blocks: [], lock: 1 },
 ];
 const HM_INFO = {
@@ -416,7 +416,7 @@ if (typeof fyRender === 'function') fyRender = (orig => function (box) {
   const L = box.querySelector('.fy2-list');
   if (L) { L.querySelectorAll('.fy2-b, .fw-jobs, .fw-away, [data-fy="pet2"]').forEach(e => e.remove()); L.insertAdjacentHTML('beforebegin', `<h3 class="hm-h">Nourrir un familier</h3>`); }
   hm$(() => hmPanelExtra(box, R, 'end'), 0);
-  if (R.b) box.insertAdjacentHTML('beforeend', `<div class="hm-up"><h3 class="hm-h">${l < 1 ? 'Construire' : l < 3 ? 'Améliorer la pièce' : 'Pièce au maximum'}</h3>${hm$(() => pgCardHTML(PG_BY[R.b]), '')}${R.b2 ? hm$(() => pgCardHTML(PG_BY[R.b2]), '') : ''}</div>`);
+  if (R.b || R.b2) box.insertAdjacentHTML('beforeend', `<div class="hm-up"><h3 class="hm-h">${!R.b ? 'Agrandir' : l < 1 ? 'Construire' : l < 3 ? 'Améliorer la pièce' : 'Pièce au maximum'}</h3>${R.b ? hm$(() => pgCardHTML(PG_BY[R.b]), '') : ''}${R.b2 ? hm$(() => pgCardHTML(PG_BY[R.b2]), '') : ''}</div>`);
 })(fyRender);
 function hmGo(d) { const i = HM_ROOMS.findIndex(x => x.id === hmRoom); hmRoom = HM_ROOMS[(i + d + HM_ROOMS.length) % HM_ROOMS.length].id; renderPanel(); }
 document.addEventListener('click', ev => {
