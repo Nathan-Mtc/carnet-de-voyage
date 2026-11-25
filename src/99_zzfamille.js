@@ -106,68 +106,106 @@ GAME.on('order:done', e => zf2$(() => {
   setTimeout(() => zf2$(() => toast(`👁️ ${c.name} a vu un animal vers ${Lc.label} : c’est sur le radar.`)), 2600);
 }));
 // regrouper les observations : une forme par espèce et par coin (~1 km)
-function zoGroups() {
-  const G = new Map();
-  for (const o of zoSt().L) {
-    if (zfSt(o.sp) >= 2) continue;
-    const k = o.sp + '|' + o.lon.toFixed(2) + '|' + o.lat.toFixed(2);
-    let g = G.get(k); if (!g) { g = { k, sp: o.sp, lon: o.lon, lat: o.lat, obs: [] }; G.set(k, g); }
-    g.obs.push(o);
+// ================= v207 : LA PISTE QUI SE RESSERRE (le joueur : « qu'il se dise : un indice de plus et ce sera plus simple ») =================
+// Une piste par animal. 1 indice : un grand cercle (« quelque part par ici », 15 km). 2 indices : un petit cercle (4 km).
+// 3 indices : le REPAIRE, un vrai lieu exact. Y aller donne de bonnes chances de trouver son œuf (s'il fait nuit, si c'est la saison…).
+const ZO_NEED = 3, ZO_R = [0, 15000, 4000];
+const zoKm = (a, b) => { const R = 6371, t = Math.PI / 180, dl = (b.lat - a.lat) * t, dn = (b.lon - a.lon) * t, x = Math.sin(dl / 2) ** 2 + Math.cos(a.lat * t) * Math.cos(b.lat * t) * Math.sin(dn / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
+function zoRep(sp) { const st = zoSt(); if (!st.rep) st.rep = {}; return st.rep[sp] || null; }
+// le repaire est fixé au premier indice : le lieu exact si l'indice est précis, sinon le vrai lieu où l'espèce vit
+const zoAddOrig = zoAdd;
+zoAdd = function (sp, src, d, tx, who) {
+  const o = zoAddOrig(sp, src, d, tx, who); const st = zoSt(); if (!st.rep) st.rep = {};
+  if (o && !st.rep[sp] && o.dest) st.rep[sp] = o.dest;
+  return o;
+};
+function zoTrails() {
+  const T = new Map();
+  for (const o of zoSt().L) { if (zfSt(o.sp) >= 2) continue; let t = T.get(o.sp); if (!t) { t = { sp: o.sp, obs: [] }; T.set(o.sp, t); } t.obs.push(o); }
+  const out = [];
+  for (const t of T.values()) {
+    const rep = zoRep(t.sp) || t.obs[0].dest || t.obs[0]; if (!rep || !isFinite(rep.lon)) continue;
+    t.rep = rep; t.n = Math.min(ZO_NEED, t.obs.length); t.found = t.n >= ZO_NEED;
+    t.r = t.found ? 0 : ZO_R[t.n];
+    // le centre du cercle n'est pas le repaire : décalé (toujours dedans), sinon le cercle donnerait la réponse
+    const h = zf2$(() => hashStr(t.sp + t.n), 1), ang = (h % 360) * Math.PI / 180, dm = t.r * 0.5;
+    t.c = { lon: rep.lon + (dm * Math.cos(ang)) / (111320 * Math.cos(rep.lat * Math.PI / 180)), lat: rep.lat + (dm * Math.sin(ang)) / 110540 };
+    out.push(t);
   }
-  return [...G.values()];
+  return out;
 }
+const zoGroups = zoTrails; // compatibilité
+const zoMpp = lat => zf2$(() => 40075016 * Math.cos(lat * Math.PI / 180) / (512 * Math.pow(2, map.getZoom())), 100);
 function zfRefresh() {
   if (typeof map === 'undefined' || !map || !mapReady || typeof maplibregl === 'undefined') return;
   const seen = new Set();
-  if (zfRadar) for (const g of zoGroups()) {
-    const f = zf2$(() => FA_SP.find(x => x.id === g.sp), null); if (!f) continue;
-    const st = zfSt(g.sp), id = g.k; seen.add(id);
+  if (zfRadar) for (const t of zoTrails()) {
+    const f = zf2$(() => FA_SP.find(x => x.id === t.sp), null); if (!f) continue;
+    const st = zfSt(t.sp), id = t.sp; seen.add(id);
+    const pos = t.found ? t.rep : t.c;
     let m = zfMk.get(id);
     if (!m) {
       const el = document.createElement('div'); el.className = 'zfm'; el.setAttribute('role', 'button'); el.tabIndex = 0;
       const hsh = zf2$(() => hashStr(id), 7); el.style.setProperty('--dx', ((hsh % 21) - 10) + 'px'); el.style.setProperty('--dy', (((hsh >> 5) % 17) - 8) + 'px'); el.style.setProperty('--dur', (2.4 + (hsh % 9) / 4) + 's'); el.style.setProperty('--del', ((hsh >> 3) % 12) / 10 + 's');
-      el.addEventListener('click', ev => { ev.stopPropagation(); zfFiche(g.sp, id); });
-      m = new maplibregl.Marker({ element: el, anchor: 'bottom', opacity: '1', opacityWhenCovered: '1' }).setLngLat([g.lon, g.lat]).addTo(map); zfMk.set(id, m);
-    }
+      el.addEventListener('click', ev => { ev.stopPropagation(); zfFiche(id, id); });
+      m = new maplibregl.Marker({ element: el, anchor: 'bottom', opacity: '1', opacityWhenCovered: '1' }).setLngLat([pos.lon, pos.lat]).addTo(map); zfMk.set(id, m);
+    } else m.setLngLat([pos.lon, pos.lat]);
     // v201 : NE JAMAIS remplacer className — MapLibre y a mis « maplibregl-marker » (position absolue).
-    const el = m.getElement(), srcs = [...new Set(g.obs.map(o => o.src))], key = st + '' + f.tier + srcs.join('') + g.obs.length;
+    const el = m.getElement(), key = st + '' + f.tier + t.n;
     if (el.dataset.k !== key || !el.firstChild) {
-      el.dataset.k = key; ['s0', 's1', 's2', 't0', 't1', 't2', 'sure'].forEach(c => el.classList.remove(c)); el.classList.add('zfm', 's' + st, 't' + f.tier); if (srcs.length >= 2 || g.obs.length >= 3) el.classList.add('sure');
-      el.setAttribute('aria-label', `${st ? f.nm : 'Familier inconnu'} : ${g.obs.length} indice${g.obs.length > 1 ? 's' : ''}`);
-      el.innerHTML = `<span class="zfm-c"><img src="${zfPic(g.sp, st)}" alt=""></span><span class="zfm-s">${srcs.map(x => ZO_SRC[x][0]).join('')}</span>`;
+      el.dataset.k = key; ['s0', 's1', 's2', 't0', 't1', 't2', 'sure'].forEach(c => el.classList.remove(c)); el.classList.add('zfm', 's' + st, 't' + f.tier); if (t.found) el.classList.add('sure');
+      el.setAttribute('aria-label', t.found ? `Repaire trouvé : ${st ? f.nm : 'familier inconnu'}` : `Piste : ${t.n} indice${t.n > 1 ? 's' : ''} sur ${ZO_NEED}`);
+      el.innerHTML = `<span class="zfm-c"><img src="${zfPic(t.sp, st)}" alt=""></span><span class="zfm-s">${t.found ? '🏠 Repaire' : `${t.n}/${ZO_NEED}`}</span>`;
+    }
+    // le cercle de recherche (en vrais mètres : il rétrécit à chaque indice)
+    const rk = 'ring|' + id; let rm = zfMk.get(rk);
+    if (!t.found) {
+      if (!rm) { const re = document.createElement('div'); re.className = 'zo-ring'; rm = new maplibregl.Marker({ element: re, anchor: 'center' }).setLngLat([t.c.lon, t.c.lat]).addTo(map); zfMk.set(rk, rm); }
+      else rm.setLngLat([t.c.lon, t.c.lat]);
+      const mpp = zoMpp(t.c.lat), px = isFinite(mpp) && mpp > 0 ? Math.max(30, Math.min(2400, 2 * t.r / mpp)) : 220; const re = rm.getElement(); re.style.width = re.style.height = px + 'px';
+      seen.add(rk);
     }
   }
   for (const [id, m] of zfMk) if (!seen.has(id)) { m.remove(); zfMk.delete(id); }
   zfBtn();
 }
-zf2$(() => { const hook = () => zf2$(() => { map.on('moveend', zfRefresh); map.on('load', zfRefresh); }); if (typeof map !== 'undefined' && map) hook(); });
+{ const t = setInterval(() => { if (typeof map !== 'undefined' && map && map.on) { clearInterval(t); zf2$(() => { map.on('zoom', () => { if (zfRadar) zfRefresh(); }); map.on('moveend', zfRefresh); }); zf2$(zfRefresh); } }, 1000); }
 setInterval(() => zf2$(() => { if (!document.hidden) zfRefresh(); }), 4000);
-GAME.on('trip:return', () => setTimeout(() => zf2$(zfRefresh), 2500));
 GAME.on('comp:new', () => setTimeout(() => zf2$(zfRefresh), 800));
-
-// ---------- la fiche d'une espèce ----------
-function zfFiche(sp, gk) {
+// au repaire : de bonnes chances de trouver l'œuf (une fois par jour et par animal)
+GAME.on('trip:return', e => zf2$(() => {
+  const tr = e && e.trip, d = tr && tr.dest; if (!d || !isFinite(+d.lon)) return;
+  const st = zoSt(); if (!st.egg) st.egg = {};
+  for (const t of zoTrails()) {
+    if (!t.found || zoKm({ lon: +d.lon, lat: +d.lat }, t.rep) > 0.6) continue;
+    const f = FA_SP.find(x => x.id === t.sp), c = f.cond || {}, h = new Date(tr.startedAt || Date.now()).getHours(), night = h < 6 || h >= 21;
+    const miss = c.night && !night ? 'il ne sort que la nuit' : c.season && !c.season.includes(season()) ? `il ne sort qu’en ${c.season.join(' ou ')}` : c.bait && !(tr.bait && (tr.bait.sps || []).includes(t.sp)) ? 'il faut son appât' : '';
+    if (miss) { setTimeout(() => zf2$(() => toast(`🏠 Au repaire, rien cette fois : ${miss}.`)), 4200); continue; }
+    if (st.egg[t.sp] === dayKey()) continue; st.egg[t.sp] = dayKey();
+    if (Math.random() < 0.6) { addEgg({ sp: t.sp, rarity: f.tier >= 1 ? 2 : 1, from: { how: 'repaire', place: d.name } }); const eg = S.eggs[S.eggs.length - 1]; if (eg) eg.known = true; save(); setTimeout(() => zf2$(() => toast(`🥚 Au repaire, vous avez trouvé un œuf de ${f.nm} ! Il est à la Couveuse.`)), 4200); }
+    else setTimeout(() => zf2$(() => toast(`🏠 Au repaire, il s’est caché… Réessayez demain.`)), 4200);
+  }
+}));
+function zfFiche(sp) {
   const f = zf2$(() => FA_SP.find(x => x.id === sp), null); if (!f) return;
-  const rid = zfHome(), st = zfSt(sp), L = zfLoc(f, rid), cond = zf2$(() => faCondTx(f), []);
-  const g = gk ? zoGroups().find(x => x.k === gk) : null, O = (g ? g.obs : zoSt().L.filter(o => o.sp === sp)).slice(-6).reverse();
-  const ago = t => { const m = Math.round((Date.now() - t) / 60e3); return m < 60 ? `il y a ${Math.max(1, m)} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j`; };
-  const obsH = O.length ? `<div class="zo-l"><p class="zo-h">Vos indices${g ? ` · ${esc(g.obs[0].place || '')}` : ''}</p>${O.map(o => `<div class="zo-i"><span>${ZO_SRC[o.src][0]}</span><p><b>${esc(o.tx || ZO_SRC[o.src][1])}</b><small>${o.who ? esc(o.who) + ' · ' : ''}${esc(o.place || '')} · ${ago(o.at)}</small></p></div>`).join('')}</div>` : '<p class="zf-ez">Aucun indice pour l’instant : voyagez, écoutez la nuit, visitez un musée ou servez vos clients.</p>';
-  const dest = g ? (g.obs.find(o => o.dest) || {}).dest : null;
-  const km = dest ? zf2$(() => Math.round(kmBetween(homeObj(), dest)), null) : L ? zf2$(() => Math.round(kmBetween(homeObj(), L)), null) : null;
-  let go = '';
-  if (dest) { go = `<button class="btn green big wide" data-zogo="${esc(gk)}">Y aller${km != null ? ` · ${km} km` : ''}</button>`; }
-  else if (L) { const i = zf2$(() => CF_GO.push({ step: L.step, name: st ? f.nm : 'Un familier inconnu', why: 'trouver ' + (st ? f.art : 'ce familier') }) - 1, -1); if (i >= 0) go = `<button class="btn green big wide" data-cfgo="${i}">Y aller${km != null ? ` · ${km} km` : ''}</button>`; }
+  const st = zfSt(sp), cond = zf2$(() => faCondTx(f), []), t = zoTrails().find(x => x.sp === sp);
+  const O = (t ? t.obs : []).slice(-5).reverse();
+  const ago = x => { const m = Math.round((Date.now() - x) / 60e3); return m < 60 ? `il y a ${Math.max(1, m)} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j`; };
+  const n = t ? t.n : 0;
+  const prog = `<div class="zo-p${t && t.found ? ' ok' : ''}"><span class="zo-dots">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span><b>${t && t.found ? '🏠 Repaire trouvé !' : n ? `Encore ${ZO_NEED - n} indice${ZO_NEED - n > 1 ? 's' : ''} pour trouver son repaire` : 'Pas encore de piste'}</b><small>${t && t.found ? 'Allez-y : vous avez de bonnes chances de trouver son œuf.' : n === 1 ? 'Pour l’instant : quelque part dans un grand cercle de 15 km.' : n === 2 ? 'Le cercle se resserre : 4 km.' : 'Voyagez, sortez la nuit, visitez un musée, écoutez vos clients.'}</small></div>`;
+  const obsH = O.length ? `<div class="zo-l"><p class="zo-h">Vos indices</p>${O.map(o => `<div class="zo-i"><span>${ZO_SRC[o.src][0]}</span><p><b>${esc(o.tx || ZO_SRC[o.src][1])}</b><small>${o.who ? esc(o.who) + ' · ' : ''}${esc(o.place || '')} · ${ago(o.at)}</small></p></div>`).join('')}</div>` : '';
+  const dest = t ? (t.found ? t.rep : (O.find(o => o.dest) || {}).dest) : null;
+  const km = dest ? zf2$(() => Math.round(kmBetween(homeObj(), dest)), null) : null;
+  const go = dest ? `<button class="btn green big wide" data-zogo="${esc(sp)}">${t.found ? 'Aller au repaire' : 'Fouiller le coin'}${km != null ? ` · ${km} km` : ''}</button>` : '';
   const tier = ['Commun', 'Rare', 'Légendaire'][f.tier] || '';
   showModal(`<div class="zf-f s${st}"><button class="ld-x" data-closemodal="1" aria-label="Fermer"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="#4a3528" stroke-width="2.4" stroke-linecap="round"/></svg></button>
     <div class="zf-fp"><img class="${st ? '' : 'sil'}" src="${zfPic(sp, st)}" alt=""></div>
     <p class="cn-k">${tier} · ${st ? 'déjà aperçu' : 'jamais vu'}</p><h2>${st ? esc(f.nm) : '? ? ?'}</h2>
-    <p class="zf-cl">🔎 ${esc(zf2$(() => faClue(sp, st ? 1 : 0), f.clue[0]))}</p>
-    ${cond.length ? `<ul class="zf-co">${cond.map(c => `<li>${c.includes('nuit') ? '🌙' : c.includes('appât') ? '🧺' : '🍂'} ${esc(c.charAt(0).toUpperCase() + c.slice(1))}${c.includes('appât') ? (zf2$(() => sctSt().learn[sp], 0) ? ' <small>(recette connue : Herboristerie)</small>' : ' <small>(recette dans un camp d’Augustine)</small>') : ''}</li>`).join('')}</ul>` : '<p class="zf-ez">Pas de condition : partez voyager là où il vit, il finira par se montrer.</p>'}
+    ${prog}
+    ${cond.length ? `<ul class="zf-co">${cond.map(c => `<li>${c.includes('nuit') ? '🌙' : c.includes('appât') ? '🧺' : '🍂'} ${esc(c.charAt(0).toUpperCase() + c.slice(1))}</li>`).join('')}</ul>` : ''}
     ${obsH}
-    <p class="zf-how">En voyage là où il vit, un œuf peut apparaître : il éclôt à la Couveuse.</p>
     ${go}</div>`);
 }
-
 // ---------- le bouton 🐾 et la liste ----------
 function zfBtn() {
   const host = document.querySelector('.zoom'); if (!host) return;
@@ -185,12 +223,12 @@ function zfList() {
   showModal(`<div class="zf-l"><button class="ld-x" data-closemodal="1" aria-label="Fermer"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="#4a3528" stroke-width="2.4" stroke-linecap="round"/></svg></button>
     <p class="cn-k">Le but du jeu</p><h2>Les familiers de ${esc(RG[rid].short || RG[rid].name)}</h2>
     <p class="zf-lp">Explorez pour les trouver tous : <b>${n}/${L.length}</b> adoptés. Le radar montre vos indices : ce que vos familiers ont senti, les traces, les bruits de la nuit, ce que disent les musées et vos clients.</p>
-    <div class="zf-g">${L.map(f => { const st = zfSt(f.id); return `<button class="zf-gi s${st}" data-zfsp="${f.id}"><img class="${st ? '' : 'sil'}" src="${zfPic(f.id, st)}" alt=""><b>${st ? esc(f.nm) : '? ? ?'}</b><small>${st >= 2 ? '✓ Adopté' : (n => n ? `${n} indice${n > 1 ? 's' : ''}` : st ? 'Aperçu' : ['Commun', 'Rare', 'Légendaire'][f.tier])(zoSt().L.filter(o => o.sp === f.id).length)}</small></button>`; }).join('')}</div>
+    <div class="zf-g">${L.map(f => { const st = zfSt(f.id); return `<button class="zf-gi s${st}" data-zfsp="${f.id}"><img class="${st ? '' : 'sil'}" src="${zfPic(f.id, st)}" alt=""><b>${st ? esc(f.nm) : '? ? ?'}</b><small>${st >= 2 ? '✓ Adopté' : (n => n >= ZO_NEED ? '🏠 Repaire' : n ? `Piste ${n}/${ZO_NEED}` : st ? 'Aperçu' : ['Commun', 'Rare', 'Légendaire'][f.tier])(zoSt().L.filter(o => o.sp === f.id).length)}</small></button>`; }).join('')}</div>
     <button class="btn ${zfRadar ? 'cream' : 'green'} sm" data-zfrad="1">${zfRadar ? 'Éteindre le radar' : '📡 Allumer le radar'}</button></div>`);
 }
 document.addEventListener('click', ev => {
   const t = ev.target; if (!t.closest) return;
-  const z = t.closest('[data-zogo]'); if (z) { ev.stopPropagation(); const g = zoGroups().find(x => x.k === z.dataset.zogo), o = g && g.obs.find(o => o.dest); if (!o) return; const m = $('modal'); if (m) m.hidden = true; zfRadarSet(false); zf2$(() => map.flyTo({ center: [o.dest.lon, o.dest.lat], zoom: 14 })); zf2$(() => choosePOI(o.dest)); return; }
+  const z = t.closest('[data-zogo]'); if (z) { ev.stopPropagation(); const tr = zoTrails().find(x => x.sp === z.dataset.zogo); if (!tr) return; const dest = tr.found ? tr.rep : (tr.obs.slice().reverse().find(o => o.dest) || {}).dest; if (!dest) return; const m = $('modal'); if (m) m.hidden = true; zfRadarSet(false); zf2$(() => map.flyTo({ center: [dest.lon, dest.lat], zoom: 14 })); zf2$(() => choosePOI(Object.assign({}, dest))); return; }
   const a = t.closest('[data-zfsp]'); if (a) { ev.stopPropagation(); const sp = a.dataset.zfsp; if (zfSt(sp) >= 2) return; zfFiche(sp); return; }
   const h = t.closest('[data-zfrad]'); if (h) { ev.stopPropagation(); const m = $('modal'); if (m) m.hidden = true; zfRadarSet(!zfRadar); }
 }, true);
@@ -213,6 +251,9 @@ zf2$(() => {
 .zfm.t1 .zfm-c{border-color:#3d6fb0}.zfm.t2 .zfm-c{border-color:#c98a1a;box-shadow:0 0 0 3px rgba(232,177,58,.45)}
 .zfm-s{position:absolute;left:50%;transform:translateX(-50%);top:-14px;padding:0 4px;border-radius:999px;background:#effffb;border:1.5px solid #2b8f86;font-size:10px;line-height:14px;white-space:nowrap}
 .zfm:not(.sure) .zfm-c{opacity:.75}.zfm.sure .zfm-c{border-width:3px}
+.zo-ring{border-radius:50%;border:2.5px dashed rgba(43,143,134,.9);background:rgba(120,255,230,.14);pointer-events:none;box-sizing:border-box}
+.zo-p{margin:8px 0;padding:10px 12px;border-radius:14px;background:#effffb;border:2px solid #2b8f86;display:grid;gap:3px}.zo-p b{font:800 14px var(--body,system-ui);color:#1d5c56}.zo-p small{font:600 12.5px/1.35 var(--body,system-ui);color:#2f6b64}
+.zo-p.ok{background:#fff6d6;border-color:#e8b13a}.zo-p.ok b{color:#6b4f20}.zo-dots{display:flex;gap:5px}.zo-dots i{width:14px;height:14px;border-radius:50%;background:#cfe9e5;display:block}.zo-dots i.on{background:#2b8f86}.zo-p.ok .zo-dots i{background:#e8b13a}
 .zo-l{margin:8px 0}.zo-h{margin:0 0 5px;font:800 12px var(--body,system-ui);letter-spacing:.3px;text-transform:uppercase;color:#7a6250}
 .zo-i{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid #efe3cc}.zo-i>span{font-size:18px;line-height:1.2}.zo-i p{margin:0;display:grid}.zo-i b{font:700 13px/1.3 var(--body,system-ui);color:#4a3528}.zo-i small{font:600 11.5px var(--body,system-ui);color:#7a6250}
 .zfm-q{position:absolute;right:-2px;top:-4px;min-width:16px;height:16px;border-radius:999px;background:#4a3528;color:#fff;font:800 11px/16px system-ui;text-align:center}.zfm.s1 .zfm-q{display:none}
@@ -227,4 +268,4 @@ zf2$(() => {
 .zf-gi img{width:58px;height:58px;object-fit:cover;border-radius:50%;background:#fbf0dc}.zf-gi b{font:800 12.5px var(--body,system-ui)}.zf-gi small{font:700 11px var(--body,system-ui);color:#7a6250}.zf-gi.s2{border-color:#9cc98f;background:#f3faef}.zf-gi.s2 small{color:#3f7f3a}`;
   document.head.appendChild(st);
 });
-window.__zf = { refresh: zfRefresh, loc: zfLoc, sps: zfSps, groups: zoGroups, obs: () => zoSt().L, trip: (d, night) => GAME.emit('trip:return', { trip: { dest: d, startedAt: night ? new Date().setHours(23) : Date.now() }, items: [] }), order: c => GAME.emit('order:done', { client: c, items: [] }), home: () => zfHome(), sp: () => zfSps(zfHome()).map(f => f.id + ':' + f.ter.join('/')) };
+window.__zf = { dbg: () => ({ z: zf2$(() => map.getZoom(), 'err'), mpp: zoMpp(45), map: typeof map !== 'undefined' && !!map, ready: typeof mapReady !== 'undefined' && mapReady, ml: typeof maplibregl }), refresh: zfRefresh, loc: zfLoc, sps: zfSps, groups: zoGroups, obs: () => zoSt().L, trip: (d, night) => GAME.emit('trip:return', { trip: { dest: d, startedAt: night ? new Date().setHours(23) : Date.now() }, items: [] }), order: c => GAME.emit('order:done', { client: c, items: [] }), home: () => zfHome(), sp: () => zfSps(zfHome()).map(f => f.id + ':' + f.ter.join('/')) };
