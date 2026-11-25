@@ -8,7 +8,7 @@
 //  Couture : machine à coudre, 3 à la fois (78) · patrons rares : 2 vêtements rares · métier à tisser : laine → tissu
 //  Couveuse : lampe chauffante −30 % d'incubation · nid douillet 10 œufs au lieu de 8 (21) · berceuse : naissance au niveau 3
 //  Observatoire : lunette, une pierre d'étoile par jour · carte du ciel : un objet de plus en voyage de nuit · comète : une pierre précieuse par semaine
-// Les constructions qui n'étaient visibles nulle part (Cheminée, Chambre d'amis) sont rangées dans la Cuisine et la Couveuse (74).
+// (v198 : la Cheminée et la Chambre d'amis restent hors du Foyer, à la demande du joueur.)
 const fu$ = (f, d) => { try { const v = f(); return v === undefined ? d : v; } catch (e) { console.error('foyer+', e); return d; } };
 function fuSt() { if (!S.fu || typeof S.fu !== 'object') S.fu = {}; if (!S.fu.own) S.fu.own = {}; if (!S.fu.day) S.fu.day = {}; return S.fu; }
 function fuHas(id) { try { return !!(S && S.fu && S.fu.own && S.fu.own[id]); } catch (e) { return false; } }

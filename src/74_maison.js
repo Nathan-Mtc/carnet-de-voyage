@@ -14,11 +14,11 @@ const HM_ROOMS = [
   // voyage (fabrication avec un temps, qui continue pendant les voyages ; 78_ateliers.js). Plus de fatigue ni d'énergie.
   // st = atelier (genre de recettes) ; j = poste du familier artisan (40_foyer.js) ; l'équipe de voyage ne travaille jamais.
   { id: 'jardin', nm: 'Potager', v: 'Planter', e: '🌱', b: 'serre', blocks: ['.fy2-jar'], j: 'jard' },
-  { id: 'cuisine', nm: 'Cuisine', v: 'Cuisiner', e: '🍲', b: 'repas', b2: 'cheminee', blocks: [], j: 'cuis', st: 'Cuisine' },
+  { id: 'cuisine', nm: 'Cuisine', v: 'Cuisiner', e: '🍲', b: 'repas', blocks: [], j: 'cuis', st: 'Cuisine' },
   { id: 'herbo', nm: 'Herboristerie', v: 'Appâts', e: '🌿', b: null, blocks: [], j: 'herbo', st: 'Herboristerie' },
   { id: 'forge', nm: 'Forge', v: 'Forger', e: '⚒️', b: 'atelier', blocks: [], j: 'forge', st: 'Équipement' },
   { id: 'couture', nm: 'Couture', v: 'Coudre', e: '🧵', b: null, blocks: [], j: 'couture', st: 'Vêtement' },
-  { id: 'nurserie', nm: 'Couveuse', v: 'Éclore', e: '🥚', b: null, b2: 'chambre', blocks: [], j: 'nurs' },
+  { id: 'nurserie', nm: 'Couveuse', v: 'Éclore', e: '🥚', b: null, blocks: [], j: 'nurs' },
   { id: 'observ', nm: 'Observatoire', v: 'Le ciel', e: '🔭', b: 'observ', blocks: [], lock: 1 },
 ];
 const HM_INFO = {
