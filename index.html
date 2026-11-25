@@ -45358,7 +45358,9 @@ function zoTrails() {
   for (const t of T.values()) {
     const rep = zoRep(t.sp) || t.obs[0].dest || t.obs[0]; if (!rep || !isFinite(rep.lon)) continue;
     t.rep = rep; t.n = Math.min(ZO_NEED, t.obs.length); t.found = t.n >= ZO_NEED;
-    t.r = t.found ? 0 : ZO_R[t.n];
+    // près de chez soi, des cercles plus petits (sinon un cercle de 15 km couvre toute la ville et ne dit rien)
+    const kmH = zf2$(() => kmBetween(homeObj(), rep), 99); t.R = kmH < 12 ? [0, 2500, 700] : ZO_R;
+    t.r = t.found ? 0 : t.R[t.n];
     // le centre du cercle n'est pas le repaire : décalé (toujours dedans), sinon le cercle donnerait la réponse
     const h = zf2$(() => hashStr(t.sp + t.n), 1), ang = (h % 360) * Math.PI / 180, dm = t.r * 0.5;
     t.c = { lon: rep.lon + (dm * Math.cos(ang)) / (111320 * Math.cos(rep.lat * Math.PI / 180)), lat: rep.lat + (dm * Math.sin(ang)) / 110540 };
@@ -45367,6 +45369,8 @@ function zoTrails() {
   return out;
 }
 const zoGroups = zoTrails; // compatibilité
+const zoDist = km => km == null || !isFinite(km) ? '' : km < 1 ? `${Math.max(10, Math.round(km * 100) * 10)} m` : `${Math.round(km)} km`;
+const zoRtx = r => r >= 1000 ? `${Math.round(r / 1000)} km` : `${r} m`;
 const zoMpp = lat => zf2$(() => 40075016 * Math.cos(lat * Math.PI / 180) / (512 * Math.pow(2, map.getZoom())), 100);
 function zfRefresh() {
   if (typeof map === 'undefined' || !map || !mapReady || typeof maplibregl === 'undefined') return;
@@ -45424,11 +45428,12 @@ function zfFiche(sp) {
   const O = (t ? t.obs : []).slice(-5).reverse();
   const ago = x => { const m = Math.round((Date.now() - x) / 60e3); return m < 60 ? `il y a ${Math.max(1, m)} min` : m < 1440 ? `il y a ${Math.round(m / 60)} h` : `il y a ${Math.round(m / 1440)} j`; };
   const n = t ? t.n : 0;
-  const prog = `<div class="zo-p${t && t.found ? ' ok' : ''}"><span class="zo-dots">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span><b>${t && t.found ? '🏠 Repaire trouvé !' : n ? `Encore ${ZO_NEED - n} indice${ZO_NEED - n > 1 ? 's' : ''} pour trouver son repaire` : 'Pas encore de piste'}</b><small>${t && t.found ? 'Allez-y : vous avez de bonnes chances de trouver son œuf.' : n === 1 ? 'Pour l’instant : quelque part dans un grand cercle de 15 km.' : n === 2 ? 'Le cercle se resserre : 4 km.' : 'Voyagez, sortez la nuit, visitez un musée, écoutez vos clients.'}</small></div>`;
+  const prog = `<div class="zo-p${t && t.found ? ' ok' : ''}"><span class="zo-dots">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span><b>${t && t.found ? '🏠 Repaire trouvé !' : n ? `Encore ${ZO_NEED - n} indice${ZO_NEED - n > 1 ? 's' : ''} pour trouver son repaire` : 'Pas encore de piste'}</b><small>${t && t.found ? 'Allez-y : vous avez de bonnes chances de trouver son œuf.' : n === 1 ? `Pour l’instant : quelque part dans un cercle de ${zoRtx(t.R[1])} (en pointillés sur le radar).` : n === 2 ? `Le cercle se resserre : ${zoRtx(t.R[2])}.` : 'Voyagez, sortez la nuit, visitez un musée, écoutez vos clients.'}</small></div>`;
   const obsH = O.length ? `<div class="zo-l"><p class="zo-h">Vos indices</p>${O.map(o => `<div class="zo-i"><span>${ZO_SRC[o.src][0]}</span><p><b>${esc(o.tx || ZO_SRC[o.src][1])}</b><small>${o.who ? esc(o.who) + ' · ' : ''}${esc(o.place || '')} · ${ago(o.at)}</small></p></div>`).join('')}</div>` : '';
   const dest = t ? (t.found ? t.rep : (O.find(o => o.dest) || {}).dest) : null;
-  const km = dest ? zf2$(() => Math.round(kmBetween(homeObj(), dest)), null) : null;
-  const go = dest ? `<button class="btn green big wide" data-zogo="${esc(sp)}">${t.found ? 'Aller au repaire' : 'Fouiller le coin'}${km != null ? ` · ${km} km` : ''}</button>` : '';
+  const km = dest ? zf2$(() => kmBetween(homeObj(), dest), null) : null;
+  const where = dest ? `<p class="zo-w">📍 <b>${esc(dest.name || 'Cet endroit')}</b> · ${km != null && km < 0.3 ? 'tout près de chez vous' : `à ${zoDist(km)} de chez vous`}${t.found ? '' : ' (là où vient votre dernier indice)'}</p>` : '';
+  const go = dest ? `${where}<button class="btn green big wide" data-zogo="${esc(sp)}">${t.found ? 'Aller au repaire' : 'Fouiller le coin'}${km != null ? ` · ${zoDist(km)}` : ''}</button>` : '';
   const tier = ['Commun', 'Rare', 'Légendaire'][f.tier] || '';
   showModal(`<div class="zf-f s${st}"><button class="ld-x" data-closemodal="1" aria-label="Fermer"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="#4a3528" stroke-width="2.4" stroke-linecap="round"/></svg></button>
     <div class="zf-fp"><img class="${st ? '' : 'sil'}" src="${zfPic(sp, st)}" alt=""></div>
@@ -45486,6 +45491,9 @@ zf2$(() => {
 .zo-ring{border-radius:50%;border:2.5px dashed rgba(43,143,134,.9);background:rgba(120,255,230,.14);pointer-events:none;box-sizing:border-box}
 .zo-p{margin:8px 0;padding:10px 12px;border-radius:14px;background:#effffb;border:2px solid #2b8f86;display:grid;gap:3px}.zo-p b{font:800 14px var(--body,system-ui);color:#1d5c56}.zo-p small{font:600 12.5px/1.35 var(--body,system-ui);color:#2f6b64}
 .zo-p.ok{background:#fff6d6;border-color:#e8b13a}.zo-p.ok b{color:#6b4f20}.zo-dots{display:flex;gap:5px}.zo-dots i{width:14px;height:14px;border-radius:50%;background:#cfe9e5;display:block}.zo-dots i.on{background:#2b8f86}.zo-p.ok .zo-dots i{background:#e8b13a}
+.zo-w{margin:10px 0 2px;font:600 13px var(--body,system-ui);color:#4a3528}
+.zb-l{display:grid;gap:7px;margin:10px 0}.zb-i{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px 10px;border-radius:14px;border:2px solid #eadcc4;background:#fffaf0;text-align:left;font-family:inherit;color:#4a3528}
+.zb-i.rec{border-color:#2b8f86;background:#effffb}.zb-i span{flex:1;display:grid}.zb-i b{font:800 14px var(--body,system-ui)}.zb-i small{font:600 12px var(--body,system-ui);color:#6b5340}.zb-i em{font-style:normal;font:800 11px var(--body,system-ui);color:#2b8f86}
 .zo-l{margin:8px 0}.zo-h{margin:0 0 5px;font:800 12px var(--body,system-ui);letter-spacing:.3px;text-transform:uppercase;color:#7a6250}
 .zo-i{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid #efe3cc}.zo-i>span{font-size:18px;line-height:1.2}.zo-i p{margin:0;display:grid}.zo-i b{font:700 13px/1.3 var(--body,system-ui);color:#4a3528}.zo-i small{font:600 11.5px var(--body,system-ui);color:#7a6250}
 .zfm-q{position:absolute;right:-2px;top:-4px;min-width:16px;height:16px;border-radius:999px;background:#4a3528;color:#fff;font:800 11px/16px system-ui;text-align:center}.zfm.s1 .zfm-q{display:none}
@@ -45500,7 +45508,31 @@ zf2$(() => {
 .zf-gi img{width:58px;height:58px;object-fit:cover;border-radius:50%;background:#fbf0dc}.zf-gi b{font:800 12.5px var(--body,system-ui)}.zf-gi small{font:700 11px var(--body,system-ui);color:#7a6250}.zf-gi.s2{border-color:#9cc98f;background:#f3faef}.zf-gi.s2 small{color:#3f7f3a}`;
   document.head.appendChild(st);
 });
-window.__zf = { dbg: () => ({ z: zf2$(() => map.getZoom(), 'err'), mpp: zoMpp(45), map: typeof map !== 'undefined' && !!map, ready: typeof mapReady !== 'undefined' && mapReady, ml: typeof maplibregl }), refresh: zfRefresh, loc: zfLoc, sps: zfSps, groups: zoGroups, obs: () => zoSt().L, trip: (d, night) => GAME.emit('trip:return', { trip: { dest: d, startedAt: night ? new Date().setHours(23) : Date.now() }, items: [] }), order: c => GAME.emit('order:done', { client: c, items: [] }), home: () => zfHome(), sp: () => zfSps(zfHome()).map(f => f.id + ':' + f.ter.join('/')) };
+// ---------- v208 : au départ, proposer un appât (le joueur : « au moment de partir, qu'on me demande si je souhaite prendre un appât ») ----------
+let zbSkip = false, zbDest = null, zbSel = null;
+startTrip = (orig => function () {
+  if (zbSkip) { zbSkip = false; return orig.apply(this, arguments); }
+  const go = () => orig.apply(this, arguments);
+  const ask = zf2$(() => {
+    if (S.trips[S.sel] || !plan.dest || nsState().bait) return false;
+    const B = nsBaitsInBag(); if (!B.length) return false;
+    const d = plan.dest; zbDest = d; zbSel = S.sel; const near = zoTrails().filter(t => t.found && zoKm({ lon: +d.lon, lat: +d.lat }, t.rep) < 0.6).map(t => t.sp);
+    const nm = sp => zfSt(sp) >= 1 ? zf2$(() => spName(sp), sp) : 'une espèce inconnue';
+    const L = B.slice(0, 5).map(b => { const rec = b.sps.some(sp => near.includes(sp)); return `<button class="zb-i${rec ? ' rec' : ''}" data-zbait="${esc(b.name)}"><span><b>${esc(b.name)}${b.n > 1 ? ` ×${b.n}` : ''}</b><small>Attire : ${esc(b.sps.slice(0, 2).map(nm).join(', '))}</small></span>${rec ? '<em>Repaire ici !</em>' : ''}</button>`; }).join('');
+    showModal(`<div class="zf-f"><button class="ld-x" data-closemodal="1" aria-label="Fermer"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="#4a3528" stroke-width="2.4" stroke-linecap="round"/></svg></button>
+      <p class="cn-k">Avant de partir</p><h2>Prendre un appât ?</h2><p class="zf-ez">Un appât attire un animal précis : il a bien plus de chances de se montrer, et certains ne viennent qu’avec le leur.</p>
+      <div class="zb-l">${L}</div><button class="btn cream wide" data-zbait="">Partir sans appât</button></div>`);
+    return true;
+  }, false);
+  if (!ask) return go();
+})(startTrip);
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-zbait]'); if (!b) return;
+  ev.stopPropagation(); const m = $('modal'); if (m) m.hidden = true;
+  zf2$(() => { if (b.dataset.zbait) { nsState().bait = b.dataset.zbait; save(); } });
+  if (zbDest) { plan.dest = zbDest; if (zbSel) S.sel = zbSel; } zbSkip = true; zf2$(() => startTrip());
+}, true);
+window.__zf = { baits: () => nsBaitsInBag().map(b => b.name), pick: p => choosePOI(p), give: n => { const d = Object.values(AUG_HB)[0].out; for (let i = 0; i < n; i++) S.inv.push(makeItem(d, 0, 'test', [])); return d[0]; }, dbg: () => ({ z: zf2$(() => map.getZoom(), 'err'), mpp: zoMpp(45), map: typeof map !== 'undefined' && !!map, ready: typeof mapReady !== 'undefined' && mapReady, ml: typeof maplibregl }), refresh: zfRefresh, loc: zfLoc, sps: zfSps, groups: zoGroups, obs: () => zoSt().L, trip: (d, night) => GAME.emit('trip:return', { trip: { dest: d, startedAt: night ? new Date().setHours(23) : Date.now() }, items: [] }), order: c => GAME.emit('order:done', { client: c, items: [] }), home: () => zfHome(), sp: () => zfSps(zfHome()).map(f => f.id + ':' + f.ter.join('/')) };
 
 // ================= FORGE ET ATELIER : « IL MANQUE », COMME À LA BOUTIQUE (v180) =================
 // Le joueur : « dans la forge, quand on n'a pas les matériaux, montrer les matériaux manquants, du même principe que dans la boutique ».
