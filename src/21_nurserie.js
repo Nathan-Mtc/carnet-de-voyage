@@ -298,6 +298,7 @@ function nsEggFoundHTML(egg) {
 // ---------------- 2. rencontres en chemin ----------------
 // au départ : une chance sur six environ, plus dans le bon habitat ou avec un appât ; l'événement arrive tard dans le voyage
 function nsPlanWild(t) {
+  if (!(t.bait && t.bait.sps && t.bait.sps.length)) return; // v210 : pas de rencontre sauvage (donc pas d'œuf) sans appât
   const N = nsState(), sc = nsScores(t.dest, t.bait ? t.bait.sps : null), best = Math.max(...sc.map(x => x.w));
   if (!(best > 0)) return; // v19 : aucune espèce sauvage ici
   let p = 0.17;
