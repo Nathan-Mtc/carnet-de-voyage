@@ -259,6 +259,8 @@ zf2$(() => {
 .zo-ring{border-radius:50%;border:2.5px dashed rgba(43,143,134,.9);background:rgba(120,255,230,.14);pointer-events:none;box-sizing:border-box}
 .zo-p{margin:8px 0;padding:10px 12px;border-radius:14px;background:#effffb;border:2px solid #2b8f86;display:grid;gap:3px}.zo-p b{font:800 14px var(--body,system-ui);color:#1d5c56}.zo-p small{font:600 12.5px/1.35 var(--body,system-ui);color:#2f6b64}
 .zo-p.ok{background:#fff6d6;border-color:#e8b13a}.zo-p.ok b{color:#6b4f20}.zo-dots{display:flex;gap:5px}.zo-dots i{width:14px;height:14px;border-radius:50%;background:#cfe9e5;display:block}.zo-dots i.on{background:#2b8f86}.zo-p.ok .zo-dots i{background:#e8b13a}
+.zo-tip{display:grid;gap:6px;margin:8px 0}.zo-tr{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:#effffb;border:2px solid #2b8f86}
+.zo-tr img{flex:none;width:44px;height:44px;border-radius:50%;object-fit:cover;background:#dff5f1}.zo-tr img.sil{filter:brightness(0);opacity:.45}.zo-tr span{display:grid;text-align:left}.zo-tr b{font:800 14px var(--body,system-ui);color:#1d5c56}.zo-tr small{font:600 12.5px/1.35 var(--body,system-ui);color:#2f6b64}
 .zo-w{margin:10px 0 2px;font:600 13px var(--body,system-ui);color:#4a3528}
 .zb-l{display:grid;gap:7px;margin:10px 0}.zb-i{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px 10px;border-radius:14px;border:2px solid #eadcc4;background:#fffaf0;text-align:left;font-family:inherit;color:#4a3528}
 .zb-i.rec{border-color:#2b8f86;background:#effffb}.zb-i span{flex:1;display:grid}.zb-i b{font:800 14px var(--body,system-ui)}.zb-i small{font:600 12px var(--body,system-ui);color:#6b5340}.zb-i em{font-style:normal;font:800 11px var(--body,system-ui);color:#2b8f86}
@@ -276,6 +278,39 @@ zf2$(() => {
 .zf-gi img{width:58px;height:58px;object-fit:cover;border-radius:50%;background:#fbf0dc}.zf-gi b{font:800 12.5px var(--body,system-ui)}.zf-gi small{font:700 11px var(--body,system-ui);color:#7a6250}.zf-gi.s2{border-color:#9cc98f;background:#f3faef}.zf-gi.s2 small{color:#3f7f3a}`;
   document.head.appendChild(st);
 });
+// ---------- v209 : la fiche de départ dit qu'on est sur une piste (le joueur : « ça m'affiche juste ce que je peux récolter ») ----------
+function zoNear(d) {
+  if (!d || !isFinite(+d.lon)) return [];
+  const p = { lon: +d.lon, lat: +d.lat };
+  return zoTrails().filter(t => zoKm(p, t.rep) < 0.7 || t.obs.some(o => zoKm(p, o) < 0.7));
+}
+trjDecorate = (orig => function (box) {
+  const r = orig.apply(this, arguments);
+  zf2$(() => {
+    if (!box) return; const old = box.querySelector('.zo-tip');
+    const d = plan.dest, L = !S.trips[S.sel] && d ? zoNear(d).slice(0, 2) : [];
+    if (!L.length) { if (old) old.remove(); return; }
+    const h = `<div class="zo-tip">${L.map(t => { const f = FA_SP.find(x => x.id === t.sp), st = zfSt(t.sp), nm = st ? f.nm : '? ? ?', c = f.cond || {};
+      const at = t.found && zoKm({ lon: +d.lon, lat: +d.lat }, t.rep) < 0.7;
+      const need = [c.night ? '🌙 partez entre 21 h et 6 h' : '', c.bait ? '🧺 prenez son appât' : '', c.season ? `🍂 seulement en ${c.season.join(' ou ')}` : ''].filter(Boolean);
+      return `<div class="zo-tr"><img class="${st ? '' : 'sil'}" src="${zfPic(t.sp, st)}" alt=""><span><b>${at ? `🏠 Repaire de ${esc(nm)}` : `🐾 Sur la piste de ${esc(nm)} · ${t.n}/${ZO_NEED}`}</b><small>${at ? `Bonnes chances de trouver son œuf (6 sur 10).${need.length ? ' À faire : ' + need.join(', ') + '.' : ''}` : 'Votre familier cherchera des indices ici : chaque indice resserre la piste.'}</small></span></div>`; }).join('')}</div>`;
+    if (old) { if (old.outerHTML !== h) old.outerHTML = h; return; }
+    const a = box.querySelector('.dhead, .poihead') || box.querySelector('.trjline'); if (a) a.insertAdjacentHTML('afterend', h); else box.insertAdjacentHTML('afterbegin', h);
+  });
+  return r;
+})(trjDecorate);
+// fouiller le coin d'une piste : de bonnes chances d'y trouver un indice de CET animal
+GAME.on('trip:return', e => zf2$(() => {
+  const t = e && e.trip, d = t && t.dest; if (!d) return;
+  for (const tr of zoNear(d)) {
+    if (tr.found || Math.random() > 0.6) continue;
+    const f = FA_SP.find(x => x.id === tr.sp), h = new Date(t.startedAt || Date.now()).getHours(), night = h < 6 || h >= 21;
+    const src = night ? 'bruit' : Math.random() < 0.5 ? 'trace' : 'vu', tx = src === 'bruit' ? `On a entendu ${ZO_SOUND[f.ter[0]] || 'un cri'}` : src === 'trace' ? zoPick(ZO_TRACE[f.ter[0]] || ['Des traces']) : 'Une présence sentie en chemin';
+    zoAdd(tr.sp, src, d, tx); save();
+    const n = Math.min(ZO_NEED, tr.n + 1);
+    setTimeout(() => zf2$(() => toast(n >= ZO_NEED ? `🏠 Nouvel indice : le repaire est trouvé ! Voir le radar.` : `🐾 Nouvel indice sur la piste (${n}/${ZO_NEED}) : la zone se resserre.`)), 4600);
+  }
+}));
 // ---------- v208 : au départ, proposer un appât (le joueur : « au moment de partir, qu'on me demande si je souhaite prendre un appât ») ----------
 let zbSkip = false, zbDest = null, zbSel = null;
 startTrip = (orig => function () {
@@ -300,4 +335,4 @@ document.addEventListener('click', ev => {
   zf2$(() => { if (b.dataset.zbait) { nsState().bait = b.dataset.zbait; save(); } });
   if (zbDest) { plan.dest = zbDest; if (zbSel) S.sel = zbSel; } zbSkip = true; zf2$(() => startTrip());
 }, true);
-window.__zf = { baits: () => nsBaitsInBag().map(b => b.name), pick: p => choosePOI(p), give: n => { const d = Object.values(AUG_HB)[0].out; for (let i = 0; i < n; i++) S.inv.push(makeItem(d, 0, 'test', [])); return d[0]; }, dbg: () => ({ z: zf2$(() => map.getZoom(), 'err'), mpp: zoMpp(45), map: typeof map !== 'undefined' && !!map, ready: typeof mapReady !== 'undefined' && mapReady, ml: typeof maplibregl }), refresh: zfRefresh, loc: zfLoc, sps: zfSps, groups: zoGroups, obs: () => zoSt().L, trip: (d, night) => GAME.emit('trip:return', { trip: { dest: d, startedAt: night ? new Date().setHours(23) : Date.now() }, items: [] }), order: c => GAME.emit('order:done', { client: c, items: [] }), home: () => zfHome(), sp: () => zfSps(zfHome()).map(f => f.id + ':' + f.ter.join('/')) };
+window.__zf = { deco: () => { const b = document.getElementById('panelBody'); const pd = plan.dest; trjDecorate(b); return { pd: pd && pd.name, trip: !!S.trips[S.sel], tip: !!b.querySelector('.zo-tip'), near: pd ? zoNear(pd).length : -1 }; }, near: d => zoNear(d).map(t => t.sp), baits: () => nsBaitsInBag().map(b => b.name), pick: p => choosePOI(p), give: n => { const d = Object.values(AUG_HB)[0].out; for (let i = 0; i < n; i++) S.inv.push(makeItem(d, 0, 'test', [])); return d[0]; }, dbg: () => ({ z: zf2$(() => map.getZoom(), 'err'), mpp: zoMpp(45), map: typeof map !== 'undefined' && !!map, ready: typeof mapReady !== 'undefined' && mapReady, ml: typeof maplibregl }), refresh: zfRefresh, loc: zfLoc, sps: zfSps, groups: zoGroups, obs: () => zoSt().L, trip: (d, night) => GAME.emit('trip:return', { trip: { dest: d, startedAt: night ? new Date().setHours(23) : Date.now() }, items: [] }), order: c => GAME.emit('order:done', { client: c, items: [] }), home: () => zfHome(), sp: () => zfSps(zfHome()).map(f => f.id + ':' + f.ter.join('/')) };
