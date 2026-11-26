@@ -43794,7 +43794,7 @@ function ldFiche(id) {
     <p class="ld-k">Cadenas · ${st.n} ouvert${st.n > 1 ? 's' : ''} sur ${D.locks.length}${k ? ` pour ${esc(faNm(k))}` : ''}</p>
     <ul class="ld-l">${locks}</ul>
     <p class="ld-k">Ce qu’on y trouve</p>
-    <div class="ld-r">${done ? '' : `<div><b>${esc(D.tr)}</b><small>trésor unique, la première fois</small></div>`}<div><b>${esc(mat)}</b><small>matériau ${'★'.repeat(D.s)}, à chaque réussite</small></div><div><b>${D.s + 1} trouvailles du lieu</b><small>toutes utiles : atelier, repas, tenue ou Foyer</small></div>${D.s >= 3 ? '<div><b>Pierre précieuse</b><small>35 % : pour le légendaire</small></div>' : ''}<div><b>${D.s >= 3 ? 'Œuf de forme locale' : 'Œuf de familier'}</b><small>${[0, 3, 10, 25][D.s]} % · seulement avec un appât</small></div></div>
+    <div class="ld-r">${done ? '' : `<div><b>${esc(D.tr)}</b><small>trésor unique, la première fois</small></div>`}<div><b>${esc(mat)}</b><small>matériau ${'★'.repeat(D.s)}, à chaque réussite</small></div><div><b>${D.s + 1} trouvailles du lieu</b><small>toutes utiles : atelier, repas, tenue ou Foyer</small></div>${D.s >= 3 ? '<div><b>Pierre précieuse</b><small>35 % : pour le légendaire</small></div>' : ''}<div><b>${D.s >= 3 ? 'Œuf de forme locale' : 'Œuf de familier'}</b><small>${[0, 3, 10, 25][D.s]} % de chance</small></div></div>
     ${done ? `<p class="ld-n">Déjà réussi ${done} fois.</p>` : ''}
     <div class="ld-b">${st.all ? `<button class="btn green" data-ldgo="${id}">Y aller avec ${esc(faNm(k))}</button>` : `<button class="btn" disabled aria-disabled="true">Encore ${D.locks.length - st.n} cadenas à ouvrir</button>`}</div></div>`);
 }
@@ -43838,8 +43838,8 @@ GAME.on('trip:return', e => ld$(() => {
       if (D.s >= 3 && Math.random() < 0.35 && typeof famGemItem === 'function') { const it = famGemItem(D.p, D.p.name); S.inv.push(it); got.push(`${it.name} (pierre précieuse : équipement légendaire)`); }
     });
     // les familiers : de temps en temps seulement (★ 3 %, ★★ 10 %, ★★★ 25 % : forme locale du lieu)
-    // v210 : pas d'œuf sans appât (le joueur : « impossible d'obtenir des œufs sans appâts ») ; l'espèce est celle que l'appât attire si elle vit ici
-    ld$(() => { if (!(t.bait && (t.bait.sps || []).length)) return; if (Math.random() < [0, 0.03, 0.10, 0.25][D.s]) { const sp0 = ldEggSp(D), sp = (t.bait.sps.find(x => ld$(() => faLives(FA_SP.find(f => f.id === x), D.p), false)) || sp0); if (!sp) return; const local = D.s >= 3 ? D.p.name : null;
+    // v211 : les défis donnent leur œuf SANS appât (le joueur l'a voulu) ; si on a un appât, l'espèce est celle qu'il attire si elle vit ici
+    ld$(() => { if (Math.random() < [0, 0.03, 0.10, 0.25][D.s]) { const sp0 = ldEggSp(D), sp = ((t.bait && t.bait.sps || []).find(x => ld$(() => faLives(FA_SP.find(f => f.id === x), D.p), false)) || sp0); if (!sp) return; const local = D.s >= 3 ? D.p.name : null;
       addEgg({ sp, rarity: D.s >= 3 ? 3 : 2, from: { how: 'defi', place: D.p.name, local } }); const e = S.eggs[S.eggs.length - 1]; if (e) e.known = true;
       got.unshift(local ? `un œuf rare : ${ld$(() => spName(sp), sp)} forme locale « ${local} » !` : `un œuf de ${ld$(() => spName(sp), sp)} !`); } });
     s.done[D.id] = (s.done[D.id] || 0) + 1;
