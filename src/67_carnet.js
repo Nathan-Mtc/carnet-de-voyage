@@ -80,7 +80,7 @@ if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
       const ev = secs.find(x => /^Événement/.test(title(x)) || /^Aujourd/.test(title(x)));
       if (ev) { const h3 = ev.querySelector('header h3'); if (h3) h3.textContent = 'Chaque jour'; wrap.appendChild(ev); }
       const rv = secs.find(x => /^Rendez-vous/.test(title(x))), mach = rv && [...rv.querySelectorAll('.mrow')].find(x => x.querySelector('.eco-mach'));
-      if (mach) { const sm = document.createElement('section'); sm.className = 'msec'; sm.innerHTML = '<header><h3>Machine à souvenirs</h3></header>'; sm.appendChild(mach); wrap.appendChild(sm); }
+      if (mach) { const sm = document.createElement('section'); sm.className = 'msec'; sm.innerHTML = '<header><h3>Portail des étoiles</h3></header>'; sm.appendChild(mach); wrap.appendChild(sm); }
       box.innerHTML = '';
       box.appendChild(wrap);
     } catch (e) { console.error('carnet cadeaux', e); }

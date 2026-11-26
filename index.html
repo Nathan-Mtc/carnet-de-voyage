@@ -6364,14 +6364,14 @@ function checkLogin() {
   const idx = ((L.streak || 1) - 1) % 7, r = LOGIN_REWARDS[idx];
   const got = { idx, coins: r.coins || 0, item: null, tickets: 0 };
   if (r.ticket && typeof ecoAddTickets === 'function') got.tickets = ecoAddTickets(r.ticket, 'login');
-  if (r.dated && typeof ecoMonthGift === 'function') { got.item = ecoMonthGift(); if (!got.item) got.tickets += 3; } // déjà reçu ce mois-ci : 3 tickets à la place
+  if (r.dated && typeof ecoMonthGift === 'function') { got.item = ecoMonthGift(); if (!got.item) got.tickets += 30; } // déjà reçu ce mois-ci : 3 tickets à la place
   else if (r.item != null) got.item = giftItem(r.item);
   L.claimed = L.last;
   save();
   return got;
 }
 function rewardCell(r, i, cls) {
-  if (r.ticket && typeof ECO_TICKET !== 'undefined') return `<div class="dcell ${cls} d${i + 1}"><span>Jour ${i + 1}</span><span class="dic">${ECO_TICKET}</span><span class="dv">${r.ticket} ticket${r.ticket > 1 ? 's' : ''}</span></div>`;
+  if (r.ticket && typeof ECO_TICKET !== 'undefined') return `<div class="dcell ${cls} d${i + 1}"><span>Jour ${i + 1}</span><span class="dic">${ECO_TICKET}</span><span class="dv">${r.ticket * 10} ⭐</span></div>`;
   const ic = r.item != null ? GIFT(RARC[r.item]) : COIN;
   return `<div class="dcell ${cls} d${i + 1}${i === 6 ? ' big' : ''}"><span>Jour ${i + 1}</span><span class="dic">${ic}</span><span class="dv"${r.item != null && !r.coins ? ` style="color:${RARC[r.item]}"` : ''}>${r.coins ? r.coins : RARITY[r.item]}${r.coins && r.item != null ? ` + <span style="color:${RARC[r.item]}">${RARITY[r.item]}</span>` : ''}</span></div>`;
 }
@@ -6379,7 +6379,7 @@ function loginModal(got) {
   const L = S.login, cur = ((L.streak || 1) - 1) % 7, ev = todayEvent();
   const cells = LOGIN_REWARDS.map((r, i) => rewardCell(r, i, i < cur ? 'past' : i === cur ? 'today' : '')).join('');
   let gotTxt = '';
-  if (got) gotTxt = `<p>Cadeau du jour ${got.idx + 1} : ${[got.coins ? `<b>${got.coins} pièces</b>` : '', got.tickets ? `<b>${got.tickets} ticket${got.tickets > 1 ? 's' : ''}</b>` : '', got.item ? `<b class="rar r${got.item.rarity}">« ${esc(got.item.name)} »</b> (${RARITY[got.item.rarity]})` : ''].filter(Boolean).join(' et ')}.</p>`;
+  if (got) gotTxt = `<p>Cadeau du jour ${got.idx + 1} : ${[got.coins ? `<b>${got.coins} pièces</b>` : '', got.tickets ? `<b>${stonesWord(got.tickets)}</b>` : '', got.item ? `<b class="rar r${got.item.rarity}">« ${esc(got.item.name)} »</b> (${RARITY[got.item.rarity]})` : ''].filter(Boolean).join(' et ')}.</p>`;
   showModal(`<span class="streak">${FLAME} ${L.streak} jour${L.streak > 1 ? 's' : ''} de suite</span><h2>${got ? (L.total > 1 || (S.stats.trips || 0) > 0 ? 'Bon retour !' : 'Cadeau de bienvenue !') : 'Cadeaux quotidiens'}</h2>${gotTxt}<div class="dgrid">${cells}</div><p class="small">Revenez chaque jour : les cadeaux grandissent jusqu’au 7ᵉ jour. Si vous manquez un jour, la série recommence.</p><div class="evcard"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>${ev.season ? 'Événement' : 'Bonus du jour'} : ${esc(ev.name)}</b><br>${esc(ev.short)}</p></div><button class="btn green big" data-closemodal="1" data-jeu="logindone">${got ? 'Merci !' : 'Fermer'}</button>`);
   if (got) setTimeout(() => { if (got.coins) { lastPointer = { x: innerWidth / 2, y: innerHeight / 2, t: Date.now() }; coinFX(got.coins); } }, 350);
 }
@@ -6388,7 +6388,7 @@ function runLogin() { markVisit(); renderJeuBar(); } // plus de fenêtre automat
 function claimGift() {
   const got = checkLogin(); if (!got) return null;
   gainCoins(got.coins); renderTop(); renderJeuBar();
-  toast(`Cadeau du jour : ${[got.coins ? `+${got.coins} pièces` : '', got.tickets ? `+${got.tickets} ticket${got.tickets > 1 ? 's' : ''}` : '', got.item ? `« ${got.item.name} »` : ''].filter(Boolean).join(' et ')} !`);
+  toast(`Cadeau du jour : ${[got.coins ? `+${got.coins} pièces` : '', got.tickets ? `+${stonesWord(got.tickets)}` : '', got.item ? `« ${got.item.name} »` : ''].filter(Boolean).join(' et ')} !`);
   return got;
 }
 // les pièces du cadeau sont ajoutées sans animation immédiate (l'animation part du cadeau)
@@ -9329,7 +9329,7 @@ const bqRound5 = n => Math.max(5, Math.round(n / 5) * 5);
 // ---------------- pierres d'étoile (v22) ----------------
 // S.stones : seconde monnaie, rare (0 par défaut, les anciennes sauvegardes démarrent à 0).
 // On en gagne avec certaines commandes du comptoir (Normal : 1 fois sur 3, Défi : 2 ou 3), les défis et la fin des histoires (5 à 10).
-// PRÉVU POUR PLUS TARD : un tirage façon Dokkan Battle (invocation). Le tirage n'existe pas encore : ne pas dépenser S.stones ailleurs.
+// v214 : elles servent au Portail des étoiles (28_economie.js), 10 par invocation, 90 les dix.
 function stonesN() { if (typeof S.stones !== 'number' || !isFinite(S.stones) || S.stones < 0) S.stones = 0; return S.stones; }
 function gainStones(n) {
   n = Math.max(0, Math.round(n || 0)); stonesN(); if (!n) return 0;
@@ -9352,7 +9352,7 @@ if (typeof renderTop === 'function') renderTop = (orig => function () {
   } catch (e) {}
   return r;
 })(renderTop);
-document.addEventListener('click', ev => { if (!ev.target.closest('#stones')) return; const n = stonesN(); toast(`${stonesWord(n)}. Gardez-les précieusement : elles serviront bientôt à un tirage spécial !`); });
+document.addEventListener('click', ev => { if (!ev.target.closest('#stones')) return; const n = stonesN(); if (typeof ecoGo === 'function' && typeof ecoOn === 'function' && ecoOn()) { ecoGo('machine'); return; } toast(`${stonesWord(n)} : elles servent au Portail des étoiles, au village.`); });
 
 // ---------------- objets : compter, réserver, consommer ----------------
 function bqWorn() { const s = new Set(); for (const o of Object.values(S.outfits || {})) if (o && o.worn) for (const [sl, id] of Object.entries(o.worn)) if (id && o[sl] && o[sl] !== 'none') s.add(id); return s; }
@@ -17326,6 +17326,8 @@ function ecoState() {
   if (!S.eco || typeof S.eco !== 'object') S.eco = {};
   const E = S.eco;
   if (typeof E.tickets !== 'number' || !isFinite(E.tickets) || E.tickets < 0) E.tickets = 0;
+  // v214 : Portail des étoiles. Les anciens tickets sont convertis une fois pour toutes en pierres d'étoile.
+  if (E.tickets > 0 && !E.inPull) { const v = E.tickets * ECO_STAR1; E.tickets = 0; E.convT = (E.convT || 0) + v; S.stones = (typeof S.stones === 'number' && isFinite(S.stones) ? S.stones : 0) + v; }
   if (!E.pity || typeof E.pity !== 'object') E.pity = {};
   for (const b of ['perm', 'ev']) { const p = E.pity[b]; if (!p || typeof p !== 'object') E.pity[b] = { e: 0, l: 0, n: 0 }; else for (const k of ['e', 'l', 'n']) if (typeof p[k] !== 'number') p[k] = 0; }
   if (typeof E.lux !== 'number') E.lux = 0;
@@ -17350,13 +17352,17 @@ const ecoCap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 const ECO_MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const ecoDate = ms => { const d = new Date(ms); return `${d.getDate() === 1 ? '1er' : d.getDate()} ${ECO_MOIS[d.getMonth()]}`; };
 const ecoDaysLeft = ms => Math.max(0, Math.ceil((ms - Date.now()) / 864e5));
+// v214 : « n tickets » = n invocations, versées en pierres d'étoile (10 par invocation). Renvoie le nombre de pierres.
+const ECO_STAR1 = 10, ECO_STAR10 = 90;
 function ecoAddTickets(n, why) {
   const E = ecoState(); n = Math.max(0, Math.round(n)); if (!n) return 0;
-  E.tickets += n; E.st.tickIn += n; if (why) E.st['t_' + why] = (E.st['t_' + why] || 0) + n;
-  return n;
+  E.st.tickIn += n; if (why) E.st['t_' + why] = (E.st['t_' + why] || 0) + n;
+  return gainStones(n * ECO_STAR1);
 }
+const ecoPullCost = n => n >= 10 ? ECO_STAR10 * Math.floor(n / 10) + ECO_STAR1 * (n % 10) : ECO_STAR1 * n;
 const ECO_L = '#4a3528';
-const ECO_TICKET = `<svg class="eco-tk" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7 h18 v3 a2 2 0 0 0 0 4 v3 h-18 v-3 a2 2 0 0 0 0 -4z" fill="#f6c445" stroke="${ECO_L}" stroke-width="1.5" stroke-linejoin="round"/><path d="M15.5 7.6 v8.8" stroke="${ECO_L}" stroke-width="1.2" stroke-dasharray="1.6 1.4"/><path d="M8.6 9.4 l.95 1.9 2.1 .3 -1.5 1.45 .35 2.1 -1.9 -1 -1.9 1 .35 -2.1 -1.5 -1.45 2.1 -.3z" fill="#fff"/></svg>`;
+const ECO_TICKET_OLD = `<svg class="eco-tk" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7 h18 v3 a2 2 0 0 0 0 4 v3 h-18 v-3 a2 2 0 0 0 0 -4z" fill="#f6c445" stroke="${ECO_L}" stroke-width="1.5" stroke-linejoin="round"/><path d="M15.5 7.6 v8.8" stroke="${ECO_L}" stroke-width="1.2" stroke-dasharray="1.6 1.4"/><path d="M8.6 9.4 l.95 1.9 2.1 .3 -1.5 1.45 .35 2.1 -1.9 -1 -1.9 1 .35 -2.1 -1.5 -1.45 2.1 -.3z" fill="#fff"/></svg>`;
+const ECO_TICKET = (typeof STONE_SVG !== 'undefined' ? STONE_SVG : '⭐').replace('class="stone"', 'class="stone eco-tk"');
 const ecoTk = n => `<span class="eco-tkn">${ECO_TICKET}${n.toLocaleString('fr-FR')}</span>`;
 
 // ================= 1. ÉVÉNEMENTS DE SAISON =================
@@ -17541,8 +17547,8 @@ function ecoRegPal(sp, id, name, r, base, accent, belly, pc, extra = {}) {
 }
 for (const E of ECO_EVENTS) { const g = E.egg; ecoRegPal(g.sp, 'ev_' + E.key, g.pal, 4, g.base, g.accent, g.belly, g.pc); }
 for (const sp of Object.keys(typeof SPECIES !== 'undefined' ? SPECIES : {})) {
-  ecoRegPal(sp, 'capsule', 'Capsule', 3, '#cdeaf2', '#7c8fd0', '#fff8fb', '#f6a6c1', { grad: ['#f6d2e6', '#cde4fb', '#d8f2e0'] });
-  ecoRegPal(sp, 'capsule_or', 'Capsule dorée', 4, '#f6dc8a', '#b98328', '#fff8de', '#ffffff', { grad: ['#fff1b8', '#f6cf6a', '#f2b45a'], x: { line: '#7e5222' }, fx: 'glint' });
+  ecoRegPal(sp, 'capsule', 'Étoilée', 3, '#cdeaf2', '#7c8fd0', '#fff8fb', '#f6a6c1', { grad: ['#f6d2e6', '#cde4fb', '#d8f2e0'] });
+  ecoRegPal(sp, 'capsule_or', 'Étoilée dorée', 4, '#f6dc8a', '#b98328', '#fff8de', '#ffffff', { grad: ['#fff1b8', '#f6cf6a', '#f2b45a'], x: { line: '#7e5222' }, fx: 'glint' });
 }
 const ecoPalGenes = (sp, palId, pattern, special, eye) => { const p = (SPECIES[sp] || SPECIES.panda).palettes.find(x => x.id === palId) || SPECIES[sp].palettes[0]; return { pal: p.id, base: p.base, accent: p.accent, belly: p.belly, pattern: pattern || 'uni', patCol: p.pc || '#ffffff', eye: eye || 'def', special: special || 'none' }; };
 if (typeof randomGenes === 'function') randomGenes = (orig => function (sp) {
@@ -17562,7 +17568,7 @@ function ecoEgg(sp, genes, rarity, from, hatchMs) {
   return e;
 }
 const ecoEvEggGenes = (E, shiny) => ecoPalGenes(E.egg.sp, 'ev_' + E.key, E.egg.pattern, shiny ? 'brillant' : 'none', shiny ? 'or' : 'def');
-if (typeof COMP_FROM !== 'undefined') Object.assign(COMP_FROM, { evenement: 'Œuf d’événement', machine: 'Sorti de la machine à souvenirs', cadeau: 'Cadeau', tournoi: 'Gagné au tournoi' });
+if (typeof COMP_FROM !== 'undefined') Object.assign(COMP_FROM, { evenement: 'Œuf d’événement', machine: 'Apparu au Portail des étoiles', cadeau: 'Cadeau', tournoi: 'Gagné au tournoi' });
 
 // ---------------- boutique d'événement ----------------
 const ECO_PRICE = { 2: 45, 3: 100 };
@@ -17570,7 +17576,7 @@ function ecoShop(occ) {
   const E = occ.E, out = [];
   [0, 1, 2, 3].forEach(i => { const d = E.items[i]; out.push({ id: 'i' + i, kind: 'item', i, price: ECO_PRICE[d[3]] || 60, lim: 1, name: `${d[0]} ${occ.y}`, def: d }); });
   out.push({ id: 'egg', kind: 'egg', price: 200, lim: 1, name: `Œuf ${E.egg.pal.toLowerCase().startsWith('sucre') ? 'sucre d’orge' : E.egg.pal.toLowerCase()} ${occ.y}` });
-  out.push({ id: 'tk', kind: 'ticket', price: 30, lim: 3, name: 'Ticket de la machine à souvenirs' });
+  out.push({ id: 'tk', kind: 'ticket', price: 30, lim: 3, name: '10 pierres d’étoile pour le Portail' });
   return out;
 }
 function ecoBuyEv(id) {
@@ -17582,7 +17588,7 @@ function ecoBuyEv(id) {
   let msg;
   if (a.kind === 'item') { const it = ecoEvItem(occ, a.i, `Boutique · ${occ.label}`); S.inv.push(it); S.dex[it.name] = true; msg = `« ${it.name} » rejoint le sac !`; }
   else if (a.kind === 'egg') { ecoEgg(occ.E.egg.sp, ecoEvEggGenes(occ.E, false), 3, { how: 'evenement', place: occ.label }); msg = `${a.name} : il éclora au refuge dans 10 minutes !`; }
-  else { ecoAddTickets(1, 'event'); msg = '+1 ticket pour la machine à souvenirs !'; }
+  else { ecoAddTickets(1, 'event'); msg = '+10 pierres d’étoile pour le Portail !'; }
   save(); renderTop(); if (tab === 'menu') renderPanel(); toast(msg);
   return true;
 }
@@ -17632,8 +17638,8 @@ const ECO_WELCOME = ['Foulard du voyageur débutant', 'v', 'cou', 2, 'foulard', 
 function ecoPending() {
   if (!ecoOn()) return [];
   const E = ecoState(), out = [];
-  if (!E.gifts.welcome) out.push({ kind: 'eco', id: 'welcome', t: 'Cadeau de bienvenue', s: '3 tickets + un foulard daté, rien que pour vous', ic: GIFT('#f6c445') });
-  for (const b of ecoBirthdays()) out.push({ kind: 'eco', id: 'bday:' + b.key, t: `Joyeux anniversaire, ${CHARS[b.k].name} !`, s: `${b.age} an${b.age > 1 ? 's' : ''} aujourd’hui · 2 tickets + un chapeau de fête daté`, ic: `<img src="${portraitURI(b.k, 'rire')}" alt="">` });
+  if (!E.gifts.welcome) out.push({ kind: 'eco', id: 'welcome', t: 'Cadeau de bienvenue', s: '30 pierres d’étoile + un foulard daté, rien que pour vous', ic: GIFT('#f6c445') });
+  for (const b of ecoBirthdays()) out.push({ kind: 'eco', id: 'bday:' + b.key, t: `Joyeux anniversaire, ${CHARS[b.k].name} !`, s: `${b.age} an${b.age > 1 ? 's' : ''} aujourd’hui · 20 pierres d’étoile + un chapeau de fête daté`, ic: `<img src="${portraitURI(b.k, 'rire')}" alt="">` });
   for (const p of E.pend) {
     if (p.kind === 'conv') { const o = ecoOcc(p.ev); out.push({ kind: 'eco', id: p.id, t: `Fin de l’événement ${p.label}`, s: `${ecoPl(p.n, o ? o.E.res[0] : 'ressource', o ? o.E.res[1] : 'ressources')} → ${p.coins} pièces`, ic: o ? ecoIconSVG(o.E) : COIN }); }
     if (p.kind === 'tour') out.push({ kind: 'eco', id: p.id, t: `Tournoi « ${p.theme} » : ${p.rank}${p.rank === 1 ? 'er' : 'e'} sur 16`, s: ecoTourPrizeText(p.rank), ic: TROPHY(p.rank === 1 ? '#f2c14e' : p.rank === 2 ? '#c9d2d8' : p.rank === 3 ? '#d9905a' : '#e7dcc4') });
@@ -17648,7 +17654,7 @@ function ecoClaim(id, quiet) {
     const d = new Date(), it = ecoDated(ECO_WELCOME, `${ECO_MOIS[d.getMonth()]} ${d.getFullYear()}`, 'Cadeau de bienvenue', 0, { edition: `Cadeau de bienvenue · ${ECO_MOIS[d.getMonth()]} ${d.getFullYear()}` });
     it.dated.end = Date.now(); // unique : on ne le reçoit qu'une fois
     S.inv.push(it); S.dex[it.name] = true;
-    msg = `Bienvenue ! +3 tickets et « ${it.name} ».`;
+    msg = `Bienvenue ! +30 pierres d’étoile et « ${it.name} ».`;
   } else if (id.startsWith('bday:')) {
     const key = id.slice(5), b = ecoBirthdays().find(x => x.key === key); if (!b) return '';
     E.gifts.bday[key] = Date.now(); ecoAddTickets(2, 'gift');
@@ -17656,7 +17662,7 @@ function ecoClaim(id, quiet) {
     const it = ecoDated([`Chapeau de fête ${/^[aeiouyéèêh]/i.test(nm) ? 'd’' : 'de '}${nm} ${y}`, 'v', 'tete', 3, 'chapeau', '#f6a6c1'], `anniversaire ${y}`, `Anniversaire de ${nm}`, Date.now() + 864e5, { edition: `Anniversaire · ${y}` });
     S.inv.push(it); S.dex[it.name] = true;
     try { addXP(b.k, 60); } catch (e) {}
-    msg = `Joyeux anniversaire ${nm} ! +2 tickets et « ${it.name} ».`;
+    msg = `Joyeux anniversaire ${nm} ! +20 pierres d’étoile et « ${it.name} ».`;
   } else {
     const i = E.pend.findIndex(p => p.id === id); if (i < 0) return '';
     const p = E.pend.splice(i, 1)[0];
@@ -17673,16 +17679,16 @@ const ECO_RATES = [52, 28, 14, 5, 1];
 const ECO_PITY_E = 10, ECO_PITY_L = 50, ECO_LUX = 300, ECO_EXCH = [20, 6], ECO_KEEP1 = 2, ECO_EXDAY = 10; // au plus 10 tickets d'échange par jour
 // lots de la bannière permanente (exclusifs à la machine)
 const ECO_CAPS = [
-  [['Bob capsule à pois', 'v', 'tete', 0, 'chapeau', '#f6a6c1'], ['Chaussettes capsule', 'v', 'pieds', 0, 'chaussettes', '#a8d8f0'], ['Bandana capsule', 'v', 'cou', 0, 'foulard', '#f6d88a'], ['Figurine capsule', 'd', 'statue', 0, null, '#ec9c6f'], ['Mini plante capsule', 'd', 'plante', 0, null, '#9fd3ae'], ['Autocollants du monde', 'd', 'herbier', 0, null, '#f4b7c4']],
-  [['Casquette capsule', 'v', 'tete', 1, 'casquette', '#9fb6e8'], ['Moufles bonbon', 'v', 'mains', 1, 'moufles', '#f4b7c4'], ['Sweat capsule pastel', 'v', 'haut', 1, 'sweat', '#c9b8ea'], ['Bocal de capsules', 'd', 'bocal', 1, null, '#f6e08a'], ['Lanterne capsule', 'd', 'lanterne', 1, null, '#a9dcc8']],
-  [['Cape capsule étoilée', 'v', 'dos', 2, 'cape', '#7377be'], ['Bottes capsule', 'v', 'pieds', 2, 'bottes', '#f6a68a'], ['Mappemonde capsule', 'd', 'mappemonde', 2, null, '#9fd1d8'], { recipe: 'cap_lampe' }, { recipe: 'cap_pull' }, { recipe: 'cap_gateau' }, { egg: 2 }],
-  [['Couronne de capsules', 'v', 'tete', 3, 'couronne', '#c9b8ea'], ['Jupe capsule étoilée', 'v', 'bas', 3, 'jupe', '#cdb8ee'], ['Machine à souvenirs miniature', 'd', 'statue', 3, null, '#f08aa6'], { egg: 3 }],
-  [['Cape de la machine à souvenirs', 'v', 'dos', 4, 'cape', '#f2c14e'], ['Couronne dorée des souvenirs', 'v', 'tete', 4, 'couronne', '#f2c14e'], { egg: 4 }],
+  [['Bob à petites étoiles', 'v', 'tete', 0, 'chapeau', '#f6a6c1'], ['Chaussettes astrales', 'v', 'pieds', 0, 'chaussettes', '#a8d8f0'], ['Bandana constellation', 'v', 'cou', 0, 'foulard', '#f6d88a'], ['Figurine d’étoile', 'd', 'statue', 0, null, '#ec9c6f'], ['Petite plante de lune', 'd', 'plante', 0, null, '#9fd3ae'], ['Autocollants d’étoiles', 'd', 'herbier', 0, null, '#f4b7c4']],
+  [['Casquette lune', 'v', 'tete', 1, 'casquette', '#9fb6e8'], ['Moufles bonbon', 'v', 'mains', 1, 'moufles', '#f4b7c4'], ['Sweat nébuleuse', 'v', 'haut', 1, 'sweat', '#c9b8ea'], ['Bocal de poussière d’étoile', 'd', 'bocal', 1, null, '#f6e08a'], ['Lanterne de lune', 'd', 'lanterne', 1, null, '#a9dcc8']],
+  [['Cape nuit étoilée', 'v', 'dos', 2, 'cape', '#7377be'], ['Bottes de comète', 'v', 'pieds', 2, 'bottes', '#f6a68a'], ['Carte du ciel en relief', 'd', 'mappemonde', 2, null, '#9fd1d8'], { recipe: 'cap_lampe' }, { recipe: 'cap_pull' }, { recipe: 'cap_gateau' }, { egg: 2 }],
+  [['Couronne de comètes', 'v', 'tete', 3, 'couronne', '#c9b8ea'], ['Jupe voie lactée', 'v', 'bas', 3, 'jupe', '#cdb8ee'], ['Portail des étoiles miniature', 'd', 'statue', 3, null, '#9a8ee0'], { egg: 3 }],
+  [['Cape du Portail', 'v', 'dos', 4, 'cape', '#f2c14e'], ['Couronne d’étoile filante', 'v', 'tete', 4, 'couronne', '#f2c14e'], { egg: 4 }],
 ];
 const ECO_RECIPES = [
-  { id: 'cap_lampe', kind: 'Décoration', out: ['Lampe à capsules', 'd', 'lampe', 3, null, '#f6c2cf'], ing: [['cristal', 1], ['papier', 2]], coins: 10 },
-  { id: 'cap_pull', kind: 'Vêtement', out: ['Pull capsule arc-en-ciel', 'v', 'haut', 3, 'pull', '#c9b8ea'], ing: [['laine', 3], ['fleur', 1]], coins: 10 },
-  { id: 'cap_gateau', kind: 'Cuisine', out: ['Gâteau capsule', 'n', 'sucre', 3, null, '#f6a6c1'], ing: [['sucre', 2], ['fruit', 1]], coins: 0 },
+  { id: 'cap_lampe', kind: 'Décoration', out: ['Lampe constellation', 'd', 'lampe', 3, null, '#f6c2cf'], ing: [['cristal', 1], ['papier', 2]], coins: 10 },
+  { id: 'cap_pull', kind: 'Vêtement', out: ['Pull aurore boréale', 'v', 'haut', 3, 'pull', '#c9b8ea'], ing: [['laine', 3], ['fleur', 1]], coins: 10 },
+  { id: 'cap_gateau', kind: 'Cuisine', out: ['Gâteau des étoiles', 'n', 'sucre', 3, null, '#f6a6c1'], ing: [['sucre', 2], ['fruit', 1]], coins: 0 },
 ].filter(r => r.ing.every(([k]) => ING[k]));
 const ECO_RIDS = new Set(ECO_RECIPES.map(r => r.id));
 const ecoRecOwned = id => ecoState().recipes.includes(id);
@@ -17698,6 +17704,8 @@ function ecoRoll(bn) {
   if (r === 4) P.l = 0;
   return r;
 }
+// espèces déjà dans la famille (le Portail ne fait jamais découvrir une nouvelle espèce : ça, c'est l'exploration)
+function ecoOwnedSp() { const o = new Set(); try { for (const k in CHARS) { const c = CHARS[k]; if (c && c.sp && SPECIES[c.sp]) o.add(c.sp); } } catch (e) {} const a = [...o]; return a.length ? a : ['panda', 'capy', 'axo'].filter(x => SPECIES[x]); }
 function ecoPrizePool(bn, r, occ) {
   let pool = ECO_CAPS[r].slice();
   if (bn === 'ev' && occ) {
@@ -17717,7 +17725,7 @@ function ecoGive(bn, r, opt = {}) {
   let pool = ecoPrizePool(bn, r, occ).filter(p => !(p && p.recipe && (ecoRecOwned(p.recipe) || !ECO_RIDS.has(p.recipe))));
   if (!pool.length) pool = ECO_CAPS[r].filter(p => Array.isArray(p));
   const p = pick(pool);
-  const from = bn === 'ev' && occ ? `Machine · ${occ.label}` : 'Machine à souvenirs';
+  const from = bn === 'ev' && occ ? `Portail · ${occ.label}` : 'Portail des étoiles';
   const out = { r };
   if (Array.isArray(p)) {
     const it = makeItem(p, 0, from, [], { fixed: p[3] }); it.cap = 1;
@@ -17727,10 +17735,10 @@ function ecoGive(bn, r, opt = {}) {
     const E = ecoState(); E.recipes.push(p.recipe); ecoSyncRecipes();
     const rc = ECO_RECIPES.find(x => x.id === p.recipe); out.rec = rc; out.it = { name: `Recette : ${rc.out[0]}`, cat: rc.out[1], sub: rc.out[2], rarity: r, look: rc.out[4], color: rc.out[5] };
   } else if (p.egg != null) {
-    const sp = pick(SP_IDS), genes = r >= 3 ? ecoPalGenes(sp, r >= 4 ? 'capsule_or' : 'capsule', r >= 4 ? 'etoiles' : 'coeurs', r >= 4 ? 'brillant' : 'none', r >= 4 ? 'or' : 'def') : randomGenes(sp, 1.5);
-    const e = ecoEgg(sp, genes, r >= 3 ? r : Math.max(2, typeof geneRarityOf === 'function' ? geneRarityOf(genes, sp) : 2), { how: 'machine', place: 'Machine à souvenirs' });
+    const sp = pick(ecoOwnedSp()), genes = r >= 3 ? ecoPalGenes(sp, r >= 4 ? 'capsule_or' : 'capsule', r >= 4 ? 'etoiles' : 'coeurs', r >= 4 ? 'brillant' : 'none', r >= 4 ? 'or' : 'def') : randomGenes(sp, 1.5);
+    const e = ecoEgg(sp, genes, r >= 3 ? r : Math.max(2, typeof geneRarityOf === 'function' ? geneRarityOf(genes, sp) : 2), { how: 'machine', place: 'Portail des étoiles' });
     if (e && opt.paid) e.paid = opt.paid;
-    out.egg = { sp, genes }; out.it = { name: r >= 3 ? `Œuf ${r >= 4 ? 'capsule dorée' : 'capsule'} de ${spName(sp).toLowerCase()}` : `Œuf de ${spName(sp).toLowerCase()}`, rarity: r };
+    out.egg = { sp, genes }; const nm = spName(sp).toLowerCase(), de = /^[aeiouyéèêh]/.test(nm) ? 'd’' : 'de '; out.it = { name: r >= 3 ? `Œuf ${r >= 4 ? 'étoilé doré' : 'étoilé'} ${de}${nm}` : `Œuf ${de}${nm}`, rarity: r };
   } else if (p.res && occ) {
     const v = ecoEvState(occ); v.res += p.res; v.got += p.res; out.res = p.res; out.it = { name: `${p.res} ${occ.E.res[1]}`, rarity: r };
   } else if (p.evItem != null && occ) {
@@ -17750,7 +17758,7 @@ function ecoPull(bn, n, pay) {
   const E = ecoState();
   if (bn === 'ev' && !ecoActive()) bn = 'perm';
   if (pay === 'lux') { if (E.lux === dayNum() || S.coins < ECO_LUX) return null; S.coins -= ECO_LUX; E.lux = dayNum(); E.st.lux++; n = 1; }
-  else { if (E.tickets < n) return null; E.tickets -= n; }
+  else { const c = ecoPullCost(n); if (stonesN() < c) return null; S.stones -= c; renderTop(); }
   const res = [];
   for (let i = 0; i < n; i++) { const r = ecoRoll(bn); res.push(ecoGive(bn, r, pay === 'lux' ? { paid: ECO_LUX } : {})); }
   E.st.pulls += n;
@@ -17890,12 +17898,12 @@ function ecoTourFinish(forfeit) {
   try { GAME.emit('contest:done', { score: Math.round(T.sum / ECO_ROUNDS) / 20, rank, who: T.who, theme: T.theme }); } catch (e) {}
 }
 const ecoTourTickets = rank => rank === 1 ? 5 : rank === 2 ? 4 : rank === 3 ? 3 : rank <= 8 ? 2 : 1;
-function ecoTourPrizeText(rank) { return `${ecoTourTickets(rank)} ticket${ecoTourTickets(rank) > 1 ? 's' : ''}${rank <= 3 ? ` + trophée ${rank === 1 ? 'd’or' : rank === 2 ? 'd’argent' : 'de bronze'} daté` : ''}${rank <= 4 ? ' + vêtement unique' : ''}`; }
+function ecoTourPrizeText(rank) { return `${ecoTourTickets(rank) * ECO_STAR1} pierres d’étoile${rank <= 3 ? ` + trophée ${rank === 1 ? 'd’or' : rank === 2 ? 'd’argent' : 'de bronze'} daté` : ''}${rank <= 4 ? ' + vêtement unique' : ''}`; }
 function ecoTourGive(p) {
   const E = ecoState(), rank = p.rank, lab = `Tournoi · semaine ${p.wn} · ${p.y}`;
   const end = Date.now();
   ecoAddTickets(ecoTourTickets(rank), 'tour');
-  const got = [`${ecoTourTickets(rank)} ticket${ecoTourTickets(rank) > 1 ? 's' : ''}`];
+  const got = [`${ecoTourTickets(rank) * ECO_STAR1} pierres d’étoile`];
   if (rank <= 3) {
     const med = [['Trophée d’or', '#f2c14e', 4, 'or'], ['Trophée d’argent', '#c9d2d8', 3, 'argent'], ['Trophée de bronze', '#d9905a', 3, 'bronze']][rank - 1];
     const it = ecoDated([`${med[0]} · ${p.theme} ${p.y}`, 'd', 'statue', med[2], null, med[1]], `semaine ${p.wn} · ${p.y}`, 'Tournoi de style', end, { edition: lab });
@@ -17931,7 +17939,7 @@ if (typeof showHaul === 'function') showHaul = (orig => function (h) {
 if (typeof GAME !== 'undefined' && GAME.on) GAME.on('order:done', d => {
   try {
     if (!ecoOn()) return; const o = d && d.order; if (!o) return;
-    if ((o.req || []).length >= 3 || o.deadline || (o.coins || 0) >= 220 || (o.req || []).some(r => r.wonder)) { ecoAddTickets(1, 'order'); save(); setTimeout(() => toast('Commande difficile réussie : +1 ticket pour la machine à souvenirs !'), 3800); }
+    if ((o.req || []).length >= 3 || o.deadline || (o.coins || 0) >= 220 || (o.req || []).some(r => r.wonder)) { ecoAddTickets(1, 'order'); save(); setTimeout(() => toast('Commande difficile réussie : +10 pierres d’étoile !'), 3800); }
   } catch (e) {}
 });
 // paliers de collection : un ticket chacun
@@ -17975,7 +17983,7 @@ if (typeof mkRowSell === 'function') mkRowSell = (orig => function (x) { const s
 // fiches d'objet (23_objets.js) : un objet daté raconte d'où il vient
 if (typeof obStory === 'function') obStory = (orig => function (it) {
   if (it && it.dated) return `${esc(it.edition || 'Édition limitée')}. ${ecoGone(it) ? 'On ne peut plus l’obtenir : sa valeur grimpe.' : `Disponible jusqu’au ${ecoDate(it.dated.end)}, puis introuvable.`}`;
-  if (it && it.cap) return 'Sorti de la machine à souvenirs : on ne le trouve nulle part ailleurs.';
+  if (it && it.cap) return 'Apparu au Portail des étoiles : on ne le trouve nulle part ailleurs.';
   return orig.apply(this, arguments);
 })(obStory);
 if (typeof obRareHTML === 'function') obRareHTML = (orig => function (it) {
@@ -17995,13 +18003,13 @@ if (typeof menuRewardRow === 'function') menuRewardRow = (orig => function (r) {
     return `<div class="mrow"><span class="mri gift">${GIFT()}</span><div><b>Cadeau du jour</b><span>Jour ${idx + 1} de la série · ${esc(ecoLoginWhat(rw))}</span></div><button class="btn gold sm" data-menu="gift">Récupérer</button></div>`;
   }
   const h = orig.apply(this, arguments);
-  return r && r.kind === 'tier' && r.p && r.p.i >= 1 && ecoOn() ? h.replace(/(<\/span><\/div><button class="btn gold sm" data-menu="tier")/, ' + 1 ticket$1') : h;
+  return r && r.kind === 'tier' && r.p && r.p.i >= 1 && ecoOn() ? h.replace(/(<\/span><\/div><button class="btn gold sm" data-menu="tier")/, ' + 10 ⭐$1') : h;
 })(menuRewardRow);
 function ecoLoginWhat(rw) {
   if (!rw) return '';
   const p = [];
   if (rw.coins) p.push(`${rw.coins} pièces`);
-  if (rw.ticket) p.push(`${rw.ticket} ticket${rw.ticket > 1 ? 's' : ''}`);
+  if (rw.ticket) p.push(`${rw.ticket * ECO_STAR1} pierres d’étoile`);
   if (rw.dated) p.push(`l’objet daté de ${ECO_MOIS[new Date().getMonth()]}`);
   else if (rw.item != null) p.push(`un objet ${RARITY[rw.item].toLowerCase()}`);
   return p.join(' + ');
@@ -18036,7 +18044,7 @@ function ecoMenuHTML() {
   if (!T) tr = `<div><b>Tournoi de style : ${esc(th ? th.name : '')}</b><span>Inscriptions ouvertes jusqu’à dimanche</span></div><button class="btn gold sm" data-eco-go="tournoi">S’inscrire</button>`;
   else if (T.final) tr = `<div><b>Tournoi « ${esc(T.tname)} » terminé</b><span>${T.rank}${T.rank === 1 ? 'er' : 'e'} sur 16 · nouveau thème lundi</span></div><button class="btn cream sm" data-eco-go="tournoi">Voir</button>`;
   else tr = `<div><b>Tournoi « ${esc(T.tname)} » · manche ${Math.min(ECO_ROUNDS, T.rounds.length + 1)}/${ECO_ROUNDS}</b><span>${ecoRoundOpen() ? 'Une manche vous attend !' : 'Prochaine manche demain'} · ${T.pts} pts</span></div><button class="btn ${ecoRoundOpen() ? 'gold' : 'cream'} sm" data-eco-go="tournoi">${ecoRoundOpen() ? 'Jouer' : 'Voir'}</button>`;
-  h += `<section class="msec eco-ms"><header><h3>Rendez-vous</h3></header><div class="mrow"><span class="mri">${TROPHY()}</span>${tr}</div><div class="mrow"><span class="mri eco-mach">${ecoMachIcon()}</span><div><b>Machine à souvenirs</b><span>${ecoPl(E.tickets, 'ticket', 'tickets')}${occ ? ` · bannière ${esc(occ.label)}` : ''}</span></div><button class="btn ${E.tickets ? 'gold' : 'cream'} sm" data-eco-go="machine">${E.tickets ? 'Tourner' : 'Voir'}</button></div></section>`;
+  h += `<section class="msec eco-ms"><header><h3>Rendez-vous</h3></header><div class="mrow"><span class="mri">${TROPHY()}</span>${tr}</div><div class="mrow"><span class="mri eco-mach">${ecoMachIcon()}</span><div><b>Portail des étoiles</b><span>${stonesWord(stonesN())}${occ ? ` · bannière ${esc(occ.label)}` : ''}</span></div><button class="btn ${stonesN() >= ECO_STAR1 ? 'gold' : 'cream'} sm" data-eco-go="machine">${stonesN() >= ECO_STAR1 ? 'Invoquer' : 'Voir'}</button></div></section>`;
   return h;
 }
 if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
@@ -18069,7 +18077,7 @@ function ecoRenderEvent(box) {
     else { ic = ECO_TICKET; rar = 1; sub = `Pour la machine à souvenirs · ${n}/${a.lim}`; }
     h += `<article class="eco-art r${rar}" style="--rc:${RARC[rar]}"><span class="eco-aic">${ic}</span><b>${esc(a.name)}</b><i style="color:${RARC[rar]}">${RARITY[rar]}</i><span class="eco-asub">${sub}</span><button class="btn ${done ? 'cream' : can ? 'gold' : 'cream'} sm" data-eco-buy="${a.id}" ${done ? 'disabled' : ''}>${done ? 'Acheté' : `${ecoIconSVG(E, 'sm')} ${a.price}`}</button></article>`;
   }
-  h += `</div><div class="eco-mbanner" style="--ec:${E.color}"><span>${ecoMachIcon()}</span><div><b>Bannière ${esc(occ.label)}</b><span>À la machine à souvenirs : objets exclusifs et l’œuf scintillant.</span></div><button class="btn gold sm" data-eco-go="machine-ev">Y aller</button></div>`;
+  h += `</div><div class="eco-mbanner" style="--ec:${E.color}"><span>${ecoMachIcon()}</span><div><b>Bannière ${esc(occ.label)}</b><span>Au Portail des étoiles : objets exclusifs et l’œuf scintillant.</span></div><button class="btn gold sm" data-eco-go="machine-ev">Y aller</button></div>`;
   h += `<p class="small eco-note">À la fin de l’événement, chaque ${esc(E.res[0])} restant${/e$/.test(E.res[0]) && !/[éè]e$/.test(E.res[0]) ? 'e' : ''} devient ${ECO_CONV} pièces.</p>`;
   box.innerHTML = h;
 }
@@ -18078,62 +18086,61 @@ function ecoOpenEvent() { if (!ecoOn() || !ecoActive()) return; ecoView = 'event
 // ---------- la machine à souvenirs (village › Capsules) ----------
 let ecoBanner = 'perm';
 function ecoMachIcon() { return `<svg viewBox="0 0 30 30" aria-hidden="true">${NAV_ICONS.machine}</svg>`; }
-function ecoMachineSVG(run, cols) {
-  const caps = [[78, 70], [104, 58], [132, 66], [92, 92], [120, 90], [146, 96], [70, 104], [100, 118], [130, 120], [84, 136], [112, 142], [142, 140], [158, 116], [62, 128]];
-  const C = cols || ['#f6a6c1', '#9fd1d8', '#f6e08a', '#a6d88f', '#cdb8ee', '#f6a68a', '#9a6fd6', '#4f88cf', '#d99a25', '#f08aa6', '#5fbf7f', '#b8d8f0', '#f6c445', '#e9a0a0'];
-  const cap = (x, y, c, i) => `<g transform="translate(${x} ${y}) rotate(${(i * 47) % 360})"><circle r="12" fill="#fffaf0" stroke="${ECO_L}" stroke-width="2.2"/><path d="M-12 0 a12 12 0 0 1 24 0z" fill="${c}" stroke="${ECO_L}" stroke-width="2.2"/><ellipse cx="-4.5" cy="-5.5" rx="3.6" ry="2" fill="#fff" opacity=".7"/></g>`;
-  return `<svg class="cm-svg ${run ? 'run' : ''}" viewBox="0 0 220 290" aria-hidden="true"><defs><radialGradient id="cmGl" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".55" stop-color="#e9f8fb" stop-opacity=".25"/><stop offset="1" stop-color="#bfe6ee" stop-opacity=".55"/></radialGradient><clipPath id="cmClip"><circle cx="110" cy="100" r="74"/></clipPath></defs>
-<ellipse cx="110" cy="281" rx="86" ry="8" fill="#000" opacity=".12"/>
-<circle cx="110" cy="100" r="76" fill="#dff3f6" stroke="${ECO_L}" stroke-width="4.5"/>
-<g clip-path="url(#cmClip)"><g class="cm-caps">${caps.map(([x, y], i) => cap(x, y, C[i % C.length], i)).join('')}</g></g>
-<circle cx="110" cy="100" r="74" fill="url(#cmGl)"/><path d="M62 70 Q74 44 104 36" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round" opacity=".8"/>
-<rect x="88" y="16" width="44" height="12" rx="6" fill="#f6c445" stroke="${ECO_L}" stroke-width="3"/>
-<path d="M46 166 H174 L184 270 H36Z" fill="#f08aa6" stroke="${ECO_L}" stroke-width="4.5" stroke-linejoin="round"/>
-<path d="M58 176 H162 L168 256 H52Z" fill="#f6a6c1" opacity=".55"/>
-<rect x="40" y="160" width="140" height="18" rx="7" fill="#f6c445" stroke="${ECO_L}" stroke-width="4"/>
-<rect x="68" y="186" width="84" height="22" rx="7" fill="#fff8ea" stroke="${ECO_L}" stroke-width="3"/><text x="110" y="201.5" text-anchor="middle" font-family="Baloo 2, sans-serif" font-weight="800" font-size="12.5" fill="${ECO_L}" letter-spacing="1">SOUVENIRS</text>
-<g class="cm-crank"><circle cx="80" cy="236" r="19" fill="#fff8ea" stroke="${ECO_L}" stroke-width="4"/><rect x="75.5" y="214" width="9" height="44" rx="4.5" fill="#f6c445" stroke="${ECO_L}" stroke-width="3"/><circle cx="80" cy="236" r="4" fill="${ECO_L}"/></g>
-<rect x="122" y="220" width="44" height="36" rx="9" fill="#5b4636" stroke="${ECO_L}" stroke-width="3.5"/><path d="M126 236 Q144 228 162 236 V250 H126Z" fill="#7a5f50"/>
-<rect x="150" y="190" width="7" height="16" rx="3.5" fill="#5b4636"/>
+function ecoMachineSVG(run) {
+  // v214 : le Portail des étoiles (arche de pierre moussue, tourbillon étoilé)
+  const st = [[84, 92, 3.2], [128, 80, 2.4], [140, 128, 3.4], [96, 150, 2.2], [118, 176, 2.8], [76, 130, 2], [150, 164, 2.2], [108, 112, 2.6]];
+  const star = (x, y, r, i) => `<path class="pt-st" style="animation-delay:${(i * 0.37).toFixed(2)}s" d="M${x} ${y - r * 2.2} L${x + r * .6} ${y - r * .6} L${x + r * 2.2} ${y} L${x + r * .6} ${y + r * .6} L${x} ${y + r * 2.2} L${x - r * .6} ${y + r * .6} L${x - r * 2.2} ${y} L${x - r * .6} ${y - r * .6}Z" fill="#fff"/>`;
+  return `<svg class="cm-svg pt-svg ${run ? 'run' : ''}" viewBox="0 0 220 290" aria-hidden="true"><defs><radialGradient id="ptV" cx="50%" cy="48%" r="60%"><stop offset="0" stop-color="#fff6d8"/><stop offset=".25" stop-color="#c9b8ff"/><stop offset=".6" stop-color="#6f6cd6"/><stop offset="1" stop-color="#2f2f7a"/></radialGradient><clipPath id="ptClip"><path d="M58 262 V128 A52 56 0 0 1 162 128 V262Z"/></clipPath></defs>
+<ellipse cx="110" cy="279" rx="92" ry="9" fill="#000" opacity=".12"/>
+<path d="M30 268 V126 A80 84 0 0 1 190 126 V268Z" fill="#cbbfae" stroke="${ECO_L}" stroke-width="4.5" stroke-linejoin="round"/>
+<path d="M30 160 h28 M162 160 h28 M30 204 h28 M162 204 h28 M30 240 h28 M162 240 h28 M44 126 v34 M176 126 v34 M44 204 v36 M176 204 v36 M58 74 l18 22 M162 74 l-18 22" stroke="#a8977f" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+<path d="M58 262 V128 A52 56 0 0 1 162 128 V262Z" fill="url(#ptV)" stroke="${ECO_L}" stroke-width="4"/>
+<g clip-path="url(#ptClip)"><g class="pt-swirl"><path d="M110 150 m-70 0 a70 70 0 0 1 70 -70" stroke="#fff" stroke-opacity=".45" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M110 150 m70 0 a70 70 0 0 1 -70 70" stroke="#fff" stroke-opacity=".45" stroke-width="7" fill="none" stroke-linecap="round"/><path d="M110 150 m-40 0 a40 40 0 0 1 40 -40" stroke="#ffe9a8" stroke-opacity=".7" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M110 150 m40 0 a40 40 0 0 1 -40 40" stroke="#ffe9a8" stroke-opacity=".7" stroke-width="5" fill="none" stroke-linecap="round"/></g>${st.map(([x, y, r], i) => star(x, y, r, i)).join('')}<circle class="pt-core" cx="110" cy="150" r="16" fill="#fffbe8" opacity=".9"/></g>
+<path d="M98 34 h24 l6 22 h-36z" fill="#b9ab96" stroke="${ECO_L}" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M110 37 l3 6 6.6 .8 -4.8 4.4 1.3 6.5 -6.1 -3.3 -6.1 3.3 1.3 -6.5 -4.8 -4.4 6.6 -.8z" fill="#9fdcf6" stroke="#3d4f99" stroke-width="1.3" stroke-linejoin="round"/>
+<path d="M30 140 q8 -10 18 -4 q4 -12 14 -6" fill="none" stroke="#7fae4f" stroke-width="5" stroke-linecap="round"/><path d="M190 226 q-8 -8 -16 -2" fill="none" stroke="#7fae4f" stroke-width="5" stroke-linecap="round"/>
+<circle cx="40" cy="138" r="3.4" fill="#f6a6c1"/><circle cx="184" cy="222" r="3" fill="#f6e08a"/>
+<path d="M22 268 H198 L204 282 H16Z" fill="#b9ab96" stroke="${ECO_L}" stroke-width="4" stroke-linejoin="round"/>
 </svg>`;
 }
-function ecoCapsuleSVG(c, uid) {
-  return `<svg class="cp-svg" viewBox="0 0 100 100" aria-hidden="true"><g class="cp-top"><path d="M10 50 a40 40 0 0 1 80 0z" fill="${c}" stroke="${ECO_L}" stroke-width="5"/><ellipse cx="34" cy="28" rx="11" ry="6" fill="#fff" opacity=".6"/></g><g class="cp-bot"><path d="M10 50 a40 40 0 0 0 80 0z" fill="#fffaf0" stroke="${ECO_L}" stroke-width="5"/></g><rect class="cp-band" x="7" y="46" width="86" height="8" rx="4" fill="#fff" stroke="${ECO_L}" stroke-width="4"/></svg>`;
+function ecoCapsuleSVG(c) {
+  // v214 : une étoile-bulle qui s'ouvre (les deux moitiés s'envolent)
+  return `<svg class="cp-svg" viewBox="0 0 100 100" aria-hidden="true"><g class="cp-top"><path d="M10 50 a40 40 0 0 1 80 0z" fill="${c}" stroke="${ECO_L}" stroke-width="5"/><ellipse cx="34" cy="28" rx="11" ry="6" fill="#fff" opacity=".65"/><circle cx="66" cy="24" r="2.4" fill="#fff"/><circle cx="74" cy="36" r="1.6" fill="#fff"/></g><g class="cp-bot"><path d="M10 50 a40 40 0 0 0 80 0z" fill="${c}" stroke="${ECO_L}" stroke-width="5" style="filter:brightness(.82)"/><circle cx="30" cy="68" r="1.8" fill="#fff" opacity=".8"/></g><path class="cp-band" d="M50 33 L55 45 L68 46 L58 54 L61 67 L50 60 L39 67 L42 54 L32 46 L45 45Z" fill="#fffbe8" stroke="${ECO_L}" stroke-width="3.5" stroke-linejoin="round"/></svg>`;
 }
 const ECO_CAPC = ['#c9c4d2', '#7fcf9f', '#7fb0ea', '#b58ce8', '#f2c14e'];
-function ecoMachineDot() { try { const E = ecoState(); return ecoOn() && E.tickets > 0 && E.tickets > E.seenT; } catch (e) { return false; } }
+function ecoMachineDot() { try { const E = ecoState(), n = stonesN(); return ecoOn() && n >= ECO_STAR1 && n > (E.seenS || 0); } catch (e) { return false; } }
 function ecoRenderMachine(box) {
   const E = ecoState(), occ = ecoActive();
   if (ecoBanner === 'ev' && !occ) ecoBanner = 'perm';
-  E.seenT = E.tickets;
+  E.seenS = stonesN();
   const bn = ecoBanner, P = E.pity[bn], luxOK = E.lux !== dayNum();
-  let h = `<div class="cm-wrap"><div class="cm-head"><div class="cm-mach">${ecoMachineSVG(false)}</div><div class="cm-side"><span class="eco-kick">Village · place du marché</span><h2>La machine à souvenirs</h2><p>Glissez un ticket, tournez la manivelle… et ouvrez la capsule !</p><div class="cm-tk">${ecoTk(E.tickets)}<span>ticket${E.tickets > 1 ? 's' : ''}</span></div></div></div>`;
+  let h = `<div class="cm-wrap"><div class="cm-head"><div class="cm-mach">${ecoMachineSVG(false)}</div><div class="cm-side"><span class="eco-kick">Village · au bout du chemin</span><h2>Le Portail des étoiles</h2><p>Offrez des pierres d’étoile au portail… et voyez ce qu’il fait apparaître !</p><div class="cm-tk">${ecoTk(stonesN())}<span>pierre${stonesN() > 1 ? 's' : ''} d’étoile</span></div></div></div>`;
   // bannières
   h += `<div class="cm-bans" role="tablist"><button role="tab" aria-selected="${bn === 'perm'}" data-eco-ban="perm"><b>Souvenirs du monde</b><small>Permanente</small></button>${occ ? `<button role="tab" aria-selected="${bn === 'ev'}" data-eco-ban="ev" style="--ec:${occ.E.color}">${ecoIconSVG(occ.E, 'sm')}<b>${esc(occ.label)}</b><small>jusqu’au ${ecoDate(occ.e)}</small></button>` : ''}</div>`;
-  h += bn === 'ev' && occ ? `<p class="cm-bdesc">Objets datés exclusifs « ${esc(occ.label)} », ${esc(occ.E.res[1])} et l’œuf <b>scintillant</b> (légendaire) de la variante ${esc(occ.E.egg.pal)}.</p>` : `<p class="cm-bdesc">Vêtements, décorations, recettes et œufs que l’on ne trouve nulle part ailleurs.</p>`;
+  h += bn === 'ev' && occ ? `<p class="cm-bdesc">Objets datés exclusifs « ${esc(occ.label)} », ${esc(occ.E.res[1])} et l’œuf <b>scintillant</b> (légendaire) de la variante ${esc(occ.E.egg.pal)}.</p>` : `<p class="cm-bdesc">Formes <b>étoilées</b> de vos compagnons, tenues et décorations introuvables ailleurs. Jamais de nouvelle espèce : celles-là, on les découvre en voyageant.</p>`;
   // garanties
   const le = ECO_PITY_E - P.e, ll = ECO_PITY_L - P.l;
-  h += `<div class="cm-pity"><div><span>Épique ou mieux garanti dans</span><b>${le} tirage${le > 1 ? 's' : ''}</b><i class="cm-bar"><i style="width:${(P.e / ECO_PITY_E * 100).toFixed(0)}%;background:${RARC[3]}"></i></i></div><div><span>Légendaire garanti dans</span><b>${ll} tirage${ll > 1 ? 's' : ''}</b><i class="cm-bar"><i style="width:${(P.l / ECO_PITY_L * 100).toFixed(0)}%;background:${RARC[4]}"></i></i></div></div>`;
+  h += `<div class="cm-pity"><div><span>Épique ou mieux garanti dans</span><b>${le} invocation${le > 1 ? 's' : ''}</b><i class="cm-bar"><i style="width:${(P.e / ECO_PITY_E * 100).toFixed(0)}%;background:${RARC[3]}"></i></i></div><div><span>Légendaire garanti dans</span><b>${ll} invocation${ll > 1 ? "s" : ""}</b><i class="cm-bar"><i style="width:${(P.l / ECO_PITY_L * 100).toFixed(0)}%;background:${RARC[4]}"></i></i></div></div>`;
   // boutons
-  h += `<div class="cm-go"><button class="btn green big" data-eco-pull="1" ${E.tickets >= 1 ? '' : 'disabled'}>Tourner la manivelle<small>${ECO_TICKET} 1 ticket</small></button>${E.tickets >= 10 ? `<button class="btn gold" data-eco-pull="10">×10<small>${ECO_TICKET} 10</small></button>` : ''}</div>`;
-  h += `<div class="cm-lux"><span>${COIN}<span><b>Pièce dorée</b><small>Un tirage par jour contre ${ECO_LUX} pièces</small></span></span><button class="btn cream sm" data-eco-pull="lux" ${luxOK && S.coins >= ECO_LUX ? '' : 'disabled'}>${luxOK ? coins(ECO_LUX) : 'Demain'}</button></div>`;
+  h += `<div class="cm-go"><button class="btn green big" data-eco-pull="1" ${stonesN() >= ECO_STAR1 ? '' : 'disabled'}>Invoquer<small>${ECO_TICKET} ${ECO_STAR1}</small></button><button class="btn gold" data-eco-pull="10" ${stonesN() >= ECO_STAR10 ? '' : 'disabled'}>×10<small>${ECO_TICKET} ${ECO_STAR10}</small></button></div>`;
+  h += `<div class="cm-lux"><span>${COIN}<span><b>Vœu du jour</b><small>Une invocation par jour contre ${ECO_LUX} pièces</small></span></span><button class="btn cream sm" data-eco-pull="lux" ${luxOK && S.coins >= ECO_LUX ? '' : 'disabled'}>${luxOK ? coins(ECO_LUX) : 'Demain'}</button></div>`;
   // probabilités
-  h += `<details class="cm-rates" open><summary>Probabilités et garanties</summary><div class="cm-rt">${ECO_RATES.map((p, r) => `<span style="--rc:${RARC[r]}"><i></i>${RARITY[r]}<b>${String(p).replace('.', ',')} %</b></span>`).join('')}</div><p class="small">Le 10ᵉ tirage sans objet épique donne forcément un épique ou un légendaire ; le 50ᵉ sans légendaire donne forcément un légendaire. Chaque bannière a ses compteurs. Aucun achat : les tickets se gagnent en jouant, jamais avec de l’argent réel.</p></details>`;
+  h += `<details class="cm-rates" open><summary>Probabilités et garanties</summary><div class="cm-rt">${ECO_RATES.map((p, r) => `<span style="--rc:${RARC[r]}"><i></i>${RARITY[r]}<b>${String(p).replace('.', ',')} %</b></span>`).join('')}</div><p class="small">La 10ᵉ invocation sans objet épique donne forcément un épique ou un légendaire ; la 50ᵉ sans légendaire donne forcément un légendaire. Chaque bannière a ses compteurs. Aucun achat : les pierres d’étoile se gagnent en jouant, jamais avec de l’argent réel.</p></details>`;
   // contenu
-  h += `<details class="cm-pool"><summary>Ce que contient la ${bn === 'ev' ? 'bannière' : 'machine'}</summary>${[4, 3, 2, 1, 0].map(r => `<div class="cm-pr"><b style="color:${RARC[r]}">${RARITY[r]}</b><span>${ecoPrizePool(bn, r, occ).map(p => esc(ecoPrizeLabel(p, occ))).join(' · ')}</span></div>`).join('')}</details>`;
+  h += `<details class="cm-pool"><summary>Ce que contient la ${bn === 'ev' ? 'bannière' : 'bannière permanente'}</summary>${[4, 3, 2, 1, 0].map(r => `<div class="cm-pr"><b style="color:${RARC[r]}">${RARITY[r]}</b><span>${ecoPrizePool(bn, r, occ).map(p => esc(ecoPrizeLabel(p, occ))).join(' · ')}</span></div>`).join('')}</details>`;
   // échange du surplus
   const s0 = ecoSurplus(0), s1 = ecoSurplus(1), xl = ecoExLeft(), n0 = Math.min(xl, Math.floor(s0.length / ECO_EXCH[0])), n1 = Math.min(xl, Math.floor(s1.length / ECO_EXCH[1]));
-  h += `<h3 class="cm-h">Échanger le surplus contre des tickets <small class="tr-opt">${ecoExLeft()}/${ECO_EXDAY} aujourd’hui</small></h3><p class="small cm-ex">Vos doublons repartent dans le monde : on garde toujours les ${E.keep} plus récents de chaque objet commun (et 2 de chaque peu commun), ce qui est réservé à une commande, porté, acheté, daté ou unique.</p><div class="cm-exs">`;
-  h += `<div class="cm-exr"><span class="cm-exi" style="--rc:${RARC[0]}">${s0.length ? itemIcon(s0[0]) : ''}</span><div><b>${ECO_EXCH[0]} objets communs → 1 ticket</b><span>${s0.length} en surplus${s0.length ? ` (${esc([...new Set(s0.map(x => x.name))].slice(0, 3).join(', '))}${new Set(s0.map(x => x.name)).size > 3 ? '…' : ''})` : ''}</span></div><div class="cm-exb"><button class="btn cream sm" data-eco-ex="0" ${n0 ? '' : 'disabled'}>1 ticket</button>${n0 > 1 ? `<button class="btn gold sm" data-eco-ex="0a">Tout : ${n0}</button>` : ''}</div></div>`;
-  h += `<div class="cm-exr"><span class="cm-exi" style="--rc:${RARC[1]}">${s1.length ? itemIcon(s1[0]) : ''}</span><div><b>${ECO_EXCH[1]} objets peu communs → 1 ticket</b><span>${s1.length} en surplus</span></div><div class="cm-exb"><button class="btn cream sm" data-eco-ex="1" ${n1 ? '' : 'disabled'}>1 ticket</button>${n1 > 1 ? `<button class="btn gold sm" data-eco-ex="1a">Tout : ${n1}</button>` : ''}</div></div>`;
+  h += `<h3 class="cm-h">Échanger le surplus contre des pierres <small class="tr-opt">${ecoExLeft()}/${ECO_EXDAY} aujourd’hui</small></h3><p class="small cm-ex">Vos doublons repartent dans le monde : on garde toujours les ${E.keep} plus récents de chaque objet commun (et 2 de chaque peu commun), ce qui est réservé à une commande, porté, acheté, daté ou unique.</p><div class="cm-exs">`;
+  h += `<div class="cm-exr"><span class="cm-exi" style="--rc:${RARC[0]}">${s0.length ? itemIcon(s0[0]) : ''}</span><div><b>${ECO_EXCH[0]} objets communs → ${ECO_STAR1} ⭐</b><span>${s0.length} en surplus${s0.length ? ` (${esc([...new Set(s0.map(x => x.name))].slice(0, 3).join(', '))}${new Set(s0.map(x => x.name)).size > 3 ? '…' : ''})` : ''}</span></div><div class="cm-exb"><button class="btn cream sm" data-eco-ex="0" ${n0 ? '' : 'disabled'}>Échanger</button>${n0 > 1 ? `<button class="btn gold sm" data-eco-ex="0a">Tout : ${n0}</button>` : ''}</div></div>`;
+  h += `<div class="cm-exr"><span class="cm-exi" style="--rc:${RARC[1]}">${s1.length ? itemIcon(s1[0]) : ''}</span><div><b>${ECO_EXCH[1]} objets peu communs → ${ECO_STAR1} ⭐</b><span>${s1.length} en surplus</span></div><div class="cm-exb"><button class="btn cream sm" data-eco-ex="1" ${n1 ? '' : 'disabled'}>Échanger</button>${n1 > 1 ? `<button class="btn gold sm" data-eco-ex="1a">Tout : ${n1}</button>` : ''}</div></div>`;
   h += `<label class="cm-keep">Garder <select data-eco-keep="1">${[1, 2, 3, 5, 8].map(n => `<option value="${n}" ${n === E.keep ? 'selected' : ''}>${n}</option>`).join('')}</select> exemplaire(s) de chaque objet commun</label></div>`;
-  h += `<h3 class="cm-h">Gagner des tickets</h3><ul class="cm-earn"><li><b>Tournoi de style</b><span>1 à 5 tickets chaque semaine</span></li><li><b>Cadeaux</b><span>Série de connexion, anniversaires, bienvenue</span></li><li><b>Commandes difficiles</b><span>3 objets, délai ou grosse commande : +1</span></li><li><b>Paliers de collection</b><span>+1 aux paliers 50 % et 100 %</span></li>${occ ? `<li><b>Boutique ${esc(occ.E.name)}</b><span>jusqu’à 3 tickets</span></li>` : ''}<li><b>Surplus</b><span>Échangez vos doublons ci-dessus</span></li></ul></div>`;
+  h += `<h3 class="cm-h">Gagner des pierres d’étoile</h3><ul class="cm-earn"><li><b>Défis et carnet de région</b><span>Tampons, pages, gardiens, défis réussis</span></li><li><b>Tournoi de style</b><span>10 à 50 chaque semaine</span></li><li><b>Cadeaux</b><span>Série de connexion, anniversaires, bienvenue</span></li><li><b>Commandes difficiles</b><span>3 objets, délai ou grosse commande : +10</span></li><li><b>Paliers de collection</b><span>+10 aux paliers 50 % et 100 %</span></li>${occ ? `<li><b>Boutique ${esc(occ.E.name)}</b><span>jusqu’à 30 pierres</span></li>` : ''}<li><b>Surplus</b><span>Échangez vos doublons ci-dessus</span></li></ul></div>`;
   box.innerHTML = h;
 }
 function ecoPrizeLabel(p, occ) {
   if (Array.isArray(p)) return p[0];
   if (p.recipe) { const r = ECO_RECIPES.find(x => x.id === p.recipe); return r ? `Recette : ${r.out[0]}` : 'Recette'; }
-  if (p.egg != null) return p.egg >= 4 ? 'Œuf capsule dorée (brillant)' : p.egg >= 3 ? 'Œuf capsule' : 'Œuf de compagnon';
+  if (p.egg != null) return p.egg >= 4 ? 'Forme étoilée dorée d’un de vos compagnons (œuf)' : p.egg >= 3 ? 'Forme étoilée d’un de vos compagnons (œuf)' : 'Œuf de compagnon';
   if (p.res && occ) return `${p.res} ${occ.E.res[1]}`;
   if (p.evItem != null && occ) return `${occ.E.items[p.evItem][0]} ${occ.y}`;
   if (p.evEgg != null && occ) return p.evEgg ? `Œuf scintillant ${occ.E.egg.pal}` : `Œuf ${occ.E.egg.pal}`;
@@ -18146,9 +18153,9 @@ function ecoPullShow(res, bn) {
   if (!res || !res.length) return;
   if (res.length === 1) {
     const x = res[0];
-    showModal(`<div class="cp-stage" data-n="1"><span class="eco-kick">${bn === 'ev' && ecoActive() ? esc(ecoActive().label) : 'Machine à souvenirs'}</span><div class="cp-mach">${ecoMachineSVG(true)}</div><button class="cp-cap r${x.r}" data-eco-open="0" style="--rc:${RARC[x.r]}" aria-label="Ouvrir la capsule">${ecoCapsuleSVG(ECO_CAPC[x.r])}</button><p class="cp-hint">Touchez la capsule pour l’ouvrir !</p><div class="cp-out" hidden></div><div class="cp-acts" hidden><button class="btn cream" data-closemodal="1">Ranger</button>${ecoState().tickets >= 1 ? `<button class="btn green" data-eco-again="${bn}">Encore ! <small>${ECO_TICKET}1</small></button>` : ''}</div></div>`);
+    showModal(`<div class="cp-stage" data-n="1"><span class="eco-kick">${bn === 'ev' && ecoActive() ? esc(ecoActive().label) : 'Portail des étoiles'}</span><div class="cp-mach">${ecoMachineSVG(true)}</div><button class="cp-cap r${x.r}" data-eco-open="0" style="--rc:${RARC[x.r]}" aria-label="Ouvrir l’étoile">${ecoCapsuleSVG(ECO_CAPC[x.r])}</button><p class="cp-hint">Touchez l’étoile pour l’ouvrir !</p><div class="cp-out" hidden></div><div class="cp-acts" hidden><button class="btn cream" data-closemodal="1">Ranger</button>${stonesN() >= ECO_STAR1 ? `<button class="btn green" data-eco-again="${bn}">Encore ! <small>${ECO_TICKET}${ECO_STAR1}</small></button>` : ''}</div></div>`);
   } else {
-    showModal(`<div class="cp-stage multi"><span class="eco-kick">${res.length} capsules</span><div class="cp-row">${res.map((x, i) => `<button class="cp-cap mini r${x.r}" data-eco-open="${i}" style="--rc:${RARC[x.r]};--d:${(i * 0.07).toFixed(2)}s">${ecoCapsuleSVG(ECO_CAPC[x.r])}</button>`).join('')}</div><p class="cp-hint">Touchez une capsule, ou ouvrez tout d’un coup.</p><button class="btn gold" data-eco-openall="1">Tout ouvrir</button><div class="haul cp-grid" hidden></div><div class="cp-acts" hidden><button class="btn green big wide" data-closemodal="1">Tout ranger</button></div></div>`);
+    showModal(`<div class="cp-stage multi"><span class="eco-kick">${res.length} étoiles</span><div class="cp-row">${res.map((x, i) => `<button class="cp-cap mini r${x.r}" data-eco-open="${i}" style="--rc:${RARC[x.r]};--d:${(i * 0.07).toFixed(2)}s">${ecoCapsuleSVG(ECO_CAPC[x.r])}</button>`).join('')}</div><p class="cp-hint">Touchez une étoile, ou ouvrez tout d’un coup.</p><button class="btn gold" data-eco-openall="1">Tout ouvrir</button><div class="haul cp-grid" hidden></div><div class="cp-acts" hidden><button class="btn green big wide" data-closemodal="1">Tout ranger</button></div></div>`);
   }
 }
 function ecoPrizeCard(x, i) {
@@ -18177,7 +18184,7 @@ function ecoDoPull(arg) {
   if (!ecoOn()) return;
   const bn = ecoBanner === 'ev' && ecoActive() ? 'ev' : 'perm';
   const res = arg === 'lux' ? ecoPull(bn, 1, 'lux') : ecoPull(bn, Math.max(1, +arg || 1), 'ticket');
-  if (!res) { toast(arg === 'lux' ? (ecoState().lux === dayNum() ? 'La pièce dorée, c’est une fois par jour. À demain !' : `Il faut ${ECO_LUX} pièces.`) : 'Pas assez de tickets. Échangez votre surplus ou jouez le tournoi !'); return; }
+  if (!res) { toast(arg === 'lux' ? (ecoState().lux === dayNum() ? 'La pièce dorée, c’est une fois par jour. À demain !' : `Il faut ${ECO_LUX} pièces.`) : `Il faut ${ecoPullCost(Math.max(1, +arg || 1))} pierres d’étoile. On en gagne avec les défis, le carnet de région, les commandes difficiles…`); return; }
   renderTop(); if (tab === 'village') renderPanel();
   ecoPullShow(res, bn);
 }
@@ -18237,7 +18244,7 @@ function ecoDuelShow(rd) {
 // ---------- navigation : sous-onglets « Tournoi » (Compagnons) et « Capsules » (Village) ----------
 if (typeof NAV_ICONS !== 'undefined') {
   NAV_ICONS.tournoi = NAV_ICONS.concours;
-  NAV_ICONS.machine = '<rect x="7" y="16" width="16" height="11" rx="2" fill="#f08aa6" stroke="currentColor" stroke-width="2"/><circle cx="15" cy="10" r="7.6" fill="#dff3f6" stroke="currentColor" stroke-width="2"/><circle cx="12.2" cy="10.4" r="2.3" fill="#f6c445" stroke="currentColor" stroke-width="1"/><circle cx="17" cy="8.4" r="2.1" fill="#9a6fd6" stroke="currentColor" stroke-width="1"/><circle cx="16.6" cy="12.8" r="2" fill="#5fbf7f" stroke="currentColor" stroke-width="1"/><rect x="16" y="19.5" width="5" height="5" rx="1.2" fill="#5b4636"/><circle cx="11" cy="22" r="2.4" fill="#fff8ea" stroke="currentColor" stroke-width="1.5"/>';
+  NAV_ICONS.machine = '<path d="M5 27 V13 A10 10.5 0 0 1 25 13 V27Z" fill="#cbbfae" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 27 V13.5 A5.5 6 0 0 1 20.5 13.5 V27Z" fill="#8f86e6" stroke="currentColor" stroke-width="1.6"/><path d="M15 15.5 l1.1 2.4 2.5 .3 -1.9 1.7 .5 2.5 -2.2 -1.3 -2.2 1.3 .5 -2.5 -1.9 -1.7 2.5 -.3z" fill="#fff6c8"/>';
 }
 if (typeof TAB_ALIAS !== 'undefined') Object.assign(TAB_ALIAS, { concours: ['compagnons', 'tournoi'], tournoi: ['compagnons', 'tournoi'], machine: ['village', 'machine'], capsules: ['village', 'machine'], tirage: ['village', 'machine'] });
 function ecoSyncTabs() {
@@ -18245,7 +18252,7 @@ function ecoSyncTabs() {
   const on = ecoOn();
   const sync = (arr, entry) => { if (!arr) return; const i = arr.findIndex(x => x[0] === entry[0]); if (on && i < 0) arr.push(entry); if (!on && i >= 0) arr.splice(i, 1); };
   sync(SUBTABS.compagnons, ['tournoi', 'Tournoi', 'tournoi']);
-  sync(SUBTABS.village, ['machine', 'Capsules', 'machine']);
+  sync(SUBTABS.village, ['machine', 'Portail', 'machine']);
 }
 if (typeof renderPanel === 'function') renderPanel = (orig => function () {
   try {
@@ -18283,7 +18290,7 @@ document.addEventListener('click', ev => {
   if (d.ecoAgain) { $('modal').hidden = true; ecoBanner = d.ecoAgain; ecoDoPull('1'); return; }
   if (d.ecoOpen !== undefined) { ecoOpenCap(el, +d.ecoOpen); return; }
   if (d.ecoOpenall) { const st = el.closest('.cp-stage'); st.querySelectorAll('.cp-cap:not(.open)').forEach((b, i) => setTimeout(() => ecoOpenCap(b, +b.dataset.ecoOpen), reduceMotion() ? 0 : i * 160)); return; }
-  if (d.ecoEx) { const r = +d.ecoEx[0], n = ecoExchange(r, d.ecoEx.length > 1); if (n) { toast(`+${ecoPl(n, 'ticket', 'tickets')} ! Vos doublons repartent dans le monde.`); renderTop(); renderPanel(); } return; }
+  if (d.ecoEx) { const r = +d.ecoEx[0], n = ecoExchange(r, d.ecoEx.length > 1); if (n) { toast(`+${n * ECO_STAR1} pierres d’étoile ! Vos doublons repartent dans le monde.`); renderTop(); renderPanel(); } return; }
   if (d.ecoPresent) { ecoSelItem = ecoSelItem === d.ecoPresent ? null : d.ecoPresent; renderPanel(); return; }
   if (d.ecoReg) { if (ecoTourRegister(d.ecoReg, ecoSelItem)) { ecoSelItem = null; renderTop(); renderPanel(); toast(`${CHARS[d.ecoReg].name} est inscrit${compE(d.ecoReg)} ! Première manche : quand vous voulez.`); } return; }
   if (d.ecoPlay) { const rd = ecoTourPlay(); if (rd) { renderAll(); ecoDuelShow(rd); } return; }
@@ -18467,6 +18474,17 @@ setInterval(() => { try { if (!window.__jeuReady) return; ecoCheckEnds(); const 
 .tr-ok{animation:ctIn .3s ease 1.8s both}
 .tr-hero .ctmeta span:first-child{color:var(--ink2)}
 @media (max-width:420px){.cm-mach{width:96px}.cm-side h2{font-size:20px}.eco-shop{grid-template-columns:repeat(2,minmax(0,1fr))}.cm-pr b{width:74px}.tr-sc{font-size:26px}.cp-row{gap:5px}}
+.pt-svg .pt-swirl{transform-origin:110px 150px;animation:ptSpin 16s linear infinite}
+.pt-svg.run .pt-swirl{animation-duration:1.1s}
+.pt-svg .pt-st{transform-box:fill-box;transform-origin:50% 50%;animation:ptTw 2.4s ease-in-out infinite}
+.pt-svg .pt-core{transform-box:fill-box;transform-origin:50% 50%;animation:ptCore 3s ease-in-out infinite}
+.pt-svg.run .pt-core{animation:ptBurst .9s ease-out}
+@keyframes ptSpin{to{transform:rotate(360deg)}}
+@keyframes ptTw{0%,100%{opacity:.35;transform:scale(.7)}50%{opacity:1;transform:scale(1.15)}}
+@keyframes ptCore{0%,100%{transform:scale(.85)}50%{transform:scale(1.15)}}
+@keyframes ptBurst{0%{transform:scale(.8)}55%{transform:scale(3.6);opacity:1}100%{transform:scale(1);opacity:.9}}
+.cm-head{background:radial-gradient(circle at 30% 20%,#fff 0,#ece6ff 55%,#e2ecfb 100%)}
+@media (prefers-reduced-motion:reduce){.pt-svg .pt-swirl,.pt-svg .pt-st,.pt-svg .pt-core{animation:none!important}}
 @media (prefers-reduced-motion:reduce){.cp-cap,.cp-cap.mini{animation:none;opacity:1}.cp-cap .cp-svg,.cp-cap::after,.cp-cap::before{animation:none!important}.cm-svg.run .cm-crank,.cm-svg.run .cm-caps,.tr-side,.tr-verd,.tr-res,.tr-ok{animation:none}}
 `;
   document.head.appendChild(st);
@@ -18475,7 +18493,7 @@ setInterval(() => { try { if (!window.__jeuReady) return; ecoCheckEnds(); const 
 // ---------- pour les tests et la simulation ----------
 window.__eco = {
   S: () => ecoState(), active: ecoActive, next: ecoNext, year: ecoYear, occ: ecoOcc, events: ECO_EVENTS, pull: ecoPull, surplus: ecoSurplus, exchange: ecoExchange,
-  tickets: () => ecoState().tickets, addTickets: n => { ecoAddTickets(n); save(); }, pending: ecoPending, claim: ecoClaim, buy: ecoBuyEv, shop: () => { const o = ecoActive(); return o ? ecoShop(o) : []; },
+  tickets: () => ecoState().tickets, stones: () => stonesN(), setOldTickets: n => { S.eco.tickets = n; return ecoState().tickets; }, doPull: n => ecoDoPull(n), owned: () => ecoOwnedSp(), addTickets: n => { ecoAddTickets(n); save(); }, pending: ecoPending, claim: ecoClaim, buy: ecoBuyEv, shop: () => { const o = ecoActive(); return o ? ecoShop(o) : []; },
   tour: ecoTour, register: ecoTourRegister, play: ecoTourPlay, standings: () => ecoTour() && ecoStandings(ecoTour()), go: ecoGo, openEvent: ecoOpenEvent, duel: ecoDuelShow, show: ecoPullShow,
   on: ecoOn, birthdays: ecoBirthdays, monthGift: ecoMonthGift, checkEnds: ecoCheckEnds, setBanner: b => { ecoBanner = b; },
   // simulation : un joueur qui utilise les nouveaux systèmes
@@ -20481,7 +20499,7 @@ function btSources(itOrName) {
     } else if (s.k === 'pays') out.push({ txt: `${btIsoName(s.v)}${s.cats && s.cats.length ? ' · ' + s.cats.slice(0, 3).map(c => btCatL(c).toLowerCase()).join(', ') : ''}${s.fr ? ` (là-bas, le « ${s.fr.toLowerCase()} » s’appelle ainsi)` : ''}`, ico: 'pays', step: { fn: () => btGoCountry(s.v) }, go: 'Y aller', d: 2000 });
     else if (s.k === 'spec') { const T = BT_SPEC[s.v]; out.push({ txt: `Spécialité maison des ${T.l}s : chaque lieu a sa propre recette`, ico: 'lieu', step: { fn: () => btGoSub(s.v) }, go: 'Y aller', d: 2 }); }
     else if (s.k === 'rec') out.push({ txt: 'À fabriquer à l’atelier (recette)', ico: 'rec', step: (typeof RECIPES !== 'undefined' && RECIPES.some(r => r.id === s.v)) ? { t: 'craft', id: s.v } : { fn: () => openSheet('atelier') }, go: 'Atelier', d: 0 });
-    else if (s.k === 'caps') out.push({ txt: 'Machine à souvenirs (capsules)', ico: 'shop', step: { fn: () => (typeof ecoGo === 'function' ? ecoGo('machine') : openSheet('village')) }, go: 'Ouvrir', d: 0 });
+    else if (s.k === 'caps') out.push({ txt: 'Portail des étoiles', ico: 'shop', step: { fn: () => (typeof ecoGo === 'function' ? ecoGo('machine') : openSheet('village')) }, go: 'Ouvrir', d: 0 });
     else if (s.k === 'shop') out.push({ txt: 'Magasin de votre boutique', ico: 'shop', step: { fn: () => (typeof openBoutique === 'function' ? openBoutique('magasin') : openSheet('boutique')) }, go: 'Ouvrir', d: 0 });
     else if (s.k === 'saison') out.push({ txt: 'En automne : bois, champs, parcs et rues', ico: 'tag', step: { t: 'visit', cat: ['parc', 'foret', 'campagne'] }, go: 'Y aller', d: 4 });
     else if (s.k === 'nuit') out.push({ txt: 'La nuit, partout (voyager le soir)', ico: 'tag', step: { fn: () => openSheet('voyage') }, go: 'Partir', d: 6 });
@@ -36187,7 +36205,7 @@ if (typeof renderMenu === 'function') renderMenu = (orig => function (box) {
       const ev = secs.find(x => /^Événement/.test(title(x)) || /^Aujourd/.test(title(x)));
       if (ev) { const h3 = ev.querySelector('header h3'); if (h3) h3.textContent = 'Chaque jour'; wrap.appendChild(ev); }
       const rv = secs.find(x => /^Rendez-vous/.test(title(x))), mach = rv && [...rv.querySelectorAll('.mrow')].find(x => x.querySelector('.eco-mach'));
-      if (mach) { const sm = document.createElement('section'); sm.className = 'msec'; sm.innerHTML = '<header><h3>Machine à souvenirs</h3></header>'; sm.appendChild(mach); wrap.appendChild(sm); }
+      if (mach) { const sm = document.createElement('section'); sm.className = 'msec'; sm.innerHTML = '<header><h3>Portail des étoiles</h3></header>'; sm.appendChild(mach); wrap.appendChild(sm); }
       box.innerHTML = '';
       box.appendChild(wrap);
     } catch (e) { console.error('carnet cadeaux', e); }

@@ -276,14 +276,14 @@ function checkLogin() {
   const idx = ((L.streak || 1) - 1) % 7, r = LOGIN_REWARDS[idx];
   const got = { idx, coins: r.coins || 0, item: null, tickets: 0 };
   if (r.ticket && typeof ecoAddTickets === 'function') got.tickets = ecoAddTickets(r.ticket, 'login');
-  if (r.dated && typeof ecoMonthGift === 'function') { got.item = ecoMonthGift(); if (!got.item) got.tickets += 3; } // déjà reçu ce mois-ci : 3 tickets à la place
+  if (r.dated && typeof ecoMonthGift === 'function') { got.item = ecoMonthGift(); if (!got.item) got.tickets += 30; } // déjà reçu ce mois-ci : 3 tickets à la place
   else if (r.item != null) got.item = giftItem(r.item);
   L.claimed = L.last;
   save();
   return got;
 }
 function rewardCell(r, i, cls) {
-  if (r.ticket && typeof ECO_TICKET !== 'undefined') return `<div class="dcell ${cls} d${i + 1}"><span>Jour ${i + 1}</span><span class="dic">${ECO_TICKET}</span><span class="dv">${r.ticket} ticket${r.ticket > 1 ? 's' : ''}</span></div>`;
+  if (r.ticket && typeof ECO_TICKET !== 'undefined') return `<div class="dcell ${cls} d${i + 1}"><span>Jour ${i + 1}</span><span class="dic">${ECO_TICKET}</span><span class="dv">${r.ticket * 10} ⭐</span></div>`;
   const ic = r.item != null ? GIFT(RARC[r.item]) : COIN;
   return `<div class="dcell ${cls} d${i + 1}${i === 6 ? ' big' : ''}"><span>Jour ${i + 1}</span><span class="dic">${ic}</span><span class="dv"${r.item != null && !r.coins ? ` style="color:${RARC[r.item]}"` : ''}>${r.coins ? r.coins : RARITY[r.item]}${r.coins && r.item != null ? ` + <span style="color:${RARC[r.item]}">${RARITY[r.item]}</span>` : ''}</span></div>`;
 }
@@ -291,7 +291,7 @@ function loginModal(got) {
   const L = S.login, cur = ((L.streak || 1) - 1) % 7, ev = todayEvent();
   const cells = LOGIN_REWARDS.map((r, i) => rewardCell(r, i, i < cur ? 'past' : i === cur ? 'today' : '')).join('');
   let gotTxt = '';
-  if (got) gotTxt = `<p>Cadeau du jour ${got.idx + 1} : ${[got.coins ? `<b>${got.coins} pièces</b>` : '', got.tickets ? `<b>${got.tickets} ticket${got.tickets > 1 ? 's' : ''}</b>` : '', got.item ? `<b class="rar r${got.item.rarity}">« ${esc(got.item.name)} »</b> (${RARITY[got.item.rarity]})` : ''].filter(Boolean).join(' et ')}.</p>`;
+  if (got) gotTxt = `<p>Cadeau du jour ${got.idx + 1} : ${[got.coins ? `<b>${got.coins} pièces</b>` : '', got.tickets ? `<b>${stonesWord(got.tickets)}</b>` : '', got.item ? `<b class="rar r${got.item.rarity}">« ${esc(got.item.name)} »</b> (${RARITY[got.item.rarity]})` : ''].filter(Boolean).join(' et ')}.</p>`;
   showModal(`<span class="streak">${FLAME} ${L.streak} jour${L.streak > 1 ? 's' : ''} de suite</span><h2>${got ? (L.total > 1 || (S.stats.trips || 0) > 0 ? 'Bon retour !' : 'Cadeau de bienvenue !') : 'Cadeaux quotidiens'}</h2>${gotTxt}<div class="dgrid">${cells}</div><p class="small">Revenez chaque jour : les cadeaux grandissent jusqu’au 7ᵉ jour. Si vous manquez un jour, la série recommence.</p><div class="evcard"><span class="evi" style="--ec:${evColor(ev)}">${evIcon(ev)}</span><p><b>${ev.season ? 'Événement' : 'Bonus du jour'} : ${esc(ev.name)}</b><br>${esc(ev.short)}</p></div><button class="btn green big" data-closemodal="1" data-jeu="logindone">${got ? 'Merci !' : 'Fermer'}</button>`);
   if (got) setTimeout(() => { if (got.coins) { lastPointer = { x: innerWidth / 2, y: innerHeight / 2, t: Date.now() }; coinFX(got.coins); } }, 350);
 }
@@ -300,7 +300,7 @@ function runLogin() { markVisit(); renderJeuBar(); } // plus de fenêtre automat
 function claimGift() {
   const got = checkLogin(); if (!got) return null;
   gainCoins(got.coins); renderTop(); renderJeuBar();
-  toast(`Cadeau du jour : ${[got.coins ? `+${got.coins} pièces` : '', got.tickets ? `+${got.tickets} ticket${got.tickets > 1 ? 's' : ''}` : '', got.item ? `« ${got.item.name} »` : ''].filter(Boolean).join(' et ')} !`);
+  toast(`Cadeau du jour : ${[got.coins ? `+${got.coins} pièces` : '', got.tickets ? `+${stonesWord(got.tickets)}` : '', got.item ? `« ${got.item.name} »` : ''].filter(Boolean).join(' et ')} !`);
   return got;
 }
 // les pièces du cadeau sont ajoutées sans animation immédiate (l'animation part du cadeau)

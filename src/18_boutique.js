@@ -263,7 +263,7 @@ const bqRound5 = n => Math.max(5, Math.round(n / 5) * 5);
 // ---------------- pierres d'étoile (v22) ----------------
 // S.stones : seconde monnaie, rare (0 par défaut, les anciennes sauvegardes démarrent à 0).
 // On en gagne avec certaines commandes du comptoir (Normal : 1 fois sur 3, Défi : 2 ou 3), les défis et la fin des histoires (5 à 10).
-// PRÉVU POUR PLUS TARD : un tirage façon Dokkan Battle (invocation). Le tirage n'existe pas encore : ne pas dépenser S.stones ailleurs.
+// v214 : elles servent au Portail des étoiles (28_economie.js), 10 par invocation, 90 les dix.
 function stonesN() { if (typeof S.stones !== 'number' || !isFinite(S.stones) || S.stones < 0) S.stones = 0; return S.stones; }
 function gainStones(n) {
   n = Math.max(0, Math.round(n || 0)); stonesN(); if (!n) return 0;
@@ -286,7 +286,7 @@ if (typeof renderTop === 'function') renderTop = (orig => function () {
   } catch (e) {}
   return r;
 })(renderTop);
-document.addEventListener('click', ev => { if (!ev.target.closest('#stones')) return; const n = stonesN(); toast(`${stonesWord(n)}. Gardez-les précieusement : elles serviront bientôt à un tirage spécial !`); });
+document.addEventListener('click', ev => { if (!ev.target.closest('#stones')) return; const n = stonesN(); if (typeof ecoGo === 'function' && typeof ecoOn === 'function' && ecoOn()) { ecoGo('machine'); return; } toast(`${stonesWord(n)} : elles servent au Portail des étoiles, au village.`); });
 
 // ---------------- objets : compter, réserver, consommer ----------------
 function bqWorn() { const s = new Set(); for (const o of Object.values(S.outfits || {})) if (o && o.worn) for (const [sl, id] of Object.entries(o.worn)) if (id && o[sl] && o[sl] !== 'none') s.add(id); return s; }
